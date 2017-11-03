@@ -256,7 +256,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IDocumentQuery<T> CmpXchg(string key, T value)
+        public IAsyncDocumentQuery<T> CmpXchg(string key, T value)
         {
             return CmpXchg(key, value);
         }

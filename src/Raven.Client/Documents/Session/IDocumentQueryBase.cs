@@ -419,8 +419,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
         TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
-        /// <inheritdoc />
-        IDocumentQuery<T> CmpXchg(string key, T value);
+        TSelf CmpXchg(string key, T value);
     }
 
     /// <summary>

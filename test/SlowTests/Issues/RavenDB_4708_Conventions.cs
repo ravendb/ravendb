@@ -42,7 +42,10 @@ namespace SlowTests.Issues
             var suspectedMethods = methods.Where(x => x.ReturnType.ToString().Contains(typeof(Employee).FullName)).ToList();
 
             // the ones which return IAsyncDocumentQuery<Employee> are ok
-            suspectedMethods = suspectedMethods.Where(x => x.ReturnType != typeof(IAsyncDocumentQuery<Employee>)).ToList();
+            suspectedMethods = suspectedMethods.Where(x => 
+                x.ReturnType != typeof(IAsyncDocumentQuery<Employee>) && 
+                x.ReturnType != typeof(IAsyncGroupByDocumentQuery<Employee>))
+                .ToList();
 
             // filter out Lazy methods
             suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.GetTypeInfo().IsGenericType || typeof(Lazy<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
@@ -50,8 +53,8 @@ namespace SlowTests.Issues
             // filter out methods which returns Task
             suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.GetTypeInfo().IsGenericType || typeof(Task<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
 
-            // filter out where method as it only servs as reminder to not use in memory filtering
-            suspectedMethods = suspectedMethods.Where(x => x.Name != "Where").ToList();
+            // filter out where / group by methods as it only servs as reminder to not use in memory filtering
+            suspectedMethods = suspectedMethods.Where(x => x.Name != "Where" && x.Name != "GroupBy").ToList();
 
             Assert.True(suspectedMethods.Count == 0, "Detected sync methods in async interface: " + string.Join(", ", suspectedMethods.Select(x => x.ReturnType + " " + x.Name)));
         }

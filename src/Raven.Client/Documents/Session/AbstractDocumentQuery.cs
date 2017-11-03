@@ -437,7 +437,7 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   This function exists solely to forbid in memory where clause on IDocumentQuery, because
+        ///   This function exists solely to forbid in memory group by clause on IDocumentQuery, because
         ///   that is nearly always a mistake.
         /// </summary>
         [Obsolete(
