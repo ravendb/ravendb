@@ -248,9 +248,13 @@ namespace Raven.Server.Commercial
             dynamic jsonObj = JsonConvert.DeserializeObject(json);
 
             jsonObj["ServerUrl"] = serverUrl;
-            jsonObj["PublicServerUrl"] = publicUrl;
+            jsonObj["PublicServerUrl"] = null;
+            if (string.IsNullOrEmpty(publicUrl))
+            {
+                jsonObj["PublicServerUrl"] = publicUrl;                
+            }
             jsonObj["Security.Certificate.Base64"] = base64Cert;
-            jsonObj["Setup.Mode"] = setupMode.ToString();
+            jsonObj["Setup.Mode"] = setupMode.ToString(); //TODO: setup.mode vs setup: { "mode": .... }
 
             string output = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 

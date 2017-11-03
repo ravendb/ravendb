@@ -320,6 +320,11 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CompactSettings));
             scripter.AddType(typeof(CompactionResult));
             scripter.AddType(typeof(CompactionProgress));
+            
+            // server setup
+            scripter.AddType(typeof(UnsecuredSetupInfo));
+            scripter.AddType(typeof(SecuredSetupInfo));
+            scripter.AddType(typeof(ClaimDomainInfo));
 
             return scripter;
         }
