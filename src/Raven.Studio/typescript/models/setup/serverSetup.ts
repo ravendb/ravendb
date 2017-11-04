@@ -12,14 +12,30 @@ class serverSetup {
    static default = new serverSetup();
    
    mode = ko.observable<configurationMode>();
-   
    license = ko.observable<licenseInfo>(new licenseInfo());
-   
    domain = ko.observable<domainInfo>(new domainInfo());
-   
    unsecureSetup = ko.observable<unsecureSetup>(new unsecureSetup());
+   nodes = ko.observableArray<nodeInfo>();
+   useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
    
-   nodes = ko.observableArray<nodeInfo>([new nodeInfo()]);
+   nodesValidationGroup: KnockoutValidationGroup;
+   
+   constructor() {
+       this.nodes.push(nodeInfo.empty(this.useOwnCertificates));
+
+       this.nodes.extend({
+           validation: [
+               {
+                   validator: () => this.nodes().length > 0,
+                   message: "All least node is required"
+               }
+           ]
+       });
+    
+       this.nodesValidationGroup = ko.validatedObservable({
+           nodes: this.nodes
+       });
+   }
 }
 
 export = serverSetup;
