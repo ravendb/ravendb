@@ -27,7 +27,7 @@
                     <div class="flex-grow">
                         <input type="text" autocomplete="off" class="form-control" id="port"
                                placeholder="Server port"
-                               data-bind="numberInput: port">
+                               data-bind="textInput: port">
                     </div>
                 </div>
 
@@ -51,7 +51,7 @@
                 <div class="form-group" data-bind="validationElement: certificate, visible: $root.provideCertificates">
                     <label for="certificate" class="control-label">Certificate<i class="required"></i></label>
                     <div class="flex-grow input-group file-input" data-bind="validationElement: certificate">
-                        <input type="file" tabindex="-1" name="importFile" id="certificate" accept="" > <!--data-bind="event: { change: _.partial($root.fileSelected, $element) }" -->
+                        <input type="file" tabindex="-1" name="importFile" id="certificate" accept=""  data-bind="event: { change: _.partial(fileSelected, $element) }"> 
                         <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select .pfx file...'"></span>
                         <span class="input-group-btn">
                             <label for="certificate" class="btn btn-default">

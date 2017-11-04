@@ -13,16 +13,12 @@ class finish extends setupStep {
         return $.when({ redirect: "#welcome" });
     }
     
-    compositionComplete() {
-        super.compositionComplete();
-
-
+    finishConfiguration() {
         new finishSetupCommand()
             .execute()
             .done(() => {
                 setTimeout(() => this.redirectToStudio(), 3000);
             });
-
     }
 
     private redirectToStudio() {
