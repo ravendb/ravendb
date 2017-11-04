@@ -174,6 +174,11 @@ namespace Raven.Client.Documents.Linq
             _afterQueryExecuted = afterQueryExecutedCallback;
         }
 
+        public void InvokeAfterQueryExecuted(QueryResult result)
+        {
+            _afterQueryExecuted?.Invoke(result);
+        }
+
         /// <summary>
         /// Customizes the query using the specified action
         /// </summary>

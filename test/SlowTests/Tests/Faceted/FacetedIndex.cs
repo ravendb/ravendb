@@ -146,7 +146,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Fact(Skip = "Wait for new client")]
+        [Fact]
         public void CanPerformFacetedSearch_Remotely_Lazy_can_work_with_others()
         {
             using (var store = GetDocumentStore())
@@ -164,19 +164,20 @@ namespace SlowTests.Tests.Faceted
 
                     foreach (var exp in expressions)
                     {
-                        //var oldRequests = s.Advanced.NumberOfRequests;
-                        //var load = s.Advanced.Lazily.Load<Camera>(oldRequests);
-                        //var facetResults = s.Query<Camera>("CameraCost")
-                        //    .Customize(x => x.WaitForNonStaleResults())
-                        //    .Where(exp)
-                        //    .ToFacetsLazy("facets/CameraFacets");
+                        var oldRequests = s.Advanced.NumberOfRequests;
+                        var load = s.Advanced.Lazily.Load<Camera>(oldRequests.ToString());
+                        var facetResults = s.Query<Camera>("CameraCost")
+                            .Customize(x => x.WaitForNonStaleResults())
+                            .Where(exp)
+                            .AggregateUsing("facets/CameraFacets")
+                            .ExecuteLazy();
 
-                        //Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
+                        Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
 
-                        //var filteredData = _data.Where(exp.Compile()).ToList();
-                        //CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
-                        //var forceLoading = load.Value;
-                        //Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
+                        var filteredData = _data.Where(exp.Compile()).ToList();
+                        CheckFacetResultsMatchInMemoryData(facetResults.Value, filteredData);
+                        var forceLoading = load.Value;
+                        Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
                     }
                 }
             }
