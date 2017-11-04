@@ -5,10 +5,10 @@ using Raven.Client.Documents.Commands;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public interface IAggregationAsyncDocumentQuery<T>
+    public interface IAsyncAggregationDocumentQuery<T>
     {
-        IAggregationAsyncDocumentQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null);
-        IAggregationAsyncDocumentQuery<T> AndAggregateBy(Facet facet);
+        IAsyncAggregationDocumentQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null);
+        IAsyncAggregationDocumentQuery<T> AndAggregateBy(Facet facet);
         Task<Dictionary<string, FacetResult>> ExecuteAsync();
         Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync();
     }

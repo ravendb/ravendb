@@ -166,7 +166,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
             }
 
-            throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected \"<\", \"<=\", \">\" or \">=\")");
+            throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
         }
 
         private static string GetFieldName(MemberExpression left)

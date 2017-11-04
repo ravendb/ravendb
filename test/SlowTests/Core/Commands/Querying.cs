@@ -173,25 +173,25 @@ namespace SlowTests.Core.Commands
                         },
                         new Facet
                         {
-                            Name = "Cost_D_Range",
+                            Name = "Cost",
                             Ranges =
                             {
-                                "[NULL TO 200.0]",
-                                "[300.0 TO 400.0]",
-                                "[500.0 TO 600.0]",
-                                "[700.0 TO 800.0]",
-                                "[900.0 TO NULL]"
+                                "Cost <= 200",
+                                "Cost >= 300 AND Cost <= 400",
+                                "Cost >= 500 AND Cost <= 600",
+                                "Cost >= 700 AND Cost <= 800",
+                                "Cost >= 900"
                             }
                         },
                         new Facet
                         {
-                            Name = "Megapixels_D_Range",
+                            Name = "Megapixels",
                             Ranges =
                             {
-                                "[NULL TO 3.0]",
-                                "[4.0 TO 7.0]",
-                                "[8.0 TO 10.0]",
-                                "[11.0 TO NULL]"
+                                "Megapixels <= 3",
+                                "Megapixels >= 4 AND Megapixels <= 7",
+                                "Megapixels >= 8 AND Megapixels <= 10",
+                                "Megapixels >= 11",
                             }
                         }
                     };
@@ -219,27 +219,27 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("manufacturer2", facetResults["Manufacturer"].Values[1].Range);
                         Assert.Equal(5, facetResults["Manufacturer"].Values[1].Count);
 
-                        Assert.Equal(5, facetResults["Cost_D_Range"].Values.Count);
-                        Assert.Equal("[NULL TO 200.0]", facetResults["Cost_D_Range"].Values[0].Range);
-                        Assert.Equal(3, facetResults["Cost_D_Range"].Values[0].Count);
-                        Assert.Equal("[300.0 TO 400.0]", facetResults["Cost_D_Range"].Values[1].Range);
-                        Assert.Equal(2, facetResults["Cost_D_Range"].Values[1].Count);
-                        Assert.Equal("[500.0 TO 600.0]", facetResults["Cost_D_Range"].Values[2].Range);
-                        Assert.Equal(2, facetResults["Cost_D_Range"].Values[2].Count);
-                        Assert.Equal("[700.0 TO 800.0]", facetResults["Cost_D_Range"].Values[3].Range);
-                        Assert.Equal(2, facetResults["Cost_D_Range"].Values[3].Count);
-                        Assert.Equal("[900.0 TO NULL]", facetResults["Cost_D_Range"].Values[4].Range);
-                        Assert.Equal(1, facetResults["Cost_D_Range"].Values[4].Count);
+                        Assert.Equal(5, facetResults["Cost"].Values.Count);
+                        Assert.Equal("Cost <= 200", facetResults["Cost"].Values[0].Range);
+                        Assert.Equal(3, facetResults["Cost"].Values[0].Count);
+                        Assert.Equal("Cost >= 300 AND Cost <= 400", facetResults["Cost"].Values[1].Range);
+                        Assert.Equal(2, facetResults["Cost"].Values[1].Count);
+                        Assert.Equal("Cost >= 500 AND Cost <= 600", facetResults["Cost"].Values[2].Range);
+                        Assert.Equal(2, facetResults["Cost"].Values[2].Count);
+                        Assert.Equal("Cost >= 700 AND Cost <= 800", facetResults["Cost"].Values[3].Range);
+                        Assert.Equal(2, facetResults["Cost"].Values[3].Count);
+                        Assert.Equal("Cost >= 900", facetResults["Cost"].Values[4].Range);
+                        Assert.Equal(1, facetResults["Cost"].Values[4].Count);
 
-                        Assert.Equal(4, facetResults["Megapixels_D_Range"].Values.Count);
-                        Assert.Equal("[NULL TO 3.0]", facetResults["Megapixels_D_Range"].Values[0].Range);
-                        Assert.Equal(4, facetResults["Megapixels_D_Range"].Values[0].Count);
-                        Assert.Equal("[4.0 TO 7.0]", facetResults["Megapixels_D_Range"].Values[1].Range);
-                        Assert.Equal(4, facetResults["Megapixels_D_Range"].Values[1].Count);
-                        Assert.Equal("[8.0 TO 10.0]", facetResults["Megapixels_D_Range"].Values[2].Range);
-                        Assert.Equal(2, facetResults["Megapixels_D_Range"].Values[2].Count);
-                        Assert.Equal("[11.0 TO NULL]", facetResults["Megapixels_D_Range"].Values[3].Range);
-                        Assert.Equal(0, facetResults["Megapixels_D_Range"].Values[3].Count);
+                        Assert.Equal(4, facetResults["Megapixels"].Values.Count);
+                        Assert.Equal("Megapixels <= 3", facetResults["Megapixels"].Values[0].Range);
+                        Assert.Equal(4, facetResults["Megapixels"].Values[0].Count);
+                        Assert.Equal("Megapixels >= 4 AND Megapixels <= 7", facetResults["Megapixels"].Values[1].Range);
+                        Assert.Equal(4, facetResults["Megapixels"].Values[1].Count);
+                        Assert.Equal("Megapixels >= 8 AND Megapixels <= 10", facetResults["Megapixels"].Values[2].Range);
+                        Assert.Equal(2, facetResults["Megapixels"].Values[2].Count);
+                        Assert.Equal("Megapixels >= 11", facetResults["Megapixels"].Values[3].Range);
+                        Assert.Equal(0, facetResults["Megapixels"].Values[3].Count);
                     }
 
                     using (var session = store.OpenSession())
@@ -264,27 +264,27 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("manufacturer2", multiFacetResults[0]["Manufacturer"].Values[1].Range);
                         Assert.Equal(1, multiFacetResults[0]["Manufacturer"].Values[1].Count);
 
-                        Assert.Equal(5, multiFacetResults[0]["Cost_D_Range"].Values.Count);
-                        Assert.Equal("[NULL TO 200.0]", multiFacetResults[0]["Cost_D_Range"].Values[0].Range);
-                        Assert.Equal(2, multiFacetResults[0]["Cost_D_Range"].Values[0].Count);
-                        Assert.Equal("[300.0 TO 400.0]", multiFacetResults[0]["Cost_D_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Cost_D_Range"].Values[1].Count);
-                        Assert.Equal("[500.0 TO 600.0]", multiFacetResults[0]["Cost_D_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Cost_D_Range"].Values[2].Count);
-                        Assert.Equal("[700.0 TO 800.0]", multiFacetResults[0]["Cost_D_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Cost_D_Range"].Values[3].Count);
-                        Assert.Equal("[900.0 TO NULL]", multiFacetResults[0]["Cost_D_Range"].Values[4].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Cost_D_Range"].Values[4].Count);
+                        Assert.Equal(5, multiFacetResults[0]["Cost"].Values.Count);
+                        Assert.Equal("Cost <= 200", multiFacetResults[0]["Cost"].Values[0].Range);
+                        Assert.Equal(2, multiFacetResults[0]["Cost"].Values[0].Count);
+                        Assert.Equal("Cost >= 300 AND Cost <= 400", multiFacetResults[0]["Cost"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Cost"].Values[1].Count);
+                        Assert.Equal("Cost >= 500 AND Cost <= 600", multiFacetResults[0]["Cost"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Cost"].Values[2].Count);
+                        Assert.Equal("Cost >= 700 AND Cost <= 800", multiFacetResults[0]["Cost"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Cost"].Values[3].Count);
+                        Assert.Equal("Cost >= 900", multiFacetResults[0]["Cost"].Values[4].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Cost"].Values[4].Count);
 
-                        Assert.Equal(4, multiFacetResults[0]["Megapixels_D_Range"].Values.Count);
-                        Assert.Equal("[NULL TO 3.0]", multiFacetResults[0]["Megapixels_D_Range"].Values[0].Range);
-                        Assert.Equal(2, multiFacetResults[0]["Megapixels_D_Range"].Values[0].Count);
-                        Assert.Equal("[4.0 TO 7.0]", multiFacetResults[0]["Megapixels_D_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Megapixels_D_Range"].Values[1].Count);
-                        Assert.Equal("[8.0 TO 10.0]", multiFacetResults[0]["Megapixels_D_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Megapixels_D_Range"].Values[2].Count);
-                        Assert.Equal("[11.0 TO NULL]", multiFacetResults[0]["Megapixels_D_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[0]["Megapixels_D_Range"].Values[3].Count);
+                        Assert.Equal(4, multiFacetResults[0]["Megapixels"].Values.Count);
+                        Assert.Equal("Megapixels <= 3", multiFacetResults[0]["Megapixels"].Values[0].Range);
+                        Assert.Equal(2, multiFacetResults[0]["Megapixels"].Values[0].Count);
+                        Assert.Equal("Megapixels >= 4 AND Megapixels <= 7", multiFacetResults[0]["Megapixels"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Megapixels"].Values[1].Count);
+                        Assert.Equal("Megapixels >= 8 AND Megapixels <= 10", multiFacetResults[0]["Megapixels"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Megapixels"].Values[2].Count);
+                        Assert.Equal("Megapixels >= 11", multiFacetResults[0]["Megapixels"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[0]["Megapixels"].Values[3].Count);
 
 
                         Assert.Equal(3, multiFacetResults[1].Count);
@@ -295,27 +295,27 @@ namespace SlowTests.Core.Commands
                         Assert.Equal("manufacturer2", multiFacetResults[1]["Manufacturer"].Values[1].Range);
                         Assert.Equal(1, multiFacetResults[1]["Manufacturer"].Values[1].Count);
 
-                        Assert.Equal(5, multiFacetResults[1]["Cost_D_Range"].Values.Count);
-                        Assert.Equal("[NULL TO 200.0]", multiFacetResults[1]["Cost_D_Range"].Values[0].Range);
-                        Assert.Equal(3, multiFacetResults[1]["Cost_D_Range"].Values[0].Count);
-                        Assert.Equal("[300.0 TO 400.0]", multiFacetResults[1]["Cost_D_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Cost_D_Range"].Values[1].Count);
-                        Assert.Equal("[500.0 TO 600.0]", multiFacetResults[1]["Cost_D_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Cost_D_Range"].Values[2].Count);
-                        Assert.Equal("[700.0 TO 800.0]", multiFacetResults[1]["Cost_D_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Cost_D_Range"].Values[3].Count);
-                        Assert.Equal("[900.0 TO NULL]", multiFacetResults[1]["Cost_D_Range"].Values[4].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Cost_D_Range"].Values[4].Count);
+                        Assert.Equal(5, multiFacetResults[1]["Cost"].Values.Count);
+                        Assert.Equal("Cost <= 200", multiFacetResults[1]["Cost"].Values[0].Range);
+                        Assert.Equal(3, multiFacetResults[1]["Cost"].Values[0].Count);
+                        Assert.Equal("Cost >= 300 AND Cost <= 400", multiFacetResults[1]["Cost"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Cost"].Values[1].Count);
+                        Assert.Equal("Cost >= 500 AND Cost <= 600", multiFacetResults[1]["Cost"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Cost"].Values[2].Count);
+                        Assert.Equal("Cost >= 700 AND Cost <= 800", multiFacetResults[1]["Cost"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Cost"].Values[3].Count);
+                        Assert.Equal("Cost >= 900", multiFacetResults[1]["Cost"].Values[4].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Cost"].Values[4].Count);
 
-                        Assert.Equal(4, multiFacetResults[1]["Megapixels_D_Range"].Values.Count);
-                        Assert.Equal("[NULL TO 3.0]", multiFacetResults[1]["Megapixels_D_Range"].Values[0].Range);
-                        Assert.Equal(3, multiFacetResults[1]["Megapixels_D_Range"].Values[0].Count);
-                        Assert.Equal("[4.0 TO 7.0]", multiFacetResults[1]["Megapixels_D_Range"].Values[1].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Megapixels_D_Range"].Values[1].Count);
-                        Assert.Equal("[8.0 TO 10.0]", multiFacetResults[1]["Megapixels_D_Range"].Values[2].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Megapixels_D_Range"].Values[2].Count);
-                        Assert.Equal("[11.0 TO NULL]", multiFacetResults[1]["Megapixels_D_Range"].Values[3].Range);
-                        Assert.Equal(0, multiFacetResults[1]["Megapixels_D_Range"].Values[3].Count);
+                        Assert.Equal(4, multiFacetResults[1]["Megapixels"].Values.Count);
+                        Assert.Equal("Megapixels <= 3", multiFacetResults[1]["Megapixels"].Values[0].Range);
+                        Assert.Equal(3, multiFacetResults[1]["Megapixels"].Values[0].Count);
+                        Assert.Equal("Megapixels >= 4 AND Megapixels <= 7", multiFacetResults[1]["Megapixels"].Values[1].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Megapixels"].Values[1].Count);
+                        Assert.Equal("Megapixels >= 8 AND Megapixels <= 10", multiFacetResults[1]["Megapixels"].Values[2].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Megapixels"].Values[2].Count);
+                        Assert.Equal("Megapixels >= 11", multiFacetResults[1]["Megapixels"].Values[3].Range);
+                        Assert.Equal(0, multiFacetResults[1]["Megapixels"].Values[3].Count);
                     }
                 }
             }

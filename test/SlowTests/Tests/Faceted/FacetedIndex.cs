@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.Facets;
@@ -29,34 +28,37 @@ namespace SlowTests.Tests.Faceted
             _data = GetCameras(NumCameras);
 
             _originalFacets = new List<Facet>
-                        {
-                            new Facet {Name = "Manufacturer"},
-                            //default is term query		                         
-                            //In Lucene [ is inclusive, { is exclusive
-                            new Facet
-                                {
-                                    Name = "Cost",
-                                    Ranges =
-                                        {
-                                            "Cost <= 200",
-                                            "Cost >= 200 AND Cost <= 400",
-                                            "Cost >= 400 AND Cost <= 600",
-                                            "Cost >= 600 AND Cost <= 800",
-                                            "Cost >= 800"
-                                        }
-                                },
-                            new Facet
-                                {
-                                    Name = "Megapixels",
-                                    Ranges =
-                                        {
-                                            "Megapixels <= 3",
-                                            "Megapixels >= 3 AND Megapixels <= 7",
-                                            "Megapixels >= 7 AND Megapixels <= 10",
-                                            "Megapixels >= 10",
-                                        }
-                                }
-                        };
+            {
+                new Facet
+                {
+                    Name = "Manufacturer"
+                },
+                //default is term query		                         
+                //In Lucene [ is inclusive, { is exclusive
+                new Facet
+                {
+                    Name = "Cost",
+                    Ranges =
+                    {
+                        "Cost <= 200",
+                        "Cost BETWEEN 200 AND 400",
+                        "Cost BETWEEN 400 AND 600",
+                        "Cost BETWEEN 600 AND 800",
+                        "Cost >= 800"
+                    }
+                },
+                new Facet
+                {
+                    Name = "Megapixels",
+                    Ranges =
+                    {
+                        "Megapixels <= 3",
+                        "Megapixels BETWEEN 3 AND 7",
+                        "Megapixels BETWEEN 7 AND 10",
+                        "Megapixels >= 10",
+                    }
+                }
+            };
 
             _stronglyTypedFacets = GetFacets();
         }
@@ -276,11 +278,11 @@ namespace SlowTests.Tests.Faceted
             CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
                             costFacets.FirstOrDefault(x => x.Range == "Cost <= 200"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
-                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 200 AND Cost <= 400"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost BETWEEN 200 AND 400"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 400 AND Cost <= 600"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost BETWEEN 400 AND 600"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 600.0m && x.Cost <= 800.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 600 AND Cost <= 800"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost BETWEEN 600 AND 800"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m),
                             costFacets.FirstOrDefault(x => x.Range == "Cost >= 800"));
 
@@ -289,9 +291,9 @@ namespace SlowTests.Tests.Faceted
             CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels <= 3"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 3 AND Megapixels <= 7"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels BETWEEN 3 AND 7"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 7 AND Megapixels <= 10"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels BETWEEN 7 AND 10"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 10"));
         }

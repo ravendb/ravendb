@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Tests.Core.Utils.Entities;
@@ -44,7 +45,8 @@ namespace SlowTests.Issues
             // the ones which return IAsyncDocumentQuery<Employee> are ok
             suspectedMethods = suspectedMethods.Where(x => 
                 x.ReturnType != typeof(IAsyncDocumentQuery<Employee>) && 
-                x.ReturnType != typeof(IAsyncGroupByDocumentQuery<Employee>))
+                x.ReturnType != typeof(IAsyncGroupByDocumentQuery<Employee>) &&
+                x.ReturnType != typeof(IAsyncAggregationDocumentQuery<Employee>))
                 .ToList();
 
             // filter out Lazy methods

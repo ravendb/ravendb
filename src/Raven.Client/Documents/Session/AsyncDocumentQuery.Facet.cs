@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentQuery<T>
     {
-        public IAggregationAsyncDocumentQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null)
+        public IAsyncAggregationDocumentQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null)
         {
             var ff = new FacetFactory<T>(fieldName);
             factory?.Invoke(ff);
@@ -14,26 +14,26 @@ namespace Raven.Client.Documents.Session
             return AggregateBy(ff.Facet);
         }
 
-        public new IAggregationAsyncDocumentQuery<T> AggregateBy(Facet facet)
+        public new IAsyncAggregationDocumentQuery<T> AggregateBy(Facet facet)
         {
             base.AggregateBy(facet);
 
-            return new AggregationAsyncDocumentQuery<T>(this);
+            return new AsyncAggregationDocumentQuery<T>(this);
         }
 
-        public IAggregationAsyncDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets)
+        public IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets)
         {
             foreach (var facet in facets)
                 base.AggregateBy(facet);
 
-            return new AggregationAsyncDocumentQuery<T>(this);
+            return new AsyncAggregationDocumentQuery<T>(this);
         }
 
-        public new IAggregationAsyncDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey)
+        public new IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey)
         {
             base.AggregateUsing(facetSetupDocumentKey);
 
-            return new AggregationAsyncDocumentQuery<T>(this);
+            return new AsyncAggregationDocumentQuery<T>(this);
         }
     }
 }
