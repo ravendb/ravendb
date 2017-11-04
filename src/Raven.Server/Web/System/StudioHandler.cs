@@ -158,6 +158,18 @@ namespace Raven.Server.Web.System
             return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
         }
 
+        [RavenAction("/server-setup/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetSetupIndexFile()
+        {
+            // if user asks for entry point but we are already configured redirect to studio
+            if (ServerStore.Configuration.Core.SetupMode != SetupMode.Initial)
+            {
+                HttpContext.Response.Headers["Location"] = "/studio/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+            }
+
+            return GetStudioFileInternal("index.html");
+        }
 
         [RavenAction("/server-setup/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupFile()
@@ -170,6 +182,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioIndexFile()
         {
+            // if user asks for entry point but we are NOT already configured redirect to setup
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
             {
                 HttpContext.Response.Headers["Location"] = "/server-setup/index.html";

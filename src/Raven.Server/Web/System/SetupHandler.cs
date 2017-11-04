@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -90,7 +91,11 @@ namespace Raven.Server.Web.System
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
                 jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
                 jsonObj["ServerUrl"] = setupInfo.ServerUrl;
-                jsonObj["PublicServerUrl"] = setupInfo.PublicServerUrl;
+                jsonObj.Remove("PublicServerUrl");
+                if (string.IsNullOrEmpty(setupInfo.PublicServerUrl) == false)
+                {
+                    jsonObj["PublicServerUrl"] = setupInfo.PublicServerUrl;                    
+                }
                 jsonObj["Security.Certificate.Base64"] = null;
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
