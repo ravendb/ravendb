@@ -6,33 +6,35 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Linq
+namespace Raven.Client.Documents.Queries.Facets
 {
-    public class AggregationQuery<T> : AggregationQueryBase<T>
+    internal class AggregationQuery<T> : AggregationQueryBase, IAggregationQuery<T>
     {
+        private IQueryable<T> _source;
+
         private readonly Func<IQueryable<T>, Expression> _convertExpressionIfNecessary;
         private readonly MethodInfo _aggregateByMethod;
 
         public AggregationQuery(
             IQueryable<T> source,
             Func<IQueryable<T>, Expression> convertExpressionIfNecessary,
-            MethodInfo aggregateByMethod) : base(source)
+            MethodInfo aggregateByMethod) : base(((IRavenQueryInspector)source).Session)
         {
+            _source = source;
             _convertExpressionIfNecessary = convertExpressionIfNecessary;
             _aggregateByMethod = aggregateByMethod;
         }
 
-        public AggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
+        public IAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
         {
             return AndAggregateOn(path.ToPropertyPath('_'), factory);
         }
 
-        public AggregationQuery<T> AndAggregateOn(string path, Action<FacetFactory<T>> factory = null)
+        public IAggregationQuery<T> AndAggregateOn(string path, Action<FacetFactory<T>> factory = null)
         {
             var f = new FacetFactory<T>(path);
             factory?.Invoke(f);
@@ -40,41 +42,45 @@ namespace Raven.Client.Documents.Linq
             return AndAggregateOn(f.Facet);
         }
 
-        public AggregationQuery<T> AndAggregateOn(Facet facet)
+        public IAggregationQuery<T> AndAggregateOn(Facet facet)
         {
-            var expression = _convertExpressionIfNecessary(Source);
-            Source = Source.Provider.CreateQuery<T>(Expression.Call(null, _aggregateByMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facet)));
+            var expression = _convertExpressionIfNecessary(_source);
+            _source = _source.Provider.CreateQuery<T>(Expression.Call(null, _aggregateByMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facet)));
             return this;
+        }
+
+        protected override IndexQuery GetIndexQuery(bool isAsync)
+        {
+            var inspector = (IRavenQueryInspector)_source;
+            return inspector.GetIndexQuery(isAsync);
         }
     }
 
-    public abstract class AggregationQueryBase<T>
+    internal abstract class AggregationQueryBase
     {
-        protected IQueryable<T> Source;
+        private readonly InMemoryDocumentSessionOperations _session;
 
-        protected AggregationQueryBase(IQueryable<T> source)
+        protected AggregationQueryBase(InMemoryDocumentSessionOperations session)
         {
-            Source = source;
+            _session = session;
         }
 
         public Dictionary<string, FacetResult> Execute()
         {
-            var inspector = (IRavenQueryInspector)Source;
-            var command = GetCommand(inspector, isAsync: false);
+            var command = GetCommand(isAsync: false);
 
-            inspector.Session.RequestExecutor.Execute(command, inspector.Session.Context);
+            _session.RequestExecutor.Execute(command, _session.Context);
 
-            return GetResults(command, inspector.Session.Conventions);
+            return ProcessResults(command, _session.Conventions);
         }
 
         public async Task<Dictionary<string, FacetResult>> ExecuteAsync()
         {
-            var inspector = (IRavenQueryInspector)Source;
-            var command = GetCommand(inspector, isAsync: true);
+            var command = GetCommand(isAsync: true);
 
-            await inspector.Session.RequestExecutor.ExecuteAsync(command, inspector.Session.Context).ConfigureAwait(false);
+            await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
 
-            return GetResults(command, inspector.Session.Conventions);
+            return ProcessResults(command, _session.Conventions);
         }
 
         public Lazy<Dictionary<string, FacetResult>> ExecuteLazy()
@@ -87,7 +93,9 @@ namespace Raven.Client.Documents.Linq
             return new Lazy<Task<Dictionary<string, FacetResult>>>(ExecuteAsync);
         }
 
-        private static Dictionary<string, FacetResult> GetResults(QueryCommand command, DocumentConventions conventions)
+        protected abstract IndexQuery GetIndexQuery(bool isAsync);
+
+        private static Dictionary<string, FacetResult> ProcessResults(QueryCommand command, DocumentConventions conventions)
         {
             var results = new Dictionary<string, FacetResult>();
             foreach (BlittableJsonReaderObject result in command.Result.Results)
@@ -99,11 +107,11 @@ namespace Raven.Client.Documents.Linq
             return results;
         }
 
-        private static QueryCommand GetCommand(IRavenQueryInspector inspector, bool isAsync)
+        private QueryCommand GetCommand(bool isAsync)
         {
-            var iq = inspector.GetIndexQuery(isAsync);
+            var iq = GetIndexQuery(isAsync);
 
-            return new QueryCommand(inspector.Session.Conventions, iq);
+            return new QueryCommand(_session.Conventions, iq);
         }
     }
 }
