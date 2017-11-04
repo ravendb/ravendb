@@ -58,7 +58,9 @@ class setupShell extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        $("body").removeClass('loading-active');
+        $("body")
+            .removeClass('loading-active')
+            .addClass("setup-shell");
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
