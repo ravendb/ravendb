@@ -10,7 +10,6 @@ namespace Raven.Server.Commercial
     public class SetupInfo
     {
         public License License { get; set; }
-        public string Email { get; set; }
         public string Domain { get; set; }
         public string Challenge { get; set; }
         public bool ModifyLocalServer { get; set; }
@@ -21,7 +20,6 @@ namespace Raven.Server.Commercial
             return new DynamicJsonValue
             {
                 [nameof(License)] = License.ToJson(),
-                [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
                 [nameof(Challenge)] = Challenge,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
@@ -106,6 +104,7 @@ namespace Raven.Server.Commercial
 
     public enum SetupMode
     {
+        None,
         Initial,
         LetsEncrypt,
         Secured,

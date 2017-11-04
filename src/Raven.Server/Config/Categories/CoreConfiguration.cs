@@ -44,7 +44,7 @@ namespace Raven.Server.Config.Categories
         public PathSetting DataDirectory { get; set; }
 
         [Description("Determines what kind of security was chosen during setup.")]
-        [DefaultValue(SetupMode.Initial)]
+        [DefaultValue(SetupMode.None)]
         [ConfigurationEntry("Setup.Mode", ConfigurationEntryScope.ServerWideOnly)]
         public SetupMode SetupMode { get; set; }
 
