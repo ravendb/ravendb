@@ -2,121 +2,125 @@
 using System.Collections.Generic;
 using System.Globalization;
 using Lucene.Net.Util;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(DocumentsOperationContext context, QueryMetadata metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, (RangeType Type, List<ParsedRange> Ranges)> rangeFacets)
+        public static Dictionary<string, FacetResult> Parse(FacetQuery query)
         {
-            DocumentsTransaction tx = null;
+            var results = new Dictionary<string, FacetResult>();
 
-            try
+            foreach (var field in query.Query.Metadata.SelectFields)
             {
-                var results = new Dictionary<string, FacetResult>();
-                defaultFacets = new Dictionary<string, Facet>();
-                rangeFacets = new Dictionary<string, (RangeType Type, List<ParsedRange> Ranges)>();
-                foreach (var field in metadata.SelectFields)
+                if (field.IsFacet == false)
+                    throw new InvalidOperationException("Should not happen!");
+
+                var facetField = (FacetField)field;
+                if (facetField.FacetSetupDocumentId != null)
                 {
-                    if (field.IsFacet == false)
-                        throw new InvalidOperationException("Should not happen!");
+                    var facetSetup = query.Facets[facetField.FacetSetupDocumentId];
 
-                    var facetField = (FacetField)field;
-                    if (facetField.FacetSetupDocumentId != null)
+                    foreach (var f in ProcessFacetSetup(facetSetup))
                     {
-                        if (tx == null)
-                            tx = context.OpenReadTransaction();
-
-                        var documentJson = context.DocumentDatabase.DocumentsStorage.Get(context, facetField.FacetSetupDocumentId);
-                        if (documentJson == null)
-                            throw new InvalidOperationException("TODO ppekrol");
-
-                        var document = (FacetSetup)EntityToBlittable.ConvertToEntity(typeof(FacetSetup), facetField.FacetSetupDocumentId, documentJson.Data, DocumentConventions.Default);
-
-                        QueryParser queryParser = null;
-                        List<QueryExpression> facetRanges = null;
-                        foreach (var f in document.Facets)
-                        {
-                            if (f.Options == null)
-                                f.Options = FacetOptions.Default;
-
-                            if (f.Ranges != null && f.Ranges.Count > 0)
-                            {
-                                if (queryParser == null)
-                                    queryParser = new QueryParser();
-
-                                if (facetRanges == null)
-                                    facetRanges = new List<QueryExpression>();
-                                else
-                                    facetRanges.Clear();
-
-                                foreach (var range in f.Ranges)
-                                {
-                                    queryParser.Init(range);
-
-                                    if (queryParser.Expression(out var qr) == false)
-                                        throw new InvalidOperationException("TODO ppekrol");
-
-                                    facetRanges.Add(qr);
-                                }
-                            }
-
-                            ProcessFacet(f, facetRanges, defaultFacets, rangeFacets, results);
-                        }
-
-                        continue;
+                        var r = ProcessFacet(f.Facet, f.Ranges);
+                        results[r.Result.Name] = r;
                     }
 
-                    var facet = new Facet
-                    {
-                        Name = facetField.Name,
-                        DisplayName = facetField.Alias,
-                        Aggregations = facetField.Aggregations,
-                        Options = FacetOptions.Default // TODO [ppekrol]
-                    };
-
-                    foreach (var range in facetField.Ranges)
-                        facet.Ranges.Add(range.GetText());
-
-                    ProcessFacet(facet, facetField.Ranges, defaultFacets, rangeFacets, results);
+                    continue;
                 }
 
-                return results;
+                var facet = new Facet
+                {
+                    Name = facetField.Name,
+                    DisplayName = facetField.Alias,
+                    Aggregations = facetField.Aggregations,
+                    Options = FacetOptions.Default // TODO [ppekrol]
+                };
+
+                foreach (var range in facetField.Ranges)
+                    facet.Ranges.Add(range.GetText());
+
+                var result = ProcessFacet(facet, facetField.Ranges);
+                results[result.Result.Name] = result;
             }
-            finally
+
+            return results;
+        }
+
+        private static IEnumerable<(Facet Facet, List<QueryExpression> Ranges)> ProcessFacetSetup(FacetSetup setup)
+        {
+            QueryParser queryParser = null;
+
+            foreach (var f in setup.Facets)
             {
-                tx?.Dispose();
+                List<QueryExpression> facetRanges = null;
+
+                if (f.Options == null)
+                    f.Options = FacetOptions.Default;
+
+                if (f.Ranges != null && f.Ranges.Count > 0)
+                {
+                    if (queryParser == null)
+                        queryParser = new QueryParser();
+
+                    facetRanges = new List<QueryExpression>();
+
+                    foreach (var range in f.Ranges)
+                    {
+                        queryParser.Init(range);
+
+                        if (queryParser.Expression(out var qr) == false)
+                            throw new InvalidOperationException("TODO ppekrol");
+
+                        facetRanges.Add(qr);
+                    }
+                }
+
+                yield return (f, facetRanges);
             }
         }
 
-        private static void ProcessFacet(Facet facet, List<QueryExpression> facetRanges, Dictionary<string, Facet> defaultFacets, Dictionary<string, (RangeType Type, List<ParsedRange> Ranges)> rangeFacets, Dictionary<string, FacetResult> results)
+        private static FacetResult ProcessFacet(Facet facet, List<QueryExpression> facetRanges)
         {
-            var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
-
-            defaultFacets[key] = facet;
-
-            if (facetRanges == null || facetRanges.Count == 0)
+            var result = new FacetResult
             {
-                results[key] = new FacetResult
+                AggregateBy = facet.Name,
+                Result = new Client.Documents.Commands.FacetResult
                 {
-                    Name = key
-                };
+                    Name = facet.DisplayName
+                },
+                Options = facet.Options
+            };
+
+            foreach (var kvp in facet.Aggregations)
+            {
+                if (result.Aggregations.TryGetValue(kvp.Value, out var value) == false)
+                    result.Aggregations[kvp.Value] = value = new FacetResult.Aggregation();
+
+                switch (kvp.Key)
+                {
+                    case FacetAggregation.Max:
+                        value.Max = true;
+                        break;
+                    case FacetAggregation.Min:
+                        value.Min = true;
+                        break;
+                    case FacetAggregation.Average:
+                        value.Average = true;
+                        break;
+                    case FacetAggregation.Sum:
+                        value.Sum = true;
+                        break;
+                }
             }
-            else
-            {
-                var result = results[key] = new FacetResult
-                {
-                    Name = key
-                };
 
+            if (facetRanges != null && facetRanges.Count > 0)
+            {
                 RangeType? rangeType = null;
                 var ranges = new List<ParsedRange>();
                 foreach (var range in facetRanges)
@@ -129,14 +133,17 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                     ranges.Add(parsedRange);
 
-                    result.Values.Add(new FacetValue
+                    result.Result.Values.Add(new FacetValue
                     {
                         Range = parsedRange.RangeText
                     });
                 }
 
-                rangeFacets[key] = (rangeType.Value, ranges);
+                result.Ranges = ranges;
+                result.RangeType = rangeType.Value;
             }
+
+            return result;
         }
 
         private static ParsedRange ParseRange(string field, QueryExpression expression, out RangeType type)
@@ -292,6 +299,37 @@ namespace Raven.Server.Documents.Queries.Faceted
             public override string ToString()
             {
                 return string.Format("{0}:{1}", Field, RangeText);
+            }
+        }
+
+        public class FacetResult
+        {
+            public FacetResult()
+            {
+                Aggregations = new Dictionary<string, Aggregation>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            public string AggregateBy;
+
+            public Dictionary<string, Aggregation> Aggregations;
+
+            public RangeType RangeType;
+
+            public List<ParsedRange> Ranges;
+
+            public Raven.Client.Documents.Commands.FacetResult Result;
+
+            public FacetOptions Options;
+
+            public class Aggregation
+            {
+                public bool Sum;
+
+                public bool Min;
+
+                public bool Max;
+
+                public bool Average;
             }
         }
     }

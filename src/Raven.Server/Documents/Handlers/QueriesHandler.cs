@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var result = await Database.QueryRunner.ExecuteFacetedQuery(indexQuery, null, existingResultEtag, context, token);
+            var result = await Database.QueryRunner.ExecuteFacetedQuery(indexQuery, existingResultEtag, context, token);
 
             if (result.NotModified)
             {
