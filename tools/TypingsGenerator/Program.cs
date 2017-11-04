@@ -323,7 +323,7 @@ namespace TypingsGenerator
             
             // server setup
             scripter.AddType(typeof(UnsecuredSetupInfo));
-            scripter.AddType(typeof(SecuredSetupInfo));
+            scripter.AddType(typeof(SetupInfo));
             scripter.AddType(typeof(ClaimDomainInfo));
 
             return scripter;

@@ -43,10 +43,12 @@ namespace Raven.Server.Commercial
         private SetupStage _lastSetupStage = SetupStage.Initial;
 
         //TODO handle progress, logs and errors everywhere
-        
+        //TODO _token.ThrowIfCancellationRequested() before long operations
+
         private readonly ServerStore _serverStore;
         public Timer CertificateRenewalTimer { get; set; }
 
+        private string _email;
         private SetupInfo _setupInfo;
 
         public SetupManager(ServerStore serverStore)
@@ -68,6 +70,8 @@ namespace Raven.Server.Commercial
         public async Task<Uri> LetsEncryptAgreement(string email)
         {
             AssertCorrectSetupStage(SetupStage.Agreement);
+            // validate email
+            _email = email;
 
             using (var acmeClient = new AcmeClient(LetsEncryptServer))
             {
@@ -159,26 +163,35 @@ namespace Raven.Server.Commercial
             progress.AddInfo("Stage1: Validating provided setup information.");
             ValidateSetupInfo(SetupMode.LetsEncrypt);
 
-            progress.AddInfo($"Stage1: Getting challenge from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
+            progress.AddInfo($"Stage1: Getting challenge from Let's Encrypt. Using e-mail: {_email}.");
             onProgress(progress);
 
             try
             {
                 using (var acmeClient = new AcmeClient(LetsEncryptServer))
                 {
-                    var account = await acmeClient.NewRegistraton("mailto:" + setupInfo.Email);
+                    var account = await acmeClient.NewRegistraton("mailto:" + _email);
                     account.Data.Agreement = account.GetTermsOfServiceUri();
                     await acmeClient.UpdateRegistration(account);
 
-                    var authz = await acmeClient.NewAuthorization(new AuthorizationIdentifier
+                    var dictionary = new Dictionary<string, Task<Challenge>>();
+                    foreach (var node in _setupInfo.NodeSetupInfos)
                     {
-                        Type = AuthorizationIdentifierTypes.Dns,
-                        Value = setupInfo.Domain + RavenDbDomain
-                    }); 
+                        var host = $"{node.Key}.{_setupInfo.Domain}";
+                        var fullHost = host + ".dbs.local.ravendb.net";
+                        var authz = acmeClient.NewAuthorization(new AuthorizationIdentifier
+                        {
+                            Type = AuthorizationIdentifierTypes.Dns,
+                            Value = fullHost
+                        }).ContinueWith(t =>
+                        {
+                            return t.Result.Data.Challenges.First(c => c.Type == ChallengeTypes.Dns01);
+                        }, token);
+                        dictionary[host] = authz;
+                    }
 
-                    var challenge = authz.Data.Challenges.First(c => c.Type == ChallengeTypes.Dns01);
-
-                    setupInfo.Challenge = acmeClient.ComputeDnsValue(challenge);
+                    await Task.WhenAll(dictionary.Values.ToArray());
+                    var map = dictionary.ToDictionary(x => x.Key, x => acmeClient.ComputeDnsValue(x.Value.Result));
 
                     progress.Processed++;
                     progress.AddInfo("Stage1: Finished.");
@@ -186,25 +199,45 @@ namespace Raven.Server.Commercial
                     onProgress(progress);
 
 
-                    // Update DNS record in dbs.local.ravendb.net and set the let's encrypt challenge
-                    var response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/register",
+                    HttpResponseMessage response;
+                    try
+                    {
+                        // Update DNS record in dbs.local.ravendb.net and set the let's encrypt challenge
+                        ApiHttpClient.Instance.Timeout = TimeSpan.FromSeconds(10);
+                        response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/register",
                             new StringContent(JsonConvert.SerializeObject(setupInfo), Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
 
-                    if (response.IsSuccessStatusCode == false)
+
+                        if (response.IsSuccessStatusCode == false)
+                        {
+                            var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            progress.AddError($"Stage2: Failed. Cannot complete setup: {response.StatusCode}.\r\n{responseString}");
+                            onProgress(progress);
+                            return null;
+                        }
+                    }
+                    catch (Exception e)
                     {
-                        var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        progress.AddError($"Stage2: Failed. Cannot complete setup: {response.StatusCode}.\r\n{responseString}");
-                        onProgress(progress);
-                        return null;
+                        Console.WriteLine(e); //cannot reach server...
+                        throw;
                     }
 
                     var i = 0;
                     while (true)
                     {
                         await Task.Delay(1000, token);
-                        response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/registration-result",
-                                new StringContent(JsonConvert.SerializeObject(setupInfo), Encoding.UTF8, "application/json"), token)
-                            .ConfigureAwait(false);
+                        try
+                        {
+                            response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/registration-result",
+                                    new StringContent(JsonConvert.SerializeObject(setupInfo), Encoding.UTF8, "application/json"), token)
+                                .ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
+                        
 
                         var registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
                         
@@ -240,36 +273,21 @@ namespace Raven.Server.Commercial
                     progress.AddInfo("Stage2: Finished.");
                     progress.AddInfo($"Stage3: Completing Let's Encrypt challenge for domain {setupInfo.Domain}.");
                     onProgress(progress);
-                    
-                    var challengeResult = await acmeClient.CompleteChallenge(challenge);
 
-                    for (i = 0; i < 15; i++)
+                    var tasks = new List<Task>();
+                    foreach (var kvp in dictionary)
                     {
-                        authz = await acmeClient.GetAuthorization(challengeResult.Location);
-                        if (authz?.Data.Status != EntityStatus.Pending)
-                            break;
-
-                        await Task.Delay(250, token);
+                        tasks.Add(CompleteAuthorizationFor(acmeClient, kvp.Value.Result));
                     }
-
-                    if (authz != null && authz.Data.Status != EntityStatus.Valid)
-                    {
-                        progress.AddError($"Stage3: Failed to authorize with Let\'s Encrypt: {authz.Data.Status}\r\n{authz.Json}"); 
-                        onProgress(progress);
-                        return null;
-                    }
+                    await Task.WhenAll(tasks);
 
                     try
                     {
                         var csr = new CertificationRequestBuilder();
-                        csr.AddName($"CN={setupInfo.Domain}");
-                        csr.SubjectAlternativeNames.Add(setupInfo.Domain);
-                        
-                        // TODO change process to handle multiple domains
-                        // This doesn't work yet
-                        foreach (var node in setupInfo.NodeSetupInfos)
+                        csr.AddName("CN", "my.dbs.local.ravendb.net");
+                        foreach (var node in _setupInfo.NodeSetupInfos)
                         {
-                            csr.SubjectAlternativeNames.Add($"{node.Key}.{setupInfo.Domain}");
+                            csr.SubjectAlternativeNames.Add($"{node.Key}.{_setupInfo.Domain}.dbs.local.ravendb.net");
                         }
                         var cert = await acmeClient.NewCertificate(csr);
 
@@ -300,6 +318,26 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Failed to complete dns challenge from Let's Encrypt.", e);
             }
             return progress;
+        }
+
+        private static async Task CompleteAuthorizationFor(AcmeClient client, Challenge dnsChallenge)
+        {
+            var challenge = await client.CompleteChallenge(dnsChallenge);
+
+            for (int i = 0; i < 15; i++)
+            {
+                var authz = await client.GetAuthorization(challenge.Location);
+                if (authz.Data.Status == EntityStatus.Pending)
+                {
+                    await Task.Delay(250);
+                    continue;
+                }
+
+                if (authz.Data.Status == EntityStatus.Valid)
+                    return;
+
+                throw new InvalidOperationException("Failed to authorize certificate: " + authz.Data.Status);
+            }
         }
 
         public async Task<IOperationResult> SetupValidateTask(Action<IOperationProgress> onProgress, CancellationToken token)
