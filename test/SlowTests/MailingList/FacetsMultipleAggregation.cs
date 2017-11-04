@@ -3,7 +3,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -45,13 +44,12 @@ namespace SlowTests.MailingList
                     DisplayName = "Prices",
                     Aggregations = new Dictionary<FacetAggregation, string>
                     {
-                        { FacetAggregation.Min, "Prices_D_Range" }
+                        { FacetAggregation.Min, "Prices" }
                     },
                     Options = new FacetOptions
                     {
                         TermSortMode = FacetTermSortMode.ValueAsc
-                    },
-                    Ranges = {"[* TO *]"}
+                    }
                 },
                 new Facet
                 {
@@ -60,10 +58,9 @@ namespace SlowTests.MailingList
                     //MaxResults = 1,
                     Aggregations = new Dictionary<FacetAggregation, string>
                     {
-                        { FacetAggregation.Min, "Prices_D_Range" }
-                    },
-                    Ranges = {"[* TO *]"}
-                },
+                        { FacetAggregation.Min, "Prices" }
+                    }
+                }
             };
         }
 

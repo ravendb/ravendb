@@ -164,15 +164,13 @@ namespace Raven.Server.Documents.Queries.Faceted
                     case OperatorType.LessThanEqual:
                     case OperatorType.GreaterThanEqual:
                         var fieldName = ExtractFieldName(be);
-                        if (string.Equals(field, fieldName, StringComparison.OrdinalIgnoreCase) == false)
-                            throw new InvalidOperationException("TODO ppekrol");
 
                         var r = (ValueExpression)be.Right;
                         var fieldValue = ConvertFieldValue(r.Token, r.Value);
 
                         var range = new ParsedRange
                         {
-                            Field = field,
+                            Field = fieldName,
                             RangeText = expression.GetText(),
                             RangeType = fieldValue.Type
                         };

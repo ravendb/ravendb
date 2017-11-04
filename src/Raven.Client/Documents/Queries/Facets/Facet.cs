@@ -96,12 +96,6 @@ namespace Raven.Client.Documents.Queries.Facets
                 }
             }
 
-            if (shouldUseRanges)
-            {
-                var type = GetExpressionType(other.Name);
-                name = FieldUtil.ApplyRangeSuffixIfNecessary(name, type);
-            }
-
             return new Facet
             {
                 Name = name,
