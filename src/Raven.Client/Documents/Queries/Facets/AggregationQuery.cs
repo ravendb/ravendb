@@ -6,7 +6,9 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -54,6 +56,12 @@ namespace Raven.Client.Documents.Queries.Facets
             var inspector = (IRavenQueryInspector)_source;
             return inspector.GetIndexQuery(isAsync);
         }
+
+        protected override void InvokeAfterQueryExecuted(QueryResult result)
+        {
+            var provider = (RavenQueryProvider<T>)_source.Provider;
+            provider.InvokeAfterQueryExecuted(result);
+        }
     }
 
     internal abstract class AggregationQueryBase
@@ -72,7 +80,7 @@ namespace Raven.Client.Documents.Queries.Facets
             _session.IncrementRequestCount();
             _session.RequestExecutor.Execute(command, _session.Context);
 
-            return ProcessResults(command, _session.Conventions);
+            return ProcessResults(command.Result, _session.Conventions);
         }
 
         public async Task<Dictionary<string, FacetResult>> ExecuteAsync()
@@ -82,25 +90,27 @@ namespace Raven.Client.Documents.Queries.Facets
             _session.IncrementRequestCount();
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
 
-            return ProcessResults(command, _session.Conventions);
+            return ProcessResults(command.Result, _session.Conventions);
         }
 
-        public Lazy<Dictionary<string, FacetResult>> ExecuteLazy()
+        public Lazy<Dictionary<string, FacetResult>> ExecuteLazy(Action<Dictionary<string, FacetResult>> onEval = null)
         {
-            return new Lazy<Dictionary<string, FacetResult>>(Execute);
+            return ((DocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, GetIndexQuery(isAsync: false), InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
-        public Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync()
+        public Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync(Action<Dictionary<string, FacetResult>> onEval = null)
         {
-            return new Lazy<Task<Dictionary<string, FacetResult>>>(ExecuteAsync);
+            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazyAggregationQueryOperation(_session.Conventions, GetIndexQuery(isAsync: true), InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
         protected abstract IndexQuery GetIndexQuery(bool isAsync);
 
-        private static Dictionary<string, FacetResult> ProcessResults(QueryCommand command, DocumentConventions conventions)
+        protected abstract void InvokeAfterQueryExecuted(QueryResult result);
+
+        private static Dictionary<string, FacetResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
         {
             var results = new Dictionary<string, FacetResult>();
-            foreach (BlittableJsonReaderObject result in command.Result.Results)
+            foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
                 var facetResult = (FacetResult)EntityToBlittable.ConvertToEntity(typeof(FacetResult), "facet/result", result, conventions);
                 results[facetResult.Name] = facetResult;

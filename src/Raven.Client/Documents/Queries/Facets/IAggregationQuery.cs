@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Queries.Facets
         IAggregationQuery<T> AndAggregateBy(Facet facet);
         Dictionary<string, FacetResult> Execute();
         Task<Dictionary<string, FacetResult>> ExecuteAsync();
-        Lazy<Dictionary<string, FacetResult>> ExecuteLazy();
-        Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync();
+        Lazy<Dictionary<string, FacetResult>> ExecuteLazy(Action<Dictionary<string, FacetResult>> onEval = null);
+        Lazy<Task<Dictionary<string, FacetResult>>> ExecuteLazyAsync(Action<Dictionary<string, FacetResult>> onEval = null);
     }
 }

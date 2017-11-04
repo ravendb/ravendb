@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -30,6 +29,11 @@ namespace Raven.Client.Documents.Queries.Facets
         protected override IndexQuery GetIndexQuery(bool isAsync)
         {
             return _source.GetIndexQuery();
+        }
+
+        protected override void InvokeAfterQueryExecuted(QueryResult result)
+        {
+            _source.InvokeAfterQueryExecuted(result);
         }
     }
 }
