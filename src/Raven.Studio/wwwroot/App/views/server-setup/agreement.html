@@ -3,15 +3,27 @@
 </div>
 
 <div>
-    
-    <a href="#" data-bind="attr: { href: url }" target="_blank">click - TODO</a>
-    
-    <div>
-        <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
-        <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
-    </div>
 
+    <form class="flex-form" data-bind="submit: save">
+    
+        <a href="#" data-bind="attr: { href: url }" target="_blank">click - TODO</a>
 
+        <div>
+            <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                <input id="agree" type="checkbox" data-bind="checked: confirmation">
+                <label for="agree">I agree to 'Let's Encrypt' terms and conditions. </label>
+            </div>
+            <div data-bind="validationElement: confirmation">
+                <div class="help-block" data-bind="validationMessage: confirmation"></div>
+            </div>
+        </div>
+
+        <div>
+            <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+            <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+        </div>
+    
+    </form>
     <div class="bg-info padding">
         <ul>
             <li>TODO: validation </li>

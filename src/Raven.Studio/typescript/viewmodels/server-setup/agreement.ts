@@ -6,6 +6,25 @@ class agreement extends setupStep {
 
     url = ko.observable<string>();
     
+    confirmation = ko.observable<boolean>(false);
+    
+    validationGroup = ko.validatedObservable({
+        confirmation: this.confirmation
+    });
+    
+    constructor() {
+        super();
+
+        this.confirmation.extend({
+            validation: [
+                {
+                    validator: (val: boolean) => val === true,
+                    message: "You must accept terms & conditions"
+                }
+            ]
+        });
+    }
+    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
@@ -17,8 +36,7 @@ class agreement extends setupStep {
     }
     
     activate() {
-        //tODO: return 
-         new loadAgreementCommand(this.model.domain().userEmail())
+        return new loadAgreementCommand(this.model.domain().userEmail())
             .execute()
             .done(url => {
                 this.url(url);
@@ -26,8 +44,9 @@ class agreement extends setupStep {
     }
     
     save() {
-        //TODO:
-     
+        if (this.isValid(this.validationGroup)) {
+            router.navigate("#nodes");
+        }
     }
 
 }

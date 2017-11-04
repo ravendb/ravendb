@@ -5,14 +5,39 @@
 <div>
     <form class="flex-form" data-bind="with: model.domain, submit: save">
 
-        <div class="form-group" data-bind="validationElement: domain">
-            <label for="domain" class="control-label">Domain<i class="required"></i></label>
+        <div class="form-group" data-bind="validationElement: domain, visible: availableDomains().length === 1">
+            <label for="domain_one" class="control-label">Domain<i class="required"></i></label>
             <div class="flex-grow">
-                <input type="text" autocomplete="off" class="form-control" id="domain"
+                <input type="text" autocomplete="off" disabled="disabled" class="form-control" id="domain_one"
                        placeholder="domain"
                        data-bind="textInput: domain">
             </div>
-            <div>.dbs.local.ravendb.net</div>
+            <div class="form-control-static">.dbs.local.ravendb.net</div>
+        </div>
+        
+        <div class="form-group" data-bind="validationElement: domain, visible: availableDomains().length > 1">
+            <label class="control-label">Domain<i class="required"></i></label>
+            <div class="flex-grow">
+                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                    <span data-bind="text: domain() || 'Select domain'"></span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu" data-bind="foreach: availableDomains">
+                    <li><a href="#" data-bind="text: $data, click: $parent.setDomain.bind($parent, $data)"></a></li>
+                </ul>
+                <span class="help-block" data-bind="validationMessage: domain"></span>
+            </div>
+            <div class="form-control-static">.dbs.local.ravendb.net</div>
+        </div>
+
+        <div class="form-group" data-bind="validationElement: domain, visible: availableDomains().length === 0">
+            <label for="domain_none" class="control-label">Domain<i class="required"></i></label>
+            <div class="flex-grow">
+                <input type="text" autocomplete="off" class="form-control" id="domain_none"
+                       placeholder="domain"
+                       data-bind="textInput: domain">
+            </div>
+            <div class="form-control-static">.dbs.local.ravendb.net</div>
         </div>
 
         <div class="form-group" data-bind="validationElement: userEmail">
@@ -29,12 +54,5 @@
             <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
         </div>
     </form>
-
-    <div class="bg-info padding">
-        <ul>
-            <li>domain input should have suffix .dbs.local.ravendb.net</li>
-            <li>what if user already claimed domain for this license - can we query for this information?</li>
-        </ul>
-    </div>
 </div>
       

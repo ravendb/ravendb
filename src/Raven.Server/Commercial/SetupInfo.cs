@@ -61,6 +61,19 @@ namespace Raven.Server.Commercial
         }
     }
     
+    public class ListDomainsInfo
+    {
+        public License License { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(License)] = License.ToJson(),
+            };
+        }
+    }
+    
     public class ClaimDomainInfo
     {
         public License License { get; set; }

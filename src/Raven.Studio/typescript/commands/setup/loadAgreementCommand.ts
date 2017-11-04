@@ -14,7 +14,7 @@ class loadAgreementCommand extends commandBase {
         
         const url = endpoints.global.setup.setupLetsencryptAgreement + this.urlEncodeArgs(args);
 
-        return this.query(url, null, null)
+        return this.query(url, null, null, x => x.Uri)
             .fail((response: JQueryXHR) => this.reportError("Failed to load Let's Encrypt agreement", response.responseText, response.statusText));
     }
 }

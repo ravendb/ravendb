@@ -74,7 +74,7 @@ class extensions {
             message: (params: any, url: KnockoutObservable<string>) => {
                 return extensions.validateUrl(url());
             }
-        };  
+        };
 
         (ko.validation.rules as any)['validDatabaseName'] = {
             validator: (val: string) => !extensions.validateDatabaseName(val),
@@ -89,6 +89,23 @@ class extensions {
                 return !val || base64regex.test(val);
             },
             message: 'Invaild base64 string.'
+        };
+        
+        (ko.validation.rules as any)['validLicense'] = {
+            validator: (license: string) => {
+                try {
+                    const parsedLicense = JSON.parse(license);
+
+                    const hasId = "Id" in parsedLicense;
+                    const hasName = "Name" in parsedLicense;
+                    const hasKeys = "Keys" in parsedLicense;
+
+                    return hasId && hasName && hasKeys;
+                } catch (e) {
+                    return false;
+                }
+            },
+            message: "Invalid license format"
         };
 
         (ko.validation.rules as any)['aceValidation'] = {
