@@ -105,6 +105,7 @@ namespace SlowTests.SlowTests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Skip(2)
+                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -664,6 +665,7 @@ namespace SlowTests.SlowTests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .Skip(2)
+                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 

@@ -117,23 +117,29 @@ namespace Raven.Server.Documents.Queries.Faceted
                     Name = key
                 };
 
-                var ranges = rangeFacets[key] = (RangeType.None, new List<ParsedRange>());
+                RangeType? rangeType = null;
+                var ranges = new List<ParsedRange>();
                 foreach (var range in facetRanges)
                 {
-                    var parsedRange = ParseRange(facet.Name, range);
+                    var parsedRange = ParseRange(facet.Name, range, out var type);
+                    if (rangeType.HasValue == false)
+                        rangeType = type;
+                    else if (rangeType.Value != type)
+                        throw new InvalidOperationException("TODO ppekrol");
 
-                    ranges.Type = parsedRange.RangeType;
-                    ranges.Ranges.Add(parsedRange);
+                    ranges.Add(parsedRange);
 
                     result.Values.Add(new FacetValue
                     {
                         Range = parsedRange.RangeText
                     });
                 }
+
+                rangeFacets[key] = (rangeType.Value, ranges);
             }
         }
 
-        private static ParsedRange ParseRange(string field, QueryExpression expression)
+        private static ParsedRange ParseRange(string field, QueryExpression expression, out RangeType type)
         {
             if (expression is BetweenExpression bee)
             {
@@ -143,6 +149,8 @@ namespace Raven.Server.Documents.Queries.Faceted
                 if (hValue.Type != lValue.Type)
                     throw new InvalidOperationException("TODO ppekrol");
 
+                type = hValue.Type;
+
                 return new ParsedRange
                 {
                     Field = field,
@@ -150,8 +158,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                     HighValue = hValue.Value,
                     LowInclusive = true,
                     LowValue = lValue.Value,
-                    RangeText = expression.GetText(),
-                    RangeType = hValue.Type
+                    RangeText = expression.GetText()
                 };
             }
 
@@ -168,11 +175,12 @@ namespace Raven.Server.Documents.Queries.Faceted
                         var r = (ValueExpression)be.Right;
                         var fieldValue = ConvertFieldValue(r.Token, r.Value);
 
+                        type = fieldValue.Type;
+
                         var range = new ParsedRange
                         {
                             Field = fieldName,
-                            RangeText = expression.GetText(),
-                            RangeType = fieldValue.Type
+                            RangeText = expression.GetText()
                         };
 
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
@@ -193,11 +201,13 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                         return range;
                     case OperatorType.And:
-                        var left = ParseRange(field, be.Left);
-                        var right = ParseRange(field, be.Right);
+                        var left = ParseRange(field, be.Left, out var lType);
+                        var right = ParseRange(field, be.Right, out var rType);
 
-                        if (left.RangeType != right.RangeType)
+                        if (lType != rType)
                             throw new InvalidOperationException("TODO ppekrol");
+
+                        type = lType;
 
                         if (left.HighValue == null)
                         {
@@ -257,7 +267,6 @@ namespace Raven.Server.Documents.Queries.Faceted
             public string HighValue;
             public string RangeText;
             public string Field;
-            public RangeType RangeType;
 
             public bool IsMatch(string value)
             {
