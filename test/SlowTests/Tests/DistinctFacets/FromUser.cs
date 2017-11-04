@@ -29,7 +29,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .Distinct()
                         .SelectFields<SampleData_Index.Result>("Name")
                         .AggregateBy("Tag")
-                        .AndAggregateOn("TotalCount")
+                        .AndAggregateBy("TotalCount")
                         .Execute();
 
                     Assert.Equal(3, result["Tag"].Values.Count);

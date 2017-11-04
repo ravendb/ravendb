@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
                     WaitForIndexing(store);
 
                     var query = session.Advanced.DocumentQuery<Product>(new Products().IndexName);
-                    var results = query.AggregateUsing("facets/Products").Execute();
+                    var results = query.Take(1).AggregateUsing("facets/Products").Execute();
                     Assert.Equal(100, results["Prices"].Values.First().Min);
                     Assert.Equal(200, results["PricesMax"].Values.First().Max);
                 }
@@ -58,7 +58,11 @@ namespace SlowTests.MailingList
                     //MaxResults = 1,
                     Aggregations = new Dictionary<FacetAggregation, string>
                     {
-                        { FacetAggregation.Min, "Prices" }
+                        { FacetAggregation.Max, "Prices" }
+                    },
+                    Options = new FacetOptions
+                    {
+                        TermSortMode = FacetTermSortMode.ValueDesc
                     }
                 }
             };

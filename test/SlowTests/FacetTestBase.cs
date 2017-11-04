@@ -73,11 +73,11 @@ namespace SlowTests
                     Name = x => x.Cost,
                     Ranges =
                     {
-                        x => x.Cost < 200m,
-                        x => x.Cost > 200m && x.Cost < 400m,
-                        x => x.Cost > 400m && x.Cost < 600m,
-                        x => x.Cost > 600m && x.Cost < 800m,
-                        x => x.Cost > 800m
+                        x => x.Cost <= 200m,
+                        x => x.Cost >= 200m && x.Cost <= 400m,
+                        x => x.Cost >= 400m && x.Cost <= 600m,
+                        x => x.Cost >= 600m && x.Cost <= 800m,
+                        x => x.Cost >= 800m
                     }
                 },
                 new Facet<Camera>
@@ -85,10 +85,10 @@ namespace SlowTests
                     Name = x => x.Megapixels,
                     Ranges =
                     {
-                        x => x.Megapixels < 3.0m,
-                        x => x.Megapixels > 3.0m && x.Megapixels < 7.0m,
-                        x => x.Megapixels > 7.0m && x.Megapixels < 10.0m,
-                        x => x.Megapixels > 10.0m
+                        x => x.Megapixels <= 3.0m,
+                        x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m,
+                        x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m,
+                        x => x.Megapixels >= 10.0m
                     }
                 }
             };
