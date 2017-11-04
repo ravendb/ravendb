@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -125,9 +126,8 @@ namespace Raven.Server.Web.System
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
-                var localNode = setupInfo.NodeSetupInfos["A"];
 
-                var contentDisposition = $"attachment; filename={localNode.PublicServerUrl ?? localNode.ServerUrl}.Cluster.Settings.zip";
+                var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 
@@ -145,7 +145,8 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var uri = await ServerStore.SetupManager.LetsEncryptAgreement(email);
+                var baseUri = new Uri("https://letsencrypt.org/");
+                var uri = new Uri(baseUri, await ServerStore.SetupManager.LetsEncryptAgreement(email));
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -183,10 +184,8 @@ namespace Raven.Server.Web.System
                     operationId.Value, operationCancelToken);
                 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
-
-                var localNode = setupInfo.NodeSetupInfos["A"];
-
-                var contentDisposition = $"attachment; filename={localNode.PublicServerUrl ?? localNode.ServerUrl}.Cluster.Settings.zip";
+                
+                var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 

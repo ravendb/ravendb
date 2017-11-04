@@ -297,7 +297,7 @@ namespace Raven.Server
             try
             {
                 if (string.IsNullOrEmpty(base64) == false)
-                    return ServerStore.Secrets.LoadCertificateFromBase64(base64);
+                    return ServerStore.Secrets.LoadCertificateFromBase64(base64, password);
                 if (string.IsNullOrEmpty(exec) == false)
                     return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
                 if (string.IsNullOrEmpty(path) == false)

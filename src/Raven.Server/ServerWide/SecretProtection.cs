@@ -426,7 +426,7 @@ namespace Raven.Server.ServerWide
             return loadedCertificate;
         }
 
-        public RavenServer.CertificateHolder LoadCertificateFromBase64(string certificate)
+        public RavenServer.CertificateHolder LoadCertificateFromBase64(string certificate, string password)
         {
             var source = "settings.json";
             try
@@ -441,7 +441,7 @@ namespace Raven.Server.ServerWide
                     throw new ArgumentException($"Unable to parse the {certificate} property, expected a Base64 value", e);
                 }
 
-                var loadedCertificate = new X509Certificate2(certBytes);
+                var loadedCertificate = new X509Certificate2(certBytes, password);
 
                 return ValidateCertificateAndCreateCertificateHolder(certificate, source, loadedCertificate, certBytes);
             }
