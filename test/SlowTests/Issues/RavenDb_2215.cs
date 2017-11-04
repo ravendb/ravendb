@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                     var failedFinance = session.Query<SalesIndex.Result, SalesIndex>()
                         .Where(x => x.IsCancelled)
                         .AggregateBy(x => x.IsCancelled, factory => factory.SumOn(x => x.Nett))
-                        .AndAggregateOn(
+                        .AndAggregateBy(
                             x => x.IsCancelled,
                             factory => factory
                                 .WithDisplayName("AndAggregateOnName")
@@ -169,7 +169,7 @@ namespace SlowTests.Issues
                         session.Query<SalesIndex.Result, SalesIndex>()
                             .Where(x => x.IsCancelled)
                             .AggregateBy(x => x.IsCancelled, factory => factory.SumOn(x => x.Nett))
-                            .AndAggregateOn(x => x.IsCancelled, factory => factory.AverageOn(x => x.Val))
+                            .AndAggregateBy(x => x.IsCancelled, factory => factory.AverageOn(x => x.Val))
                             .Execute());
                 }
                 using (var session = store.OpenSession())
@@ -178,7 +178,7 @@ namespace SlowTests.Issues
                         session.Query<SalesIndex.Result, SalesIndex>()
                             .Where(x => x.IsCancelled)
                             .AggregateBy(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").SumOn(x => x.Nett))
-                            .AndAggregateOn(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").AverageOn(x => x.Val))
+                            .AndAggregateBy(x => x.IsCancelled, factory => factory.WithDisplayName("Name1").AverageOn(x => x.Val))
                             .Execute());
                 }
 

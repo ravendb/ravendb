@@ -8,9 +8,9 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public interface IAggregationQuery<T>
     {
-        IAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null);
-        IAggregationQuery<T> AndAggregateOn(string path, Action<FacetFactory<T>> factory = null);
-        IAggregationQuery<T> AndAggregateOn(Facet facet);
+        IAggregationQuery<T> AndAggregateBy(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null);
+        IAggregationQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null);
+        IAggregationQuery<T> AndAggregateBy(Facet facet);
         Dictionary<string, FacetResult> Execute();
         Task<Dictionary<string, FacetResult>> ExecuteAsync();
         Lazy<Dictionary<string, FacetResult>> ExecuteLazy();

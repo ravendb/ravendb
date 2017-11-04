@@ -144,7 +144,7 @@ namespace Raven.Client.Documents
 #endif
 
             var query = new AggregationQuery<T>(source, ConvertExpressionIfNecessary, currentMethod);
-            return query.AndAggregateOn(facet);
+            return query.AndAggregateBy(facet);
         }
 
         public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, IEnumerable<Facet> facets)
@@ -158,7 +158,7 @@ namespace Raven.Client.Documents
                     continue;
                 }
 
-                query = query.AndAggregateOn(facet);
+                query = query.AndAggregateBy(facet);
             }
 
             return query;
