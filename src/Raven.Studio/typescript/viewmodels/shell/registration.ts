@@ -16,27 +16,9 @@ class licenseKeyModel {
 
     private setupValidation() {
 
-        const licenseValidator = (license: string) => {
-
-            try {
-                const parsedLicense = JSON.parse(license);
-
-                const hasId = "Id" in parsedLicense;
-                const hasName = "Name" in parsedLicense;
-                const hasKeys = "Keys" in parsedLicense;
-
-                return hasId && hasName && hasKeys;
-            } catch (e) {
-                return false;
-            }
-        }
-
         this.key.extend({
             required: true,
-            validation: [{
-                validator: licenseValidator,
-                message: "Invalid license format"
-            }]
+            validLicense: true 
         });
     }
 }

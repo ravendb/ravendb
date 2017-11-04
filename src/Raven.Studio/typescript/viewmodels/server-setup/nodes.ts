@@ -9,6 +9,16 @@ class nodes extends setupStep {
         
         this.bindToCurrentInstance("removeNode");
     }
+
+    canActivate(): JQueryPromise<canActivateResultDto> {
+        const mode = this.model.mode();
+
+        if (mode && (mode === "Secured" || mode === "LetsEncrypt")) {
+            return $.when({ can: true });
+        }
+
+        return $.when({redirect: "#welcome" });
+    }
     
     save() {
         //TODO:

@@ -1,14 +1,14 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
 import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
+import popoverUtils = require("common/popoverUtils");
 
 class unsecured extends setupStep {
 
-    constructor() {
-        super();
-        this.bindToCurrentInstance("useDefaultServerUrl");
-    }
-
+    spinners = {
+        next: ko.observable<boolean>(false)
+    };
+    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
@@ -18,19 +18,34 @@ class unsecured extends setupStep {
 
         return $.when({redirect: "#welcome" });
     }
-
-    save() {
-        //TODO: validate
-        //TODO: spininers
-        new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
-            .execute()
-            .done(() => {
-                router.navigate("#finish");
-            })
+    
+    compositionComplete() {
+        super.compositionComplete();
+        
+        popoverUtils.longWithHover($("label[for=serverUrl] .icon-info"),
+            {
+                content: 'The URL which the server should listen to. It can be hostname, ip address or 0.0.0.0:{port}',
+            });
     }
 
-    useDefaultServerUrl() {
-        this.model.unsecureSetup().serverUrl(location.origin);
+    back() {
+        router.navigate("#welcome");
+    }
+    
+    save() {
+        if (this.isValid(this.model.unsecureSetup().validationGroup)) {
+            this.spinners.next(true);
+            new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
+                .execute()
+                .done(() => {
+                    router.navigate("#finish");
+                })
+                .always(() => this.spinners.next(false));
+        }
+        
+        //TODO: validate
+        //TODO: spininers
+        
     }
 
 }

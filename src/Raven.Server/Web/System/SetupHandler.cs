@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -21,6 +22,88 @@ namespace Raven.Server.Web.System
 {
     public class SetupHandler : RequestHandler
     {
+        
+        [RavenAction("/setup/check-domain", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task CheckDomainAvailability()
+        {
+            AssertOnlyInSetupMode();
+
+            string domainToCheck = GetQueryStringValueAndAssertIfSingleAndNotEmpty("domain");
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                { //TODO: DELETE ME! - this is temporary fake impl!
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    
+                    Thread.Sleep(300); //TODO: delete me! - simulate slow response 
+                    
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Available");
+                        writer.WriteBool(domainToCheck.StartsWith("a") ? false : true); //TODO: fake impl - let's assume each domain which starts with A is taken
+                        writer.WriteEndObject();
+                    }
+                }
+            }
+            return Task.CompletedTask;
+        }
+        
+        [RavenAction("/setup/registration-info", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public Task RegistrationInfo()
+        {
+            AssertOnlyInSetupMode();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "domain-list"))
+            {
+                var listDomainsInfo = JsonDeserializationServer.ListDomainsInfo(setupInfoJson);
+
+                /* TODO
+                 list existing domains associated with given license 
+                 
+                 don't return 404 when not found - instead return empty list 
+                 
+                 this endpoint returns the same output as /setup/claim but it doesn't claim any domain
+                 optionally we might merge those 2 endpoint and make claim request optional
+                 
+                 */
+
+                { //TODO: DELETE ME! - this is temporary fake impl!
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        WriteFakeClaimResult(writer);
+                    }
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        private void WriteFakeClaimResult(BlittableJsonTextWriter writer) //TODO: remove me !
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("Domains");
+            writer.WriteStartObject();
+            
+            /* TODO
+            writer.WritePropertyName("oren");
+            writer.WriteStartArray();
+            writer.WriteEndArray();
+            writer.WriteComma();
+            writer.WritePropertyName("marcin");
+            writer.WriteStartArray();
+            writer.WriteEndArray();
+            */
+            
+            writer.WriteEndObject();
+            writer.WriteComma();
+            writer.WritePropertyName("Email");
+            writer.WriteString("marcin@ravendb.net");
+            writer.WriteEndObject();
+        }
+        
         [RavenAction("/setup/claim", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task ClaimDomain()
         {
@@ -31,6 +114,7 @@ namespace Raven.Server.Web.System
             {
                 var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
 
+                /* TODO uncomment one it will be deployed!
                 var response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/claim",
                         new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json"))
                     .ConfigureAwait(false);
@@ -38,6 +122,12 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
                 var serverResponse = await response.Content.ReadAsStreamAsync();
                 await serverResponse.CopyToAsync(ResponseBodyStream());
+                */
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    WriteFakeClaimResult(writer);
+                }
             }
         }
 

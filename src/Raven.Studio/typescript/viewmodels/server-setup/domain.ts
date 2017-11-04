@@ -1,6 +1,7 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
 import claimDomainCommand = require("commands/setup/claimDomainCommand");
+import registrationInfoCommand = require("commands/setup/registrationInfoCommand");
 
 class domain extends setupStep {
 
@@ -14,25 +15,54 @@ class domain extends setupStep {
         return $.when({redirect: "#welcome"});
     }
 
+    activate(args: any) {
+        super.activate(args);
+
+        return new registrationInfoCommand(this.model.license().toDto())
+            .execute()
+            .done((result) => {
+                const domainModel = this.model.domain();
+
+                domainModel.userEmail(result.Email);
+                domainModel.availableDomains(Object.keys(result.Domains));
+                
+                if (domainModel.availableDomains().length === 1) {
+                    domainModel.domain(domainModel.availableDomains()[0]);
+                }
+            });
+    }
+    
+    
     //TODO handle back in view model
 
 
-    //TODO: handle domain is taken
-
     save() {
-        //TODO: should we claim already claimed domain? 
+        const domainModel = this.model.domain();
+        this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
+            if (this.isValid(domainModel.validationGroup)) {
 
-        /* TODO
-        const domain = this.model.domain().domain();
-        const license = JSON.parse(this.model.license().license()) as Raven.Server.Commercial.License;
-        new claimDomainCommand(domain, license)
-            .execute();
-            //TODO: post exectuion callbacks
-            */
-        router.navigate("#agreement");
+                this.claimDomainIfNeeded()
+                    .done(() => {
+                        router.navigate("#agreement");
+                    });
+            }
+        });
+    }
+    
+    private claimDomainIfNeeded(): JQueryPromise<void> {
+        const domainModel = this.model.domain();
         
+        if (domainModel.availableDomains().length === 0) {
+            const task = $.Deferred<void>();
+            new claimDomainCommand(domainModel.domain(), this.model.license().toDto())
+                .execute()
+                .done(() => task.resolve())
+                .fail(() => task.reject());
+            
+            return task;
+        }
         
-
+        return $.when<void>();
     }
 
 }

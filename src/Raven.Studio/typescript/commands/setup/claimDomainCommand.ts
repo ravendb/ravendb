@@ -7,7 +7,7 @@ class claimDomainCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<claimDomainResult> {
+    execute(): JQueryPromise<registrationInfoResult> {
         const url = endpoints.global.setup.setupClaim;
         const payload = { 
             Domain: this.domain,
