@@ -1,30 +1,39 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 
 namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
     {
-        public AggregationQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null)
+        public IAggregationDocumentQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null)
         {
-            throw new NotImplementedException();
+            var ff = new FacetFactory<T>(fieldName);
+            factory?.Invoke(ff);
+
+            return AggregateBy(ff.Facet);
         }
 
-        public new AggregationQuery<T> AggregateBy(Facet facet)
+        public new IAggregationDocumentQuery<T> AggregateBy(Facet facet)
         {
-            throw new NotImplementedException();
+            base.AggregateBy(facet);
+
+            return new AggregationDocumentQuery<T>(this);
         }
 
-        public AggregationQuery<T> AggregateBy(IEnumerable<Facet> facets)
+        public IAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets)
         {
-            throw new NotImplementedException();
+            foreach (var facet in facets)
+                base.AggregateBy(facet);
+
+            return new AggregationDocumentQuery<T>(this);
         }
 
-        public new AggregationQuery<T> AggregateUsing(string facetSetupDocumentKey)
+        public new IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey)
         {
-            throw new NotImplementedException();
+            base.AggregateUsing(facetSetupDocumentKey);
+
+            return new AggregationDocumentQuery<T>(this);
         }
     }
 }

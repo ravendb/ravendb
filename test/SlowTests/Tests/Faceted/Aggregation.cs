@@ -452,15 +452,15 @@ namespace SlowTests.Tests.Faceted
                         .Where(x => x.At >= end0)
                        .AggregateBy(x => x.At, f => f.WithRanges(
                             x => x.At >= minValue, // all - 4
-                            x => x.At >= end0 && x.At < end1, // 1
-                            x => x.At >= end1 && x.At < end2 // 3
+                            x => x.At >= end0 && x.At < end1, // 0
+                            x => x.At >= end1 && x.At < end2 // 1
                             ))
                        .Execute();
 
                     var facetResults = r["At"].Values;
                     Assert.Equal(4, facetResults[0].Count);
-                    Assert.Equal(1, facetResults[1].Count);
-                    Assert.Equal(3, facetResults[2].Count);
+                    Assert.Equal(0, facetResults[1].Count);
+                    Assert.Equal(1, facetResults[2].Count);
                 }
             }
         }
@@ -495,15 +495,15 @@ namespace SlowTests.Tests.Faceted
                         .Where(x => x.Items.In(items))
                         .AggregateBy(x => x.At, f => f.WithRanges(
                             x => x.At >= minValue, // all - 3
-                            x => x.At >= end0 && x.At < end1, // 1
-                            x => x.At >= end1 && x.At < end2 // 2
+                            x => x.At >= end0 && x.At < end1, // 0
+                            x => x.At >= end1 && x.At < end2 // 1
                             ))
                        .Execute();
 
                     var facetResults = r["At"].Values;
                     Assert.Equal(3, facetResults[0].Count);
-                    Assert.Equal(1, facetResults[1].Count);
-                    Assert.Equal(2, facetResults[2].Count);
+                    Assert.Equal(0, facetResults[1].Count);
+                    Assert.Equal(1, facetResults[2].Count);
                 }
             }
         }
@@ -541,15 +541,15 @@ namespace SlowTests.Tests.Faceted
                             f => f
                                 .WithRanges(
                                     x => x.At >= minValue, // all - 3
-                                    x => x.At >= end0 && x.At < end1, // 1
-                                    x => x.At >= end1 && x.At < end2 // 2
+                                    x => x.At >= end0 && x.At < end1, // 0
+                                    x => x.At >= end1 && x.At < end2 // 1
                                 ))
                         .Execute();
 
                     var facetResults = r["At"].Values;
                     Assert.Equal(3, facetResults[0].Count);
-                    Assert.Equal(1, facetResults[1].Count);
-                    Assert.Equal(2, facetResults[2].Count);
+                    Assert.Equal(0, facetResults[1].Count);
+                    Assert.Equal(1, facetResults[2].Count);
                 }
             }
         }

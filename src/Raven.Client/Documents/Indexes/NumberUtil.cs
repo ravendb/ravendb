@@ -29,21 +29,5 @@ namespace Raven.Client.Documents.Indexes
         {
             return number.ToString("G", CultureInfo.InvariantCulture);
         }
-
-        /// <summary>
-        /// Translate an indexable string to a nullable double
-        /// </summary>
-        public static bool TryStringToDouble(string number, out double value)
-        {
-            value = 0;
-
-            if (number == null)
-                return false;
-
-            if (number.Length == 0)
-                throw new ArgumentException("String must be greater than 0 characters");
-
-            return double.TryParse(number, NumberStyles.None, CultureInfo.InvariantCulture, out value);
-        }
     }
 }

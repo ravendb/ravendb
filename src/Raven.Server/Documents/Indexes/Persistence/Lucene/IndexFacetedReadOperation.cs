@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public List<FacetResult> FacetedQuery(IndexQueryServerSide query, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var results = FacetedQueryParser.Parse(context, query.Metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
+            var results = FacetedQueryParser.Parse(context, query.Metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, (RangeType Type, List<FacetedQueryParser.ParsedRange> Ranges)> rangeFacets);
 
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var readerFacetInfo in returnedReaders)
                 {
-                    var name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.Name, RangeType.Double);
+                    var name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.Name, range.Value.Type);
                     var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, name, _indexName, _state);
                     if (query.Metadata.IsDistinct)
                     {
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
 
                     var facetResult = results[range.Key];
-                    var ranges = range.Value;
+                    var ranges = range.Value.Ranges;
                     foreach (var kvp in termsForField)
                     {
                         for (int i = 0; i < ranges.Count; i++)

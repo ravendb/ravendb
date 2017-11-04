@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 
@@ -135,5 +136,13 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);
 
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
+
+        IAggregationAsyncDocumentQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null);
+
+        IAggregationAsyncDocumentQuery<T> AggregateBy(Facet facet);
+
+        IAggregationAsyncDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
+
+        IAggregationAsyncDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey);
     }
 }

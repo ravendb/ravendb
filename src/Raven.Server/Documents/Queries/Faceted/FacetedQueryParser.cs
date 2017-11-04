@@ -10,13 +10,12 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(DocumentsOperationContext context, QueryMetadata metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<ParsedRange>> rangeFacets)
+        public static Dictionary<string, FacetResult> Parse(DocumentsOperationContext context, QueryMetadata metadata, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, (RangeType Type, List<ParsedRange> Ranges)> rangeFacets)
         {
             DocumentsTransaction tx = null;
 
@@ -24,7 +23,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             {
                 var results = new Dictionary<string, FacetResult>();
                 defaultFacets = new Dictionary<string, Facet>();
-                rangeFacets = new Dictionary<string, List<ParsedRange>>();
+                rangeFacets = new Dictionary<string, (RangeType Type, List<ParsedRange> Ranges)>();
                 foreach (var field in metadata.SelectFields)
                 {
                     if (field.IsFacet == false)
@@ -98,7 +97,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        private static void ProcessFacet(Facet facet, List<QueryExpression> facetRanges, Dictionary<string, Facet> defaultFacets, Dictionary<string, List<ParsedRange>> rangeFacets, Dictionary<string, FacetResult> results)
+        private static void ProcessFacet(Facet facet, List<QueryExpression> facetRanges, Dictionary<string, Facet> defaultFacets, Dictionary<string, (RangeType Type, List<ParsedRange> Ranges)> rangeFacets, Dictionary<string, FacetResult> results)
         {
             var key = string.IsNullOrWhiteSpace(facet.DisplayName) ? facet.Name : facet.DisplayName;
 
@@ -118,12 +117,14 @@ namespace Raven.Server.Documents.Queries.Faceted
                     Name = key
                 };
 
-                var ranges = rangeFacets[key] = new List<ParsedRange>();
+                var ranges = rangeFacets[key] = (RangeType.None, new List<ParsedRange>());
                 foreach (var range in facetRanges)
                 {
                     var parsedRange = ParseRange(facet.Name, range);
 
-                    ranges.Add(parsedRange);
+                    ranges.Type = parsedRange.RangeType;
+                    ranges.Ranges.Add(parsedRange);
+
                     result.Values.Add(new FacetValue
                     {
                         Range = parsedRange.RangeText
@@ -136,14 +137,21 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             if (expression is BetweenExpression bee)
             {
+                var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value);
+                var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value);
+
+                if (hValue.Type != lValue.Type)
+                    throw new InvalidOperationException("TODO ppekrol");
+
                 return new ParsedRange
                 {
                     Field = field,
                     HighInclusive = true,
-                    HighValue = UnescapeValueIfNecessary(ConvertFieldValue(bee.Max.Token)),
+                    HighValue = hValue.Value,
                     LowInclusive = true,
-                    LowValue = UnescapeValueIfNecessary(ConvertFieldValue(bee.Min.Token)),
-                    RangeText = expression.GetText()
+                    LowValue = lValue.Value,
+                    RangeText = expression.GetText(),
+                    RangeType = hValue.Type
                 };
             }
 
@@ -159,17 +167,19 @@ namespace Raven.Server.Documents.Queries.Faceted
                         if (string.Equals(field, fieldName, StringComparison.OrdinalIgnoreCase) == false)
                             throw new InvalidOperationException("TODO ppekrol");
 
-                        var fieldValue = UnescapeValueIfNecessary(ConvertFieldValue(ExtractFieldValue(be)));
+                        var r = (ValueExpression)be.Right;
+                        var fieldValue = ConvertFieldValue(r.Token, r.Value);
 
                         var range = new ParsedRange
                         {
                             Field = field,
-                            RangeText = expression.GetText()
+                            RangeText = expression.GetText(),
+                            RangeType = fieldValue.Type
                         };
 
                         if (be.Operator == OperatorType.LessThan || be.Operator == OperatorType.LessThanEqual)
                         {
-                            range.HighValue = fieldValue;
+                            range.HighValue = fieldValue.Value;
                             range.HighInclusive = be.Operator == OperatorType.LessThanEqual;
 
                             return range;
@@ -177,7 +187,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                         if (be.Operator == OperatorType.GreaterThan || be.Operator == OperatorType.GreaterThanEqual)
                         {
-                            range.LowValue = fieldValue;
+                            range.LowValue = fieldValue.Value;
                             range.LowInclusive = be.Operator == OperatorType.GreaterThanEqual;
 
                             return range;
@@ -187,6 +197,9 @@ namespace Raven.Server.Documents.Queries.Faceted
                     case OperatorType.And:
                         var left = ParseRange(field, be.Left);
                         var right = ParseRange(field, be.Right);
+
+                        if (left.RangeType != right.RangeType)
+                            throw new InvalidOperationException("TODO ppekrol");
 
                         if (left.HighValue == null)
                         {
@@ -221,33 +234,21 @@ namespace Raven.Server.Documents.Queries.Faceted
             throw new InvalidOperationException("TODO ppekrol");
         }
 
-        private static string ExtractFieldValue(BinaryExpression be)
+        private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type)
         {
-            if (be.Right is ValueExpression rve)
-                return rve.Token;
-
-            throw new InvalidOperationException("TODO ppekrol");
-        }
-
-        private static string UnescapeValueIfNecessary(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return value;
-
-            var unescapedValue = QueryBuilder.Unescape(value);
-
-            if (DateTime.TryParseExact(unescapedValue, DefaultFormat.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime _))
-                return unescapedValue;
-
-            return value;
-        }
-
-        private static string ConvertFieldValue(string value)
-        {
-            if (NumberUtil.TryStringToDouble(value, out var dbl))
-                return NumericUtils.DoubleToPrefixCoded(dbl);
-
-            return value;
+            switch (type)
+            {
+                case ValueTokenType.Long:
+                case ValueTokenType.Double:
+                    var dbl = double.Parse(value, CultureInfo.InvariantCulture);
+                    return (NumericUtils.DoubleToPrefixCoded(dbl), RangeType.Double);
+                case ValueTokenType.String:
+                    return (value, RangeType.None);
+                case ValueTokenType.Null:
+                    return (null, RangeType.None);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
         }
 
         public class ParsedRange
@@ -258,6 +259,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             public string HighValue;
             public string RangeText;
             public string Field;
+            public RangeType RangeType;
 
             public bool IsMatch(string value)
             {
@@ -287,3 +289,4 @@ namespace Raven.Server.Documents.Queries.Faceted
         }
     }
 }
+

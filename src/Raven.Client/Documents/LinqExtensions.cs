@@ -134,7 +134,7 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<TResult>)queryable;
         }
 
-        public static AggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Facet facet)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Facet facet)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -147,9 +147,9 @@ namespace Raven.Client.Documents
             return query.AndAggregateOn(facet);
         }
 
-        public static AggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, IEnumerable<Facet> facets)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, IEnumerable<Facet> facets)
         {
-            AggregationQuery<T> query = null;
+            IAggregationQuery<T> query = null;
             foreach (var facet in facets)
             {
                 if (query == null)
@@ -164,7 +164,7 @@ namespace Raven.Client.Documents
             return query;
         }
 
-        public static AggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, string path, Action<FacetFactory<T>> factory = null)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, string path, Action<FacetFactory<T>> factory = null)
         {
             var f = new FacetFactory<T>(path);
             factory?.Invoke(f);
@@ -175,12 +175,12 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Query the facets results for this query using aggregation
         /// </summary>
-        public static AggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
         {
             return source.AggregateBy(path.ToPropertyPath('_'), factory);
         }
 
-        public static AggregationQueryBase<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentKey)
+        public static IAggregationQuery<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentKey)
         {
             if (facetSetupDocumentKey == null)
                 throw new ArgumentNullException(nameof(facetSetupDocumentKey));
