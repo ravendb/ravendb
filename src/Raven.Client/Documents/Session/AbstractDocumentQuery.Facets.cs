@@ -15,6 +15,10 @@ namespace Raven.Client.Documents.Session
                     if (string.Equals(ft.Name, facet.DisplayName, StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException("TODO ppekrol");
                 }
+                else if (token is DistinctToken)
+                {
+                    continue;
+                }
                 else
                     throw new InvalidOperationException("TODO ppekrol");
             }

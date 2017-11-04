@@ -35,25 +35,25 @@ namespace SlowTests.Tests.Faceted
                             //In Lucene [ is inclusive, { is exclusive
                             new Facet
                                 {
-                                    Name = "Cost_D_Range",
+                                    Name = "Cost",
                                     Ranges =
                                         {
-                                            "[NULL TO 200]",
-                                            "[200 TO 400]",
-                                            "[400 TO 600]",
-                                            "[600 TO 800]",
-                                            "[800 TO NULL]",
+                                            "Cost <= 200",
+                                            "Cost >= 200 AND Cost <= 400",
+                                            "Cost >= 400 AND Cost <= 600",
+                                            "Cost >= 600 AND Cost <= 800",
+                                            "Cost >= 800"
                                         }
                                 },
                             new Facet
                                 {
-                                    Name = "Megapixels_D_Range",
+                                    Name = "Megapixels",
                                     Ranges =
                                         {
-                                            "[NULL TO 3]",
-                                            "[3 TO 7]",
-                                            "[7 TO 10]",
-                                            "[10 TO NULL]",
+                                            "Megapixels <= 3",
+                                            "Megapixels >= 3 AND Megapixels <= 7",
+                                            "Megapixels >= 7 AND Megapixels <= 10",
+                                            "Megapixels >= 10",
                                         }
                                 }
                         };
@@ -67,37 +67,6 @@ namespace SlowTests.Tests.Faceted
             using (var store = GetDocumentStore())
             {
                 ExecuteTest(store, _originalFacets);
-            }
-        }
-
-        [Fact]
-        public void RemoteFacetedSearchHonorsConditionalGet()
-        {
-            using (var store = GetDocumentStore())
-            {
-                Setup(store, _stronglyTypedFacets);
-
-                string firstChangeVector;
-
-                const string queryUrl = "/queries?query=FROM%20INDEX%20'CameraCost'%20WHERE%20Manufacturer%20=%20'canon'&facetDoc=facets%2FCameraFacets&facetStart=0&facetPageSize=&op=facets";
-
-                var url = string.Format(queryUrl, "canon");
-
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, null, out firstChangeVector));
-
-                //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, firstChangeVector, out firstChangeVector));
-
-                //change index etag by inserting new doc
-                InsertCameraData(store, GetCameras(1));
-
-                string secondChangeVector;
-
-                //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, firstChangeVector, out secondChangeVector));
-
-                //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, secondChangeVector, out secondChangeVector));
             }
         }
 
@@ -303,28 +272,28 @@ namespace SlowTests.Tests.Faceted
 
             //Go through the expected (in-memory) results and check that there is a corresponding facet result
             //Not the prettiest of code, but it works!!!
-            var costFacets = facetResults["Cost_D_Range"].Values;
+            var costFacets = facetResults["Cost"].Values;
             CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "[NULL TO 200]"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost <= 200"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
-                            costFacets.FirstOrDefault(x => x.Range == "[200 TO 400]"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 200 AND Cost <= 400"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "[400 TO 600]"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 400 AND Cost <= 600"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 600.0m && x.Cost <= 800.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "[600 TO 800]"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 600 AND Cost <= 800"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "[800 TO NULL]"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost >= 800"));
 
             //Test the Megapixels_Range facets using the same method
-            var megapixelsFacets = facetResults["Megapixels_D_Range"].Values;
+            var megapixelsFacets = facetResults["Megapixels"].Values;
             CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[NULL TO 3]"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels <= 3"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[3 TO 7]"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 3 AND Megapixels <= 7"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[7 TO 10]"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 7 AND Megapixels <= 10"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "[10 TO NULL]"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 10"));
         }
 
         private void CheckFacetCount(int expectedCount, FacetValue facets)
