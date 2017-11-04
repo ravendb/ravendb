@@ -8,7 +8,7 @@ class nodeInfo {
     
     nodeTag = ko.observable<string>(); //TODO: do we need it
     ips = ko.observableArray<ipEntry>([]);
-    port = ko.observable<number>();
+    port = ko.observable<string>();
     certificate = ko.observable<string>();
     certificatePassword = ko.observable<string>();
     certificateFileName = ko.observable<string>();
@@ -36,7 +36,8 @@ class nodeInfo {
         }
         
         this.port.extend({
-            required: true
+            required: true,
+            number: true
         });
         
         this.validationGroup = ko.validatedObservable({
@@ -61,9 +62,40 @@ class nodeInfo {
     removeIp(ipEntry: ipEntry) {
         this.ips.remove(ipEntry);
     }
+
+    fileSelected(fileInput: HTMLInputElement) {
+        if (fileInput.files.length === 0) {
+            return;
+        }
+
+        const fileName = fileInput.value;
+        const isFileSelected = fileName ? !!fileName.trim() : false;
+        this.certificateFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
+
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            // dataUrl has following format: data:;base64,PD94bW... trim on first comma
+            this.certificate(dataUrl.substr(dataUrl.indexOf(",") + 1));
+        };
+        reader.onerror = function(error: any) {
+            alert(error);
+        };
+        reader.readAsDataURL(file);
+    }
     
     static empty(ownCertificates: KnockoutObservable<boolean>) {
         return new nodeInfo(ownCertificates);
+    }
+    
+    toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
+        return {
+            Certificate: this.certificate(),
+            Password: this.certificatePassword(),
+            Ips: this.ips().map(x => x.ip()),
+            Port: parseInt(this.port(), 10)
+        };
     }
 }
 

@@ -100,9 +100,8 @@ namespace Raven.Server.Commercial
         {
             //TODO handle progress, logs and errors
             AssertCorrectSetupStage(SetupStage.Setup);
-            ValidateSetupInfo(SetupMode.LetsEncrypt);
-
             _setupInfo = setupInfo;
+            ValidateSetupInfo(SetupMode.LetsEncrypt);
 
             var localNodeInfo = _setupInfo.NodeSetupInfos[LocalNodeTag];
             _localCertificateBase64 = localNodeInfo.Certificate;

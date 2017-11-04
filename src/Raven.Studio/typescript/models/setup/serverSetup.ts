@@ -36,6 +36,20 @@ class serverSetup {
            nodes: this.nodes
        });
    }
+
+    toSecuredDto(): Raven.Server.Commercial.SetupInfo {
+       const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
+       this.nodes().forEach(node => {
+           nodesInfo[node.nodeTag()] = node.toDto();
+       });
+       
+       return {
+           License: this.license().toDto(),
+           Domain: this.domain().domain(),
+           ModifyLocalServer: true,  //TODO: always true?
+           NodeSetupInfos: nodesInfo 
+       };
+    }
 }
 
 export = serverSetup;
