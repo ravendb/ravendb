@@ -74,13 +74,13 @@ namespace SlowTests.MailingList
                             },
                             new Facet
                             {
-                                Name = "Price_D_Range",
+                                Name = "Price",
                                 Ranges = new List<string>
                                 {
-                                    "[NULL TO 0]",
-                                    "[0.001 TO 0.999]",
-                                    "[0.999 TO 1.999]",
-                                    "[1.999 TO NULL]"
+                                    "Price <= 0",
+                                    "Price BETWEEN 0.001 AND 0.999",
+                                    "Price BETWEEN 0.999 AND 1.999",
+                                    "Price >= 1.999"
                                 }
                             }
                         }
@@ -96,7 +96,7 @@ namespace SlowTests.MailingList
                     var query = s.Query<Product>("Products/Stats");
                     var facetResults = query.AggregateUsing("facets/StatsFacet").Execute();
 
-                    var priceFacet = facetResults["Price_D_Range"];
+                    var priceFacet = facetResults["Price"];
 
                     foreach (var val in priceFacet.Values)
                         Assert.NotEqual(0, val.Count);

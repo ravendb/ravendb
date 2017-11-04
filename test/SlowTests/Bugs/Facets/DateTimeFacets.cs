@@ -38,19 +38,21 @@ namespace SlowTests.Bugs.Facets
                     }
                 };
 
-            var facetOldSchool = new List<Facet>{
-                    new Facet
-                                     {
-                                         Name = "DateOfListing",
-                                         Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
-                                         }
-                                     }
-                };
+            var facetOldSchool = new List<Facet>
+            {
+                new Facet
+                {
+                    Name = "DateOfListing",
+                    Ranges = new List<string>
+                    {
+                        string.Format("DateOfListing < '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0]),
+                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0], dates[1]),
+                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[1], dates[2]),
+                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[2], dates[3]),
+                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[3])
+                    }
+                }
+            };
 
             for (int i = 0; i < facetOldSchool.Count; i++)
             {
@@ -112,18 +114,20 @@ namespace SlowTests.Bugs.Facets
                            }
                     }
                 };
-                var facetOldSchool = new List<Facet>{
+                var facetOldSchool = new List<Facet>
+                {
                     new Facet
-                                     {
-                                         Name = "DateOfListing",
-                                        Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
-                                         }
-                                     }
+                    {
+                        Name = "DateOfListing",
+                        Ranges = new List<string>
+                        {
+                            string.Format("DateOfListing < '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0]),
+                            string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0], dates[1]),
+                            string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[1], dates[2]),
+                            string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[2], dates[3]),
+                            string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[3])
+                        }
+                    }
                 };
 
                 using (var s = store.OpenSession())

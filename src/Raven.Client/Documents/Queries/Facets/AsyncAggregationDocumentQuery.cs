@@ -4,16 +4,16 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    internal class AggregationAsyncDocumentQuery<T> : AggregationQueryBase, IAggregationAsyncDocumentQuery<T>
+    internal class AsyncAggregationDocumentQuery<T> : AggregationQueryBase, IAsyncAggregationDocumentQuery<T>
     {
         private readonly AbstractDocumentQuery<T, AsyncDocumentQuery<T>> _source;
 
-        public AggregationAsyncDocumentQuery(AsyncDocumentQuery<T> source) : base((InMemoryDocumentSessionOperations)source.AsyncSession)
+        public AsyncAggregationDocumentQuery(AsyncDocumentQuery<T> source) : base((InMemoryDocumentSessionOperations)source.AsyncSession)
         {
             _source = source;
         }
 
-        public IAggregationAsyncDocumentQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null)
+        public IAsyncAggregationDocumentQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null)
         {
             var f = new FacetFactory<T>(path);
             factory?.Invoke(f);
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Queries.Facets
             return AndAggregateBy(f.Facet);
         }
 
-        public IAggregationAsyncDocumentQuery<T> AndAggregateBy(Facet facet)
+        public IAsyncAggregationDocumentQuery<T> AndAggregateBy(Facet facet)
         {
             _source.AggregateBy(facet);
             return this;

@@ -27,25 +27,25 @@ namespace SlowTests.Tests.Faceted
                 new Facet {Name = "Manufacturer"},
                 new Facet
                 {
-                    Name = "Cost_D_Range",
+                    Name = "Cost",
                     Ranges =
                     {
-                        "[NULL TO 200]",
-                        "[200 TO 400]",
-                        "[400 TO 600]",
-                        "[600 TO 800]",
-                        "[800 TO NULL]",
+                        "Cost < 200",
+                        "Cost > 200 AND Cost < 400",
+                        "Cost > 400 AND Cost < 600",
+                        "Cost > 600 AND Cost < 800",
+                        "Cost > 800",
                     }
                 },
                 new Facet
                 {
-                    Name = "Price_D_Range",
+                    Name = "Price",
                     Ranges =
                     {
-                        "[NULL TO 9.99]",
-                        "[9.99 TO 49.99]",
-                        "[49.99 TO 99.99]",
-                        "[99.99 TO NULL]",
+                        "Price < 9.99",
+                        "Price > 9.99 AND Price < 49.99",
+                        "Price > 49.99 AND Price < 99.99",
+                        "Price > 99.99",
                     }
                 }
             };
@@ -137,7 +137,7 @@ namespace SlowTests.Tests.Faceted
             var facet = TriggerConversion(edgeCaseFacet);
             Assert.Equal(2, facet.Ranges.Count);
             Assert.False(string.IsNullOrWhiteSpace(facet.Ranges[0]));
-            Assert.Equal(@"[2001-12-05T00:00:00.0000000 TO 2010-12-05T00:00:00.0000000]", facet.Ranges[1]);
+            Assert.Equal(@"Date > '2001-12-05T00:00:00.0000000' AND Date < '2010-12-05T00:00:00.0000000'", facet.Ranges[1]);
         }
 
         private bool AreFacetsEqual(Facet left, Facet right)
