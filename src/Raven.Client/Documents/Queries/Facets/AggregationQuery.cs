@@ -29,20 +29,20 @@ namespace Raven.Client.Documents.Queries.Facets
             _aggregateByMethod = aggregateByMethod;
         }
 
-        public IAggregationQuery<T> AndAggregateOn(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
+        public IAggregationQuery<T> AndAggregateBy(Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
         {
-            return AndAggregateOn(path.ToPropertyPath('_'), factory);
+            return AndAggregateBy(path.ToPropertyPath('_'), factory);
         }
 
-        public IAggregationQuery<T> AndAggregateOn(string path, Action<FacetFactory<T>> factory = null)
+        public IAggregationQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null)
         {
             var f = new FacetFactory<T>(path);
             factory?.Invoke(f);
 
-            return AndAggregateOn(f.Facet);
+            return AndAggregateBy(f.Facet);
         }
 
-        public IAggregationQuery<T> AndAggregateOn(Facet facet)
+        public IAggregationQuery<T> AndAggregateBy(Facet facet)
         {
             var expression = _convertExpressionIfNecessary(_source);
             _source = _source.Provider.CreateQuery<T>(Expression.Call(null, _aggregateByMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facet)));

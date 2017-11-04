@@ -109,6 +109,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Where(x => x.DateOfListing > new DateTime(2000, 1, 1))
+                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -164,6 +165,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Where(x => x.DateOfListing > new DateTime(2000, 1, 1))
+                        .Take(3)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -219,6 +221,7 @@ namespace SlowTests.Tests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
+                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -399,6 +402,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
+                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -454,6 +458,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
+                        .Take(3)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -509,6 +514,7 @@ namespace SlowTests.Tests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
+                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
