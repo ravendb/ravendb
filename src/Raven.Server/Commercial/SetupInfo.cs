@@ -11,7 +11,6 @@ namespace Raven.Server.Commercial
     {
         public License License { get; set; }
         public string Domain { get; set; }
-        public string Challenge { get; set; }
         public bool ModifyLocalServer { get; set; }
         public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
         
@@ -21,7 +20,6 @@ namespace Raven.Server.Commercial
             {
                 [nameof(License)] = License.ToJson(),
                 [nameof(Domain)] = Domain,
-                [nameof(Challenge)] = Challenge,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
                 [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)
             };
@@ -29,24 +27,20 @@ namespace Raven.Server.Commercial
 
         public class NodeInfo
         {
-            public string ServerUrl { get; set; }
-            public string PublicServerUrl { get; set; }
-            public int Port { get; set; }
-            public string Hostname { get; set; }
             public string Certificate { get; set; }
+            public string Password { get; set; }
+            public int Port { get; set; }
             public List<string> Ips { get; set; }
-
 
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
                 {
-                    [nameof(ServerUrl)] = ServerUrl,
-                    [nameof(PublicServerUrl)] = PublicServerUrl,
-                    [nameof(Port)] = Port,
-                    [nameof(Hostname)] = Hostname,
                     [nameof(Certificate)] = Certificate,
+                    [nameof(Password)] = Password,
+                    [nameof(Port)] = Port,
                     [nameof(Ips)] = Ips.ToArray(),
+
                 };
             }
         }
@@ -85,12 +79,14 @@ namespace Raven.Server.Commercial
     public class RegistrationResult
     {
         public RegistrationStatus Status { get; set; }
+        public string Message { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Status)] = Status.ToString()
+                [nameof(Status)] = Status.ToString(),
+                [nameof(Message)] = Message
             };
         }
     }
@@ -130,7 +126,7 @@ namespace Raven.Server.Commercial
 
         public SetupProgressAndResult()
         {
-            Messages = new List<string>();
+            Messages = new List<string>(); // <-- fix this to be thread safe
         }
 
         public string Message { get; private set; }
@@ -160,7 +156,7 @@ namespace Raven.Server.Commercial
             AddMessage("ERROR", message);
         }
 
-        private void AddMessage(string type, string message)
+        private void AddMessage(string type, string message) //<-- remember last message here
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
             Messages.Add(Message);
