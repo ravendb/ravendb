@@ -1808,13 +1808,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual async Task<FacetedQueryResult> FacetedQuery(IndexQueryServerSide query, long facetSetupEtag,
-            DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual async Task<FacetedQueryResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
 
             if (State == IndexState.Idle)
                 SetState(IndexState.Normal);
+
+            var query = facetQuery.Query;
 
             MarkQueried(DocumentDatabase.Time.GetUtcNow());
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
@@ -1866,13 +1867,13 @@ namespace Raven.Server.Documents.Indexes
                                 continue;
                             }
 
-                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetSetupEtag, documentsContext, indexContext);
+                            FillFacetedQueryResult(result, IsStale(documentsContext, indexContext), facetQuery.FacetsEtag, documentsContext, indexContext);
 
                             documentsContext.CloseTransaction();
 
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
-                                result.Results = reader.FacetedQuery(query, documentsContext, GetOrAddSpatialField, token.Token);
+                                result.Results = reader.FacetedQuery(facetQuery, documentsContext, GetOrAddSpatialField, token.Token);
                                 return result;
                             }
                         }
@@ -2492,7 +2493,7 @@ namespace Raven.Server.Documents.Indexes
                                 onProgress?.Invoke(result.Progress);
                             });
                         }
-                        
+
                         // reset tree name back to null after processing
                         result.TreeName = null;
 

@@ -69,6 +69,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             var command = GetCommand(isAsync: false);
 
+            _session.IncrementRequestCount();
             _session.RequestExecutor.Execute(command, _session.Context);
 
             return ProcessResults(command, _session.Conventions);
@@ -78,6 +79,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             var command = GetCommand(isAsync: true);
 
+            _session.IncrementRequestCount();
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
 
             return ProcessResults(command, _session.Conventions);

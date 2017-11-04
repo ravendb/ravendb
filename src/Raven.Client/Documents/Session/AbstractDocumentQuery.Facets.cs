@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
                 }
                 else if (token is DistinctToken)
                 {
-                    continue;
+                    throw new InvalidOperationException("TODO ppekrol");
                 }
                 else
                     throw new InvalidOperationException("TODO ppekrol");

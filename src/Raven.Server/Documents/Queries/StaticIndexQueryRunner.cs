@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Queries.Faceted;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -57,48 +53,22 @@ namespace Raven.Server.Documents.Queries
             return Task.FromResult(index.IndexEntries(query, context, token));
         }
 
-        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? facetsEtag, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            /*
-            if (query.FacetSetupDoc != null)
-            {
-                FacetSetup facetSetup;
-                using (documentsContext.OpenReadTransaction())
-                {
-                    var facetSetupAsJson = Database.DocumentsStorage.Get(documentsContext, query.FacetSetupDoc);
-                    if (facetSetupAsJson == null)
-                        throw new DocumentDoesNotExistException(query.FacetSetupDoc);
-
-                    try
-                    {
-                        facetSetup = JsonDeserializationServer.FacetSetup(facetSetupAsJson.Data);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new DocumentParseException(query.FacetSetupDoc, typeof(FacetSetup), e);
-                    }
-
-                    facetsEtag = facetSetupAsJson.Etag;
-                }
-
-                query.Facets = facetSetup.Facets;
-            }
-            */
-
-            facetsEtag = 0; // TODO [ppekrol]
+            var fq = FacetQuery.Create(documentsContext, query);
 
             var index = GetIndex(query.Metadata.IndexName);
             if (existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag() ^ facetsEtag.Value;
+                var etag = index.GetIndexEtag() ^ fq.FacetsEtag;
                 if (etag == existingResultEtag)
                     return FacetedQueryResult.NotModifiedResult;
             }
 
-            return await index.FacetedQuery(query, facetsEtag.Value, documentsContext, token);
+            return await index.FacetedQuery(fq, documentsContext, token);
         }
 
         public override Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
