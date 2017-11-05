@@ -2,7 +2,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -111,20 +114,12 @@ namespace Raven.Server.Web.System
             {
                 var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
 
-                /* TODO uncomment one it will be deployed!
-                var response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/claim",
-                        new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json"))
-                    .ConfigureAwait(false);
+                var content = new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json");
+                var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/claim", content).ConfigureAwait(false);
 
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
                 var serverResponse = await response.Content.ReadAsStreamAsync();
                 await serverResponse.CopyToAsync(ResponseBodyStream());
-                */
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    WriteFakeClaimResult(writer);
-                }
             }
         }
 
@@ -219,8 +214,10 @@ namespace Raven.Server.Web.System
                 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
+                var nodeCert = new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Certificate), setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Password);
+                var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
 
-                var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
+                var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 

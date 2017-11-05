@@ -92,26 +92,51 @@ namespace Raven.Server.Commercial
         }
     }
 
-    public class RegistrationResult
+    public class RegistrationInfo
     {
-        public RegistrationStatus Status { get; set; }
-        public string Message { get; set; }
+        public License License { get; set; }
+        public string Domain { get; set; }
+        public List<RegistrationNodeInfo> SubDomains { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Status)] = Status.ToString(),
-                [nameof(Message)] = Message
+                [nameof(License)] = License.ToJson(),
+                [nameof(Domain)] = Domain,
+                [nameof(SubDomains)] = SubDomains.Select(o => o.ToJson()).ToArray()
             };
         }
     }
 
-    public enum RegistrationStatus
+    public class RegistrationNodeInfo
     {
-        Pending,
-        Done,
-        Error
+        public List<string> Ips { get; set; }
+        public string SubDomain { get; set; }
+        public string Challenge { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Ips)] = Ips.ToArray(),
+                [nameof(SubDomain)] = SubDomain,
+                [nameof(Challenge)] = Challenge
+            };
+        }
+    }
+
+    public class RegistrationResult
+    {
+        public string Status { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Status)] = Status
+            };
+        }
     }
 
     public enum SetupMode
