@@ -72,7 +72,7 @@ namespace Raven.Server.Config.Categories
         internal string UnsecureAccessWarningMessage { get; private set; }
 
         public bool IsCertificateConfigured => string.IsNullOrWhiteSpace(CertificatePath) == false 
-            || string.IsNullOrWhiteSpace(CertificateExec) == false;
+            || string.IsNullOrWhiteSpace(CertificateExec) == false || string.IsNullOrWhiteSpace(Base64) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 

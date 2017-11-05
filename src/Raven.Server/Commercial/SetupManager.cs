@@ -375,7 +375,8 @@ namespace Raven.Server.Commercial
                 await AssertServerCanStartSecured(localNodeCert, localServerUrl, ips, SettingsPath, token, setupInfo);
 
                 // Load the certificate in the local server, so we can generate client certificates later
-                serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode.Certificate, "Setup Validation", localNodeCert, localCertBytes);
+                var pass = setupMode == SetupMode.LetsEncrypt ? null : localNode.Password;
+                serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode.Certificate, "Setup Validation", localNodeCert, localCertBytes, pass);
             }
             catch (Exception e)
             {

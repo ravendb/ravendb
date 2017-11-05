@@ -9,7 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -22,10 +21,27 @@ namespace Raven.Server.Web.System
 {
     public class SetupHandler : RequestHandler
     {
-        
         [RavenAction("/setup/check-domain", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task CheckDomainAvailability()
         {
+            // TODO create /v4/dns-n-cert/check-domain endpoint in api.ravendb.net. It checks availability for a single domain
+            // TODO decide if license is needed here
+            // TODO when endpoint is ready uncomment this and delete fake impl
+            /*AssertOnlyInSetupMode();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "check-domain"))
+            {
+                var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
+
+                var content = new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json");
+                var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/check-domain", content).ConfigureAwait(false);
+
+                HttpContext.Response.StatusCode = (int)response.StatusCode;
+                var serverResponse = await response.Content.ReadAsStreamAsync();
+                await serverResponse.CopyToAsync(ResponseBodyStream());
+            }*/
+
             AssertOnlyInSetupMode();
 
             string domainToCheck = GetQueryStringValueAndAssertIfSingleAndNotEmpty("domain");
@@ -52,8 +68,25 @@ namespace Raven.Server.Web.System
         [RavenAction("/setup/registration-info", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task RegistrationInfo()
         {
-            AssertOnlyInSetupMode();
+            // TODO create /v4/dns-n-cert/registration-info endpoint in api.ravendb.net. It's the same as claim but without the actual claiming.. just checking
+            // TODO when endpoint is ready uncomment this and delete fake impl
+            /*AssertOnlyInSetupMode();
 
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "check-domain"))
+            {
+                var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
+
+                var content = new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json");
+                var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-info", content).ConfigureAwait(false);
+
+                HttpContext.Response.StatusCode = (int)response.StatusCode;
+                var serverResponse = await response.Content.ReadAsStreamAsync();
+                await serverResponse.CopyToAsync(ResponseBodyStream());
+            }*/
+
+            AssertOnlyInSetupMode();
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "domain-list"))
             {
