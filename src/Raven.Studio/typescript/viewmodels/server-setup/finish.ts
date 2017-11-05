@@ -13,7 +13,7 @@ class finish extends setupStep {
         return $.when({ redirect: "#welcome" });
     }
     
-    finishConfiguration() {
+    private finishConfiguration() {
         new finishSetupCommand()
             .execute()
             .done(() => {
@@ -21,6 +21,10 @@ class finish extends setupStep {
             });
     }
 
+    restart() {
+        this.finishConfiguration();
+    }
+    
     private redirectToStudio() {
         switch (this.model.mode()) {
             case "Unsecured":
