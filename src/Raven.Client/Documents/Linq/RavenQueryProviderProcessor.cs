@@ -1752,6 +1752,7 @@ case "cmpxchg.match":
                         if (_fromAlias == null)
                         {
                             _fromAlias = lambdaExpression?.Parameters[0].Name;
+                            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
                         }
 
                         FieldsToFetch.Clear();
@@ -1806,6 +1807,7 @@ case "cmpxchg.match":
                         if (_fromAlias == null)
                         {
                             _fromAlias = lambdaExpression?.Parameters[0].Name;
+                            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
                         }
 
                         FieldsToFetch.Clear();
@@ -1906,6 +1908,7 @@ case "cmpxchg.match":
             if (_fromAlias == null)
             {
                 _fromAlias = parameter?.Name;
+                _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
             }
 
             if (loadSupport.HasLoad)

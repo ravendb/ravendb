@@ -250,6 +250,14 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public void AddAlias(string alias)
+        {
+            if (FieldName == "id()")
+                return;
+
+            FieldName = alias + "." + FieldName;
+        }
+
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
