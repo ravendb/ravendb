@@ -25,7 +25,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
     showBackupDetails = ko.observable(false);
     textClass = ko.observable<string>();
 
-    noBackupDestinations = ko.observable<boolean>(false);
+    backupDestinations = ko.observableArray<string>([]);    
     backupNowInProgress = ko.observable<boolean>(false);
     disabledBackupNowReason = ko.observable<string>();
     isBackupNowEnabled: KnockoutComputed<boolean>;
@@ -121,6 +121,8 @@ class ongoingTaskBackupListModel extends ongoingTask {
         super.update(dto);
 
         this.backupType(dto.BackupType);
+        this.backupDestinations(dto.BackupDestinations);
+        
         this.neverBackedUp(!dto.LastFullBackup);
         this.lastFullBackup(dto.LastFullBackup);
         this.lastIncrementalBackup(dto.LastIncrementalBackup);

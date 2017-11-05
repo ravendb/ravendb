@@ -261,6 +261,7 @@
                                     <div class="flex-grow">
                                         <ul class="properties">
                                             <li><span>Task Status:</span><span class="text-details" data-bind="text: badgeText"></span></li>
+                                            <li><span>Destinations:</span><span data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></span></li>
                                             <li data-bind="visible: lastFullBackupHumanized"><span data-bind="text: 'Last ' + fullBackupTypeName().toLowerCase() + ' backup'"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span></li>
                                             <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last incremental backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
                                             <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next estimated backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>
