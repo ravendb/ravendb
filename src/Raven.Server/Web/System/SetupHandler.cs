@@ -2,14 +2,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -180,6 +177,7 @@ namespace Raven.Server.Web.System
 
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
                 jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
+                jsonObj["Security.UnsecuredAccessAllowed"] = "PublicNetwork";
                 jsonObj["ServerUrl"] = setupInfo.ServerUrl;
                 jsonObj.Remove("PublicServerUrl");
                 if (string.IsNullOrEmpty(setupInfo.PublicServerUrl) == false)
@@ -212,12 +210,21 @@ namespace Raven.Server.Web.System
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
                 
-                var operationResult = await ServerStore.Operations.AddOperation(
-                    null,
-                    "Setting up RavenDB in secured mode.",
-                    Documents.Operations.Operations.OperationType.Setup,
-                    progress => ServerStore.SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo),
-                    operationId.Value, operationCancelToken);
+                IOperationResult operationResult;
+                try
+                {
+                    operationResult = await ServerStore.Operations.AddOperation(
+                        null,
+                        "Setting up RavenDB in secured mode.",
+                        Documents.Operations.Operations.OperationType.Setup,
+                        progress => ServerStore.SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo),
+                        operationId.Value, operationCancelToken);
+                }
+                catch (Exception e)
+                {
+                    await ServerStore.SetupManager.CleanCurrentStage();
+                    throw;
+                }
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
 
@@ -240,8 +247,17 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var baseUri = new Uri("https://letsencrypt.org/");
-                var uri = new Uri(baseUri, await ServerStore.SetupManager.LetsEncryptAgreement(email));
+                Uri uri;
+                try
+                {
+                    var baseUri = new Uri("https://letsencrypt.org/");
+                    uri = new Uri(baseUri, await ServerStore.SetupManager.LetsEncryptAgreement(email));
+                }
+                catch (Exception e)
+                {
+                    await ServerStore.SetupManager.CleanCurrentStage();
+                    throw;
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -270,14 +286,23 @@ namespace Raven.Server.Web.System
             using (var setupInfoJson = context.ReadForMemory(stream, "setup-lets-encrypt"))
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
-                
-                var operationResult = await ServerStore.Operations.AddOperation(
+
+                IOperationResult operationResult;
+                try
+                {
+                    operationResult = await ServerStore.Operations.AddOperation(
                     null,
                     "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => ServerStore.SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo),
                     operationId.Value, operationCancelToken);
-                
+                }
+                catch (Exception e)
+                {
+                    await ServerStore.SetupManager.CleanCurrentStage();
+                    throw;
+                }
+
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
                 
                 var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
@@ -302,12 +327,20 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                await ServerStore.Operations.AddOperation(
-                    null,
-                    "Setting up RavenDB in secured mode.",
-                    Documents.Operations.Operations.OperationType.Setup,
-                    progress => ServerStore.SetupManager.SetupValidateTask(progress, operationCancelToken.Token),
-                    operationId.Value, operationCancelToken);
+                try
+                {
+                    await ServerStore.Operations.AddOperation(
+                        null,
+                        "Setting up RavenDB in secured mode.",
+                        Documents.Operations.Operations.OperationType.Setup,
+                        progress => ServerStore.SetupManager.SetupValidateTask(progress, operationCancelToken.Token),
+                        operationId.Value, operationCancelToken);
+                }
+                catch (Exception e)
+                {
+                    await ServerStore.SetupManager.CleanCurrentStage();
+                    throw;
+                }
             }
         }
 
@@ -331,18 +364,24 @@ namespace Raven.Server.Web.System
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
                 byte[] pfx = null;
-                await
-                    ServerStore.Operations.AddOperation(
-                        null,
-                        "Generate certificate: " + certificate.Name,
-                        Documents.Operations.Operations.OperationType.CertificateGeneration,
-                        async onProgress =>
-                        {
-                            pfx = await ServerStore.SetupManager.GenerateCertificateTask(certificate);
+                try
+                {
+                    await ServerStore.Operations.AddOperation(
+                            null, "Generate certificate: " + certificate.Name,
+                            Documents.Operations.Operations.OperationType.CertificateGeneration,
+                            async onProgress =>
+                            {
+                                pfx = await ServerStore.SetupManager.GenerateCertificateTask(certificate);
 
-                            return ClientCertificateGenerationResult.Instance;
-                        },
-                        operationId.Value);
+                                return ClientCertificateGenerationResult.Instance;
+                            },
+                            operationId.Value);
+                }
+                catch (Exception e)
+                {
+                    await ServerStore.SetupManager.CleanCurrentStage();
+                    throw;
+                }
 
                 var contentDisposition = $"attachment; filename={certificate.Name}.pfx";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
@@ -353,11 +392,24 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/setup/restart", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task SetupRestart()
+        {
+            AssertOnlyInSetupMode();
+            await ServerStore.SetupManager.RestartSetup();
+        }
+
+        [RavenAction("/setup/back", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task SetupBack()
+        {
+            AssertOnlyInSetupMode();
+            await ServerStore.SetupManager.GoToPreviousStage();
+        }
+
         [RavenAction("/setup/finish", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task SetupFinish()
         {
             AssertOnlyInSetupMode();
-            ServerStore.SetupManager.AssertCorrectSetupStage(SetupStage.Finish);
 
             Task.Run(async () =>
             {

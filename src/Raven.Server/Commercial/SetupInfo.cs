@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 
 namespace Raven.Server.Commercial
 {
@@ -39,8 +41,7 @@ namespace Raven.Server.Commercial
                     [nameof(Certificate)] = Certificate,
                     [nameof(Password)] = Password,
                     [nameof(Port)] = Port,
-                    [nameof(Ips)] = Ips.ToArray(),
-
+                    [nameof(Ips)] = Ips.ToArray()
                 };
             }
         }
@@ -137,6 +138,8 @@ namespace Raven.Server.Commercial
         public readonly List<string> Messages;
         public byte[] SettingsZipFile;
 
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        
         public SetupProgressAndResult()
         {
             Messages = new List<string>(); // <-- fix this to be thread safe
@@ -164,15 +167,17 @@ namespace Raven.Server.Commercial
             AddMessage("INFO", message);
         }
 
-        public void AddError(string message)
+        public void AddError(string message, Exception ex = null)
         {
-            AddMessage("ERROR", message);
+            AddMessage("ERROR", message, ex);
         }
 
-        private void AddMessage(string type, string message) //<-- remember last message here
+        private void AddMessage(string type, string message, Exception ex = null) //<-- remember last message here
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
             Messages.Add(Message);
+            if (Logger.IsInfoEnabled)
+                Logger.Info(Message, ex);
         }
 
         public bool ShouldPersist => false;
