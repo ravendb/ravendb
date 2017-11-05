@@ -303,7 +303,7 @@ class periodicBackupConfiguration {
                 const nextBackupLocalTime = nextBackupUtc.local().format(dateFormat);
                 nextBackupOccuranceLocalTime(nextBackupLocalTime);
 
-                const fromDuration = generalUtils.formatDurationByDate(nextBackupUtc, true);
+                const fromDuration = generalUtils.formatDurationByDate(nextBackupUtc, false);
                 nextBackupInterval(`in ${fromDuration}`);
 
                 parsingError(null);
