@@ -45,6 +45,7 @@ class serverSetup {
        
        return {
            License: this.license().toDto(),
+           Email: null, 
            Domain: this.domain().domain(),
            ModifyLocalServer: true,  //TODO: always true?
            NodeSetupInfos: nodesInfo 
