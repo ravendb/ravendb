@@ -105,13 +105,14 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
-						.LocalTimeZone( TimeZoneInfo.Utc);
+                        .LocalTimeZone( TimeZoneInfo.Utc);
                     
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
+                ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, ThrowLoadDocument));
                 ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, LoadDocumentByPath));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
@@ -451,6 +452,11 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("load(id) must be called with a single string argument");
 
                 return LoadDocumentInternal(args[0].AsString());
+            }
+
+            private JsValue ThrowLoadDocument(JsValue self, JsValue[] args)
+            {
+                throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
             }
 
             private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
