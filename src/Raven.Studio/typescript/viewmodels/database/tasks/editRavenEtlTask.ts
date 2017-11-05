@@ -194,17 +194,19 @@ class editRavenEtlTask extends viewModelBase {
             savingNewStringAction.resolve();
         }
 
-        // 5. All is well, Save Raven Etl task    
-        const scriptsToReset = editedEtl.transformationScripts().filter(x => x.resetScript()).map(x => x.name());
-        
-        const dto = editedEtl.toDto();
-        saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto, scriptsToReset)
-            .execute()
-            .done(() => {
-                editedEtl.dirtyFlag().reset();
-                this.goToOngoingTasksView();
-            })
-            .always(() => this.spinners.save(false));
+        // 5. All is well, Save Raven Etl task
+        savingNewStringAction.done(()=> {
+            const scriptsToReset = editedEtl.transformationScripts().filter(x => x.resetScript()).map(x => x.name());
+
+            const dto = editedEtl.toDto();
+            saveEtlTaskCommand.forRavenEtl(this.activeDatabase(), dto, scriptsToReset)
+                .execute()
+                .done(() => {
+                    this.dirtyFlag().reset();
+                    this.goToOngoingTasksView();
+                })
+                .always(() => this.spinners.save(false));
+        });
     }
 
     addNewTransformation() {
