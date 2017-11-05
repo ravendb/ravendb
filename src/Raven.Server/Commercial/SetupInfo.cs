@@ -12,6 +12,7 @@ namespace Raven.Server.Commercial
     public class SetupInfo
     {
         public License License { get; set; }
+        public string Email { get; set; }
         public string Domain { get; set; }
         public bool ModifyLocalServer { get; set; }
         public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
@@ -21,6 +22,7 @@ namespace Raven.Server.Commercial
             return new DynamicJsonValue
             {
                 [nameof(License)] = License.ToJson(),
+                [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
                 [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)
