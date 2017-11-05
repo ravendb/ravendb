@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client
@@ -2350,8 +2352,111 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 }
             }
         }
-        
-        
+
+        [Fact]
+        public void Custom_Function_With_Sum()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var o1 = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine
+                        {
+                            PricePerUnit = (decimal)1.0,
+                            Quantity = 3
+                        },
+                        new OrderLine
+                        {
+                            PricePerUnit = (decimal)1.5,
+                            Quantity = 3
+                        }
+                    }
+                };
+                var o2 = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine
+                        {
+                            PricePerUnit = (decimal)1.0,
+                            Quantity = 5
+                        },
+                    }
+                };
+                var o3 = new Order
+                {
+                    Lines = new List<OrderLine>
+                    {
+                        new OrderLine
+                        {
+                            PricePerUnit = (decimal)3.0,
+                            Quantity = 6,
+                            Discount = (decimal)3.5
+                        },
+                        new OrderLine
+                        {
+                            PricePerUnit = (decimal)8.0,
+                            Quantity = 3,
+                            Discount = (decimal)3.5
+                        },
+                        new OrderLine
+                        {
+                            PricePerUnit = (decimal)1.8,
+                            Quantity = 2
+                        }
+                    }
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(o1);
+                    session.Store(o2);
+                    session.Store(o3);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var complexLinqQuery =
+                        from o in session.Query<Order>()
+                        let TotalSpentOnOrder =
+                            (Func<Order, decimal>)(order =>
+                                order.Lines.Sum(l => l.PricePerUnit * l.Quantity - l.Discount))
+                        select new
+                        {
+                            Id = o.Id,
+                            TotalMoneySpent = TotalSpentOnOrder(o)
+                        };
+
+                    Assert.Equal(
+@"DECLARE function output(o) {
+	var TotalSpentOnOrder = function(order){return order.Lines.map(function(l){return l.PricePerUnit*l.Quantity-l.Discount;}).reduce(function(a, b) { return a + b; }, 0);};
+	return { Id : o.Id, TotalMoneySpent : TotalSpentOnOrder(o) };
+}
+FROM Orders as o SELECT output(o)", complexLinqQuery.ToString());
+
+                    var queryResult = complexLinqQuery.ToList();
+                    Assert.Equal(3, queryResult.Count);
+
+                    var totalSpentOnOrder =
+                        (Func<Order, decimal>)(order =>
+                            order.Lines.Sum(l => l.PricePerUnit * l.Quantity - l.Discount));
+
+                    Assert.Equal("orders/1-A", queryResult[0].Id);
+                    Assert.Equal(totalSpentOnOrder(o1), queryResult[0].TotalMoneySpent);
+
+                    Assert.Equal("orders/2-A", queryResult[1].Id);
+                    Assert.Equal(totalSpentOnOrder(o2), queryResult[1].TotalMoneySpent);
+
+                    Assert.Equal("orders/3-A", queryResult[2].Id);
+                    Assert.Equal(totalSpentOnOrder(o3), queryResult[2].TotalMoneySpent);
+
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
