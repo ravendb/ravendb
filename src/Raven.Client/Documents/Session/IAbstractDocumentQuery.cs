@@ -349,5 +349,8 @@ namespace Raven.Client.Documents.Session
         void OrderByDistanceDescending(string fieldName, string shapeWkt);
 
         MoreLikeThisScope MoreLikeThis();
+
+        void AddFromAliasToWhereTokens(string fromAlias);
+
     }
 }

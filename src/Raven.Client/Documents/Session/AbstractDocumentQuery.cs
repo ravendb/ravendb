@@ -1610,5 +1610,22 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     SelectTokens.AddLast(fieldsToFetch);
             }
         }
+
+        /// <summary>
+        ///   Adds an alias to the FieldName of each where token
+        /// </summary>
+        /// <param name = "fromAlias">The alias</param>
+        public void AddFromAliasToWhereTokens(string fromAlias)
+        {
+            if (string.IsNullOrEmpty(fromAlias))
+                throw new InvalidOperationException("Alias cannot be null or empty");
+
+            var tokens = GetCurrentWhereTokens();
+            foreach (var token in tokens)
+            {
+                var whereToken = token as WhereToken;
+                whereToken?.AddAlias(fromAlias);
+            }
+        }
     }
 }
