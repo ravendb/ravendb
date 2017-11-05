@@ -113,6 +113,7 @@ namespace Raven.Client.Util
                         newName = "every";
                         break;
                     case "Select":
+                    case "Sum":
                         newName = "map";
                         break;
                     case "Where":
@@ -176,11 +177,10 @@ namespace Raven.Client.Util
                 }
 
                 var javascriptWriter = context.GetWriter();
+                context.PreventDefault();
 
                 if (methodCallExpression.Object != null)
                 {
-                    context.PreventDefault();
-
                     context.Visitor.Visit(methodCallExpression.Object);
                     javascriptWriter.Write($".{newName}");
                     javascriptWriter.Write("(");
@@ -189,17 +189,19 @@ namespace Raven.Client.Util
                 }
                 else
                 {
-                    context.PreventDefault();
-
                     context.Visitor.Visit(methodCallExpression.Arguments[0]);
                     javascriptWriter.Write($".{newName}");
-
-                    if (methodCallExpression.Arguments.Count < 2)
-                        return;
-
                     javascriptWriter.Write("(");
-                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                    if (methodCallExpression.Arguments.Count > 1)
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                    }
                     javascriptWriter.Write(")");
+                }
+
+                if (methodName == "Sum")
+                {
+                    javascriptWriter.Write(".reduce(function(a, b) { return a + b; }, 0)");
                 }
 
                 if (newName == "indexOf")
