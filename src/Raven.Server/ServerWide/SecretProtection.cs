@@ -443,7 +443,7 @@ namespace Raven.Server.ServerWide
 
                 var loadedCertificate = new X509Certificate2(certBytes, password);
 
-                return ValidateCertificateAndCreateCertificateHolder(certificate, source, loadedCertificate, certBytes);
+                return ValidateCertificateAndCreateCertificateHolder(certificate, source, loadedCertificate, certBytes, password);
             }
             catch (Exception e)
             {
@@ -451,11 +451,11 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string certificate, string source, X509Certificate2 loadedCertificate, byte[] certBytes)
+        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string certificate, string source, X509Certificate2 loadedCertificate, byte[] certBytes, string password)
         {
             ValidateExpiration(source, loadedCertificate);
 
-            ValidatePrivateKey(source, null, certBytes, out var privateKey);
+            ValidatePrivateKey(source, password, certBytes, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
 
