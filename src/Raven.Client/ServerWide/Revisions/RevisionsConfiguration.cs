@@ -16,10 +16,9 @@ namespace Raven.Client.ServerWide.Revisions
 
         public bool Equals(RevisionsConfiguration other)
         {
-            if (other == null)
+            if (other?.Default == null || other.Default.Equals(Default) == false)
                 return false;
-            if (other.Default.Equals(Default) == false)
-                return false;
+
             foreach (var keyValue in Collections)
             {
                 RevisionsCollectionConfiguration val;
