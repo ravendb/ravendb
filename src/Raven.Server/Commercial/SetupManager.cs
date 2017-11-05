@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Certes;
 using Certes.Acme;
 using Certes.Pkcs;
-using Lextm.SharpSnmpLib.Messaging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +21,6 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
@@ -71,7 +69,7 @@ namespace Raven.Server.Commercial
             progress.AddInfo("Creating new RavenDB configuration settings.");
             onProgress(progress);
 
-            ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo);
+            ValidateSetupInfo(SetupMode.Secured, setupInfo);
 
             try
             {
@@ -127,7 +125,7 @@ namespace Raven.Server.Commercial
                             {
                                 return t.Result.Data.Challenges.First(c => c.Type == ChallengeTypes.Dns01);
                             }, token);
-                            dictionary[host] = authz;
+                            dictionary[node.Key] = authz;
                         }
 
                         await Task.WhenAll(dictionary.Values.ToArray());
@@ -146,7 +144,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await UpdataDnsRecordsTask(onProgress, token, map);
+                        await UpdataDnsRecordsTask(onProgress, token, map, setupInfo);
                     }
                     catch (Exception e)
                     {
@@ -227,15 +225,33 @@ namespace Raven.Server.Commercial
         }
 
         // Update DNS record(s) and set the let's encrypt challenge(s) in dbs.local.ravendb.net
-        private static async Task UpdataDnsRecordsTask(Action<IOperationProgress> onProgress, CancellationToken token, Dictionary<string, string> map)
+        private static async Task UpdataDnsRecordsTask(Action<IOperationProgress> onProgress, CancellationToken token, Dictionary<string, string> map, SetupInfo setupInfo)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {
-                var serializeObject = JsonConvert.SerializeObject(map);
+                var registrationInfo = new RegistrationInfo
+                {
+                    License = setupInfo.License,
+                    Domain = setupInfo.Domain,
+                    SubDomains = new List<RegistrationNodeInfo>()
+                };
+
+                foreach (var domainAndChallenge in map)
+                {
+                    var regNodeInfo = new RegistrationNodeInfo()
+                    {
+                        SubDomain = domainAndChallenge.Key,
+                        Challenge = domainAndChallenge.Value,
+                        Ips = setupInfo.NodeSetupInfos[domainAndChallenge.Key].Ips
+                    };
+                    registrationInfo.SubDomains.Add(regNodeInfo);
+                }
+                
+                var serializeObject = JsonConvert.SerializeObject(registrationInfo);
                 HttpResponseMessage response;
                 try
                 {
-                    response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/register",
+                    response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -243,7 +259,7 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException("Registration request to api.ravendb.net failed for: " + serializeObject, e);
                 }
 
-                string responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode == false)
                 {
@@ -259,8 +275,8 @@ namespace Raven.Server.Commercial
                         try
                         {
                             await Task.Delay(1000, cts.Token);
-                            response = await ApiHttpClient.Instance.PostAsync("/api/v4/dns-n-cert/registration-result",
-                                    new StringContent(responseString, Encoding.UTF8, "application/json"), cts.Token)
+                            response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-result?id=" + responseString,
+                                    new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token)
                                 .ConfigureAwait(false);
                         }
                         catch (Exception e)
@@ -278,18 +294,13 @@ namespace Raven.Server.Commercial
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
 
-                        if (registrationResult.Status == RegistrationStatus.Error)
-                        {
-                            throw new InvalidOperationException($"api.ravendb.net returned an error: {registrationResult.Message}");
-                        }
-
-                    } while (registrationResult.Status == RegistrationStatus.Pending);
+                    } while (registrationResult.Status == "PENDING");
                 }
                 catch (Exception e)
                 {
                     if (cts.IsCancellationRequested == false)
                         throw;
-                    throw new System.TimeoutException("Request failed due to a timeout error", e);
+                    throw new TimeoutException("Request failed due to a timeout error", e);
                 }
             }
         }
@@ -382,12 +393,15 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
-                    throw new ArgumentException($"At least one of the nodes must have the node tag '{LocalNodeTag}'.");
-                if (IsValidEmail(setupInfo.Email) == false)
-                    throw new ArgumentException("Invalid domain name.");
-                if (IsValidDomain(setupInfo.Domain) == false)
-                    throw new ArgumentException("Invalid domain name.");
+                if (setupMode == SetupMode.LetsEncrypt)
+                {
+                    if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
+                        throw new ArgumentException($"At least one of the nodes must have the node tag '{LocalNodeTag}'.");
+                    if (IsValidEmail(setupInfo.Email) == false)
+                        throw new ArgumentException("Invalid email address.");
+                    if (IsValidDomain(setupInfo.Domain) == false)
+                        throw new ArgumentException("Invalid domain name.");
+                }
 
                 foreach (var node in setupInfo.NodeSetupInfos)
                 {
@@ -477,8 +491,8 @@ namespace Raven.Server.Commercial
                             {
                                 try
                                 {
-                                    var nodeCert = new X509Certificate2(node.Value.Certificate, node.Value.Password);
-                                    var cn = nodeCert.SubjectName.Name;
+                                    var nodeCert = new X509Certificate2(Convert.FromBase64String(node.Value.Certificate), node.Value.Password);
+                                    var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
                                     nodeServerUrl = $"https://{cn}:{node.Value.Port}";
                                 }
                                 catch (Exception e)
