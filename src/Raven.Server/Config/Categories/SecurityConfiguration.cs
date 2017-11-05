@@ -10,12 +10,12 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("The .pfx certificate in Base64 format. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Executable 3)Path")]
+        [Description("The .pfx certificate in Base64 format. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Base64", ConfigurationEntryScope.ServerWideOnly)]
         public string Base64 { get; set; }
 
-        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory. Certificate setting priority order: 1)Base64 2)Executable 3)Path")]
+        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePath { get; set; }
@@ -25,7 +25,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePassword { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Executable 3)Path")]
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
@@ -40,26 +40,6 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Security.Certificate.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CertificateExecTimeout { get; set; }
-
-        [Description("The path to .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Path", ConfigurationEntryScope.ServerWideOnly)]
-        public string ClusterCertificatePath { get; set; }
-
-        [Description("The (optional) password of the .pfx cluster certificate file.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Password", ConfigurationEntryScope.ServerWideOnly)]
-        public string ClusterCertificatePassword { get; set; }
-
-        [Description("A command or executable providing a .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
-        public string ClusterCertificateExec { get; set; }
-
-        [Description("The command line arguments for the 'Security.ClusterCertificate.Exec' command or executable.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.ClusterCertificate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
-        public string ClusterCertificateExecArguments { get; set; }
 
         [Description("The path of the (512-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]

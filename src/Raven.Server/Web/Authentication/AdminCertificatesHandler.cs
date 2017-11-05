@@ -86,9 +86,7 @@ namespace Raven.Server.Web.Authentication
                 var keys = new[]
                 {
                     RavenConfiguration.GetKey(x => x.Security.CertificatePath),
-                    RavenConfiguration.GetKey(x => x.Security.CertificateExec),
-                    RavenConfiguration.GetKey(x => x.Security.ClusterCertificatePath),
-                    RavenConfiguration.GetKey(x => x.Security.ClusterCertificateExec)
+                    RavenConfiguration.GetKey(x => x.Security.CertificateExec)
                 };
 
                 throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
@@ -172,9 +170,7 @@ namespace Raven.Server.Web.Authentication
                     var path = new[]
                     {
                         serverStore.Configuration.Security.CertificatePath,
-                        serverStore.Configuration.Security.ClusterCertificatePath,
                         serverStore.Configuration.Security.CertificateExec,
-                        serverStore.Configuration.Security.ClusterCertificateExec
                     }.FirstOrDefault(File.Exists) ?? "no path defined";
 
                     throw new InvalidOperationException($"Cannot save the client certificate '{name}'. " +

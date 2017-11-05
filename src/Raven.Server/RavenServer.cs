@@ -108,7 +108,7 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            var clusterCert = InitializeClusterCertificate(out var httpsCert);
+            var clusterCert = InitializeClusterCertificate();
             try
             {
                 ServerStore.Initialize();
@@ -145,12 +145,11 @@ namespace Raven.Server
                     if (Configuration.Http.MaxRequestBufferSize.HasValue)
                         options.Limits.MaxRequestBufferSize = Configuration.Http.MaxRequestBufferSize.Value.GetValue(SizeUnit.Bytes);
 
-                    var actualCert = httpsCert ?? clusterCert;
-                    if (actualCert != null)
+                    if (clusterCert != null)
                     {
                         var adapterOptions = new HttpsConnectionAdapterOptions
                         {
-                            ServerCertificate = actualCert.Certificate,
+                            ServerCertificate = clusterCert.Certificate,
                             CheckCertificateRevocation = true,
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
@@ -216,7 +215,7 @@ namespace Raven.Server
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
 
-                ClusterCertificateHolder = ClusterCertificateHolder ?? httpsCert ?? new CertificateHolder();
+                ClusterCertificateHolder = ClusterCertificateHolder ?? new CertificateHolder();
             }
             catch (Exception e)
             {
@@ -252,16 +251,9 @@ namespace Raven.Server
             }
         }
 
-        public CertificateHolder InitializeClusterCertificate(out CertificateHolder httpsCert)
+        public CertificateHolder InitializeClusterCertificate()
         {
             var clusterCert = LoadCertificate(
-                Configuration.Security.Base64,
-                Configuration.Security.ClusterCertificateExec,
-                Configuration.Security.ClusterCertificateExecArguments,
-                Configuration.Security.ClusterCertificatePath,
-                Configuration.Security.ClusterCertificatePassword);
-
-            httpsCert = LoadCertificate(
                 Configuration.Security.Base64,
                 Configuration.Security.CertificateExec,
                 Configuration.Security.CertificateExecArguments,
@@ -274,7 +266,7 @@ namespace Raven.Server
                     Configuration.Security.SslProxyCertificatePassword);
 
 
-            ClusterCertificateHolder = clusterCert ?? httpsCert ?? new CertificateHolder();
+            ClusterCertificateHolder = clusterCert ?? new CertificateHolder();
             return clusterCert;
         }
 
@@ -298,10 +290,11 @@ namespace Raven.Server
             {
                 if (string.IsNullOrEmpty(base64) == false)
                     return ServerStore.Secrets.LoadCertificateFromBase64(base64, password);
-                if (string.IsNullOrEmpty(exec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
                 if (string.IsNullOrEmpty(path) == false)
                     return ServerStore.Secrets.LoadCertificateFromPath(path, password);
+                if (string.IsNullOrEmpty(exec) == false)
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
+                
                 return null;
             }
             catch (Exception e)
