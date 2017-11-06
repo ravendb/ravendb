@@ -3,9 +3,13 @@ import finishSetupCommand = require("commands/setup/finishSetupCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
+import router = require("plugins/router");
+import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
 
 class finish extends setupStep {
 
+    //TODO do NOT forget about calling validate ep
+    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
@@ -20,6 +24,9 @@ class finish extends setupStep {
         super.compositionComplete();
 
         switch (this.model.mode()) {
+            case "Unsecured":
+                this.saveUnsecuredConfiguration();
+                break;
             case "LetsEncrypt":
                 this.saveSecuredConfiguration(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
                 break;
@@ -27,13 +34,20 @@ class finish extends setupStep {
                 this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
         }
-        
     }
-
+    
     private getNextOperationId(): JQueryPromise<number> {
         return new getNextOperationId(null).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
+            });
+    }
+    
+    private saveUnsecuredConfiguration() {
+        new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
+            .execute()
+            .done(() => {
+                router.navigate("#finish");
             });
     }
 

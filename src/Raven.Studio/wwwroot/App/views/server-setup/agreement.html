@@ -6,8 +6,6 @@
 
     <form class="flex-form" data-bind="submit: save">
     
-        <a href="#" data-bind="attr: { href: url }" target="_blank">click - TODO</a>
-
         <div>
             <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
                 <input id="agree" type="checkbox" data-bind="checked: confirmation">
@@ -19,16 +17,23 @@
         </div>
 
         <div>
-            <a href="#welcome" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
+            <a href="#domain" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
             <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
         </div>
+        
+        <iframe id="terms" height="600" width="100%">
+            
+        </iframe>
     
     </form>
-    <div class="bg-info padding">
-        <ul>
-            <li>TODO: validation </li>
-            <li>handle back in code - it might be dynamic</li>
-        </ul>
-    </div>
 </div>
-      
+
+<script type="text/html" id="iframe-agreement-template">
+    <html>
+        <body>
+            <object data="{{URL}}" type="application/pdf" width="100%" height="600">
+                <embed src="{{URL}}" type="application/pdf" />
+            </object>
+        </body>
+    </html>
+</script>

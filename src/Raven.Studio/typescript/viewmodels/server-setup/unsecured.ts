@@ -1,14 +1,9 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
-import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
 import popoverUtils = require("common/popoverUtils");
 
 class unsecured extends setupStep {
 
-    spinners = {
-        next: ko.observable<boolean>(false)
-    };
-    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
@@ -16,7 +11,7 @@ class unsecured extends setupStep {
             return $.when({ can: true });
         }
 
-        return $.when({redirect: "#welcome" });
+        return $.when({ redirect: "#welcome" });
     }
     
     compositionComplete() {
@@ -34,18 +29,8 @@ class unsecured extends setupStep {
     
     save() {
         if (this.isValid(this.model.unsecureSetup().validationGroup)) {
-            this.spinners.next(true);
-            new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
-                .execute()
-                .done(() => {
-                    router.navigate("#finish");
-                })
-                .always(() => this.spinners.next(false));
+            router.navigate("#finish");
         }
-        
-        //TODO: validate
-        //TODO: spininers
-        
     }
 
 }
