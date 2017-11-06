@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
         public async Task DnsCertBridge() 
         {
             AssertOnlyInSetupMode();
-            var action = GetQueryStringValueAndAssertIfSingleAndNotEmpty("action"); // Action can be: claim | user-domain
+            var action = GetQueryStringValueAndAssertIfSingleAndNotEmpty("action"); // Action can be: claim | user-domains | check-availability
 
             var content = new StreamContent(RequestBodyStream());
             var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/" + action, content).ConfigureAwait(false);
