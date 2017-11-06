@@ -34,7 +34,7 @@ namespace Raven.Server.Commercial
     public static class SetupManager
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        public const string SettingsPath = "settings.json";
+        public static string SettingsPath = Path.Combine(AppContext.BaseDirectory, "settings.json");
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
         public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncryptStaging;
