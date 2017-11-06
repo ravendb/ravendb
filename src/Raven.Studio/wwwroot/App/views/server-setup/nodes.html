@@ -7,7 +7,7 @@
 
         <div data-bind="foreach: model.nodes">
             <div class="panel padding">
-                <div>Node <span data-bind="text: getLabelFor($index())"></span>
+                <div>Node <span data-bind="text: $parent.getLabelFor($index())"></span>
                     <button  data-bind="click: $root.removeNode" class="btn btn-danger pull-right" title="Delete this node">
                         <i class="icon-trash"></i>
                     </button>
