@@ -362,26 +362,22 @@ namespace Raven.Server.Web.System
                 if (operationId.HasValue == false)
                     operationId = ServerStore.Operations.GetNextOperationId();
 
-                var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-
-                var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
-
-                var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("Name");
 
                 byte[] pfx = null;
                 
                 await ServerStore.Operations.AddOperation(
-                        null, "Generate certificate: " + certificate.Name,
+                        null, "Generate certificate: " + name,
                         Documents.Operations.Operations.OperationType.CertificateGeneration,
                         async onProgress =>
                         {
-                            pfx = await SetupManager.GenerateCertificateTask(certificate, ServerStore);
+                            pfx = await SetupManager.GenerateCertificateTask(name, ServerStore);
 
                             return ClientCertificateGenerationResult.Instance;
                         },
                         operationId.Value);
                 
-                var contentDisposition = $"attachment; filename={certificate.Name}.pfx";
+                var contentDisposition = $"attachment; filename={name}.pfx";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 

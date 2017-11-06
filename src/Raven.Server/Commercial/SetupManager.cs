@@ -679,35 +679,36 @@ namespace Raven.Server.Commercial
         }
 
         // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
-        public static async Task<byte[]> GenerateCertificateTask(CertificateDefinition certificate,  ServerStore serverStore)
+        public static async Task<byte[]> GenerateCertificateTask(string name,  ServerStore serverStore)
         {
-            if (string.IsNullOrWhiteSpace(certificate.Name))
-                throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException($"{nameof(name)} is a required field in the certificate definition");
 
             if (serverStore.Server.ClusterCertificateHolder?.Certificate == null)
-                throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded.");
+                throw new InvalidOperationException($"Cannot generate the client certificate '{name}' becuase the server certificate is not loaded.");
+            
+            // this creates a client certificate which is signed by the current server certificate
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.ClusterCertificateHolder);
+
+            var newCertDef = new CertificateDefinition
+            {
+                Name = name,
+                // this does not include the private key, that is only for the client
+                Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance = SecurityClearance.ClusterAdmin,
+                Thumbprint = selfSignedCertificate.Thumbprint
+            };
 
             if (PlatformDetails.RunningOnPosix)
             {
-                AdminCertificatesHandler.ValidateCaExistsInOsStores(certificate.Certificate, certificate.Name, serverStore);
+                AdminCertificatesHandler.ValidateCaExistsInOsStores(newCertDef.Certificate, newCertDef.Name, serverStore);
             }
 
-            // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.ClusterCertificateHolder);
-            
-            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
-                new CertificateDefinition
-                {
-                    Name = certificate.Name,
-                    // this does not include the private key, that is only for the client
-                    Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
-                    Permissions = certificate.Permissions,
-                    SecurityClearance = certificate.SecurityClearance,
-                    Thumbprint = selfSignedCertificate.Thumbprint
-                }));
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
-            return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
+            return selfSignedCertificate.Export(X509ContentType.Pfx);
         }
 
         public static Task RenewLetsEncryptCertificate(ServerStore serverStore)
