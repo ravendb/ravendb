@@ -142,9 +142,14 @@ namespace Raven.Server.Documents.Queries.Faceted
                     {
                         Range = parsedRange.RangeText
                     });
-                    // TODO arek - check field id unique
+
                     if (fieldName == null)
                         fieldName = parsedRange.Field;
+                    else
+                    {
+                        if (fieldName != parsedRange.Field)
+                            ThrowRangeDefinedOnDifferentFields(fieldName, parsedRange.Field);
+                    }
                 }
 
                 result.AggregateBy = fieldName;
@@ -178,15 +183,18 @@ namespace Raven.Server.Documents.Queries.Faceted
                         break;
                 }
             }
-
             
-
             return result;
         }
 
         private static void ThrowUnknownFacetType(FacetBase facet)
         {
             throw new InvalidOperationException($"Unsupported facet type: {facet.GetType().FullName}");
+        }
+
+        private static void ThrowRangeDefinedOnDifferentFields(string fieldName, string differentField)
+        {
+            throw new InvalidOperationException($"Facet ranges must be defined on a single field while we got: {fieldName}, {differentField}");
         }
 
         private static ParsedRange ParseRange(QueryExpression expression, out RangeType type)
