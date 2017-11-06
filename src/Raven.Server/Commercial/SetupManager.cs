@@ -164,10 +164,13 @@ namespace Raven.Server.Commercial
                         await Task.WhenAll(tasks);
 
                         var csr = new CertificationRequestBuilder();
-                        csr.AddName("CN", $"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
+                        csr.AddName($"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
+                        // we need at least one SAN, browsers today require this
                         csr.SubjectAlternativeNames.Add($"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
+                            if (node.Key == LocalNodeTag)
+                                continue;
                             csr.SubjectAlternativeNames.Add($"{node.Key}.{setupInfo.Domain}.dbs.local.ravendb.net");
                         }
                         cert = await acmeClient.NewCertificate(csr);
@@ -588,6 +591,8 @@ namespace Raven.Server.Commercial
 
             public IServiceProvider ConfigureServices(IServiceCollection services)
             {
+                var x = services.BuildServiceProvider();
+                
                 return services.BuildServiceProvider();
             }
 
@@ -628,6 +633,7 @@ namespace Raven.Server.Commercial
                             options.Listen(addr, listenOptions => listenOptions.UseHttps(serverCertificate));
                         }
                     })
+                    .UseSetting(WebHostDefaults.ApplicationKey, "Simulation")
                     .ConfigureServices(collection =>
                     {
                         collection.AddSingleton(typeof(IStartup), responder);

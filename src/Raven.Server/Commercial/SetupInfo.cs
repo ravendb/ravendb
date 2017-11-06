@@ -207,6 +207,7 @@ namespace Raven.Server.Commercial
     {
         public long Processed { get; set; }
         public long Total { get; set; }
+        public string Certificate { get; set; }
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile;
 
@@ -215,18 +216,24 @@ namespace Raven.Server.Commercial
         public SetupProgressAndResult()
         {
             Messages = new ConcurrentQueue<string>();
+            Certificate = null;
         }
 
         public string Message { get; private set; }
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue(GetType())
+            var json = new DynamicJsonValue(GetType())
             {
                 [nameof(Processed)] = Processed,
                 [nameof(Total)] = Total,
                 [nameof(Messages)] = Messages.ToArray()
-        };
+            };
+
+            if (Certificate != null)
+                json[nameof(Certificate)] = Certificate;
+
+            return json;
         }
 
         public void AddWarning(string message)
