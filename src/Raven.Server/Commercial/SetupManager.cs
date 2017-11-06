@@ -40,9 +40,6 @@ namespace Raven.Server.Commercial
         public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncryptStaging;
 
         /*  TODO
-            handle thread safety
-            Change priority of certificate selection
-            Remove one of the server certificates
             call token ThrowIfCancellationRequested() in proper places
          */
         
@@ -167,7 +164,8 @@ namespace Raven.Server.Commercial
                         await Task.WhenAll(tasks);
 
                         var csr = new CertificationRequestBuilder();
-                        csr.AddName("CN", "my.dbs.local.ravendb.net");
+                        csr.AddName("CN", $"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
+                        csr.SubjectAlternativeNames.Add($"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
                             csr.SubjectAlternativeNames.Add($"{node.Key}.{setupInfo.Domain}.dbs.local.ravendb.net");
@@ -267,6 +265,8 @@ namespace Raven.Server.Commercial
                         $"Got unsuccessful response from registration request: {response.StatusCode}.{Environment.NewLine}{responseString}");
                 }
 
+                var id = JsonConvert.DeserializeObject<Dictionary<string,string>>(responseString).First().Value;
+
                 try
                 {
                     RegistrationResult registrationResult;
@@ -275,7 +275,7 @@ namespace Raven.Server.Commercial
                         try
                         {
                             await Task.Delay(1000, cts.Token);
-                            response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-result?id=" + responseString,
+                            response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-result?id=" + id,
                                     new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token)
                                 .ConfigureAwait(false);
                         }
