@@ -382,11 +382,11 @@ type dashboardChartTooltipProviderArgs = {
 }
 
 interface registrationInfoResult {
-    email: string; // TODO: 
-    domains: dictionary<Array<string>>;
+    Email: string;  
+    Domains: dictionary<Array<string>>;
 }
 
 interface domainAvailabilityResult {
-    available: boolean;
-    isOwnedByMe: boolean;
+    Available: boolean;
+    IsOwnedByMe: boolean;
 }
