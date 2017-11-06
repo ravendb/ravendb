@@ -22,12 +22,11 @@ namespace SlowTests.Tests.Faceted
         [Fact]
         public void CanUseNewAPIToDoMultipleQueries()
         {
-            var oldFacets = new List<Facet>
+            var oldFacets = new List<FacetBase>
             {
-                new Facet {Name = "Manufacturer"},
-                new Facet
+                new Facet {FieldName = "Manufacturer"},
+                new RangeFacet
                 {
-                    Name = "Cost",
                     Ranges =
                     {
                         "Cost < 200",
@@ -37,9 +36,8 @@ namespace SlowTests.Tests.Faceted
                         "Cost > 800",
                     }
                 },
-                new Facet
+                new RangeFacet
                 {
-                    Name = "Price",
                     Ranges =
                     {
                         "Price < 9.99",
@@ -50,12 +48,11 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            var newFacets = new List<Facet>
+            var newFacets = new List<FacetBase>
             {
-                new Facet<Test> {Name = x => x.Manufacturer},
-                new Facet<Test>
+                new Facet<Test> {FieldName = x => x.Manufacturer},
+                new RangeFacet<Test>
                 {
-                    Name = x => x.Cost,
                     Ranges =
                         {
                             x => x.Cost < 200m,
@@ -65,9 +62,8 @@ namespace SlowTests.Tests.Faceted
                             x => x.Cost > 800m
                         }
                 },
-                new Facet<Test>
+                new RangeFacet<Test>
                 {
-                    Name = x => x.Price,
                     Ranges =
                     {
                         x => x.Price < 9.99,
@@ -88,33 +84,22 @@ namespace SlowTests.Tests.Faceted
         {
             //Create an invalid lambda and check it throws an exception!!
             Assert.Throws<InvalidOperationException>(() =>
-                TriggerConversion(new Facet<Test>
+                TriggerConversion(new RangeFacet<Test>
                 {
-                    Name = x => x.Cost,
                     //Ranges can be a single item or && only
                     Ranges = { x => x.Cost > 200m || x.Cost < 400m }
                 }));
 
             Assert.Throws<InvalidOperationException>(() =>
-                TriggerConversion(new Facet<Test>
+                TriggerConversion(new RangeFacet<Test>
                 {
-                    Name = x => x.Cost,
                     //Ranges can be > or < only
                     Ranges = { x => x.Cost == 200m }
                 }));
 
             Assert.Throws<InvalidOperationException>(() =>
-                TriggerConversion(new Facet<Test>
+                TriggerConversion(new RangeFacet<Test>
                 {
-                    //Facets must contain a Name expression
-                    //Name = x => x.Cost,
-                    Ranges = { x => x.Cost > 200m }
-                }));
-
-            Assert.Throws<InvalidOperationException>(() =>
-                TriggerConversion(new Facet<Test>
-                {
-                    Name = x => x.Cost,
                     //Ranges must be on the same field!!!
                     Ranges = { x => x.Price > 9.99 && x.Cost < 49.99m }
                 }));
@@ -124,9 +109,8 @@ namespace SlowTests.Tests.Faceted
         public void AdvancedAPIAdvancedEdgeCases()
         {
             var testDateTime = new DateTime(2001, 12, 5);
-            var edgeCaseFacet = new Facet<Test>
+            var edgeCaseFacet = new RangeFacet<Test>
             {
-                Name = x => x.Date,
                 Ranges =
                 {
                     x => x.Date < DateTime.Now,
@@ -140,18 +124,27 @@ namespace SlowTests.Tests.Faceted
             Assert.Equal(@"Date > '2001-12-05T00:00:00.0000000' AND Date < '2010-12-05T00:00:00.0000000'", facet.Ranges[1]);
         }
 
-        private bool AreFacetsEqual(Facet left, Facet right)
+        private bool AreFacetsEqual(FacetBase left, FacetBase right)
         {
-            return left.Name == right.Name &&
-                left.Ranges.Count == right.Ranges.Count &&
-                left.Ranges.All(x => right.Ranges.Contains(x));
+            if (left is Facet leftFacet)
+            {
+                var rightFacet = right.AsFacet();
+
+                return leftFacet.FieldName == rightFacet.FieldName;
+            }
+
+            var leftRangeFacet = left.AsRangeFacet();
+            var rightRangeFacet = right.AsRangeFacet();
+
+            return leftRangeFacet.Ranges.Count == rightRangeFacet.Ranges.Count &&
+                leftRangeFacet.Ranges.All(x => rightRangeFacet.Ranges.Contains(x));
         }
 
-        private Facet TriggerConversion(Facet<Test> facet)
+        private RangeFacet TriggerConversion(RangeFacet<Test> facet)
         {
             //The conversion is done with an implicit cast, 
             //so we remain compatible with the original facet API
-            return (Facet)facet;
+            return (RangeFacet)facet;
         }
     }
 }

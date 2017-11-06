@@ -22,11 +22,10 @@ namespace SlowTests.Bugs.Facets
                 now.AddDays(7)
             };
 
-            var facetsNewWay = new List<Facet>
+            var facetsNewWay = new List<RangeFacet>
                 {
-                    new Facet<Camera>
+                    new RangeFacet<Camera>
                     {
-                        Name = x => x.DateOfListing,
                         Ranges =
                            {
                                x => x.DateOfListing < now.AddDays(-10),
@@ -38,11 +37,10 @@ namespace SlowTests.Bugs.Facets
                     }
                 };
 
-            var facetOldSchool = new List<Facet>
+            var facetOldSchool = new List<RangeFacet>
             {
-                new Facet
+                new RangeFacet
                 {
-                    Name = "DateOfListing",
                     Ranges = new List<string>
                     {
                         string.Format("DateOfListing < '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0]),
@@ -58,8 +56,7 @@ namespace SlowTests.Bugs.Facets
             {
                 var o = facetOldSchool[i];
                 var n = facetsNewWay[i];
-                Assert.Equal(o.Name, n.Name);
-                Assert.Equal(o.DisplayName, n.DisplayName);
+                Assert.Equal(o.DisplayFieldName, n.DisplayFieldName);
                 Assert.Equal(o.Options, n.Options);
                 Assert.Equal(o.Ranges.Count, n.Ranges.Count);
 
@@ -99,11 +96,10 @@ namespace SlowTests.Bugs.Facets
 
                 InsertCameraData(store, cameras);
 
-                var facetsNewWay = new List<Facet>
+                var facetsNewWay = new List<RangeFacet>
                 {
-                    new Facet<Camera>
+                    new RangeFacet<Camera>
                     {
-                        Name = x => x.DateOfListing,
                         Ranges =
                            {
                                x => x.DateOfListing < now.AddDays(-10),
@@ -114,11 +110,10 @@ namespace SlowTests.Bugs.Facets
                            }
                     }
                 };
-                var facetOldSchool = new List<Facet>
+                var facetOldSchool = new List<RangeFacet>
                 {
-                    new Facet
+                    new RangeFacet
                     {
-                        Name = "DateOfListing",
                         Ranges = new List<string>
                         {
                             string.Format("DateOfListing < '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0]),

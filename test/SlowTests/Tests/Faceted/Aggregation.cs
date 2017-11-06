@@ -62,7 +62,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                       .AggregateBy(factory => factory.ByField(x => x.Region).MaxOn(x => x.Total).MinOn(x => x.Total))
                        .Execute();
 
                     var facetResult = r["Region"];
@@ -98,7 +98,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                        .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Tax).MinOn(x => x.Tax))
+                        .AggregateBy(factory => factory.ByField(x => x.Region).MaxOn(x => x.Tax).MinOn(x => x.Tax))
                         .Execute();
 
                     var facetResult = r["Region"];
@@ -135,7 +135,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                        .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Quantity).MinOn(x => x.Quantity))
+                        .AggregateBy(factory => factory.ByField(x => x.Region).MaxOn(x => x.Quantity).MinOn(x => x.Quantity))
                         .Execute();
 
                     var facetResult = r["Region"];
@@ -172,7 +172,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product, factory => factory.MaxOn(x => x.Region).MinOn(x => x.Region))
+                       .AggregateBy(factory => factory.ByField(x => x.Product).MaxOn(x => x.Region).MinOn(x => x.Region))
                        .Execute();
 
                     var facetResult = r["Product"];
@@ -203,7 +203,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order, Orders_All>()
-                           .AggregateBy(x => x.Product, f => f.SumOn(x => x.Total))
+                           .AggregateBy(f => f.ByField(x => x.Product).SumOn(x => x.Total))
                            .Execute();
 
                     var facetResult = r["Product"];
@@ -234,8 +234,8 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(order => order.Product, x => x.SumOn(y => y.Total))
-                       .AndAggregateBy(order => order.Currency, x => x.SumOn(y => y.Total))
+                       .AggregateBy(x => x.ByField(y => y.Product).SumOn(y => y.Total))
+                       .AndAggregateBy(x => x.ByField(order => order.Currency).SumOn(y => y.Total))
                        .Execute();
 
                     var facetResult = r["Product"];
@@ -273,7 +273,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                       .AggregateBy(factory => factory.ByField(x => x.Product).MaxOn(x => x.Total).MinOn(x => x.Total))
                        .Execute();
 
                     var facetResult = r["Product"];
@@ -307,7 +307,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                        .AggregateBy(x => x.Region, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                        .AggregateBy(factory => factory.ByField(x => x.Region).MaxOn(x => x.Total).MinOn(x => x.Total))
                        .Execute();
 
                     var facetResult = r["Region"];
@@ -336,7 +336,7 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                        .AggregateBy(x => x.At, factory => factory.MaxOn(x => x.Total).MinOn(x => x.Total))
+                        .AggregateBy(factory => factory.ByField(x => x.At).MaxOn(x => x.Total).MinOn(x => x.Total))
                        .Execute();
 
                     var facetResult = r["At"];
@@ -365,8 +365,8 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                       .AggregateBy(x => x.Product, f => f.WithDisplayName("ProductMax").MaxOn(x => x.Total))
-                       .AndAggregateBy(x => x.Product, f => f.WithDisplayName("ProductMin"))
+                       .AggregateBy(f => f.ByField(x => x.Product).WithDisplayName("ProductMax").MaxOn(x => x.Total))
+                       .AndAggregateBy(f => f.ByField(x => x.Product).WithDisplayName("ProductMin"))
                        .Execute();
 
                     Assert.Equal(2, r.Count);
@@ -399,14 +399,14 @@ namespace SlowTests.Tests.Faceted
                 using (var session = store.OpenSession())
                 {
                     var r = session.Query<Order>("Orders/All")
-                        .AggregateBy(x => x.Product, f => f.SumOn(x => x.Total))
-                        .AndAggregateBy(x => x.Total, f => f
-                            .SumOn(x => x.Total)
-                            .WithRanges(
+                        .AggregateBy(f => f.ByField(x => x.Product).SumOn(x => x.Total))
+                        .AndAggregateBy(f => f
+                            .ByRanges(
                                 x => x.Total < 100,
                                 x => x.Total >= 100 && x.Total < 500,
                                 x => x.Total >= 500 && x.Total < 1500,
-                                x => x.Total >= 1500))
+                                x => x.Total >= 1500)
+                            .SumOn(x => x.Total))
                         .Execute();
 
                     var facetResult = r["Product"];
@@ -450,7 +450,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.At >= end0)
-                       .AggregateBy(x => x.At, f => f.WithRanges(
+                       .AggregateBy(f => f.ByRanges(
                             x => x.At >= minValue, // all - 4
                             x => x.At >= end0 && x.At < end1, // 0
                             x => x.At >= end1 && x.At < end2 // 1
@@ -493,7 +493,7 @@ namespace SlowTests.Tests.Faceted
                     var r = session.Query<ItemsOrder>("ItemsOrders/All")
                         .Where(x => x.At >= end0)
                         .Where(x => x.Items.In(items))
-                        .AggregateBy(x => x.At, f => f.WithRanges(
+                        .AggregateBy(f => f.ByRanges(
                             x => x.At >= minValue, // all - 3
                             x => x.At >= end0 && x.At < end1, // 0
                             x => x.At >= end1 && x.At < end2 // 1
@@ -537,9 +537,8 @@ namespace SlowTests.Tests.Faceted
                         .Where(x => x.Items.In(items))
                         .Where(x => x.At >= end0)
                         .AggregateBy(
-                            x => x.At,
                             f => f
-                                .WithRanges(
+                                .ByRanges(
                                     x => x.At >= minValue, // all - 3
                                     x => x.At >= end0 && x.At < end1, // 0
                                     x => x.At >= end1 && x.At < end2 // 1

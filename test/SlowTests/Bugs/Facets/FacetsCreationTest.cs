@@ -22,9 +22,8 @@ namespace SlowTests.Bugs.Facets
             var exceptionThrown = false;
             try
             {
-                var facet =new List<Facet>{ new Facet<Camera>
+                var facet =new List<RangeFacet>{ new RangeFacet<Camera>
                 {
-                    Name = x => x.DateOfListing,
                     Ranges =
                         {
                             x => x.DateOfListing <= dates[0],
@@ -34,8 +33,7 @@ namespace SlowTests.Bugs.Facets
                             x => x.DateOfListing >= dates[3]
                         }
                 }};
-                facet = new List<Facet>{new Facet<Camera>{
-                    Name = x => x.DateOfListing,
+                facet = new List<RangeFacet>{new RangeFacet<Camera>{
                     Ranges =
                         {
                             x => x.DateOfListing <= now.AddDays(-10),
@@ -45,8 +43,7 @@ namespace SlowTests.Bugs.Facets
                             x => x.DateOfListing >= now.AddDays(7)
                         }
                 }};
-                facet = new List<Facet>{new Facet<Camera>{
-                    Name = x => x.Cost,
+                facet = new List<RangeFacet>{new RangeFacet<Camera>{
                     Ranges = {
                         x=> x.Cost < Math.Ceiling(100.99m),
                         x=> x.Cost > Math.Ceiling(100.99m) && x.Cost < Math.Ceiling(100.99m) + 50,

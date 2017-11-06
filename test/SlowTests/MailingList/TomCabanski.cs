@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                             {
                                 new Facet
                                 {
-                                    Name = "Age"
+                                    FieldName = "Age"
                                 }
                             }
                     });

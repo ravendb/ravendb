@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                         .Where(x => x.Year == 2011)
-                        .AggregateBy(x => x.Make, f => f.MaxOn(x => x.Price))
+                        .AggregateBy(f => f.ByField(x => x.Make).MaxOn(x => x.Price))
                         .Execute();
 
                     Assert.Equal(3, results["Make"].Values.Count);
@@ -57,7 +57,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make)
+                                         .AggregateBy(x => x.ByField(y => y.Make))
                                          .Execute();
 
 
@@ -80,7 +80,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make, f => f.MaxOn(x => x.Price))
+                                         .AggregateBy(f => f.ByField(x => x.Make).MaxOn(x => x.Price))
                                          .Execute();
 
 
@@ -103,7 +103,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make, f => f.MinOn(x => x.Price))
+                                         .AggregateBy(f => f.ByField(x => x.Make).MinOn(x => x.Price))
                                          .Execute();
 
                     Assert.Equal(3, results["Make"].Values.Count);
@@ -125,7 +125,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make, f => f.SumOn(x => x.Price))
+                                         .AggregateBy(f => f.ByField(x => x.Make).SumOn(x => x.Price))
                                          .Execute();
 
 
@@ -148,7 +148,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make, f => f.AverageOn(x => x.Price))
+                                         .AggregateBy(f => f.ByField(x => x.Make).AverageOn(x => x.Price))
                                          .Execute();
 
 
@@ -171,7 +171,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var results = session.Query<Car>("Cars")
                                          .Where(car => car.Year == 2011)
-                                         .AggregateBy(x => x.Make, f => f.AverageOn(x => x.Price))
+                                         .AggregateBy(f => f.ByField(x => x.Make).AverageOn(x => x.Price))
                                          .ExecuteAsync();
 
                     Assert.Equal(3, results.Result["Make"].Values.Count);

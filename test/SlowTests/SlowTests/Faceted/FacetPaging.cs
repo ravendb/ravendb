@@ -28,7 +28,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = null,
@@ -84,7 +84,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
@@ -140,7 +140,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -196,7 +196,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -252,7 +252,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -308,7 +308,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -364,7 +364,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -420,7 +420,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -476,7 +476,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -532,7 +532,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -588,7 +588,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = null,
@@ -644,7 +644,7 @@ namespace SlowTests.SlowTests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,

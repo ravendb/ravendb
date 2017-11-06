@@ -6,20 +6,16 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        public void AggregateBy(Facet facet)
+        public void AggregateBy(FacetBase facet)
         {
             foreach (var token in SelectTokens)
             {
-                if (token is FacetToken ft)
-                {
-                    if (string.Equals(ft.Name, facet.DisplayName, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("TODO ppekrol");
-                }
-                else if (token is DistinctToken)
+                if (token is DistinctToken)
                 {
                     throw new InvalidOperationException("TODO ppekrol");
                 }
-                else
+
+                if (!(token is FacetToken))
                     throw new InvalidOperationException("TODO ppekrol");
             }
 

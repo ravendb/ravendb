@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
                 {
                     new Facet
                     {
-                        Name = "Tags",
+                        FieldName = "Tags",
                         Options = new FacetOptions
                         {
                             TermSortMode = FacetTermSortMode.CountDesc

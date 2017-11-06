@@ -60,17 +60,16 @@ namespace SlowTests
                 WaitForIndexing(store);
         }
 
-        public static List<Facet> GetFacets()
+        public static List<FacetBase> GetFacets()
         {
-            return new List<Facet>
+            return new List<FacetBase>
             {
                 new Facet<Camera>
                 {
-                    Name = x => x.Manufacturer
+                    FieldName = x => x.Manufacturer
                 },
-                new Facet<Camera>
+                new RangeFacet<Camera>
                 {
-                    Name = x => x.Cost,
                     Ranges =
                     {
                         x => x.Cost <= 200m,
@@ -80,9 +79,8 @@ namespace SlowTests
                         x => x.Cost >= 800m
                     }
                 },
-                new Facet<Camera>
+                new RangeFacet<Camera>
                 {
-                    Name = x => x.Megapixels,
                     Ranges =
                     {
                         x => x.Megapixels <= 3.0m,

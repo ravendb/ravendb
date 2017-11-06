@@ -28,8 +28,8 @@ namespace SlowTests.Tests.DistinctFacets
                     var result = session.Advanced.DocumentQuery<SampleData, SampleData_Index>()
                         .Distinct()
                         .SelectFields<SampleData_Index.Result>("Name")
-                        .AggregateBy("Tag")
-                        .AndAggregateBy("TotalCount")
+                        .AggregateBy(x => x.ByField("Tag"))
+                        .AndAggregateBy(x => x.ByField("TotalCount"))
                         .Execute();
 
                     Assert.Equal(3, result["Tag"].Values.Count);

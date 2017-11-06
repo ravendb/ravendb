@@ -70,11 +70,13 @@ namespace SlowTests.MailingList
                         {
                             new Facet
                             {
-                                Name = "Category"
+                                FieldName = "Category"
                             },
-                            new Facet
+                        },
+                        RangeFacets = new List<RangeFacet>()
+                        {
+                            new RangeFacet()
                             {
-                                Name = "Price",
                                 Ranges = new List<string>
                                 {
                                     "Price <= 0",

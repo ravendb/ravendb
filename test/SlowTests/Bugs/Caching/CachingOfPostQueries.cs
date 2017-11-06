@@ -97,7 +97,7 @@ namespace SlowTests.Bugs.Caching
                         {
                             new Facet
                             {
-                                Name = "Age"
+                                FieldName = "Age"
                             }
                         })
                         .Execute();
@@ -107,7 +107,7 @@ namespace SlowTests.Bugs.Caching
                         {
                             new Facet
                             {
-                                Name = "Age"
+                                FieldName = "Age"
                             }
                         })
                         .Execute();
@@ -126,13 +126,13 @@ namespace SlowTests.Bugs.Caching
                 {
                     var response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Range(1, 200).Select(x => new Facet()
                     {
-                        Name = "Age" + x
+                        FieldName = "Age" + x
                     }))
                         .Execute();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                     response = session.Query<Person, PersonsIndex>().Where(x => x.Name == "Johnny").AggregateBy(Enumerable.Range(1, 200).Select(x => new Facet()
                     {
-                        Name = "Age" + x
+                        FieldName = "Age" + x
                     }))
                         .Execute();
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
@@ -155,7 +155,7 @@ namespace SlowTests.Bugs.Caching
                         {
                             new Facet
                             {
-                                Name = "Age"
+                                FieldName = "Age"
                             }
                         })
                         .ExecuteAsync();
@@ -170,7 +170,7 @@ namespace SlowTests.Bugs.Caching
                         {
                             new Facet
                             {
-                                Name = "Age"
+                                FieldName = "Age"
                             }
                         })
                         .ExecuteAsync();

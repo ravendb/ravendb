@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                     {
                         new Facet()
                         {
-                            Name = "Feature"
+                            FieldName = "Feature"
                         }
                     };
 

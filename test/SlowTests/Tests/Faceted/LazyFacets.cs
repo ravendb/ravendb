@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Faceted
                     Id = "Facets",
                     Facets = new List<Facet>()
                     {
-                        new Facet() {Name = "Facet1"},
+                        new Facet() {FieldName = "Facet1"},
                     },
                 };
 

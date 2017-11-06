@@ -152,9 +152,9 @@ namespace Raven.Client.Documents.Session
 
         IDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
 
-        IAggregationDocumentQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null);
+        IAggregationDocumentQuery<T> AggregateBy(Action<IFacetFactory<T>> factory = null);
 
-        IAggregationDocumentQuery<T> AggregateBy(Facet facet);
+        IAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
         IAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
 

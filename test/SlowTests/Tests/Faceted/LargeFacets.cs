@@ -61,18 +61,17 @@ namespace SlowTests.Tests.Faceted
                 {
                     var facetResultsA = s.Query<Item, Index>()
                         .Where(x => x.Active)
-                        .AggregateBy(x => x.Category)
+                        .AggregateBy(x => x.ByField(y => y.Category))
                         .Execute();
 
-                    var facet = new Facet
+                    var facet = new RangeFacet()
                     {
-                        Name = "Age",
                         Ranges = Enumerable.Range(0, 2048).Select(x => $"Age >= {x} AND Age <= {x + 1}").ToList()
                     };
 
                     var facetResultsB = s.Query<Item, Index>()
                         .Where(x => x.Active)
-                        .AggregateBy(x => x.Category)
+                        .AggregateBy(x => x.ByField(y => y.Category))
                         .AndAggregateBy(facet)
                         .Execute();
 
@@ -80,7 +79,7 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResultsC = s.Query<Item, Index>()
                         .Where(x => x.Active)
-                        .AggregateBy(x => x.Category)
+                        .AggregateBy(x => x.ByField(y => y.Category))
                         .AndAggregateBy(facet)
                         .ExecuteLazy().Value;
 

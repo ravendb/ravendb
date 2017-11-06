@@ -129,9 +129,9 @@ namespace SlowTests.MailingList
                     Id = "Facets/WodFacets",
                     Facets = new List<Facet>
                     {
-                        new Facet<WodsProjection> {Name = o => o.BenchmarkType},
-                        new Facet<WodsProjection> {Name = o => o.WodType},
-                        new Facet<WodsProjection> {Name = o => o.ExerciseList}
+                        new Facet<WodsProjection> {FieldName = o => o.BenchmarkType},
+                        new Facet<WodsProjection> {FieldName = o => o.WodType},
+                        new Facet<WodsProjection> {FieldName = o => o.ExerciseList}
                     }
                 });
 

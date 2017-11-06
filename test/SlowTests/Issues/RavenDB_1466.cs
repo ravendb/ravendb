@@ -109,11 +109,10 @@ namespace SlowTests.Issues
 
                 WaitForIndexing((DocumentStore)store);
 
-                var facets = new List<Facet>
+                var facets = new List<RangeFacet>
                 {
-                    new Facet<Employee>
+                    new RangeFacet<Employee>
                     {
-                        Name = x => x.Salary,
                         Ranges =
                         {
                             x => x.Salary < 20000,
@@ -127,7 +126,7 @@ namespace SlowTests.Issues
 
                 using (var s = store.OpenSession())
                 {
-                    var facetSetupDoc = new FacetSetup { Id = "facets/EmployeeFacets", Facets = facets };
+                    var facetSetupDoc = new FacetSetup { Id = "facets/EmployeeFacets", RangeFacets = facets };
                     s.Store(facetSetupDoc);
                     s.SaveChanges();
                 }

@@ -80,7 +80,7 @@ namespace SlowTests.MailingList
             Product product1 = new Product("MyName1", "MyBrand1");
             Product product2 = new Product("MyName2", "MyBrand2");
 
-            FacetSetup facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { Name = "Brand" } } };
+            FacetSetup facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { FieldName = "Brand" } } };
 
             using (IDocumentSession docSession = store.OpenSession())
             {

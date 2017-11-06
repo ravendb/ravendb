@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
@@ -34,16 +35,28 @@ namespace Raven.Server.Documents.Queries.Faceted
                     continue;
                 }
 
-                var facet = new Facet
-                {
-                    Name = facetField.Name,
-                    DisplayName = facetField.Alias,
-                    Aggregations = facetField.Aggregations,
-                    Options = FacetOptions.Default // TODO [ppekrol]
-                };
+                FacetBase facet;
 
-                foreach (var range in facetField.Ranges)
-                    facet.Ranges.Add(range.GetText());
+                if (facetField.Ranges != null && facetField.Ranges.Count > 0)
+                {
+                    var rangeFacet = new RangeFacet();
+
+                    foreach (var range in facetField.Ranges)
+                        rangeFacet.Ranges.Add(range.GetText());
+
+                    facet = rangeFacet;
+                }
+                else
+                {
+                    facet = new Facet
+                    {
+                        FieldName = facetField.Name,
+                    };
+                }
+
+                facet.DisplayFieldName = facetField.Alias;
+                facet.Aggregations = facetField.Aggregations;
+                facet.Options = FacetOptions.Default; // TODO [ppekrol]
 
                 var result = ProcessFacet(facet, facetField.Ranges);
                 results[result.Result.Name] = result;
@@ -52,11 +65,19 @@ namespace Raven.Server.Documents.Queries.Faceted
             return results;
         }
 
-        private static IEnumerable<(Facet Facet, List<QueryExpression> Ranges)> ProcessFacetSetup(FacetSetup setup)
+        private static IEnumerable<(FacetBase Facet, List<QueryExpression> Ranges)> ProcessFacetSetup(FacetSetup setup)
         {
             QueryParser queryParser = null;
 
             foreach (var f in setup.Facets)
+            {
+                if (f.Options == null)
+                    f.Options = FacetOptions.Default;
+
+                yield return (f, null);
+            }
+
+            foreach (var f in setup.RangeFacets)
             {
                 List<QueryExpression> facetRanges = null;
 
@@ -85,17 +106,56 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        private static FacetResult ProcessFacet(Facet facet, List<QueryExpression> facetRanges)
+        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges)
         {
             var result = new FacetResult
             {
-                AggregateBy = facet.Name,
-                Result = new Client.Documents.Commands.FacetResult
-                {
-                    Name = facet.DisplayName
-                },
+                Result = new Client.Documents.Commands.FacetResult(),
                 Options = facet.Options
             };
+
+            string fieldName = null;
+
+            if (facet is Facet aggregationOnlyFacet)
+            {
+                result.AggregateBy = aggregationOnlyFacet.FieldName;
+                fieldName = result.AggregateBy;
+            }
+            else if (facet is RangeFacet)
+            {
+                Debug.Assert(facetRanges != null && facetRanges.Count > 0);
+
+                RangeType? rangeType = null;
+                var ranges = new List<ParsedRange>();
+
+                foreach (var range in facetRanges)
+                {
+                    var parsedRange = ParseRange(range, out var type);
+                    if (rangeType.HasValue == false)
+                        rangeType = type;
+                    else if (rangeType.Value != type)
+                        throw new InvalidOperationException("TODO ppekrol");
+
+                    ranges.Add(parsedRange);
+
+                    result.Result.Values.Add(new FacetValue
+                    {
+                        Range = parsedRange.RangeText
+                    });
+                    // TODO arek - check field id unique
+                    if (fieldName == null)
+                        fieldName = parsedRange.Field;
+                }
+
+                result.AggregateBy = fieldName;
+
+                result.Ranges = ranges;
+                result.RangeType = rangeType.Value;
+            }
+            else
+                ThrowUnknownFacetType(facet);
+
+            result.Result.Name = facet.DisplayFieldName ?? fieldName;
 
             foreach (var kvp in facet.Aggregations)
             {
@@ -119,34 +179,17 @@ namespace Raven.Server.Documents.Queries.Faceted
                 }
             }
 
-            if (facetRanges != null && facetRanges.Count > 0)
-            {
-                RangeType? rangeType = null;
-                var ranges = new List<ParsedRange>();
-                foreach (var range in facetRanges)
-                {
-                    var parsedRange = ParseRange(facet.Name, range, out var type);
-                    if (rangeType.HasValue == false)
-                        rangeType = type;
-                    else if (rangeType.Value != type)
-                        throw new InvalidOperationException("TODO ppekrol");
-
-                    ranges.Add(parsedRange);
-
-                    result.Result.Values.Add(new FacetValue
-                    {
-                        Range = parsedRange.RangeText
-                    });
-                }
-
-                result.Ranges = ranges;
-                result.RangeType = rangeType.Value;
-            }
+            
 
             return result;
         }
 
-        private static ParsedRange ParseRange(string field, QueryExpression expression, out RangeType type)
+        private static void ThrowUnknownFacetType(FacetBase facet)
+        {
+            throw new InvalidOperationException($"Unsupported facet type: {facet.GetType().FullName}");
+        }
+
+        private static ParsedRange ParseRange(QueryExpression expression, out RangeType type)
         {
             if (expression is BetweenExpression bee)
             {
@@ -157,10 +200,10 @@ namespace Raven.Server.Documents.Queries.Faceted
                     throw new InvalidOperationException("TODO ppekrol");
 
                 type = hValue.Type;
-
+                
                 return new ParsedRange
                 {
-                    Field = field,
+                    Field = ((FieldExpression)bee.Source).FieldValue,
                     HighInclusive = true,
                     HighValue = hValue.Value,
                     LowInclusive = true,
@@ -208,8 +251,8 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                         return range;
                     case OperatorType.And:
-                        var left = ParseRange(field, be.Left, out var lType);
-                        var right = ParseRange(field, be.Right, out var rType);
+                        var left = ParseRange(be.Left, out var lType);
+                        var right = ParseRange(be.Right, out var rType);
 
                         if (lType != rType)
                             throw new InvalidOperationException("TODO ppekrol");

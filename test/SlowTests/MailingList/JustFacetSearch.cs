@@ -134,7 +134,7 @@ namespace SlowTests.MailingList
             session.Store(new FacetSetup
             {
                 Id = "facets/ArticleFacets",
-                Facets = new[] { new Facet { Name = "Sections" } }.ToList()
+                Facets = new[] { new Facet { FieldName = "Sections" } }.ToList()
             });
         }
 

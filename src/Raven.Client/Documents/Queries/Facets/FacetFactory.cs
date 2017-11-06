@@ -4,65 +4,116 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetFactory<T>
+    public interface IFacetOperations<T>
     {
-        internal Facet Facet = new Facet();
+        IFacetOperations<T> WithDisplayName(string displayName);
 
-        public FacetFactory(string name)
-        {
-            Facet.Name = name;
-        }
+        IFacetOperations<T> WithOptions(FacetOptions options);
 
-        public FacetFactory<T> WithOptions(FacetOptions options)
-        {
-            Facet.Options = options;
-            return this;
-        }
+        IFacetOperations<T> SumOn(Expression<Func<T, object>> path);
 
-        public FacetFactory<T> WithRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
+        IFacetOperations<T> MinOn(Expression<Func<T, object>> path);
+
+        IFacetOperations<T> MaxOn(Expression<Func<T, object>> path);
+
+        IFacetOperations<T> AverageOn(Expression<Func<T, object>> path);
+    }
+
+    public interface IFacetFactory<T>
+    {
+        IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths);
+
+        IFacetOperations<T> ByField(Expression<Func<T, object>> path);
+
+        IFacetOperations<T> ByField(string fieldName);
+    }
+
+    internal class FacetFactory<T> : IFacetFactory<T>, IFacetOperations<T>
+    {
+        private RangeFacet _range;
+        private Facet _default;
+
+        public IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
             if (path == null) 
                 throw new ArgumentNullException(nameof(path));
 
-            Facet.Ranges.Add(Facet<T>.Parse(path));
+            if (_range == null)
+                _range = new RangeFacet();
+
+            _range.Ranges.Add(RangeFacet<T>.Parse(path));
 
             if (paths != null)
             {
                 foreach (var p in paths)
-                    Facet.Ranges.Add(Facet<T>.Parse(p));
+                {
+                    _range.Ranges.Add(RangeFacet<T>.Parse(p));
+                }
             }
 
             return this;
         }
 
-        public FacetFactory<T> WithDisplayName(string displayName)
+        public IFacetOperations<T> ByField(Expression<Func<T, object>> path)
         {
-            Facet.DisplayName = displayName;
+            return ByField(path.ToPropertyPath('_'));
+        }
+
+        public IFacetOperations<T> ByField(string fieldName)
+        {
+            if (_default == null)
+                _default = new Facet();
+
+            _default.FieldName = fieldName;
+
             return this;
         }
 
-        public FacetFactory<T> SumOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> WithOptions(FacetOptions options)
+        {
+            Facet.Options = options;
+            return this;
+        }
+
+        public IFacetOperations<T> WithDisplayName(string displayName)
+        {
+            Facet.DisplayFieldName = displayName;
+            return this;
+        }
+
+        public IFacetOperations<T> SumOn(Expression<Func<T, object>> path)
         {
             Facet.Aggregations[FacetAggregation.Sum] = path.ToPropertyPath();
             return this;
         }
 
-        public FacetFactory<T> MinOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> MinOn(Expression<Func<T, object>> path)
         {
             Facet.Aggregations[FacetAggregation.Min] = path.ToPropertyPath();
             return this;
         }
 
-        public FacetFactory<T> MaxOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> MaxOn(Expression<Func<T, object>> path)
         {
             Facet.Aggregations[FacetAggregation.Max] = path.ToPropertyPath();
             return this;
         }
 
-        public FacetFactory<T> AverageOn(Expression<Func<T, object>> path)
+        public IFacetOperations<T> AverageOn(Expression<Func<T, object>> path)
         {
             Facet.Aggregations[FacetAggregation.Average] = path.ToPropertyPath();
             return this;
+        }
+
+        internal FacetBase Facet
+        {
+            get
+            {
+                if (_default != null)
+                    return _default;
+
+                return _range;
+            }
         }
     }
 }

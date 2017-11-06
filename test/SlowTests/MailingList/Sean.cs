@@ -21,9 +21,8 @@ namespace SlowTests.MailingList
         [Fact]
         public void CanUseNullablesForFacets()
         {
-            Facet facet = new Facet<Thread>
+            RangeFacet facet = new RangeFacet<Thread>
             {
-                Name = t => t.CreationDate,
                 Ranges =
                 {
                     t => t.CreationDate.Value < new DateTime(2012, 1, 1),
