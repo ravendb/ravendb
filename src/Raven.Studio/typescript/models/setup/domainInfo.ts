@@ -4,6 +4,8 @@ import generalUtils = require("common/generalUtils");
 import checkDomainAvailabilityCommand = require("commands/setup/checkDomainAvailabilityCommand");
 
 class domainInfo {
+    private licenseProvider: () => Raven.Server.Commercial.License;
+    
     domain = ko.observable<string>();
     userEmail = ko.observable<string>();
     
@@ -11,17 +13,18 @@ class domainInfo {
     
     validationGroup: KnockoutValidationGroup;
     
-    constructor() {
+    constructor(licenseProvider: () => Raven.Server.Commercial.License) {
         this.initValidation();
+        this.licenseProvider = licenseProvider;
     }
     
     private initValidation() {
 
         const checkDomain = (val: string, params: any, callback: (currentValue: string, result: boolean) => void) => {
-            new checkDomainAvailabilityCommand(val)
+            new checkDomainAvailabilityCommand(val, this.licenseProvider())
                 .execute()
                 .done(result => {
-                    callback(this.domain(), result);
+                    callback(this.domain(), result.available || result.isOwnedByMe); //TODO: upper case 
                 });
         };
         

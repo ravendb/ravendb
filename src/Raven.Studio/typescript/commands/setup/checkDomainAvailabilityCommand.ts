@@ -3,17 +3,21 @@ import endpoints = require("endpoints");
 
 class checkDomainAvailabilityCommand extends commandBase {
 
-    constructor(private domainName: string) {
+    constructor(private domainName: string, private license: Raven.Server.Commercial.License) {
         super();
     }
 
-    execute(): JQueryPromise<boolean> {
+    execute(): JQueryPromise<domainAvailabilityResult> {
         const args = {
-            domain: this.domainName
+            action: "domain-availability"
         };
-        const url = endpoints.global.setup.setupDnsNCert + this.urlEncodeArgs(args); //TODO:
+        const url = endpoints.global.setup.setupDnsNCert + this.urlEncodeArgs(args); 
+        const payload = {
+            Domain: this.domainName,
+            License: this.license
+        };
 
-        return this.query(url, null, null, x => x.Available)
+        return this.post(url, JSON.stringify(payload), null)
             .fail((response: JQueryXHR) => this.reportError("Failed to check domain availability", response.responseText, response.statusText));
     }
 }

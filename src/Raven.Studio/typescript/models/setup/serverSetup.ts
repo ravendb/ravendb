@@ -14,7 +14,7 @@ class serverSetup {
 
     mode = ko.observable<configurationMode>();
     license = ko.observable<licenseInfo>(new licenseInfo());
-    domain = ko.observable<domainInfo>(new domainInfo());
+    domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));
     unsecureSetup = ko.observable<unsecureSetup>(new unsecureSetup());
     nodes = ko.observableArray<nodeInfo>();
     useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
