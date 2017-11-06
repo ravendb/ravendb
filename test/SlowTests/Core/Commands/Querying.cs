@@ -169,11 +169,14 @@ namespace SlowTests.Core.Commands
                     {
                         new Facet
                         {
-                            Name = "Manufacturer"
-                        },
-                        new Facet
+                            FieldName = "Manufacturer"
+                        }
+                    };
+
+                    var rangeFacets = new List<RangeFacet>
+                    {
+                        new RangeFacet
                         {
-                            Name = "Cost",
                             Ranges =
                             {
                                 "Cost <= 200",
@@ -183,9 +186,8 @@ namespace SlowTests.Core.Commands
                                 "Cost >= 900"
                             }
                         },
-                        new Facet
+                        new RangeFacet
                         {
-                            Name = "Megapixels",
                             Ranges =
                             {
                                 "Megapixels <= 3",
@@ -196,10 +198,11 @@ namespace SlowTests.Core.Commands
                         }
                     };
 
+
                     commands.Put(
                         "facets/CameraFacets",
                         null,
-                        new FacetSetup { Id = "facets/CameraFacets", Facets = facets },
+                        new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets },
                         null);
 
                     WaitForIndexing(store);

@@ -351,7 +351,7 @@ namespace Raven.Client.Documents.Session
 
         MoreLikeThisScope MoreLikeThis();
 
-        void AggregateBy(Facet facet);
+        void AggregateBy(FacetBase facet);
 
         void AggregateUsing(string facetSetupDocumentKey);
 

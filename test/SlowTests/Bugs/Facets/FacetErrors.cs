@@ -36,10 +36,9 @@ namespace SlowTests.Bugs.Facets
 
                 InsertCameraData(store , cameras);
 
-                var facets = new List<Facet>{
-                    new Facet
+                var facets = new List<RangeFacet>{
+                    new RangeFacet
                     {
-                        Name = "DateOfListing",
                         Ranges = new List<string>{
                             string.Format("[NULL TO {0:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[0]),
                             string.Format("[{0:yyyy-MM-ddTHH-mm-ss.fffffff} TO {1:yyyy-MM-ddTHH-mm-ss.fffffff}]", dates[0], dates[1]),

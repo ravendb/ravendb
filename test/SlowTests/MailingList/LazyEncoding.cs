@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                         {
                             new Facet<User>
                             {
-                                Name = user => user.Admin
+                                FieldName = user => user.Admin
                             }
                         })
                         .Execute();
@@ -75,7 +75,7 @@ namespace SlowTests.MailingList
                         {
                             new Facet<User>
                             {
-                                Name = user => user.Admin
+                                FieldName = user => user.Admin
                             }
                         })
                         .ExecuteLazy().Value;

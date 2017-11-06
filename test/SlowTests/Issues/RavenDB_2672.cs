@@ -29,34 +29,38 @@ namespace SlowTests.Issues
                      {
                         new Facet
                         {
-                            Name = "Manufacturer"
-                        },
-                        new Facet
-                        {
-                            Name = "Cost_D_Range",
-                            Ranges =
-                            {
-                                "[NULL TO 200.0]",
-                                "[200.0 TO 400.0]",
-                                "[400.0 TO 600.0]",
-                                "[600.0 TO 800.0]",
-                                "[800.0 TO NULL]"
-                            }
-                        },
-                        new Facet
-                        {
-                            Name = "Megapixels_D_Range",
-                            Ranges =
-                            {
-                                "[NULL TO 3.0]",
-                                "[3.0 TO 7.0]",
-                                "[7.0 TO 10.0]",
-                                "[10.0 TO NULL]"
-                            }
+                            FieldName = "Manufacturer"
                         }
                      };
 
-                    session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
+                    var ranges = new List<RangeFacet>
+                    {
+                        //default is term query		                         
+                        //In Lucene [ is inclusive, { is exclusive
+                        new RangeFacet()
+                        {
+                            Ranges =
+                            {
+                                "Cost <= 200",
+                                "Cost BETWEEN 200 AND 400",
+                                "Cost BETWEEN 400 AND 600",
+                                "Cost BETWEEN 600 AND 800",
+                                "Cost >= 800"
+                            }
+                        },
+                        new RangeFacet
+                        {
+                            Ranges =
+                            {
+                                "Megapixels <= 3",
+                                "Megapixels BETWEEN 3 AND 7",
+                                "Megapixels BETWEEN 7 AND 10",
+                                "Megapixels >= 10",
+                            }
+                        }
+                    };
+
+                    session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = ranges });
                     session.SaveChanges();
 
                     var e = Assert.Throws<InvalidQueryException>(() => session.Query<Camera>().Where(x => x.Cost >= 100 && x.Cost <= 300).AggregateUsing("facets/CameraFacets").Execute());

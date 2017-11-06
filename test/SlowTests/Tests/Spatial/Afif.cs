@@ -114,7 +114,7 @@ namespace SlowTests.Tests.Spatial
                     session.Store(new FacetSetup
                     {
                         Id = "facets/Vehicle",
-                        Facets = new List<Facet> { new Facet { Name = "Make" }, new Facet { Name = "Model" } }
+                        Facets = new List<Facet> { new Facet { FieldName = "Make" }, new Facet { FieldName = "Model" } }
                     });
                     new ByVehicle().Execute(session.Advanced.DocumentStore);
                     session.SaveChanges();

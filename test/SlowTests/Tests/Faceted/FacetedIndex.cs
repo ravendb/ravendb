@@ -20,7 +20,10 @@ namespace SlowTests.Tests.Faceted
     {
         private readonly IList<Camera> _data;
         private readonly List<Facet> _originalFacets;
+        private readonly List<RangeFacet> _originalRangeFacets;
         private readonly List<Facet> _stronglyTypedFacets;
+        private readonly List<RangeFacet> _stronglyTypedRangeFacets;
+
         private const int NumCameras = 1000;
 
         public FacetedIndex()
@@ -31,13 +34,16 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer"
+                    FieldName = "Manufacturer"
                 },
+            };
+
+            _originalRangeFacets = new List<RangeFacet>
+            {
                 //default is term query		                         
                 //In Lucene [ is inclusive, { is exclusive
-                new Facet
+                new RangeFacet()
                 {
-                    Name = "Cost",
                     Ranges =
                     {
                         "Cost <= 200",
@@ -47,9 +53,8 @@ namespace SlowTests.Tests.Faceted
                         "Cost >= 800"
                     }
                 },
-                new Facet
+                new RangeFacet
                 {
-                    Name = "Megapixels",
                     Ranges =
                     {
                         "Megapixels <= 3",
@@ -60,7 +65,20 @@ namespace SlowTests.Tests.Faceted
                 }
             };
 
-            _stronglyTypedFacets = GetFacets();
+            _stronglyTypedFacets = new List<Facet>();
+            _stronglyTypedRangeFacets = new List<RangeFacet>();
+
+            foreach (var facetBase in GetFacets())
+            {
+                if (facetBase is Facet<Camera> f)
+                {
+                    _stronglyTypedFacets.Add(f);
+                }
+                else if (facetBase is RangeFacet<Camera> rf)
+                {
+                    _stronglyTypedRangeFacets.Add(rf);
+                }
+            }
         }
 
         [Fact]
@@ -68,7 +86,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTest(store, _originalFacets);
+                ExecuteTest(store, _originalFacets, _originalRangeFacets);
             }
         }
 
@@ -77,7 +95,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTestAsynchronously(store, _originalFacets);
+                ExecuteTestAsynchronously(store, _originalFacets, _originalRangeFacets);
             }
         }
 
@@ -86,7 +104,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTest(store, _stronglyTypedFacets);
+                ExecuteTest(store, _stronglyTypedFacets, _stronglyTypedRangeFacets);
             }
         }
 
@@ -95,7 +113,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTest(store, _stronglyTypedFacets);
+                ExecuteTest(store, _stronglyTypedFacets, _stronglyTypedRangeFacets);
             }
         }
 
@@ -104,7 +122,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                ExecuteTest(store, _stronglyTypedFacets);
+                ExecuteTest(store, _stronglyTypedFacets, _stronglyTypedRangeFacets);
             }
         }
 
@@ -113,7 +131,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                Setup(store, _originalFacets);
+                Setup(store, _originalFacets, _originalRangeFacets);
 
                 using (var s = store.OpenSession())
                 {
@@ -151,7 +169,7 @@ namespace SlowTests.Tests.Faceted
         {
             using (var store = GetDocumentStore())
             {
-                Setup(store, _originalFacets);
+                Setup(store, _originalFacets, _originalRangeFacets);
 
                 using (var s = store.OpenSession())
                 {
@@ -183,9 +201,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        private void ExecuteTest(IDocumentStore store, List<Facet> facetsToUse)
+        private void ExecuteTest(IDocumentStore store, List<Facet> facetsToUse, List<RangeFacet> rangeFacets)
         {
-            Setup(store, facetsToUse);
+            Setup(store, facetsToUse, rangeFacets);
 
             using (var s = store.OpenSession())
             {
@@ -213,9 +231,9 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        private void ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse)
+        private void ExecuteTestAsynchronously(IDocumentStore store, List<Facet> facetsToUse, List<RangeFacet> rangeFacets)
         {
-            Setup(store, facetsToUse);
+            Setup(store, facetsToUse, rangeFacets);
 
             using (var s = store.OpenAsyncSession())
             {
@@ -245,11 +263,11 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        private void Setup(IDocumentStore store, List<Facet> facetsToUse)
+        private void Setup(IDocumentStore store, List<Facet> facets,  List<RangeFacet> rangeFacets)
         {
             using (var s = store.OpenSession())
             {
-                var facetSetupDoc = new FacetSetup { Id = "facets/CameraFacets", Facets = facetsToUse };
+                var facetSetupDoc = new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets };
                 s.Store(facetSetupDoc);
                 s.SaveChanges();
             }

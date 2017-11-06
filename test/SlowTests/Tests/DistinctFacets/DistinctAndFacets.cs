@@ -142,7 +142,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .WhereEquals("SecondayTag", "RavenDB").Boost(4)
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
-                        .AggregateBy("Category")
+                        .AggregateBy(x => x.ByField("Category"))
                         .Execute();
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
@@ -167,7 +167,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .WhereEquals("SecondayTag", "RavenDB").Boost(4)
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
-                        .AggregateBy("Category")
+                        .AggregateBy(x => x.ByField("Category"))
                         .ExecuteLazy().Value;
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);
@@ -179,7 +179,7 @@ namespace SlowTests.Tests.DistinctFacets
                         .WhereEquals("SecondayTag", "RavenDB").Boost(4)
                         .Distinct()
                         .SelectFields<Books_Search.Result>("Author")
-                        .AggregateBy("Category")
+                        .AggregateBy(x => x.ByField("Category"))
                         .ExecuteLazy().Value;
 
                     Assert.Equal("databases", results["Category"].Values[0].Range);

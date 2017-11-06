@@ -6,15 +6,15 @@ namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
     {
-        public IAggregationDocumentQuery<T> AggregateBy(string fieldName, Action<FacetFactory<T>> factory = null)
+        public IAggregationDocumentQuery<T> AggregateBy(Action<IFacetFactory<T>> factory = null)
         {
-            var ff = new FacetFactory<T>(fieldName);
+            var ff = new FacetFactory<T>();
             factory?.Invoke(ff);
 
             return AggregateBy(ff.Facet);
         }
 
-        public new IAggregationDocumentQuery<T> AggregateBy(Facet facet)
+        public new IAggregationDocumentQuery<T> AggregateBy(FacetBase facet)
         {
             base.AggregateBy(facet);
 

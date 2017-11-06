@@ -30,7 +30,7 @@ namespace SlowTests.Tests.Faceted
         [Fact]
         public void CanPerformSearchWithTwoDefaultFacets()
         {
-            var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
+            var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
 
             using (var store = GetDocumentStore())
             {
@@ -89,7 +89,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
@@ -144,7 +144,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -201,7 +201,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
@@ -269,7 +269,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 20,
@@ -323,7 +323,7 @@ namespace SlowTests.Tests.Faceted
         [Fact]
         public void CanPerformSearchWithTwoDefaultFacets_LuceneQuery()
         {
-            var facets = new List<Facet> { new Facet { Name = "Manufacturer" }, new Facet { Name = "Model" } };
+            var facets = new List<Facet> { new Facet { FieldName = "Manufacturer" }, new Facet { FieldName = "Model" } };
 
             using (var store = GetDocumentStore())
             {
@@ -382,7 +382,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
@@ -437,7 +437,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
@@ -494,7 +494,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
@@ -557,7 +557,7 @@ namespace SlowTests.Tests.Faceted
             {
                 new Facet
                 {
-                    Name = "Manufacturer",
+                    FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
                         //MaxResults = 20,

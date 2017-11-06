@@ -12,15 +12,15 @@ namespace Raven.Client.Documents.Queries.Facets
             _source = source;
         }
 
-        public IAggregationDocumentQuery<T> AndAggregateBy(string path, Action<FacetFactory<T>> factory = null)
+        public IAggregationDocumentQuery<T> AndAggregateBy(Action<IFacetFactory<T>> factory = null)
         {
-            var f = new FacetFactory<T>(path);
+            var f = new FacetFactory<T>();
             factory?.Invoke(f);
 
             return AndAggregateBy(f.Facet);
         }
 
-        public IAggregationDocumentQuery<T> AndAggregateBy(Facet facet)
+        public IAggregationDocumentQuery<T> AndAggregateBy(FacetBase facet)
         {
             _source.AggregateBy(facet);
             return this;

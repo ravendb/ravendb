@@ -1043,7 +1043,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var aggregateFacet);
 
-                    _documentQuery.AggregateBy(aggregateFacet as Facet);
+                    _documentQuery.AggregateBy(aggregateFacet as FacetBase);
                     break;
                 case nameof(LinqExtensions.AggregateUsing):
                     VisitExpression(expression.Arguments[0]);

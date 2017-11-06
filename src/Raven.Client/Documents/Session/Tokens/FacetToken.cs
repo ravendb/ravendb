@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client.Documents.Queries.Facets;
 
@@ -8,23 +9,23 @@ namespace Raven.Client.Documents.Session.Tokens
     public class FacetToken : QueryToken
     {
         private readonly string _facetSetupDocumentKey;
-        private readonly string _fieldName;
+        private readonly string _aggregateByFieldName;
         private readonly string _alias;
         private readonly List<string> _ranges;
         private readonly string _optionsParameterName;
 
         private readonly List<FacetAggregationToken> _aggregations;
 
-        public string Name => _alias ?? _fieldName;
+        public string Name => _alias ?? _aggregateByFieldName;
 
         private FacetToken(string facetSetupDocumentKey)
         {
             _facetSetupDocumentKey = facetSetupDocumentKey;
         }
 
-        private FacetToken(string fieldName, string alias, List<string> ranges, string optionsParameterName)
+        private FacetToken(string aggregateByFieldName, string alias, List<string> ranges, string optionsParameterName)
         {
-            _fieldName = fieldName;
+            _aggregateByFieldName = aggregateByFieldName;
             _alias = alias;
             _ranges = ranges;
             _optionsParameterName = optionsParameterName;
@@ -39,11 +40,23 @@ namespace Raven.Client.Documents.Session.Tokens
             return new FacetToken(facetSetupDocumentKey);
         }
 
-        public static FacetToken Create(Facet facet, Func<object, string> addQueryParameter)
+        public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter)
         {
             var optionsParameterName = facet.Options != null && facet.Options != FacetOptions.Default ? addQueryParameter(facet.Options) : null;
 
-            var token = new FacetToken(facet.Name, facet.DisplayName, facet.Ranges, optionsParameterName);
+            string aggregateByField = null;
+            List<string> ranges = null;
+
+            var aggregationFacet = facet.AsFacet();
+            var rangeFacet = facet.AsRangeFacet();
+
+            if (aggregationFacet != null)
+                aggregateByField = aggregationFacet.FieldName;
+
+            if (rangeFacet != null)
+                ranges = rangeFacet.Ranges;
+
+            var token = new FacetToken(aggregateByField, facet.DisplayFieldName, ranges, optionsParameterName);
 
             foreach (var aggregation in facet.Aggregations)
             {
@@ -87,13 +100,23 @@ namespace Raven.Client.Documents.Session.Tokens
                 return;
             }
 
-            writer.Append(_fieldName);
-
-            foreach (var range in _ranges)
+            if (_aggregateByFieldName != null)
+                writer.Append(_aggregateByFieldName);
+            else
             {
-                writer
-                    .Append(", ")
-                    .Append(range);
+                Debug.Assert(_ranges != null);
+
+                var first = true;
+
+                foreach (var range in _ranges)
+                {
+                    if (first == false)
+                        writer.Append(", ");
+
+                    first = false;
+
+                    writer.Append(range);
+                }
             }
 
             foreach (var aggregation in _aggregations)
@@ -112,7 +135,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
             writer.Append(")");
 
-            if (string.IsNullOrWhiteSpace(_alias) || string.Equals(_fieldName, _alias))
+            if (string.IsNullOrWhiteSpace(_alias) || string.Equals(_aggregateByFieldName, _alias))
                 return;
 
             writer

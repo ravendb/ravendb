@@ -134,7 +134,7 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<TResult>)queryable;
         }
 
-        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Facet facet)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, FacetBase facet)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -147,7 +147,7 @@ namespace Raven.Client.Documents
             return query.AndAggregateBy(facet);
         }
 
-        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, IEnumerable<Facet> facets)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, IEnumerable<FacetBase> facets)
         {
             IAggregationQuery<T> query = null;
             foreach (var facet in facets)
@@ -164,20 +164,12 @@ namespace Raven.Client.Documents
             return query;
         }
 
-        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, string path, Action<FacetFactory<T>> factory = null)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetFactory<T>> factory = null)
         {
-            var f = new FacetFactory<T>(path);
+            var f = new FacetFactory<T>();
             factory?.Invoke(f);
 
             return source.AggregateBy(f.Facet);
-        }
-
-        /// <summary>
-        /// Query the facets results for this query using aggregation
-        /// </summary>
-        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Action<FacetFactory<T>> factory = null)
-        {
-            return source.AggregateBy(path.ToPropertyPath('_'), factory);
         }
 
         public static IAggregationQuery<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentKey)

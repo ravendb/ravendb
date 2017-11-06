@@ -84,7 +84,7 @@ namespace SlowTests.MailingList
                       {
                           new Facet
                               {
-                                  Name = "Attributes"
+                                  FieldName = "Attributes"
                               }
                       };
                     session.Store(new FacetSetup { Id = "facets/AttributeFacets", Facets = _facets });

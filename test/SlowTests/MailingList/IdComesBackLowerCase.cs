@@ -21,7 +21,7 @@ namespace SlowTests.MailingList
             var product2 = new Product("MyName2", "MyBrand2");
             product2.Id = "Products/101";
 
-            var facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { Name = "Brand" } } };
+            var facetSetup = new FacetSetup { Id = "facets/ProductFacets", Facets = new List<Facet> { new Facet { FieldName = "Brand" } } };
 
             using (var docSession = store.OpenSession())
             {

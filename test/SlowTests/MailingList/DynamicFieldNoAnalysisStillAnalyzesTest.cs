@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
                     {
                         new Facet
                         {
-                            Name = "prop_brand",
+                            FieldName = "prop_brand",
                         },
                     })
                     .Execute();

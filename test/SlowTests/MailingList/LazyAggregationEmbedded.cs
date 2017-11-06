@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
                     WaitForIndexing(store);
 
                     var query = session.Query<Task, TaskIndex>()
-                        .AggregateBy(t => t.AssigneeId, factory => factory.WithDisplayName("AssigneeId"));
+                        .AggregateBy(factory => factory.ByField(t => t.AssigneeId).WithDisplayName("AssigneeId"));
 
                     var lazyOperation = query.ExecuteLazy(); // blows up here
 

@@ -83,7 +83,7 @@ namespace SlowTests.MailingList
                 Id = Reference;
                 Facets = new List<Facet>
                 {
-                    new Facet {Name = "Sectors_Id"}
+                    new Facet {FieldName = "Sectors_Id"}
                 };
             }
         }
