@@ -1,9 +1,7 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
 import nodeInfo = require("models/setup/nodeInfo");
-import getNextOperationId = require("commands/database/studio/getNextOperationId");
-import messagePublisher = require("common/messagePublisher");
-import endpoints = require("endpoints");
+
 import serverSetup = require("models/setup/serverSetup");
 
 class nodes extends setupStep {
@@ -44,49 +42,11 @@ class nodes extends setupStep {
         }
         
         if (isValid) {
-            const dto = this.model.toSecuredDto();
-            
-            switch (this.model.mode()) {
-                case "LetsEncrypt":
-                    //TODO:
-                    break;
-                case "Secured":
-                    this.saveSecuredConfiguration(dto);
-            }
-            
+            router.navigate("#finish");
         }
     }
 
-    private getNextOperationId(): JQueryPromise<number> {
-        return new getNextOperationId(null).execute()
-            .fail((qXHR, textStatus, errorThrown) => {
-                messagePublisher.reportError("Could not get next task id.", errorThrown);
-            });
-    }
-    
-    private saveSecuredConfiguration(dto: Raven.Server.Commercial.SetupInfo) {
-        const $form = $("#secureSetupForm");
-        const db = this.activeDatabase();
-        const $downloadOptions = $("[name=Options]", $form);
-
-        this.getNextOperationId()
-            .done((operationId: number) => {
-                const url = endpoints.global.setup.setupSecured;
-                const operationPart = "?operationId=" + operationId;
-                $form.attr("action", url + operationPart);
-                $downloadOptions.val(JSON.stringify(dto));
-                $form.submit();
-
-                /* TODO
-                notificationCenter.instance.openDetailsForOperationById(db, operationId);
-
-                notificationCenter.instance.monitorOperation(db, operationId)
-                    .fail((exception: Raven.Client.Documents.Operations.OperationExceptionResult) => {
-                        messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
-                    }).always(() => exportDatabase.isExporting(false));*/
-            });
-    }
-    
+  
     addNode() {
         this.model.nodes.push(nodeInfo.empty(this.model.useOwnCertificates));
     }
@@ -96,7 +56,14 @@ class nodes extends setupStep {
     }
 
     getLabelFor(idx: number) {
-        return serverSetup.nodesTags[idx];
+        
+        const fullUrl =  this.model.mode() === "LetsEncrypt";
+        const tag = serverSetup.nodesTags[idx];
+        if (fullUrl) {
+            return tag + "." + this.model.domain().domain() + ".dbs.local.ravendb.net";
+        } else {
+            return tag;
+        }
     }
 }
 

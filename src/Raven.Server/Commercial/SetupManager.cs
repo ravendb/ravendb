@@ -144,7 +144,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await UpdataDnsRecordsTask(onProgress, token, map, setupInfo);
+                        await UpdateDnsRecordsTask(onProgress, token, map, setupInfo);
                     }
                     catch (Exception e)
                     {
@@ -225,7 +225,7 @@ namespace Raven.Server.Commercial
         }
 
         // Update DNS record(s) and set the let's encrypt challenge(s) in dbs.local.ravendb.net
-        private static async Task UpdataDnsRecordsTask(Action<IOperationProgress> onProgress, CancellationToken token, Dictionary<string, string> map, SetupInfo setupInfo)
+        private static async Task UpdateDnsRecordsTask(Action<IOperationProgress> onProgress, CancellationToken token, Dictionary<string, string> map, SetupInfo setupInfo)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {

@@ -42,14 +42,14 @@ class serverSetup {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
         this.nodes().forEach((node, idx) => {
             const nodeTag = serverSetup.nodesTags[idx];
-            nodesInfo[nodeTag] = node.toDto(); //TODO: check me!
+            nodesInfo[nodeTag] = node.toDto();
         });
 
         return {
             License: this.license().toDto(),
-            Email: null,
+            Email: this.domain().userEmail(),
             Domain: this.domain().domain(),
-            ModifyLocalServer: true,  //TODO: always true?
+            ModifyLocalServer: true,
             NodeSetupInfos: nodesInfo
         };
     }

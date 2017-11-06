@@ -17,23 +17,23 @@ class nodeInfo {
     
     validationGroup: KnockoutValidationGroup;
     
-    
     private constructor(useOwnCertificates: KnockoutObservable<boolean>) {
         this.useOwnCertificates = useOwnCertificates;
         this.initValidation();
     }
 
     private initValidation() {
-        //TODO: ips
-        if (this.useOwnCertificates) {
-            this.certificate.extend({
-                required: true
-            });
-            
-            this.nodeTag.extend({
-                required: true
-            })
-        }
+        this.certificate.extend({
+            required: {
+                onlyIf: () => this.useOwnCertificates()
+            }
+        });
+        
+        this.certificate.extend({
+            required: {
+                onlyIf: () => this.useOwnCertificates()
+            }
+        });
         
         this.port.extend({
             required: true,
