@@ -324,7 +324,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
+                    if (_server.LicenseManager.CanDynamicallyDistributeNodes(out var _) == false)
                         continue;
 
                     // replace the bad promotable otherwise we will continue to add more and more nodes.
@@ -379,7 +379,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (goodMembers < topology.ReplicationFactor &&
                             TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
-                            if (_server.LicenseManager.CanDynamicallyDistributeNodes() == false)
+                            if (_server.LicenseManager.CanDynamicallyDistributeNodes(out var _) == false)
                                 continue;
 
                             topology.Promotables.Add(node);
