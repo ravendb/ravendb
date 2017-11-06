@@ -8,7 +8,7 @@ class claimDomainCommand extends commandBase {
     }
 
     execute(): JQueryPromise<registrationInfoResult> {
-        const url = endpoints.global.setup.setupClaim;
+        const url = endpoints.global.setup.setupDnsNCert; //TODO: 
         const payload = { 
             Domain: this.domain,
             License: this.license

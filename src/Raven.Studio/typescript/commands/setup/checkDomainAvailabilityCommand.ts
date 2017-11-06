@@ -11,7 +11,7 @@ class checkDomainAvailabilityCommand extends commandBase {
         const args = {
             domain: this.domainName
         };
-        const url = endpoints.global.setup.setupCheckDomain + this.urlEncodeArgs(args);
+        const url = endpoints.global.setup.setupDnsNCert + this.urlEncodeArgs(args); //TODO:
 
         return this.query(url, null, null, x => x.Available)
             .fail((response: JQueryXHR) => this.reportError("Failed to check domain availability", response.responseText, response.statusText));

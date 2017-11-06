@@ -4,6 +4,7 @@ import nodeInfo = require("models/setup/nodeInfo");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
+import serverSetup = require("models/setup/serverSetup");
 
 class nodes extends setupStep {
 
@@ -94,6 +95,9 @@ class nodes extends setupStep {
         this.model.nodes.remove(node);
     }
 
+    getLabelFor(idx: number) {
+        return serverSetup.nodesTags[idx];
+    }
 }
 
 export = nodes;

@@ -7,21 +7,12 @@
 
         <div data-bind="foreach: model.nodes">
             <div class="panel padding">
-                <div>Node <span data-bind="text: $index() + 1"></span>
+                <div>Node <span data-bind="text: getLabelFor($index())"></span>
                     <button  data-bind="click: $root.removeNode" class="btn btn-danger pull-right" title="Delete this node">
                         <i class="icon-trash"></i>
                     </button>
                 </div>
  
-                <div class="form-group" data-bind="validationElement: nodeTag">
-                    <label for="nodeTag" class="control-label">Node Tag<i class="required"></i></label>
-                    <div class="flex-grow">
-                        <input type="text" autocomplete="off" class="form-control" id="nodeTag"
-                               placeholder="Node Tag"
-                               data-bind="textInput: nodeTag">
-                    </div>
-                </div>
-
                 <div class="form-group" data-bind="validationElement: port">
                     <label for="port" class="control-label">Port<i class="required"></i></label>
                     <div class="flex-grow">
