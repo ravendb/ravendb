@@ -8,7 +8,10 @@ class registrationInfoCommand extends commandBase {
     }
 
     execute(): JQueryPromise<registrationInfoResult> {
-        const url = endpoints.global.setup.setupDnsNCert; //TODO:
+        const args = {
+            action: "user-domains"
+        };
+        const url = endpoints.global.setup.setupDnsNCert + this.urlEncodeArgs(args);
         const payload = {
             License: this.license
         };
