@@ -43,6 +43,20 @@ class agreement extends setupStep {
             });
     }
     
+    compositionComplete() {
+        super.compositionComplete();
+
+        const iframe = document.getElementById('terms') as HTMLIFrameElement;
+        const iframedoc = iframe.contentDocument || iframe.contentWindow.document;
+
+        iframedoc.body.innerHTML = this.prepareIFrameContent();
+    }
+    
+    private prepareIFrameContent() {
+        const template = document.getElementById("iframe-agreement-template");
+        return _.replace(template.innerHTML, /{{URL}}/g, this.url());
+    }
+    
     save() {
         if (this.isValid(this.validationGroup)) {
             router.navigate("#nodes");

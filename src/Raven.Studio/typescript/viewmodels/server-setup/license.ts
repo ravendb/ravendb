@@ -12,7 +12,7 @@ class license extends setupStep {
             return $.when({ can: true });
         }
         
-        return $.when({redirect: "#welcome" });
+        return $.when({ redirect: "#welcome" });
     }
 
     save() {
