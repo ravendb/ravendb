@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Config.Attributes;
@@ -76,6 +77,8 @@ namespace Raven.Server.Config
             _configBuilder = new ConfigurationBuilder();
             AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
+
+            var path = _configBuilder.Sources.OfType<JsonConfigurationSource>().Last().Path;
 
             Settings = _configBuilder.Build();
 

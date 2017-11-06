@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
+using Newtonsoft.Json;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
@@ -81,6 +85,9 @@ namespace Raven.Server
                 {
                     Console.WriteLine("\nRestarting Server...");
                     rerun = false;
+
+                    configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
+                    configuration.Initialize();
                 }
 
                 try
@@ -132,7 +139,7 @@ namespace Raven.Server
                             Console.ForegroundColor = prevColor;
 
                             IsRunningNonInteractive = false;
-                            rerun = CommandLineSwitches.NonInteractive ? RunAsNonInteractive() : RunInteractive(server);
+                            rerun = CommandLineSwitches.NonInteractive || configuration.Core.SetupMode == SetupMode.Initial ? RunAsNonInteractive() : RunInteractive(server);
 
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
