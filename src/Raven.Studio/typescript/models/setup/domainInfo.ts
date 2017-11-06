@@ -24,7 +24,7 @@ class domainInfo {
             new checkDomainAvailabilityCommand(val, this.licenseProvider())
                 .execute()
                 .done(result => {
-                    callback(this.domain(), result.available || result.isOwnedByMe); //TODO: upper case 
+                    callback(this.domain(), result.Available || result.IsOwnedByMe); 
                 });
         };
         

@@ -23,8 +23,8 @@ class domain extends setupStep {
             .done((result) => {
                 const domainModel = this.model.domain();
 
-                domainModel.userEmail(result.email);
-                domainModel.availableDomains(Object.keys(result.domains));
+                domainModel.userEmail(result.Email);
+                domainModel.availableDomains(Object.keys(result.Domains));
                 
                 if (domainModel.availableDomains().length === 1) {
                     domainModel.domain(domainModel.availableDomains()[0]);
