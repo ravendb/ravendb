@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -6,6 +7,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
@@ -26,6 +28,10 @@ namespace Raven.Server.Web.System
             var action = GetQueryStringValueAndAssertIfSingleAndNotEmpty("action"); // Action can be: claim | user-domains | check-availability
 
             var content = new StreamContent(RequestBodyStream());
+            if (HttpContext.Request.Headers.TryGetValue("Content-Type", out StringValues contentType))
+            {
+                content.Headers.TryAddWithoutValidation("Content-Type", (IEnumerable<string>)contentType);
+            }
             var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/" + action, content).ConfigureAwait(false);
 
             HttpContext.Response.StatusCode = (int)response.StatusCode;
