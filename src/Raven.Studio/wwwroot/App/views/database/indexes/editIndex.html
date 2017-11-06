@@ -185,13 +185,13 @@
                     </div>
                    
                     <div class="flex-horizontal flex-stretch-items margin-top">
-                        <ul class="item-list" data-bind="foreach: editedIndex().additionalSources">
+                        <ul class="item-list flex-noshrink" data-bind="foreach: editedIndex().additionalSources">
                             <li class="item" data-bind="css: { active: $data === $root.selectedSourcePreview() }">
                                 <a href="#" data-bind="click: $root.previewAdditionalSource, text: name" class="column-name"></a>
                                 <a class="remove" data-bind="click: $root.deleteAdditionalSource" href="#"><i class="icon-trash"></i></a>
                             </li>
                         </ul>
-                        <div class="flex-grow" data-bind="html: $root.additionalSourcePreviewHtml">
+                        <div class="flex-grow margin-left" data-bind="html: $root.additionalSourcePreviewHtml">
                         </div>
                     </div>
                 </div>
@@ -313,7 +313,9 @@
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
 <script type="text/html" id="additional-source-template">
-<div class="padding padding-sm">
+    <i class="icon-xl icon-empty-set text-muted"></i>
+    <h2 class="text-center">No Additional sources uploaded</h2>
+<!--<div class="padding padding-sm">
 <div>Example additional source:</div>    
 <pre class="margin-bottom">
 <span class="token keyword">namespace</span> My<span class="token punctuation">.</span>Namespace
@@ -333,7 +335,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
     _ <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">CreateField</span><span class="token punctuation">(</span><span class="token string">"Email"</span><span class="token punctuation">,</span> PeopleUtil<span class="token punctuation">.</span><span class="token function">CalculatePersonEmail</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">,</span> stored<span class="token punctuation">:</span> <span class="token keyword">true</span><span class="token punctuation">,</span> analyzed<span class="token punctuation">:</span> <span class="token keyword">true</span><span class="token punctuation">)</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span>    
 </pre>
-</div>
+</div>-->
 </script>
 
 <script type="text/html" id="field-template">
