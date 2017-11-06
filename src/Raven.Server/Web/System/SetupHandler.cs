@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -22,9 +23,10 @@ namespace Raven.Server.Web.System
     public class SetupHandler : RequestHandler
     {
         [RavenAction("/setup/dns-n-cert", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task DnsCertBridge(string action) // Action can be: claim | user-domain
+        public async Task DnsCertBridge() 
         {
             AssertOnlyInSetupMode();
+            var action = GetQueryStringValueAndAssertIfSingleAndNotEmpty("action"); // Action can be: claim | user-domain
 
             var content = new StreamContent(RequestBodyStream());
             var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/" + action, content).ConfigureAwait(false);
@@ -33,97 +35,6 @@ namespace Raven.Server.Web.System
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 await responseStream.CopyToAsync(ResponseBodyStream());
-            }
-        }
-
-        [RavenAction("/setup/registration-info", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public Task RegistrationInfo()
-        {
-            // TODO create /v4/dns-n-cert/registration-info endpoint in api.ravendb.net. It's the same as claim but without the actual claiming.. just checking
-            // TODO when endpoint is ready uncomment this and delete fake impl
-            /*AssertOnlyInSetupMode();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "check-domain"))
-            {
-                var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
-
-                var content = new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json");
-                var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-info", content).ConfigureAwait(false);
-
-                HttpContext.Response.StatusCode = (int)response.StatusCode;
-                var serverResponse = await response.Content.ReadAsStreamAsync();
-                await serverResponse.CopyToAsync(ResponseBodyStream());
-            }*/
-
-            AssertOnlyInSetupMode();
-            
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "domain-list"))
-            {
-                var listDomainsInfo = JsonDeserializationServer.ListDomainsInfo(setupInfoJson);
-
-                /* TODO
-                 list existing domains associated with given license 
-                 
-                 don't return 404 when not found - instead return empty list 
-                 
-                 this endpoint returns the same output as /setup/claim but it doesn't claim any domain
-                 optionally we might merge those 2 endpoint and make claim request optional
-                 
-                 */
-
-                { //TODO: DELETE ME! - this is temporary fake impl!
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        WriteFakeClaimResult(writer);
-                    }
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-        private void WriteFakeClaimResult(BlittableJsonTextWriter writer) //TODO: remove me !
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName("Domains");
-            writer.WriteStartObject();
-            
-            /* TODO
-            writer.WritePropertyName("oren");
-            writer.WriteStartArray();
-            writer.WriteEndArray();
-            writer.WriteComma();
-            writer.WritePropertyName("marcin");
-            writer.WriteStartArray();
-            writer.WriteEndArray();
-            */
-            
-            writer.WriteEndObject();
-            writer.WriteComma();
-            writer.WritePropertyName("Email");
-            writer.WriteString("marcin@ravendb.net");
-            writer.WriteEndObject();
-        }
-        
-        [RavenAction("/setup/claim", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task ClaimDomain()
-        {
-            AssertOnlyInSetupMode();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "claim-domain"))
-            {
-                var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
-
-                var content = new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json");
-                var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/claim", content).ConfigureAwait(false);
-
-                HttpContext.Response.StatusCode = (int)response.StatusCode;
-                var serverResponse = await response.Content.ReadAsStreamAsync();
-                await serverResponse.CopyToAsync(ResponseBodyStream());
             }
         }
 
@@ -162,7 +73,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        /*[RavenAction("/setup/hosts", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        [RavenAction("/setup/hosts", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetHosts()
         {
             AssertOnlyInSetupMode();
@@ -172,11 +83,53 @@ namespace Raven.Server.Web.System
             {
                 var certDef = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                var certificate = new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
-                var cn = certificate.GetNameInfo(X509NameType.DnsName, false);
-                certificate.g
+                X509Extension sanNames;
+                X509Certificate2 certificate = null;
+                string cn;
+                try
+                {
+                    certificate = certDef.Password == null
+                        ? new X509Certificate2(Convert.FromBase64String(certDef.Certificate))
+                        : new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
+
+                    cn = certificate.GetNameInfo(X509NameType.DnsName, false);
+                    sanNames = certificate.Extensions["2.5.29.17"]; // Alternative names
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to extract CN and SAN from certificate {certificate?.FriendlyName}", e);
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("CN");
+                    writer.WriteString(cn);
+
+                    if (sanNames != null)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName("AlternativeNames");
+                        writer.WriteStartArray();
+                        var first = true;
+                        foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var parts = line.Split('=');
+                            var value = parts.Length > 0 ? parts[1] : null;
+
+                            if (first == false)
+                                writer.WriteComma();
+                            first = false;
+                            writer.WriteString(value);
+                        }
+                        writer.WriteEndArray();
+                    }
+
+                    writer.WriteEndObject();
+                }
             }
-        }*/
+            return Task.CompletedTask;
+        }
 
         [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task SetupUnsecured()
@@ -233,8 +186,11 @@ namespace Raven.Server.Web.System
                     operationId.Value, operationCancelToken);
                 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
-
-                var nodeCert = new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Certificate), setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Password);
+                
+                var nodeCert = setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Password == null
+                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Certificate))
+                    : new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Certificate), setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Password);
+                
                 var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
 
                 var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
