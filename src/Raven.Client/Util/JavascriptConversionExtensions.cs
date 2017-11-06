@@ -940,5 +940,60 @@ namespace Raven.Client.Util
             }
         }
 
+        public class IdentityPropertySupport : JavascriptConversionExtension
+        {
+            public Dictionary<string, string> AliasesToIdProperty { get; set; }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MemberExpression member))
+                    return;
+
+                if (member.Expression is ParameterExpression parameter 
+                    && AliasesToIdProperty.TryGetValue(parameter.Name , out var id) 
+                    && id == member.Member.Name)
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(member))
+                    {
+                        writer.Write($"id({parameter.Name})");
+                    }
+                    return;
+                }
+
+                if (!(member.Expression is MemberExpression innerMember))
+                    return;
+
+                var p = GetParameter(innerMember);
+
+                if (p != null && p.StartsWith("<>h__TransparentIdentifier") 
+                    && AliasesToIdProperty.TryGetValue(innerMember.Member.Name, out id)
+                    && id == member.Member.Name)
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(member))
+                    {
+                        writer.Write("id(");
+                        context.Visitor.Visit(innerMember);
+                        writer.Write(")");
+                    }
+                }
+            }
+
+            private string GetParameter(MemberExpression expression)
+            {
+                while (expression.Expression is MemberExpression memberExpression)
+                {
+                    expression = memberExpression;
+                }
+
+                return (expression.Expression as ParameterExpression)?.Name;
+            }
+        }
+
     }
 }

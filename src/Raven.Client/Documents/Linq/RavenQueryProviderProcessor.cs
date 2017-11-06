@@ -51,6 +51,7 @@ namespace Raven.Client.Documents.Linq
         private StringBuilder _declareBuilder;
         private DeclareToken _declareToken;
         private List<LoadToken> _loadTokens;
+        private readonly Dictionary<string, string> _aliasesToIdPropery;
         private int _insideLet = 0;
 
         private readonly LinqPathProvider _linqPathProvider;
@@ -91,6 +92,7 @@ namespace Raven.Client.Documents.Linq
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
+            _aliasesToIdPropery  = new Dictionary<string, string>();
         }
 
         /// <summary>
@@ -1751,8 +1753,7 @@ case "cmpxchg.match":
                         //lambda 2 js
                         if (_fromAlias == null)
                         {
-                            _fromAlias = lambdaExpression?.Parameters[0].Name;
-                            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
+                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
                         }
 
                         FieldsToFetch.Clear();
@@ -1806,8 +1807,7 @@ case "cmpxchg.match":
 
                         if (_fromAlias == null)
                         {
-                            _fromAlias = lambdaExpression?.Parameters[0].Name;
-                            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
+                            AddFromAlias(lambdaExpression?.Parameters[0].Name);
                         }
 
                         FieldsToFetch.Clear();
@@ -1902,18 +1902,19 @@ case "cmpxchg.match":
                     new JavascriptConversionExtensions.MetadataSupport(),
                     new JavascriptConversionExtensions.CmpXchgValueSupport(),
                     new JavascriptConversionExtensions.CmpXchgMatchSupport(),
+                    new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
 
             if (_fromAlias == null)
             {
-                _fromAlias = parameter?.Name;
-                _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
+                AddFromAlias(parameter?.Name);
             }
 
             if (loadSupport.HasLoad)
             {
                 var arg = ToJs(loadSupport.Arg);
+                var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
 
                 if (_loadTokens == null)
                 {
@@ -1924,11 +1925,13 @@ case "cmpxchg.match":
                 {
                     if (loadSupport.IsEnumerable)
                     {
-                        name += "[]";
+                        _loadTokens.Add(LoadToken.Create(arg, $"{name}[]"));
                     }
-
-                    _loadTokens.Add(LoadToken.Create(arg, name));
-
+                    else
+                    {
+                        _loadTokens.Add(LoadToken.Create(arg, name));
+                        _aliasesToIdPropery.Add(name, id);
+                    }
                     return;
                 }
 
@@ -1946,6 +1949,7 @@ case "cmpxchg.match":
                 {
                     doc = $"_doc_{_loadTokens.Count}";
                     _loadTokens.Add(LoadToken.Create(arg, doc));
+                    _aliasesToIdPropery.Add(name , id);
                 }
 
                 if (js.StartsWith(".") == false)
@@ -1962,6 +1966,14 @@ case "cmpxchg.match":
             }
 
             _declareBuilder.Append("\t").Append("var ").Append(name).Append(" = ").Append(js).Append(";").Append(Environment.NewLine);
+        }
+
+        private void AddFromAlias(string alias)
+        {
+            _fromAlias = alias;
+            _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
+            var id = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType)?.Name ?? "Id";
+            _aliasesToIdPropery.Add(_fromAlias, id);
         }
 
         private string TranslateSelectBodyToJs(Expression expression)
@@ -2032,7 +2044,7 @@ case "cmpxchg.match":
             sb.Append(name).Append(" : ").Append(js);
         }
 
-        private static string ToJs(Expression expression)
+        private string ToJs(Expression expression)
         {
             var js = expression.CompileToJavascript(
                 new JavascriptCompilationOptions(
@@ -2049,7 +2061,12 @@ case "cmpxchg.match":
                     new JavascriptConversionExtensions.MetadataSupport(),
                     new JavascriptConversionExtensions.CmpXchgValueSupport(),
                     new JavascriptConversionExtensions.CmpXchgMatchSupport(),
-                    new JavascriptConversionExtensions.ValueTypeParseSupport(),                    MemberInitAsJson.ForAllTypes));
+                    new JavascriptConversionExtensions.ValueTypeParseSupport(),
+                    new JavascriptConversionExtensions.IdentityPropertySupport
+                    {
+                        AliasesToIdProperty = _aliasesToIdPropery
+                    },
+                    MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
