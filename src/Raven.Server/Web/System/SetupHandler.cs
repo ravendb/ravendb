@@ -21,50 +21,21 @@ namespace Raven.Server.Web.System
 {
     public class SetupHandler : RequestHandler
     {
-        [RavenAction("/setup/check-domain", "GET", AuthorizationStatus.UnauthenticatedClients)]
-        public Task CheckDomainAvailability()
+        [RavenAction("/setup/dns-n-cert", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task DnsCertBridge(string action) // Action can be: claim | user-domain
         {
-            // TODO create /v4/dns-n-cert/check-domain endpoint in api.ravendb.net. It checks availability for a single domain
-            // TODO decide if license is needed here
-            // TODO when endpoint is ready uncomment this and delete fake impl
-            /*AssertOnlyInSetupMode();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "check-domain"))
-            {
-                var claimDomainInfo = JsonDeserializationServer.ClaimDomainInfo(setupInfoJson);
-
-                var content = new StringContent(JsonConvert.SerializeObject(claimDomainInfo), Encoding.UTF8, "application/json");
-                var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/check-domain", content).ConfigureAwait(false);
-
-                HttpContext.Response.StatusCode = (int)response.StatusCode;
-                var serverResponse = await response.Content.ReadAsStreamAsync();
-                await serverResponse.CopyToAsync(ResponseBodyStream());
-            }*/
-
             AssertOnlyInSetupMode();
 
-            string domainToCheck = GetQueryStringValueAndAssertIfSingleAndNotEmpty("domain");
-            
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            var content = new StreamContent(RequestBodyStream());
+            var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/" + action, content).ConfigureAwait(false);
+
+            HttpContext.Response.StatusCode = (int)response.StatusCode;
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
-                { //TODO: DELETE ME! - this is temporary fake impl!
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    
-                    Thread.Sleep(300); //TODO: delete me! - simulate slow response 
-                    
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Available");
-                        writer.WriteBool(domainToCheck.StartsWith("a") ? false : true); //TODO: fake impl - let's assume each domain which starts with A is taken
-                        writer.WriteEndObject();
-                    }
-                }
+                await responseStream.CopyToAsync(ResponseBodyStream());
             }
-            return Task.CompletedTask;
         }
-        
+
         [RavenAction("/setup/registration-info", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task RegistrationInfo()
         {
@@ -190,6 +161,22 @@ namespace Raven.Server.Web.System
             }
             return Task.CompletedTask;
         }
+
+        /*[RavenAction("/setup/hosts", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetHosts()
+        {
+            AssertOnlyInSetupMode();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var certificateJson = context.ReadForMemory(RequestBodyStream(), "setup-certificate"))
+            {
+                var certDef = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                var certificate = new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
+                var cn = certificate.GetNameInfo(X509NameType.DnsName, false);
+                certificate.g
+            }
+        }*/
 
         [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task SetupUnsecured()
