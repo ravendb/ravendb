@@ -356,7 +356,9 @@ namespace Raven.Server.Commercial
                 try
                 {
                     localCertBytes = Convert.FromBase64String(localNode.Certificate);
-                    localNodeCert = new X509Certificate2(localCertBytes, localNode.Password);
+                    localNodeCert = localNode.Password == null
+                        ? new X509Certificate2(localCertBytes)
+                        : new X509Certificate2(localCertBytes, localNode.Password);
                 }
                 catch (Exception e)
                 {
@@ -492,7 +494,9 @@ namespace Raven.Server.Commercial
                             {
                                 try
                                 {
-                                    var nodeCert = new X509Certificate2(Convert.FromBase64String(node.Value.Certificate), node.Value.Password);
+                                    var nodeCert = node.Value.Password == null
+                                        ? new X509Certificate2(Convert.FromBase64String(node.Value.Certificate))
+                                        : new X509Certificate2(Convert.FromBase64String(node.Value.Certificate), node.Value.Password);
                                     var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
                                     nodeServerUrl = $"https://{cn}:{node.Value.Port}";
                                 }
