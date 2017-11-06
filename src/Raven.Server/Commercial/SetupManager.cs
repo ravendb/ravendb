@@ -489,12 +489,13 @@ namespace Raven.Server.Commercial
 
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
+                            X509Certificate2 nodeCert = null;
                             var nodeServerUrl = string.Empty;
                             if (setupMode == SetupMode.Secured)
                             {
                                 try
                                 {
-                                    var nodeCert = node.Value.Password == null
+                                    nodeCert = node.Value.Password == null
                                         ? new X509Certificate2(Convert.FromBase64String(node.Value.Certificate))
                                         : new X509Certificate2(Convert.FromBase64String(node.Value.Certificate), node.Value.Password);
                                     var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
@@ -540,10 +541,23 @@ namespace Raven.Server.Commercial
                             {
                                 var entry = archive.CreateEntry($"{node.Key}.settings.json");
                                 using (var entryStream = entry.Open())
-
                                 using (var writer = new StreamWriter(entryStream))
                                 {
                                     writer.Write(jsonString);
+                                    writer.Flush();
+                                    await entryStream.FlushAsync(token);
+                                }
+
+                                entry = archive.CreateEntry($"{node.Key}.Certificate.pem");
+                                using (var entryStream = entry.Open())
+                                using (var writer = new StreamWriter(entryStream))
+                                {
+                                    var builder = new StringBuilder();
+                                    builder.AppendLine("-----BEGIN CERTIFICATE-----");
+                                    builder.AppendLine(Convert.ToBase64String(nodeCert?.Export(X509ContentType.Cert), Base64FormattingOptions.InsertLineBreaks));
+                                    builder.AppendLine("-----END CERTIFICATE-----");
+                                    
+                                    writer.Write(builder.ToString());
                                     writer.Flush();
                                     await entryStream.FlushAsync(token);
                                 }
