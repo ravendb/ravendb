@@ -2398,7 +2398,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
 
                     Assert.Equal("FROM Orders as o WHERE o.OrderedAt.Year <= $p0 " +
                                  "LOAD o.Employee as employee " +
-                                 "SELECT { Id : o.Id, Status : \"Ordered at \"+new Date(Date.parse(o.OrderedAt))+\", by \"+employee.FirstName+\" \"+employee.LastName }"
+                                 "SELECT { Id : id(o), Status : \"Ordered at \"+new Date(Date.parse(o.OrderedAt))+\", by \"+employee.FirstName+\" \"+employee.LastName }"
                                  ,complexLinqQuery.ToString());
 
                     var queryResult = complexLinqQuery.ToList();
@@ -2489,7 +2489,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     Assert.Equal(
 @"DECLARE function output(o) {
 	var TotalSpentOnOrder = function(order){return order.Lines.map(function(l){return l.PricePerUnit*l.Quantity-l.Discount;}).reduce(function(a, b) { return a + b; }, 0);};
-	return { Id : o.Id, TotalMoneySpent : TotalSpentOnOrder(o) };
+	return { Id : id(o), TotalMoneySpent : TotalSpentOnOrder(o) };
 }
 FROM Orders as o SELECT output(o)", complexLinqQuery.ToString());
 
@@ -2508,6 +2508,60 @@ FROM Orders as o SELECT output(o)", complexLinqQuery.ToString());
 
                     Assert.Equal("orders/3-A", queryResult[2].Id);
                     Assert.Equal(totalSpentOnOrder(o3), queryResult[2].TotalMoneySpent);
+
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_project_id_propery_to_any_name()
+        {
+            //http://issues.hibernatingrhinos.com/issue/RavenDB-9260
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        LastName = "Garcia"
+                    }, "employees/1");
+
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1"
+                    }, "orders/1");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from o in session.Query<Order>()
+                                let employee = session.Load<Employee>(o.Employee)
+                                let employeeId = employee.Id
+                                select new
+                                {
+                                    OrderId = o.Id,
+                                    EmployeeId1 = employeeId,
+                                    EmployeeId2 = employee.Id
+                                };
+
+                    Assert.Equal(
+@"DECLARE function output(o, employee) {
+	var employeeId = id(employee);
+	return { OrderId : id(o), EmployeeId1 : employeeId, EmployeeId2 : id(employee) };
+}
+FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query.ToString());
+                                 
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, queryResult.Count);
+
+                    Assert.Equal("orders/1", queryResult[0].OrderId);
+                    Assert.Equal("employees/1", queryResult[0].EmployeeId1);
+                    Assert.Equal("employees/1", queryResult[0].EmployeeId2);
 
                 }
             }
@@ -2610,7 +2664,7 @@ FROM Orders as o SELECT output(o)", complexLinqQuery.ToString());
                             };
 
                         Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (d.Deleted = $p1) " +
-                                     "SELECT { Id : d.Id, Deleted : d.Deleted, " +
+                                     "SELECT { Id : id(d), Deleted : d.Deleted, " +
                                      "Values : d.SubDocuments.filter(function(x){return ([\"id2\"]).length===0||[\"id2\"].indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                                      , projection.ToString());
 
@@ -2665,7 +2719,7 @@ FROM Orders as o SELECT output(o)", complexLinqQuery.ToString());
                             };
 
                         Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (d.Deleted = $p1) " +
-                                     "SELECT { Id : d.Id, Deleted : d.Deleted, " +
+                                     "SELECT { Id : id(d), Deleted : d.Deleted, " +
                                      "Values : d.SubDocuments.filter(function(x){return [\"id2\"].length===0||[\"id2\"].indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
 
@@ -2715,7 +2769,7 @@ FROM Orders as o SELECT output(o)", complexLinqQuery.ToString());
                             };
 
                         Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (d.Deleted = $p1) " +
-                                     "SELECT { Id : d.Id, Deleted : d.Deleted, " +
+                                     "SELECT { Id : id(d), Deleted : d.Deleted, " +
                                      "Values : d.SubDocuments.filter(function(x){return \"id2\"===null||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
 
