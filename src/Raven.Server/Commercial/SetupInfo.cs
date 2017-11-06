@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations;
@@ -126,6 +127,50 @@ namespace Raven.Server.Commercial
         }
     }
 
+    public class SubDomainAndIps
+    {
+        public string SubDomain { get; set; }
+        public List<string> Ips { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [SubDomain] = Ips.ToArray()
+            };
+        }
+    }
+
+    public class UserDomainsWithIps
+    {
+        public string Email { get; set; }
+        public Dictionary<string, List<SubDomainAndIps>> Domains { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Email)] = Email,
+                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
+            };
+        }
+    }
+
+    public class UserDomainsResult
+    {
+        public string Email { get; set; }
+        public Dictionary<string, List<string>> Domains { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Email)] = Email,
+                [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
+            };
+        }
+    }
+
     public class RegistrationResult
     {
         public string Status { get; set; }
@@ -162,14 +207,14 @@ namespace Raven.Server.Commercial
     {
         public long Processed { get; set; }
         public long Total { get; set; }
-        public readonly List<string> Messages;
+        public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile;
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         
         public SetupProgressAndResult()
         {
-            Messages = new List<string>(); // <-- fix this to be thread safe
+            Messages = new ConcurrentQueue<string>();
         }
 
         public string Message { get; private set; }
@@ -180,7 +225,7 @@ namespace Raven.Server.Commercial
             {
                 [nameof(Processed)] = Processed,
                 [nameof(Total)] = Total,
-                [nameof(Messages)] = Messages
+                [nameof(Messages)] = Messages.ToArray()
         };
         }
 
@@ -202,7 +247,7 @@ namespace Raven.Server.Commercial
         private void AddMessage(string type, string message, Exception ex = null) //<-- remember last message here
         {
             Message = $"[{SystemTime.UtcNow:T} {type}] {message}";
-            Messages.Add(Message);
+            Messages.Enqueue(Message);
             if (Logger.IsInfoEnabled)
                 Logger.Info(Message, ex);
         }

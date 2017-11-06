@@ -9,6 +9,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -38,6 +40,60 @@ namespace Raven.Server.Web.System
             using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
                 await responseStream.CopyToAsync(ResponseBodyStream());
+            }
+        }
+
+        [RavenAction("/setup/user-domains", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task UserDomains()
+        {
+            AssertOnlyInSetupMode();
+            
+            var content = new StreamContent(RequestBodyStream());
+            if (HttpContext.Request.Headers.TryGetValue("Content-Type", out StringValues contentType))
+            {
+                content.Headers.TryAddWithoutValidation("Content-Type", (IEnumerable<string>)contentType);
+            }
+            var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/user-domains", content).ConfigureAwait(false);
+
+            HttpContext.Response.StatusCode = (int)response.StatusCode;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
+
+                var fullResult = new UserDomainsWithIps()
+                {
+                    Email = results.Email,
+                    Domains = new Dictionary<string, List<SubDomainAndIps>>()
+                };
+
+                foreach (var domain in results.Domains)
+                {
+                    var list = new List<SubDomainAndIps>();
+                    foreach (var subDomain in domain.Value)
+                    {
+                        try
+                        {
+                            list.Add(new SubDomainAndIps
+                            {
+                                SubDomain = subDomain,
+                                Ips = Dns.GetHostAddresses($"{subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}").Select(ip => ip.ToString()).ToList(),
+                            });
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException($"Failed to query the ips for host {subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}", e);
+                        }
+                                               
+                    }
+                    fullResult.Domains.Add(domain.Key, list);
+                }
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var blittable = EntityToBlittable.ConvertEntityToBlittable(results, DocumentConventions.Default, context);
+                    context.Write(writer, blittable);
+                }
             }
         }
 
