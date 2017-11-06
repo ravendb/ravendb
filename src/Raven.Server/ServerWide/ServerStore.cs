@@ -957,14 +957,46 @@ namespace Raven.Server.ServerWide
 
             UpdateDatabaseCommand command;
 
+            var databaseRecord = LoadDatabaseRecord(databaseName, out var _);
+            
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
+                    
+                    // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
+                    foreach (var ravenETlTask in databaseRecord.RavenEtls)
+                    {
+                        if (ravenETlTask.ConnectionStringName == connectionStringName)
+                        {
+                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
+                        }    
+                    }
+                    
+                    foreach (var replicationTask in databaseRecord.ExternalReplication)
+                    {
+                        if (replicationTask.ConnectionStringName == connectionStringName)
+                        {
+                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
+                        }    
+                    }
+                    
                     command = new RemoveRavenConnectionString(connectionStringName, databaseName);
                     break;
+                    
                 case ConnectionStringType.Sql:
+                    
+                    // Don't delete the connection string if used by tasks types: SQL Etl
+                    foreach (var sqlETlTask in databaseRecord.SqlEtls)
+                    {
+                        if (sqlETlTask.ConnectionStringName == connectionStringName)
+                        {
+                            throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
+                        }    
+                    }
+                    
                     command = new RemoveSqlConnectionString(connectionStringName, databaseName);
                     break;
+                    
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
