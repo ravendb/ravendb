@@ -146,7 +146,17 @@ namespace Raven.Server.Commercial
                 [nameof(FormattedExpiration)] = FormattedExpiration,
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Id)] = Id?.ToString(),
-                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes)
+                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
+                [nameof(HasDynamicNodesDistribution)] = HasDynamicNodesDistribution,
+                [nameof(HasEncryption)] = HasEncryption,
+                [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
+                [nameof(HasSnapshotBackups)] = HasSnapshotBackups,
+                [nameof(HasCloudBackups)] = HasCloudBackups,
+                [nameof(HasExternalReplication)] = HasExternalReplication,
+                [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
+                [nameof(HasRavenEtl)] = HasRavenEtl,
+                [nameof(HasSqlEtl)] = HasSqlEtl
+
             };
         }
     }

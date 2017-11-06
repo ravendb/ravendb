@@ -223,6 +223,12 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replication-factor", required: false) ?? 0;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+                if ((databaseRecord.Topology?.DynamicNodesDistribution ?? true) &&
+                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
+                {
+                    SetLicenseLimitResponse(licenseLimit);
+                    return;
+                }
 
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index);
 
@@ -923,7 +929,6 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-
                 DatabaseRecord databaseRecord;
                 long index;
                 using (context.OpenReadTransaction())
@@ -931,6 +936,13 @@ namespace Raven.Server.Web.System
 
                 if (enable == databaseRecord.Topology.DynamicNodesDistribution)
                     return;
+
+                if (enable &&
+                    Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
+                {
+                    SetLicenseLimitResponse(licenseLimit);
+                    return;
+                }
 
                 databaseRecord.Topology.DynamicNodesDistribution = enable;
 

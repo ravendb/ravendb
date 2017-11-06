@@ -1311,9 +1311,9 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-        public bool CanDynamicallyDistributeNodes()
+        public bool CanDynamicallyDistributeNodes(out LicenseLimit licenseLimit)
         {
-            if (IsValid(out var _) == false)
+            if (IsValid(out licenseLimit) == false)
                 return false;
 
             if (_licenseStatus.HasDynamicNodesDistribution)
@@ -1321,7 +1321,7 @@ namespace Raven.Server.Commercial
 
             const string details = "Your current license doesn't include " +
                                    "the dynamic nodes distribution feature";
-            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, details, addNotification: true);
+            licenseLimit = GenerateLicenseLimit(LimitType.DynamicNodeDistribution, details, addNotification: true);
             return false;
         }
 

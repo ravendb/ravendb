@@ -13,6 +13,7 @@ import eventsCollector = require("common/eventsCollector");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import popoverUtils = require("common/popoverUtils");
 import notificationCenter = require("common/notifications/notificationCenter");
+import license = require("models/auth/licenseModel");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -32,6 +33,7 @@ class createDatabase extends dialogViewModelBase {
 
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
+    showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
     showReplicationFactorWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
     disableReplicationFactorInput: KnockoutComputed<boolean>;
@@ -162,6 +164,14 @@ class createDatabase extends dialogViewModelBase {
                 this.databaseModel.replication.dynamicMode(false);
                 this.databaseModel.replication.manualMode(true);
             }
+        });
+
+        this.showDynamicNodeDistributionWarning = ko.pureComputed(() => {
+            const hasDynamicNodesDistribution = license.licenseStatus().HasDynamicNodesDistribution;
+            if (!hasDynamicNodesDistribution) {
+                this.databaseModel.replication.dynamicMode(false);
+            }
+            return !hasDynamicNodesDistribution;
         });
 
         this.showReplicationFactorWarning = ko.pureComputed(() => {
