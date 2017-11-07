@@ -435,7 +435,7 @@ namespace Raven.Client.Documents.Changes
 
                 try
                 {
-                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(15), _cts.Token).ConfigureAwait(false);
+                    await TimeoutManager.WaitFor(TimeSpan.FromSeconds(1), _cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
