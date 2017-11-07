@@ -5,6 +5,7 @@ using System.Globalization;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
@@ -20,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             foreach (var field in query.Query.Metadata.SelectFields)
             {
                 if (field.IsFacet == false)
-                    throw new InvalidOperationException("Should not happen!");
+                    ThrowInvalidFieldInFacetQuery(query, field);
 
                 var facetField = (FacetField)field;
                 if (facetField.FacetSetupDocumentId != null)
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                     foreach (var f in ProcessFacetSetup(facetSetup))
                     {
-                        var r = ProcessFacet(f.Facet, f.Ranges);
+                        var r = ProcessFacet(f.Facet, f.Ranges, query);
                         results[r.Result.Name] = r;
                     }
 
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                 facet.Aggregations = facetField.Aggregations;
                 facet.Options = facetField.GetOptions(context, query.Query.QueryParameters) ?? FacetOptions.Default;
 
-                var result = ProcessFacet(facet, facetField.Ranges);
+                var result = ProcessFacet(facet, facetField.Ranges, query);
                 results[result.Result.Name] = result;
             }
 
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                         queryParser.Init(range);
 
                         if (queryParser.Expression(out var qr) == false)
-                            throw new InvalidOperationException("TODO ppekrol");
+                            throw new InvalidOperationException($"Could not parse the following range expression '{range}' from facet setup document: {setup.Id}");
 
                         facetRanges.Add(qr);
                     }
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             }
         }
 
-        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges)
+        private static FacetResult ProcessFacet(FacetBase facet, List<QueryExpression> facetRanges, FacetQuery query)
         {
             var result = new FacetResult
             {
@@ -131,11 +132,11 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                 foreach (var range in facetRanges)
                 {
-                    var parsedRange = ParseRange(range, out var type);
+                    var parsedRange = ParseRange(range, query, out var type);
                     if (rangeType.HasValue == false)
                         rangeType = type;
                     else if (rangeType.Value != type)
-                        throw new InvalidOperationException("TODO ppekrol");
+                        ThrowDifferentTypesOfRangeValues(query, rangeType.Value, type, parsedRange.Field);
 
                     ranges.Add(parsedRange);
 
@@ -149,7 +150,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                     else
                     {
                         if (fieldName != parsedRange.Field)
-                            ThrowRangeDefinedOnDifferentFields(fieldName, parsedRange.Field);
+                            ThrowRangeDefinedOnDifferentFields(query, fieldName, parsedRange.Field);
                     }
                 }
 
@@ -188,31 +189,23 @@ namespace Raven.Server.Documents.Queries.Faceted
             return result;
         }
 
-        private static void ThrowUnknownFacetType(FacetBase facet)
-        {
-            throw new InvalidOperationException($"Unsupported facet type: {facet.GetType().FullName}");
-        }
-
-        private static void ThrowRangeDefinedOnDifferentFields(string fieldName, string differentField)
-        {
-            throw new InvalidOperationException($"Facet ranges must be defined on a single field while we got: {fieldName}, {differentField}");
-        }
-
-        private static ParsedRange ParseRange(QueryExpression expression, out RangeType type)
+        private static ParsedRange ParseRange(QueryExpression expression, FacetQuery query, out RangeType type)
         {
             if (expression is BetweenExpression bee)
             {
                 var hValue = ConvertFieldValue(bee.Max.Token, bee.Max.Value);
                 var lValue = ConvertFieldValue(bee.Min.Token, bee.Min.Value);
 
+                var fieldName = ((FieldExpression)bee.Source).FieldValue;
+
                 if (hValue.Type != lValue.Type)
-                    throw new InvalidOperationException("TODO ppekrol");
+                    ThrowDifferentTypesOfRangeValues(query, hValue.Type, lValue.Type, fieldName);
 
                 type = hValue.Type;
-                
+
                 return new ParsedRange
                 {
-                    Field = ((FieldExpression)bee.Source).FieldValue,
+                    Field = fieldName,
                     HighInclusive = true,
                     HighValue = hValue.Value,
                     LowInclusive = true,
@@ -229,7 +222,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                     case OperatorType.GreaterThan:
                     case OperatorType.LessThanEqual:
                     case OperatorType.GreaterThanEqual:
-                        var fieldName = ExtractFieldName(be);
+                        var fieldName = ExtractFieldName(be, query);
 
                         var r = (ValueExpression)be.Right;
                         var fieldValue = ConvertFieldValue(r.Token, r.Value);
@@ -260,11 +253,11 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                         return range;
                     case OperatorType.And:
-                        var left = ParseRange(be.Left, out var lType);
-                        var right = ParseRange(be.Right, out var rType);
+                        var left = ParseRange(be.Left, query, out var lType);
+                        var right = ParseRange(be.Right, query, out var rType);
 
                         if (lType != rType)
-                            throw new InvalidOperationException("TODO ppekrol");
+                            ThrowDifferentTypesOfRangeValues(query, lType, rType, left.Field);
 
                         type = lType;
 
@@ -283,14 +276,17 @@ namespace Raven.Server.Documents.Queries.Faceted
                         left.RangeText = expression.GetText();
                         return left;
                     default:
-                        throw new InvalidOperationException("TODO ppekrol");
+                        ThrowUnsupportedRangeOperator(query, be.Operator);
+                        break;
                 }
             }
 
-            throw new InvalidOperationException("TODO ppekrol");
+            ThrowUnsupportedRangeExpression(query, expression);
+            type = RangeType.None;
+            return null;
         }
 
-        private static string ExtractFieldName(BinaryExpression be)
+        private static string ExtractFieldName(BinaryExpression be, FacetQuery query)
         {
             if (be.Left is FieldExpression lfe)
                 return lfe.FieldValue;
@@ -298,7 +294,8 @@ namespace Raven.Server.Documents.Queries.Faceted
             if (be.Left is ValueExpression lve)
                 return lve.Token;
 
-            throw new InvalidOperationException("TODO ppekrol");
+            ThrowUnsupportedRangeExpression(query, be.Left);
+            return null;
         }
 
         private static (string Value, RangeType Type) ConvertFieldValue(string value, ValueTokenType type)
@@ -383,6 +380,41 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                 public bool Average;
             }
+        }
+
+        private static void ThrowDifferentTypesOfRangeValues(FacetQuery query, RangeType type1, RangeType type2, string field)
+        {
+            throw new InvalidQueryException(
+                $"Expected to get values of the same type in range expressions while it got {type1} and {type2} for a field '{field}'",
+                query.Query.Metadata.QueryText, query.Query.QueryParameters);
+        }
+
+        private static void ThrowUnknownFacetType(FacetBase facet)
+        {
+            throw new InvalidOperationException($"Unsupported facet type: {facet.GetType().FullName}");
+        }
+
+        private static void ThrowRangeDefinedOnDifferentFields(FacetQuery query, string fieldName, string differentField)
+        {
+            throw new InvalidQueryException($"Facet ranges must be defined on the same field while we got '{fieldName}' and '{differentField}' used in the same faced",
+                query.Query.Metadata.QueryText, query.Query.QueryParameters);
+        }
+        
+        private static void ThrowInvalidFieldInFacetQuery(FacetQuery query, SelectField field)
+        {
+            throw new InvalidQueryException(
+                $"It encountered a field in SELECT clause which is not a facet. Field: {field.Name}", query.Query.Metadata.QueryText,
+                query.Query.QueryParameters);
+        }
+
+        private static void ThrowUnsupportedRangeOperator(FacetQuery query, OperatorType op)
+        {
+            throw new InvalidQueryException($"Unsupported operator in a range of a facet query: {op}", query.Query.Metadata.QueryText, query.Query.QueryParameters);
+        }
+
+        private static void ThrowUnsupportedRangeExpression(FacetQuery query, QueryExpression expression)
+        {
+            throw new InvalidQueryException($"Unsupported range expression of a facet query: {expression.GetType().Name}. Text: {expression.GetText()}.", query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
     }
 }

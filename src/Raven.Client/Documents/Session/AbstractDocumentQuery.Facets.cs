@@ -10,13 +10,10 @@ namespace Raven.Client.Documents.Session
         {
             foreach (var token in SelectTokens)
             {
-                if (token is DistinctToken)
-                {
-                    throw new InvalidOperationException("TODO ppekrol");
-                }
+                if (token is FacetToken)
+                    continue;
 
-                if (!(token is FacetToken))
-                    throw new InvalidOperationException("TODO ppekrol");
+                throw new InvalidOperationException($"Aggregation query can select only facets while it got {token.GetType().Name} token");
             }
 
             SelectTokens.AddLast(FacetToken.Create(facet, AddQueryParameter));

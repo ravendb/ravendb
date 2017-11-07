@@ -602,7 +602,10 @@ namespace Raven.Server.Documents.Queries
                     if (string.Equals("facet", methodName, StringComparison.OrdinalIgnoreCase))
                     {
                         if (IsGroupBy)
-                            ThrowInvalidIdInGroupByQuery(parameters);
+                            ThrowFacetQueryCannotBeGroupBy(parameters);
+
+                        if (IsDistinct)
+                            ThrowFacetQueryCannotBeDistinct(parameters);
 
                         IsFacet = true;
 
@@ -758,6 +761,16 @@ namespace Raven.Server.Documents.Queries
         private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use id() method in a group by query", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryCannotBeGroupBy(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use GROUP BY in a facet query", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use SELECT DISTINCT in a facet query", QueryText, parameters);
         }
 
         private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)
