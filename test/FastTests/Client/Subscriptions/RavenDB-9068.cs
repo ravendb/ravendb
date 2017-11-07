@@ -22,13 +22,13 @@ namespace FastTests.Client.Subscriptions
                     await session.SaveChangesAsync();
                 }
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
-                var subscription = store.Subscriptions.Open<User>(subscriptionId);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionId);
                 var cts = new CancellationTokenSource();
                 var subscriptionTask = subscription.Run(x => { }, cts.Token);
                 cts.Cancel();
                 Assert.True(await Assert.ThrowsAsync<OperationCanceledException>(() => subscriptionTask).WaitAsync(_reasonableWaitTime));
 
-                subscription = store.Subscriptions.Open<User>(subscriptionId);
+                subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionId);
                 cts = new CancellationTokenSource();
                 subscriptionTask = subscription.Run(x => Task.CompletedTask, cts.Token);
                 cts.Cancel();

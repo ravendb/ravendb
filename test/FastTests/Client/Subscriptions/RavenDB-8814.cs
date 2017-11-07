@@ -34,7 +34,7 @@ namespace FastTests.Client.Subscriptions
 
                 string foo = null;
 
-                var subscription = store.Subscriptions.Open<dynamic>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<dynamic>(subscriptionName);
                 
                 var mre = new AsyncManualResetEvent();
                 int resultsCount = 0;

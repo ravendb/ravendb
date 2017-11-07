@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class DocumentSubscriptions : IReliableSubscriptions
+    public class DocumentSubscriptions:IDisposable
     {
         private readonly IDocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
@@ -28,6 +28,11 @@ namespace Raven.Client.Documents.Subscriptions
             _store = store;
         }
 
+        /// <summary>
+        /// Creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
+        /// </summary>
+        /// <typeparam name="T">Type of the collection to be proccessed by the subscription</typeparam>
+        /// <returns>Created subscription</returns>
         public string Create<T>(SubscriptionCreationOptions<T> options, string database = null)
         {
             return Create(EnsureCriteria(new SubscriptionCreationOptions
@@ -39,6 +44,11 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
 
+        /// <summary>
+        /// Creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
+        /// </summary>
+        /// <typeparam name="T">Type of the collection to be proccessed by the subscription</typeparam>
+        /// <returns>Created subscription</returns>
         public string Create<T>(Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
             string database = null)
@@ -46,6 +56,11 @@ namespace Raven.Client.Documents.Subscriptions
             return Create(EnsureCriteria(options, predicate, null), database);
         }
 
+
+        /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
+        /// </summary>
+        /// <returns>Created subscription name.</returns>
         public Task<string> CreateAsync<T>(
             SubscriptionCreationOptions<T> options, string database = null)
         {
@@ -57,6 +72,10 @@ namespace Raven.Client.Documents.Subscriptions
             }, options.Filter, options.Project), database);
         }
 
+        /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
+        /// </summary>
+        /// <returns>Created subscription name.</returns>
         public Task<string> CreateAsync<T>(
             Expression<Func<T, bool>> predicate = null,
             SubscriptionCreationOptions options = null,
@@ -126,12 +145,22 @@ namespace Raven.Client.Documents.Subscriptions
             return criteria;
         }
 
+        /// <summary>
+        /// Create a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
+        /// </summary>
+        /// <param name="creationOptions"></param>
+        /// <param name="database"></param>
+        /// <returns>Subscription object</returns>
         public string Create(SubscriptionCreationOptions criteria, string database = null)
         {
             return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
         }
 
 
+        /// <summary>
+        /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
+        /// </summary>
+        /// <returns>Created subscription name.</returns>
         public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null)
         {
             if (options == null )
@@ -149,33 +178,67 @@ namespace Raven.Client.Documents.Subscriptions
             return command.Result.Name;
         }
 
-        public Subscription<dynamic> Open(SubscriptionConnectionOptions options, string database = null)
+        /// <summary>
+        /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
+        /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// There can be only a single client that is connected to a subscription.
+        /// </summary>
+        /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
+        public SubscriptionWorker<dynamic> GetSubscriptionWorker(SubscriptionWorkerOptions options, string database = null)
         {
-            return Open<dynamic>(options, database);
+            return GetSubscriptionWorker<dynamic>(options, database);
         }
 
-        public Subscription<dynamic> Open(string subscriptionName, string database = null)
+        /// <summary>
+        /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
+        /// Although this overload does not an <c>SubscriptionConnectionOptions</c> object as a parameter, it uses it's default values.
+        /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// There can be only a single client that is connected to a subscription.
+        /// </summary>
+        /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
+        public SubscriptionWorker<dynamic> GetSubscriptionWorker(string subscriptionName, string database = null)
         {
-            return Open<dynamic>(new SubscriptionConnectionOptions(subscriptionName), database);
+            return GetSubscriptionWorker<dynamic>(new SubscriptionWorkerOptions(subscriptionName), database);
         }
 
-        public Subscription<T> Open<T>(SubscriptionConnectionOptions options, string database = null) where T : class
+        /// <summary>
+        /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
+        /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// There can be only a single client that is connected to a subscription.
+        /// </summary>
+        /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
+        public SubscriptionWorker<T> GetSubscriptionWorker<T>(SubscriptionWorkerOptions options, string database = null) where T : class
         {
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
             
-            var subscription = new Subscription<T>(options, _store, database);
+            var subscription = new SubscriptionWorker<T>(options, _store, database);
             subscription.OnDisposed  += sender => _subscriptions.TryRemove(sender);
             _subscriptions.Add(subscription);
 
             return subscription;
         }
 
-        public Subscription<T> Open<T>(string subscriptionName, string database = null) where T : class
+        /// <summary>
+        /// It opens a subscription and starts pulling documents since a last processed document for that subscription.
+        /// Although this overload does not an <c>SubscriptionConnectionOptions</c> object as a parameter, it uses it's default values.
+        /// The connection options determine client and server cooperation rules like document batch sizes or a timeout in a matter of which a client
+        /// needs to acknowledge that batch has been processed. The acknowledgment is sent after all documents are processed by subscription's handlers.  
+        /// There can be only a single client that is connected to a subscription.
+        /// </summary>
+        /// <returns>Subscription object that allows to add/remove subscription handlers.</returns>
+        public SubscriptionWorker<T> GetSubscriptionWorker<T>(string subscriptionName, string database = null) where T : class
         {
-            return Open<T>(new SubscriptionConnectionOptions(subscriptionName), database);
+            return GetSubscriptionWorker<T>(new SubscriptionWorkerOptions(subscriptionName), database);
         }
 
+        /// <summary>
+        /// It downloads a list of all existing subscriptions in a database.
+        /// </summary>
+        /// <returns>Existing subscriptions' configurations.</returns>
         public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null)
         {
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
@@ -187,6 +250,9 @@ namespace Raven.Client.Documents.Subscriptions
             return command.Result.ToList();
         }
 
+        /// <summary>
+        /// Delete a subscription.
+        /// </summary>
         public async Task DeleteAsync(string name, string database = null)
         {
             JsonOperationContext jsonOperationContext;
@@ -197,16 +263,33 @@ namespace Raven.Client.Documents.Subscriptions
             await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
         }
 
+
+        /// <summary>
+        /// Delete a subscription.
+        /// </summary>
         public void Delete(string name, string database = null)
         {
             AsyncHelpers.RunSync(() => DeleteAsync(name, database));
         }
 
+
+        /// <summary>
+        /// Returns subscription definition and it's current state
+        /// </summary>
+        /// <param name="subscriptionName">Sbscription name as received from the server</param>
+        /// <param name="database">Database where the subscription resides</param>
+        /// <returns></returns>
         public SubscriptionState GetSubscriptionState(string subscriptionName, string database = null)
         {
             return AsyncHelpers.RunSync(() => GetSubscriptionStateAsync(subscriptionName, database));
         }
 
+        /// <summary>
+        /// Returns subscription definition and it's current state
+        /// </summary>
+        /// <param name="subscriptionName">Sbscription name as received from the server</param>
+        /// <param name="database">Database where the subscription resides</param>
+        /// <returns></returns>
         public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database= null)
         {
 
@@ -241,23 +324,37 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new InvalidOperationException("Failed to dispose active data subscriptions", ae.ExtractSingleInnerException());
             }
         }
-                
+
+        /// <summary>
+        /// It downloads a list of all existing subscriptions in a database.
+        /// </summary>
+        /// <returns>Existing subscriptions' configurations.</returns>
         public List<SubscriptionState> GetSubscriptions(int start, int take, string database = null)
         {            
             return AsyncHelpers.RunSync(() => GetSubscriptionsAsync(start, take, database));
         }
 
-        public void DropConnection(string id, string database = null)
+        /// <summary>
+        /// Force server to close current client subscription connection to the server
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="database"></param>
+        public void DropConnection(string name, string database = null)
         {
-            AsyncHelpers.RunSync(() => DropConnectionAsync(id, database));
+            AsyncHelpers.RunSync(() => DropConnectionAsync(name, database));
         }
 
-        public async Task DropConnectionAsync(string id, string database = null)
+        /// <summary>
+        /// Force server to close current client subscription connection to the server
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="database"></param>
+        public async Task DropConnectionAsync(string name, string database = null)
         {
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             using (requestExecutor.ContextPool.AllocateOperationContext(out var jsonOperationContext))
             {
-                var command = new DropSubscriptionConnectionCommand(id);
+                var command = new DropSubscriptionConnectionCommand(name);
                 await requestExecutor.ExecuteAsync(command, jsonOperationContext).ConfigureAwait(false);
             }
         }

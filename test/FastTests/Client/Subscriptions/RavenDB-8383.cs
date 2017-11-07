@@ -17,7 +17,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionName = await store.Subscriptions.CreateAsync<User>();
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 Assert.True(await Assert.ThrowsAsync<SubscriptionException>(()=> subscription.Run(x => { })).WaitAsync(_reasonableWaitTime));
             }
         }

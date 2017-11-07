@@ -157,7 +157,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Provides methods to manage data subscriptions.
         /// </summary>
-        IReliableSubscriptions Subscriptions { get; }
+        DocumentSubscriptions Subscriptions { get; }
 
         string Database { get; set; }
 

@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 };
                 var id = store.Subscriptions.Create(subscriptionCreationParams);
 
-                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 5
                 });

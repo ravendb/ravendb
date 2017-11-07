@@ -51,7 +51,7 @@ namespace FastTests.Client.Subscriptions
                         ChangeVector = lastChangeVector
                     };
                     var subsId = subscriptionManager.Create(subscriptionCreationParams);
-                    using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                    using (var subscription = subscriptionManager.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
                     {
                         var list = new BlockingCollection<Thing>();
                         GC.KeepAlive(subscription.Run(x =>
@@ -125,7 +125,7 @@ select project(d)
                     };
 
                     var subsId = subscriptionManager.Create(subscriptionCreationParams);
-                    using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
+                    using (var subscription = subscriptionManager.GetSubscriptionWorker<BlittableJsonReaderObject>(new SubscriptionWorkerOptions(subsId)))
                     {
                         using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {

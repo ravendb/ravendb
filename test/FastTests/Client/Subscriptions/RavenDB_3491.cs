@@ -46,7 +46,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<dynamic>();
 
-                    using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                     {
 
                         var docs = new BlockingCollection<dynamic>();
@@ -127,7 +127,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<User>();
 
-                    using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)))
                     {
 
                         var docs = new BlockingCollection<User>();
@@ -212,7 +212,7 @@ namespace FastTests.Client.Subscriptions
 
                     var users = new List<dynamic>();
                     
-                    using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionName)))
+                    using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
@@ -275,7 +275,7 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
                 
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionName)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionName)))
                 {
                     var docs = new BlockingCollection<dynamic>();
                     GC.KeepAlive(subscription.Run(x =>

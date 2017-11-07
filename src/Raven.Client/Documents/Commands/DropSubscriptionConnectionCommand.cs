@@ -9,15 +9,15 @@ namespace Raven.Client.Documents.Commands
 {
     public class DropSubscriptionConnectionCommand:RavenCommand
     {
-        private readonly string _id;
+        private readonly string _name;
 
-        public DropSubscriptionConnectionCommand(string id)
+        public DropSubscriptionConnectionCommand(string name)
         {
-            _id = id;
+            _name = name;
         }
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions/drop?id={_id}";
+            url = $"{node.Url}/databases/{node.Database}/subscriptions/drop?name={_name}";
 
             var request = new HttpRequestMessage
             {

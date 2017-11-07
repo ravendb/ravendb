@@ -26,7 +26,7 @@ namespace FastTests.Client.Subscriptions
             }))
             {
                 var mres = new List<AsyncManualResetEvent>();
-                var subscriptionTasks = new List<(Task RunTask, Subscription<User> SubscriptionObject)>();
+                var subscriptionTasks = new List<(Task RunTask, SubscriptionWorker<User> SubscriptionObject)>();
 
                 using (var session = store.OpenSession())
                 {
@@ -77,11 +77,11 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        private (Task RunTask, Subscription<User> SubscriptionObject) OpenAndRunSubscription(IDocumentStore store, Action runAction)
+        private (Task RunTask, SubscriptionWorker<User> SubscriptionObject) OpenAndRunSubscription(IDocumentStore store, Action runAction)
         {
             var subscriptionId = store.Subscriptions.Create<User>();
 
-            var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+            var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
             subscription.AfterAcknowledgment += batch =>
             {

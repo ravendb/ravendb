@@ -31,7 +31,7 @@ namespace FastTests.Client.Subscriptions
                 });
 
                 await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(),  store2.Smuggler);
-                var subscription = store2.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store2.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionId));
                 await Assert.ThrowsAsync<SubscriptionDoesNotExistException>(() => subscription.Run(x => { }));
             }
         }

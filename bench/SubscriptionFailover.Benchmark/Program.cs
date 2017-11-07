@@ -57,7 +57,7 @@ namespace SubscriptionFailover.Benchmark
         {
             var subscriptionId = await store.Subscriptions.CreateAsync<User>();
 
-            var subscripiton = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+            var subscripiton = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
             {
                 MaxDocsPerBatch = 1024
             });
@@ -150,7 +150,7 @@ namespace SubscriptionFailover.Benchmark
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
 
-                var subscripiton = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                var subscripiton = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1024
                 });

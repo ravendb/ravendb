@@ -114,7 +114,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subsId = await documentStore.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 var amre = new AsyncManualResetEvent();
-                using (var subscription = documentStore.Subscriptions.Open<Doc>(new SubscriptionConnectionOptions(subsId)))
+                using (var subscription = documentStore.Subscriptions.GetSubscriptionWorker<Doc>(new SubscriptionWorkerOptions(subsId)))
                 {
                     var t = subscription.Run(batch =>
                     {

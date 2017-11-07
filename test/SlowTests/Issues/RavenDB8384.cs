@@ -46,7 +46,7 @@ select {
 "
                 });
 
-                var sub = store.Subscriptions.Open(new SubscriptionConnectionOptions(id));
+                var sub = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id));
                 
                 bool done = await sub.Run(batch =>
                 {

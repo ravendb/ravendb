@@ -23,7 +23,7 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public void OpenIfFree_ShouldBeDefaultStrategy()
         {
-            Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionConnectionOptions("test").Strategy);
+            Assert.Equal(SubscriptionOpeningStrategy.OpenIfFree, new SubscriptionWorkerOptions("test").Strategy);
         }
 
         [Fact]
@@ -32,7 +32,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id));
 
                 using (var session = store.OpenSession())
                 {
@@ -46,7 +46,7 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
 
-                await Assert.ThrowsAsync<SubscriptionInUseException>(() => store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                await Assert.ThrowsAsync<SubscriptionInUseException>(() => store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.OpenIfFree
                 }).Run(x => { }));
@@ -63,7 +63,7 @@ namespace FastTests.Client.Subscriptions
 
                 const int numberOfClients = 2;
 
-                var subscriptions = new (Subscription<User> Subscription, Task Task, BlockingCollection<User> Items)[numberOfClients];
+                var subscriptions = new (SubscriptionWorker<User> Subscription, Task Task, BlockingCollection<User> Items)[numberOfClients];
 
                 using (var s = store.OpenSession())
                 {
@@ -79,7 +79,7 @@ namespace FastTests.Client.Subscriptions
                     for (int i = 0; i < numberOfClients; i++)
                     {
                         var subscriptionOpeningStrategy = i > 0 ? SubscriptionOpeningStrategy.TakeOver : SubscriptionOpeningStrategy.OpenIfFree;
-                        var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
+                        var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                         {
                             Strategy = subscriptionOpeningStrategy
                         });
@@ -145,7 +145,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 });
@@ -179,12 +179,12 @@ namespace FastTests.Client.Subscriptions
                 foreach (var activeClientStrategy in new[] { SubscriptionOpeningStrategy.OpenIfFree, SubscriptionOpeningStrategy.TakeOver})
                 {
                     var activeSubscriptionMre = new AsyncManualResetEvent();
-                    var activeSubscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
+                    var activeSubscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
                         Strategy = activeClientStrategy
                     });
 
-                    var pendingSubscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
+                    var pendingSubscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
                         Strategy = SubscriptionOpeningStrategy.WaitForFree
                     });

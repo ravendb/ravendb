@@ -34,7 +34,7 @@ namespace SlowTests.Client.Subscriptions
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 Task firstSubscription;
-                using (var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                using (var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
                     long counter = 0;
@@ -66,7 +66,7 @@ namespace SlowTests.Client.Subscriptions
                 }
 
                 // open second subscription
-                using (var takingOverSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                using (var takingOverSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                 {
                     Strategy = SubscriptionOpeningStrategy.TakeOver
                 }))

@@ -37,8 +37,8 @@ namespace SlowTests.Core.Subscriptions
                 };
                 var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
-                using (var subscription = store.Subscriptions.Open(
-                    new SubscriptionConnectionOptions(id)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(
+                    new SubscriptionWorkerOptions(id)
                     {
                         MaxDocsPerBatch = 31
                     }))

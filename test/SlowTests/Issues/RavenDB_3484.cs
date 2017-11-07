@@ -21,7 +21,7 @@ namespace SlowTests.Issues
 
                 const int numberOfClients = 4;
 
-                var subscriptions = new Subscription<User>[numberOfClients];
+                var subscriptions = new SubscriptionWorker<User>[numberOfClients];
                 var processed = new ManualResetEvent[numberOfClients];
                 var done = new bool[numberOfClients];
                 for (int i = 0; i < numberOfClients; i++)
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 {
                     var clientNumber = i;
 
-                    subscriptions[clientNumber] = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)
+                    subscriptions[clientNumber] = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)
                     {
                         Strategy = SubscriptionOpeningStrategy.WaitForFree
                     });

@@ -339,13 +339,27 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser)]
         public Task DropSubscriptionConnection()
         {
-            var subscriptionId = GetLongQueryString("id");
-
-            if (Database.SubscriptionStorage.DropSubscriptionConnection(subscriptionId, new SubscriptionClosedException("Dropped by API request")) == false)
+            var subscriptionId = GetLongQueryString("id", required: false);
+            var subscripitonName = GetStringQueryString("name", required: false);
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                var subscription = Database
+                    .SubscriptionStorage
+                    .GetRunningSubscription(context, subscriptionId, subscripitonName, false);
+
+                if (subscription != null)
+                {
+                    if (Database.SubscriptionStorage.DropSubscriptionConnection(subscription.SubscriptionId,
+                            new SubscriptionClosedException("Dropped by API request")) == false)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+                }
             }
+            
 
             return NoContent();
         }

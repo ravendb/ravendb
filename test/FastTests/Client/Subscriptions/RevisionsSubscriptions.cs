@@ -74,7 +74,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -151,7 +151,7 @@ namespace FastTests.Client.Subscriptions
                     }
                 }
 
-                using (var sub = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -252,7 +252,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     }
                 }
 
-                using (var sub = store.Subscriptions.Open<Result>(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId)))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();
@@ -341,7 +341,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     }
                 }
 
-                using (var sub = store.Subscriptions.Open<Result>(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var sub = store.Subscriptions.GetSubscriptionWorker<Result>(new SubscriptionWorkerOptions(subscriptionId)))
                 {
                     var mre = new AsyncManualResetEvent();
                     var names = new HashSet<string>();

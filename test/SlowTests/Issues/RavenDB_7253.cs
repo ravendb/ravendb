@@ -18,7 +18,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var subscriptionId = await store.Subscriptions.CreateAsync<User>();
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(200)
                 });
