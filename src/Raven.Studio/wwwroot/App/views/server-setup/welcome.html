@@ -1,17 +1,10 @@
-
-<p class="margin-bottom margin-lg">
-    The wizard will assist you with setting up your RavenDB server and selecting the right security option to best address your needs.
-</p>
-
-<p class="lead margin-bottom"><strong class="margin-right">1</strong> Let's start with choosing your desired level of security</p>
+<p class="lead margin-bottom margin-top margin-lg"><strong class="margin-right">1</strong> Let's start with choosing your desired level of security</p>
 
 <div class="row flex-row">
     <div class="col-sm-8 flex-vertical">
         <div class="panel flex-vertical flex-grow">
-            <div class="bg-success padding">
-                <h3 class="text-center margin-none">SECURE</h3>
-            </div>
             <div class="padding padding-lg flex-grow">
+                <h2 class="text-center margin-bottom margin-lg text-success">SECURE</h2>
                 <div class="row">
                     <div class="col-sm-6">
                         <button data-bind="click: chooseGenerate" class="btn btn-block btn-default">
@@ -25,7 +18,7 @@
                             <li><i class="icon-plus"></i><span>automatic server name generation</span></li>
                         </ul>
 
-                        <div class="text-center small padding">
+                        <div class="small padding">
                             Secure and easy to setup. Uses automatically generated server certificate.
                         </div>
                     </div>
@@ -40,7 +33,7 @@
                             <li><i class="icon-minus"></i><span>manual certificate generation</span></li>
                         </ul>
 
-                        <div class="text-center small padding">
+                        <div class="small padding">
                             Best to use with corporate configurations and other requiring the certificate to satisfy specific parameters.
                         </div>
                     </div>
@@ -50,10 +43,8 @@
     </div>
     <div class="col-sm-4 flex-vertical">
         <div class="panel flex-vertical flex-grow">
-            <div class="bg-warning padding">
-                <h3 class="text-center margin-none">UNSECURE</h3>
-            </div>
             <div class="padding padding-lg flex-grow">
+                <h2 class="text-center margin-bottom margin-lg text-warning">UNSECURE</h2>
                 
                 <button data-bind="click: chooseUnsecured" class="btn btn-block btn-default">
                     <i class="icon-lock icon-xl"></i>
@@ -66,7 +57,7 @@
                     <li><i class="icon-minus"></i><span>authentication disabled</span></li>
                 </ul>
 
-                <div class="text-center small padding">
+                <div class="small padding">
                     Perfect for development and enviroments not requiring <strong>any</strong> level of security.
                 </div>
             </div>
@@ -79,7 +70,7 @@
         <i class="icon-info icon-lg"></i>
     </div>
     <div>
-        explain implications of each choice - check wording here
+        In order to disable this guide and setup the server manually, please find the 'settings.json' file in your RavenDB installation directory and change the <strong>Setup.Mode</strong> value to <strong>None</strong>
     </div>
 </div>
 
