@@ -14,6 +14,12 @@ class ipEntry {
            ip: this.ip
        });
    }
+   
+   static forIp(ip: string) {
+       const entry = new ipEntry();
+       entry.ip(ip);
+       return entry;
+   }
 }
 
 export = ipEntry;

@@ -99,7 +99,7 @@ namespace Raven.Server.Web.System
                     }
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        var blittable = EntityToBlittable.ConvertEntityToBlittable(results, DocumentConventions.Default, context);
+                        var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
                         context.Write(writer, blittable);
                     }
                 }
