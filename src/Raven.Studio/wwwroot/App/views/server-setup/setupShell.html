@@ -22,3 +22,19 @@
         </form>
     </div>
 </div>
+
+
+<footer class="status-footer">
+    <div class="footer-right">
+        <div class="footer-item">
+            <div title="Studio Version">
+                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
+            </div>
+        </div>
+        <div class="footer-item">
+            <div title="Server Version">
+                <i class="icon-server"></i> <span data-bind="text: $root.constructor.buildInfo.serverBuildVersion() ? $root.constructor.buildInfo.serverBuildVersion().FullVersion : ''"></span>
+            </div>
+        </div>
+    </div>
+</footer>

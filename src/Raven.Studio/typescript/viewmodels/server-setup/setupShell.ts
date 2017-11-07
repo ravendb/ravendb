@@ -7,16 +7,21 @@ import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
+import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
+import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import messagePublisher = require("common/messagePublisher");
 import extensions = require("common/extensions");
 import viewModelBase = require("viewmodels/viewModelBase");
 import requestExecution = require("common/notifications/requestExecution");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
+import buildInfo = require("models/resources/buildInfo");
 
 class setupShell extends viewModelBase {
 
     private router = router;
     studioLoadingFakeRequest: requestExecution;
+    clientBuildVersion = ko.observable<clientBuildVersionDto>();
+    static buildInfo = buildInfo;
 
     showSplash = viewModelBase.showSplash;
 
@@ -38,7 +43,33 @@ class setupShell extends viewModelBase {
 
         this.setupRouting();
         
-        return this.router.activate();
+        return this.router.activate()
+            .then(() => {
+                this.fetchClientBuildVersion();
+                this.fetchServerBuildVersion();
+            })
+    }
+
+    fetchServerBuildVersion() {
+        new getServerBuildVersionCommand()
+            .execute()
+            .done((serverBuildResult: serverBuildVersionDto) => {
+                buildInfo.serverBuildVersion(serverBuildResult);
+
+                const currentBuildVersion = serverBuildResult.BuildVersion;
+                if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+                    buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
+                }
+            });
+    }
+
+    fetchClientBuildVersion() {
+        new getClientBuildVersionCommand()
+            .execute()
+            .done((result: clientBuildVersionDto) => {
+                this.clientBuildVersion(result);
+                viewModelBase.clientVersion(result.Version);
+            });
     }
 
     private setupRouting() {

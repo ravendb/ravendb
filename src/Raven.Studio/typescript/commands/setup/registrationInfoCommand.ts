@@ -13,8 +13,22 @@ class registrationInfoCommand extends commandBase {
             License: this.license
         };
 
-        return this.post(url, JSON.stringify(payload), null)
-            .fail((response: JQueryXHR) => this.reportError("Failed to load registration information", response.responseText, response.statusText));
+        const task = $.Deferred<Raven.Server.Commercial.UserDomainsWithIps>();
+
+        this.post(url, JSON.stringify(payload), null)
+            .done(result => task.resolve(result))
+            .fail((response: JQueryXHR) => {
+                if (response.status === 404) {
+                    task.resolve(null);
+                } else {
+                    this.reportError("Failed to load registration information", response.responseText, response.statusText);
+                    task.reject();
+                }
+            });
+        
+        return task;
+        
+        
     }
 }
 

@@ -24,12 +24,13 @@ class domain extends setupStep {
 
         const domainModel = this.model.domain();
         const userInfo = this.model.userDomains();
+        if (userInfo) {
+            domainModel.userEmail(userInfo.Email);
+            domainModel.availableDomains(Object.keys(userInfo.Domains));
 
-        domainModel.userEmail(userInfo.Email);
-        domainModel.availableDomains(Object.keys(userInfo.Domains));
-
-        if (domainModel.availableDomains().length === 1) {
-            domainModel.domain(domainModel.availableDomains()[0]);
+            if (domainModel.availableDomains().length === 1) {
+                domainModel.domain(domainModel.availableDomains()[0]);
+            }
         }
     }
 

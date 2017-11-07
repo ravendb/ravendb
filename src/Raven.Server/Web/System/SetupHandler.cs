@@ -56,6 +56,15 @@ namespace Raven.Server.Web.System
                 var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
+                
+                if (response.IsSuccessStatusCode == false)
+                {
+                    using (var responseStream = await response.Content.ReadAsStreamAsync())
+                    {
+                        await responseStream.CopyToAsync(ResponseBodyStream());
+                    }
+                    return;
+                }
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
