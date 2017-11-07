@@ -4,33 +4,29 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
-import collectionsStats = require("models/database/documents/collectionsStats"); 
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
 import querySyntax = require("viewmodels/database/query/querySyntax");
 import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
-
 import queryCommand = require("commands/database/query/queryCommand");
 import queryCompleter = require("common/queryCompleter");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
-import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
 import savedQueriesStorage = require("common/storage/savedQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import queryCriteria = require("models/database/query/queryCriteria");
-
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
-import popoverUtils = require("common/popoverUtils");
 import endpoints = require("endpoints");
+import generalUtils = require("common/generalUtils");
 
 type queryResultTab = "results" | "includes";
 
@@ -528,13 +524,21 @@ class query extends viewModelBase {
                 
                 const resultsTask = $.Deferred<pagedResultWithIncludes<document>>();
                 const queryForAllFields = this.criteria().showFields();
+                                
+                // Note: 
+                // When server resoponse is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
+                // If we ask browser to report the 304 state then 'reponse content' is empty 
+                // This is why we need to measure the execution time here ourselves..
+                const startTime = performance.now();                               
                 
                 command.execute()
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultWithIncludes<document>) => {
-                    
+                    .done((queryResults: pagedResultWithIncludes<document>) => {                                        
+                        const endTime = performance.now();                                              
+                        queryResults.additionalResultInfo.DurationInMs = generalUtils.formatMillis(Math.min(endTime-startTime, queryResults.additionalResultInfo.DurationInMs));
+                        
                         const emptyFieldsResult = queryForAllFields 
                             && queryResults.totalResultCount > 0 
                             && _.every(queryResults.items, x => x.getDocumentPropertyNames().length === 0);
