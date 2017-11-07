@@ -668,12 +668,16 @@ namespace Raven.Server.Documents.Queries
             for (var i = 0; i < expression.Arguments.Count; i++)
             {
                 var argument = expression.Arguments[i];
-                if (argument is FieldExpression || argument is ValueExpression)
-                {
-                    if (name != null)
-                        throw new InvalidOperationException("TODO ppekrol");
 
+                if (name == null && i == 0 && (argument is FieldExpression || argument is ValueExpression))
+                {
                     name = ExtractFieldNameFromArgument(argument, "facet", parameters, QueryText);
+                    continue;
+                }
+
+                if (argument is ValueExpression ve)
+                {
+                    result.AddOptions(ve.Token, ve.Value);
                     continue;
                 }
 

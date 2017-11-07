@@ -7,12 +7,13 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {
     public static class FacetedQueryParser
     {
-        public static Dictionary<string, FacetResult> Parse(FacetQuery query)
+        public static Dictionary<string, FacetResult> Parse(JsonOperationContext context, FacetQuery query)
         {
             var results = new Dictionary<string, FacetResult>();
 
@@ -56,7 +57,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
                 facet.DisplayFieldName = facetField.Alias;
                 facet.Aggregations = facetField.Aggregations;
-                facet.Options = FacetOptions.Default; // TODO [ppekrol]
+                facet.Options = facetField.GetOptions(context, query.Query.QueryParameters) ?? FacetOptions.Default;
 
                 var result = ProcessFacet(facet, facetField.Ranges);
                 results[result.Result.Name] = result;
