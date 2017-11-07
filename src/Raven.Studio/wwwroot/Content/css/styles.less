@@ -30,6 +30,7 @@
     color: @gray-lighter;
 }
 
+
 a.text-revisions:hover {
     color: lighten(@color-revisions,10%) !important;
 }
@@ -143,6 +144,17 @@ h6 {
 
 .btn {
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+
+    .icon-xl {
+        margin-top: @grid-gutter-width/2;
+        padding-top: @grid-gutter-width/2;
+        padding-bottom: @grid-gutter-width/2;
+    }
+
+    .icon-xl + .lead {
+        margin-bottom: @grid-gutter-width/2;
+        white-space: initial;
+    }
 
     &:not(.dropdown-toggle), &.btn-block {
         .caret {
@@ -319,6 +331,11 @@ a {
 .flex-row {
     display: flex;
     flex-wrap: wrap;
+    flex-direction: column;
+
+    @media (min-width: @screen-sm) {
+        flex-direction: row;
+    }
 
     .flex-bottom {
         align-self: flex-end;
@@ -396,7 +413,7 @@ a {
     }
 
     &.padding-lg {
-        padding: (@grid-gutter-width / 4 * 3);
+        padding: (@grid-gutter-width);
     }
 }
 
@@ -773,32 +790,48 @@ input[type=file] + .form-control {
 .margin-left {
     margin-left: @grid-gutter-width / 2;
 
-    &.margin-left-sm {
+    &.margin-left-sm, &.margin-sm {
         margin-left: @grid-gutter-width / 4;
+    }
+
+    &.margin-left-lg, &.margin-lg {
+        margin-left: @grid-gutter-width;
     }
 }
 
 .margin-right {
     margin-right: @grid-gutter-width / 2;
 
-    &.margin-right-sm {
+    &.margin-right-sm, &.margin-sm {
         margin-right: @grid-gutter-width / 4;
+    }
+
+    &.margin-right-lg, &.margin-lg {
+        margin-right: @grid-gutter-width;
     }
 }
 
 .margin-bottom {
     margin-bottom: @grid-gutter-width / 2;
 
-    &.margin-bottom-sm {
+    &.margin-bottom-sm, &.margin-sm {
         margin-bottom: @grid-gutter-width / 4;
+    }
+
+    &.margin-bottom-lg, &.margin-lg {
+        margin-bottom: @grid-gutter-width;
     }
 }
 
 .margin-top {
     margin-top: @grid-gutter-width / 2;
 
-    &.margin-top-sm {
+    &.margin-top-sm, &.margin-sm {
         margin-top: @grid-gutter-width / 4;
+    }
+
+    &.margin-top-lg, &.margin-lg {
+        margin-top: @grid-gutter-width;
     }
 }
 
