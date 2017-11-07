@@ -16,6 +16,10 @@ namespace Raven.Server.Commercial
         public string Email { get; set; }
         public string Domain { get; set; }
         public bool ModifyLocalServer { get; set; }
+        public bool IsWildcard { get; set; }
+        public string Certificate { get; set; }
+        public string Password { get; set; }
+
         public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
         
         public DynamicJsonValue ToJson()
@@ -26,14 +30,14 @@ namespace Raven.Server.Commercial
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
+                [nameof(Certificate)] = Certificate,
+                [nameof(Password)] = Password,
                 [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)
             };
         }
 
         public class NodeInfo
         {
-            public string Certificate { get; set; }
-            public string Password { get; set; }
             public string ServerUrl { get; set; }
             public int Port { get; set; }
             public List<string> Ips { get; set; }
@@ -42,9 +46,7 @@ namespace Raven.Server.Commercial
             {
                 return new DynamicJsonValue
                 {
-                    [nameof(Certificate)] = Certificate,
-                    [nameof(Password)] = Password,
-                    [nameof(Password)] = ServerUrl,
+                    [nameof(ServerUrl)] = ServerUrl,
                     [nameof(Port)] = Port,
                     [nameof(Ips)] = Ips.ToArray()
                 };
@@ -211,7 +213,7 @@ namespace Raven.Server.Commercial
         public long Total { get; set; }
         public string Certificate { get; set; }
         public readonly ConcurrentQueue<string> Messages;
-        public byte[] SettingsZipFile;
+        public byte[] SettingsZipFile; // not sent as part of the result
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         

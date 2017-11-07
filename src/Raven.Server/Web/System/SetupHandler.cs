@@ -255,9 +255,9 @@ namespace Raven.Server.Web.System
                 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
                 
-                var nodeCert = setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Password == null
-                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Certificate))
-                    : new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Certificate), setupInfo.NodeSetupInfos[SetupManager.LocalNodeTag].Password);
+                var nodeCert = setupInfo.Password == null
+                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate))
+                    : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
                 
                 var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
 
