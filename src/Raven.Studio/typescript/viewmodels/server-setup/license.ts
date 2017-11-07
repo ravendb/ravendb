@@ -1,5 +1,6 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
+import registrationInfoCommand = require("commands/setup/registrationInfoCommand");
 
 class license extends setupStep {
 
@@ -23,20 +24,44 @@ class license extends setupStep {
         if (this.isValid(this.model.license().validationGroup)) {
             const model = this.model;
 
-            this.spinners.next(true); // don't set this back to false
+            this.spinners.next(true);
             
             switch (model.mode()) {
                 case "LetsEncrypt":
-                    router.navigate("#domain");
+                    this.loadRegistrationInfo()
+                        .done(() => {
+                            router.navigate("#domain");
+                        })
+                        .always(() => this.spinners.next(false));
                     break;
                 case "Secured":
-                    router.navigate("#nodes");
+                    // load this even in secured mode - it checks license as side effect
+                    this.loadRegistrationInfo()
+                        .done(() => {
+                            router.navigate("#nodes");
+                        })
+                        .always(() => this.spinners.next(false));
                     break;
                 default:
                     router.navigate("#welcome");
                     break;
             }
         }
+    }
+    
+    private loadRegistrationInfo() {
+        return new registrationInfoCommand(this.model.license().toDto())
+            .execute()
+            .done((result) => {
+                const domainModel = this.model.domain();
+
+                domainModel.userEmail(result.Email);
+                domainModel.availableDomains(Object.keys(result.Domains));
+
+                if (domainModel.availableDomains().length === 1) {
+                    domainModel.domain(domainModel.availableDomains()[0]);
+                }
+            });
     }
 
 }
