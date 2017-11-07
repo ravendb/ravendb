@@ -34,8 +34,8 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var ravenDb9055 = new FastTests.Server.Documents.Expiration.ExpirationTests())
-                    ravenDb9055.CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(count: 100).Wait();
+                using (var test = new SlowTests.Voron.Bugs.RavenDB_6971())
+                    test.Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart();
 
             }
         }
