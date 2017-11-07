@@ -62,12 +62,18 @@ namespace Raven.Server.Documents.Queries
             return GetRunner(query).ExecuteStreamQuery(query, documentsContext, response, writer, token);
         }
 
-        public Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public async Task<FacetedQueryResult> ExecuteFacetedQuery(IndexQueryServerSide query, long? existingResultEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
                 throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
-            return _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
+            var sw = Stopwatch.StartNew();
+
+            var result = await _static.ExecuteFacetedQuery(query, existingResultEtag, documentsContext, token);
+
+            result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
+
+            return result;
         }
 
         public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)

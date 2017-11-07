@@ -61,7 +61,19 @@ namespace Raven.Server.Json
 
         public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, out int numberOfResults)
         {
-            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults);
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.TotalResults));
+            writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
+            writer.WriteComma();
+
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
+
+            writer.WriteEndObject();
         }
 
         public static void WriteFacetResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetResult result)
@@ -72,32 +84,9 @@ namespace Raven.Server.Json
             writer.WriteString(result.Name);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(result.RemainingHits));
-            writer.WriteInteger(result.RemainingHits);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.RemainingTermsCount));
-            writer.WriteInteger(result.RemainingTermsCount);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.RemainingTerms));
-            writer.WriteStartArray();
-            var isFirstInternal = true;
-            foreach (var term in result.RemainingTerms)
-            {
-                if (isFirstInternal == false)
-                    writer.WriteComma();
-
-                isFirstInternal = false;
-
-                writer.WriteString(term);
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(result.Values));
             writer.WriteStartArray();
-            isFirstInternal = true;
+            var isFirstInternal = true;
             foreach (var value in result.Values)
             {
                 if (isFirstInternal == false)
@@ -106,7 +95,7 @@ namespace Raven.Server.Json
                 isFirstInternal = false;
 
                 writer.WriteStartObject();
-                
+
                 if (value.Average.HasValue)
                 {
                     writer.WritePropertyName(nameof(value.Average));
@@ -116,7 +105,7 @@ namespace Raven.Server.Json
 
                     writer.WriteComma();
                 }
-                
+
                 if (value.Max.HasValue)
                 {
                     writer.WritePropertyName(nameof(value.Max));
@@ -126,7 +115,7 @@ namespace Raven.Server.Json
 
                     writer.WriteComma();
                 }
-                
+
                 if (value.Min.HasValue)
                 {
                     writer.WritePropertyName(nameof(value.Min));
@@ -136,7 +125,7 @@ namespace Raven.Server.Json
 
                     writer.WriteComma();
                 }
-                
+
                 if (value.Sum.HasValue)
                 {
                     writer.WritePropertyName(nameof(value.Sum));
@@ -155,6 +144,29 @@ namespace Raven.Server.Json
                 writer.WriteString(value.Range);
 
                 writer.WriteEndObject();
+            }
+            writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.RemainingHits));
+            writer.WriteInteger(result.RemainingHits);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.RemainingTermsCount));
+            writer.WriteInteger(result.RemainingTermsCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.RemainingTerms));
+            writer.WriteStartArray();
+            isFirstInternal = true;
+            foreach (var term in result.RemainingTerms)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WriteString(term);
             }
             writer.WriteEndArray();
 
@@ -197,7 +209,6 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.DurationInMs));
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
-
 
             writer.WriteArray(nameof(result.IncludedPaths),
                 result.IncludedPaths);
