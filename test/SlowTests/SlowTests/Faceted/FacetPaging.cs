@@ -32,6 +32,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = null,
+                        Start = 2,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
@@ -48,7 +49,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Skip(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -87,7 +87,8 @@ namespace SlowTests.SlowTests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
-                        //MaxResults = 2,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
@@ -104,8 +105,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -144,6 +143,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
@@ -160,8 +161,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -199,6 +198,8 @@ namespace SlowTests.SlowTests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        Start = 2,
+                        PageSize = 2,
                         //MaxResults = 3,
                         TermSortMode = FacetTermSortMode.CountAsc,
                         IncludeRemainingTerms = true
@@ -216,8 +217,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -256,6 +255,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.ValueDesc,
                         IncludeRemainingTerms = true
                     }
@@ -272,8 +273,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -312,6 +311,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.ValueAsc,
                         IncludeRemainingTerms = true
                     }
@@ -328,8 +329,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -368,6 +367,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
@@ -384,8 +385,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -424,6 +423,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.CountAsc,
                         IncludeRemainingTerms = true
                     }
@@ -440,8 +441,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -480,6 +479,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.ValueDesc,
                         IncludeRemainingTerms = true
                     }
@@ -496,8 +497,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -536,6 +535,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 3,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.ValueAsc,
                         IncludeRemainingTerms = true
                     }
@@ -552,8 +553,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -592,6 +591,7 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = null,
+                        Start = 2,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
@@ -608,7 +608,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Skip(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -648,6 +647,8 @@ namespace SlowTests.SlowTests.Faceted
                     Options = new FacetOptions
                     {
                         //MaxResults = 2,
+                        Start = 2,
+                        PageSize = 2,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
                     }
@@ -664,8 +665,6 @@ namespace SlowTests.SlowTests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Skip(2)
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
