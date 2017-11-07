@@ -51,6 +51,11 @@ namespace Raven.Server.Documents
     {
         private readonly CompactionResult _result;
 
+        public CompactionProgress() : this(new CompactionResult())
+        {
+            // used by json serialization
+        }
+
         public CompactionProgress(CompactionResult result)
         {
             _result = result;
