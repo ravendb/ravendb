@@ -65,7 +65,9 @@
                 <div class="form-group" data-bind="visible: $root.provideCertificates">
                     <label for="ipInput" class="control-label">CN names:</label>
                     <div class="flex-grow form-control-static">
-                        TODO: put CN + alternative names from cert
+                        <ul data-bind="foreach: certificateCNs">
+                            <li data-bind="text: $data"></li>
+                        </ul>
                     </div>
                 </div>
                 

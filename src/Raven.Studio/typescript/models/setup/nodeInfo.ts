@@ -1,6 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
 import ipEntry = require("models/setup/ipEntry");
+import listHostsForCertificateCommand = require("commands/setup/listHostsForCertificateCommand");
 
 class nodeInfo {
     
@@ -13,6 +14,8 @@ class nodeInfo {
     certificatePassword = ko.observable<string>();
     certificateFileName = ko.observable<string>();
     
+    certificateCNs = ko.observableArray<string>([]);
+    
     ipInput = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
@@ -20,6 +23,19 @@ class nodeInfo {
     private constructor(useOwnCertificates: KnockoutObservable<boolean>) {
         this.useOwnCertificates = useOwnCertificates;
         this.initValidation();
+        
+        const fetchCNsThrottled = _.debounce(() => this.fetchCNs(), 700);
+        
+        this.certificate.subscribe(fetchCNsThrottled);
+        this.certificatePassword.subscribe(fetchCNsThrottled);
+    }
+    
+    private fetchCNs() {
+        new listHostsForCertificateCommand(this.certificate(), this.certificatePassword())
+            .execute()
+            .done((hosts: Array<string>) => {
+               this.certificateCNs(hosts); 
+            });
     }
 
     private initValidation() {
