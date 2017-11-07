@@ -31,14 +31,12 @@ namespace SlowTests.Issues
             public Itineraries_ByAll()
             {
                 Map = itineraries => from itinerary in itineraries
-                                     let TotalDistance = itinerary.TotalDistance == null ? 0 : itinerary.TotalDistance
                                      select new
                                      {
                                          itinerary.ItineraryID,
                                          itinerary.ArrivalAirportCode,
                                          itinerary.DepartureAirportCode,
-
-                                         TotalDistance
+                                         itinerary.TotalDistance
                                      };
             }
         }

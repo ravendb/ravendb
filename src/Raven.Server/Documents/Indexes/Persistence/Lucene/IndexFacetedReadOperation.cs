@@ -200,9 +200,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         throw new ArgumentException(string.Format("Could not understand '{0}'", result.Value.Options.TermSortMode));
                 }
 
-                var pageSize = Math.Min(allTerms.Count, query.PageSize);
+                var start = result.Value.Options.Start;
+                var pageSize = Math.Min(allTerms.Count, result.Value.Options.PageSize);
 
-                foreach (var term in allTerms.Skip(query.Start).TakeWhile(term => values.Count < pageSize))
+                foreach (var term in allTerms.Skip(start).TakeWhile(term => values.Count < pageSize))
                 {
                     if (groups.TryGetValue(term, out FacetValue facetValue) == false || facetValue == null)
                         facetValue = new FacetValue { Range = term };
@@ -210,7 +211,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     values.Add(facetValue);
                 }
 
-                var previousHits = allTerms.Take(query.Start).Sum(allTerm =>
+                var previousHits = allTerms.Take(start).Sum(allTerm =>
                 {
                     if (groups.TryGetValue(allTerm, out FacetValue facetValue) == false || facetValue == null)
                         return 0;
@@ -222,12 +223,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     Name = result.Key,
                     Values = values,
-                    RemainingTermsCount = allTerms.Count - (query.Start + values.Count),
+                    RemainingTermsCount = allTerms.Count - (start + values.Count),
                     RemainingHits = groups.Values.Sum(x => x.Count) - (previousHits + values.Sum(x => x.Count))
                 };
 
                 if (result.Value.Options.IncludeRemainingTerms)
-                    result.Value.Result.RemainingTerms = allTerms.Skip(query.Start + values.Count).ToList();
+                    result.Value.Result.RemainingTerms = allTerms.Skip(start + values.Count).ToList();
             }
         }
 
