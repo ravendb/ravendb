@@ -3,12 +3,18 @@ import finishSetupCommand = require("commands/setup/finishSetupCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
-import router = require("plugins/router");
 import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
+import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 
 class finish extends setupStep {
 
     //TODO do NOT forget about calling validate ep
+    
+    private websocket: serverNotificationCenterClient;
+    
+    messages = ko.observableArray<string>([]);
+    
+    configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
@@ -18,6 +24,12 @@ class finish extends setupStep {
         }
 
         return $.when({ redirect: "#welcome" });
+    }
+    
+    activate(args: any) {
+        super.activate(args);
+
+        this.websocket = new serverNotificationCenterClient();
     }
     
     compositionComplete() {
@@ -45,10 +57,7 @@ class finish extends setupStep {
     
     private saveUnsecuredConfiguration() {
         new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
-            .execute()
-            .done(() => {
-                router.navigate("#finish");
-            });
+            .execute();
     }
 
     private saveSecuredConfiguration(url: string, dto: Raven.Server.Commercial.SetupInfo) {
@@ -62,15 +71,32 @@ class finish extends setupStep {
                 $form.attr("action", url + operationPart);
                 $downloadOptions.val(JSON.stringify(dto));
                 $form.submit();
-
-                /* TODO
-                notificationCenter.instance.openDetailsForOperationById(db, operationId);
-
-                notificationCenter.instance.monitorOperation(db, operationId)
-                    .fail((exception: Raven.Client.Documents.Operations.OperationExceptionResult) => {
-                        messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
-                    }).always(() => exportDatabase.isExporting(false));*/
+                
+                this.websocket.watchOperation(operationId, e => this.onChange(e));
             });
+    }
+    
+    private onChange(operation: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
+        if (operation.TaskType === "Setup") {
+            
+            let dto = null as Raven.Server.Commercial.SetupProgressAndResult;
+            
+            switch (operation.State.Status) {
+                case "Completed":
+                    dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
+                    break;
+                case "InProgress":
+                    dto = operation.State.Progress as Raven.Server.Commercial.SetupProgressAndResult;
+                    break;
+                case "Faulted":
+                    const failure = operation.State.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
+                    this.messages([failure.Message, failure.Error]);
+            }
+            
+            if (dto) {
+                this.messages(dto.Messages);
+            }
+        }
     }
 
     private finishConfiguration() {

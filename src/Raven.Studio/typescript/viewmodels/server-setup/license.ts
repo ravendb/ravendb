@@ -3,6 +3,10 @@ import router = require("plugins/router");
 
 class license extends setupStep {
 
+    spinners = {
+        next: ko.observable<boolean>(false)
+    };
+    
     licenseUrl = "https://ravendb.net/license/request";
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -19,6 +23,8 @@ class license extends setupStep {
         if (this.isValid(this.model.license().validationGroup)) {
             const model = this.model;
 
+            this.spinners.next(true); // don't set this back to false
+            
             switch (model.mode()) {
                 case "LetsEncrypt":
                     router.navigate("#domain");

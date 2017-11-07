@@ -27,7 +27,7 @@
 
         <div>
             <a href="#license" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
-            <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+            <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.save() }, disable: $root.spinners.save"><span>Next</span> <i class="icon-arrow-right"></i></button>
         </div>
     </form>
 </div>

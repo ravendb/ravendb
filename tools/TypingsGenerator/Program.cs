@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -80,6 +81,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(List<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IEnumerable<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(Queue<>))
+                .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(ConcurrentQueue<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyList<>))
                 .WithTypeMapping(new TsInterface(new TsName("Array")), typeof(IReadOnlyCollection<>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TreePage))
@@ -325,6 +327,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(UnsecuredSetupInfo));
             scripter.AddType(typeof(SetupInfo));
             scripter.AddType(typeof(ClaimDomainInfo));
+            scripter.AddType(typeof(SetupProgressAndResult));
 
             return scripter;
         }
