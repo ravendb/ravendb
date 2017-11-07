@@ -434,8 +434,7 @@ class editSqlEtlTask extends viewModelBase {
 
         const existingSqlTable = this.editedSqlEtl().sqlTables().find(x => x.tableName() === newSqlTable.tableName());
         
-        if ((!!existingSqlTable && sqlTableToSave.isNew()) || 
-            (!!existingSqlTable && (existingSqlTable.tableName() !== this.sqlTableSelectedForEdit().tableName()))) 
+        if (existingSqlTable && (sqlTableToSave.isNew() || existingSqlTable.tableName() !== this.sqlTableSelectedForEdit().tableName()))        
         {
             // Table name exists - offer to overwrite
             this.confirmationMessage(`Table ${existingSqlTable.tableName()} already exists in SQL Tables list`,
