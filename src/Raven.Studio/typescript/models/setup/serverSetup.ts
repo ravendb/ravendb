@@ -22,7 +22,9 @@ class serverSetup {
     nodesValidationGroup: KnockoutValidationGroup;
 
     constructor() {
-        this.nodes.push(nodeInfo.empty(this.useOwnCertificates));
+        const newNode = nodeInfo.empty(this.useOwnCertificates);
+        newNode.nodeTag("A");
+        this.nodes.push(newNode);
 
         this.nodes.extend({
             validation: [
