@@ -7,7 +7,7 @@ class claimDomainCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<registrationInfoResult> {
+    execute(): JQueryPromise<void> {
         const args = {
             action: "claim"
         };

@@ -12,6 +12,9 @@ class serverSetup {
     static default = new serverSetup();
     static readonly nodesTags = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
+    
+    userDomains = ko.observable<Raven.Server.Commercial.UserDomainsWithIps>();
+    
     mode = ko.observable<configurationMode>();
     license = ko.observable<licenseInfo>(new licenseInfo());
     domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));

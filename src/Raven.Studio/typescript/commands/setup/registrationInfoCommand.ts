@@ -7,11 +7,8 @@ class registrationInfoCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<registrationInfoResult> {
-        const args = {
-            action: "user-domains"
-        };
-        const url = endpoints.global.setup.setupDnsNCert + this.urlEncodeArgs(args);
+    execute(): JQueryPromise<Raven.Server.Commercial.UserDomainsWithIps> {
+        const url = endpoints.global.setup.setupUserDomains;
         const payload = {
             License: this.license
         };

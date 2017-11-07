@@ -42,7 +42,6 @@ namespace Raven.Server.Web.System
                     await responseStream.CopyToAsync(ResponseBodyStream());
                 }
             }
-            
         }
 
         [RavenAction("/setup/user-domains", "POST", AuthorizationStatus.UnauthenticatedClients)]
@@ -50,51 +49,50 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
             
-            var content = new StreamContent(RequestBodyStream());
-            if (HttpContext.Request.Headers.TryGetValue("Content-Type", out StringValues contentType))
+            using (var reader = new StreamReader(RequestBodyStream()))
             {
-                content.Headers.TryAddWithoutValidation("Content-Type", (IEnumerable<string>)contentType);
-            }
-            var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/user-domains", content).ConfigureAwait(false);
+                var payload = await reader.ReadToEndAsync();
+                var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
-            HttpContext.Response.StatusCode = (int)response.StatusCode;
+                HttpContext.Response.StatusCode = (int)response.StatusCode;
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
-
-                var fullResult = new UserDomainsWithIps()
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    Email = results.Email,
-                    Domains = new Dictionary<string, List<SubDomainAndIps>>()
-                };
+                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
 
-                foreach (var domain in results.Domains)
-                {
-                    var list = new List<SubDomainAndIps>();
-                    foreach (var subDomain in domain.Value)
+                    var fullResult = new UserDomainsWithIps()
                     {
-                        try
+                        Email = results.Email,
+                        Domains = new Dictionary<string, List<SubDomainAndIps>>()
+                    };
+
+                    foreach (var domain in results.Domains)
+                    {
+                        var list = new List<SubDomainAndIps>();
+                        foreach (var subDomain in domain.Value)
                         {
-                            list.Add(new SubDomainAndIps
+                            try
                             {
-                                SubDomain = subDomain,
-                                Ips = Dns.GetHostAddresses($"{subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}").Select(ip => ip.ToString()).ToList(),
-                            });
+                                list.Add(new SubDomainAndIps
+                                {
+                                    SubDomain = subDomain,
+                                    Ips = Dns.GetHostAddresses($"{subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}").Select(ip => ip.ToString()).ToList(),
+                                });
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException($"Failed to query the ips for host {subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}", e);
+                            }
                         }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException($"Failed to query the ips for host {subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}", e);
-                        }
-                                               
+                        fullResult.Domains.Add(domain.Key, list);
                     }
-                    fullResult.Domains.Add(domain.Key, list);
-                }
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var blittable = EntityToBlittable.ConvertEntityToBlittable(results, DocumentConventions.Default, context);
-                    context.Write(writer, blittable);
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        var blittable = EntityToBlittable.ConvertEntityToBlittable(results, DocumentConventions.Default, context);
+                        context.Write(writer, blittable);
+                    }
                 }
             }
         }
