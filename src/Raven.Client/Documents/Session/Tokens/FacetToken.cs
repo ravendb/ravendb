@@ -129,7 +129,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (string.IsNullOrWhiteSpace(_optionsParameterName) == false)
             {
                 writer
-                    .Append(", ")
+                    .Append(", $")
                     .Append(_optionsParameterName);
             }
 

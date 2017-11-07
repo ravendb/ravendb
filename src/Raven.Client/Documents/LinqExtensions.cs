@@ -1207,7 +1207,7 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetSpatialMethod(typeof(SpatialDynamicField)); // TODO [ppekrol]
+            var currentMethod = GetSpatialMethod(typeof(SpatialDynamicField));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);

@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public List<FacetResult> FacetedQuery(FacetQuery facetQuery, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var results = FacetedQueryParser.Parse(facetQuery);
+            var results = FacetedQueryParser.Parse(context, facetQuery);
 
             var query = facetQuery.Query;
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
