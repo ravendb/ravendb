@@ -76,14 +76,21 @@ namespace Raven.Client.Documents.Conventions
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
-            SerializeEntityToJsonStream = (entity, streamWriter) =>
-            {
-                var jsonSerializer = CreateSerializer();
-                jsonSerializer.Serialize(streamWriter, entity);
-                streamWriter.Flush();
-            };
 
+            SerializeEntityToJsonStream = null;
+            SerializeMetaDataToJsonStream = null;
+            
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
+        }
+
+        public Func<object, StreamWriter, bool> SerializeMetaDataToJsonStream
+        {
+            get => _serializeMetadataToJsonStream;
+            set
+            {
+                AssertNotFrozen();
+                _serializeMetadataToJsonStream = value;
+            }
         }
 
         private bool _frozen;
@@ -109,7 +116,8 @@ namespace Raven.Client.Documents.Conventions
         private bool _throwIfQueryPageSizeIsNotSet;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
-        private Action<object, StreamWriter> _serializeEntityToJsonStream;
+        private Func<object, StreamWriter, bool> _serializeEntityToJsonStream;
+        private Func<object, StreamWriter, bool> _serializeMetadataToJsonStream;
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
 
@@ -133,7 +141,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public Action<object, StreamWriter> SerializeEntityToJsonStream
+        public Func<object, StreamWriter, bool> SerializeEntityToJsonStream
         {
             get => _serializeEntityToJsonStream;
             set
@@ -556,7 +564,6 @@ namespace Raven.Client.Documents.Conventions
 
             return this;
         }
-
 
         /// <summary>
         ///     Creates the serializer.
