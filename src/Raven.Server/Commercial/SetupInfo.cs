@@ -34,6 +34,7 @@ namespace Raven.Server.Commercial
         {
             public string Certificate { get; set; }
             public string Password { get; set; }
+            public string ServerUrl { get; set; }
             public int Port { get; set; }
             public List<string> Ips { get; set; }
 
@@ -43,6 +44,7 @@ namespace Raven.Server.Commercial
                 {
                     [nameof(Certificate)] = Certificate,
                     [nameof(Password)] = Password,
+                    [nameof(Password)] = ServerUrl,
                     [nameof(Port)] = Port,
                     [nameof(Ips)] = Ips.ToArray()
                 };

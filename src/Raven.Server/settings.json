@@ -1,5 +1,4 @@
 ﻿{
-    "ServerUrl": "http://localhost:8080",
-    "RunInMemory": false,
+    "ServerUrl": "http://127.0.0.1:0",
     "Setup.Mode": "Initial"
 }

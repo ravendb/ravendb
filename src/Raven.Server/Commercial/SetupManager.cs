@@ -55,7 +55,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo)
+        public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo, ServerStore serverStore)
         {
             var progress = new SetupProgressAndResult
             {
@@ -70,7 +70,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(token, SetupMode.Secured, setupInfo);
+                progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, progress, token, SetupMode.Secured, setupInfo, serverStore);
             }
             catch (Exception e)
             {
@@ -83,7 +83,7 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo)
+        public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress,  CancellationToken token, SetupInfo setupInfo, ServerStore serverStore)
         {
             var progress = new SetupProgressAndResult
             {
@@ -200,7 +200,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(token, SetupMode.LetsEncrypt, setupInfo);
+                        progress.SettingsZipFile = await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, progress, token, SetupMode.LetsEncrypt, setupInfo, serverStore);
                     }
                     catch (Exception e)
                     {
@@ -364,10 +364,9 @@ namespace Raven.Server.Commercial
                 var ips = localNode.Ips.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
 
                 X509Certificate2 localNodeCert;
-                byte[] localCertBytes;
                 try
                 {
-                    localCertBytes = Convert.FromBase64String(localNode.Certificate);
+                    var localCertBytes = Convert.FromBase64String(localNode.Certificate);
                     localNodeCert = localNode.Password == null
                         ? new X509Certificate2(localCertBytes)
                         : new X509Certificate2(localCertBytes, localNode.Password);
@@ -377,20 +376,14 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException($"Validation failed.Could not load the provided certificate for the local node '{LocalNodeTag}'.", e);
                 }
 
-                string localServerUrl = null;
-                if (setupMode == SetupMode.LetsEncrypt)
-                    localServerUrl = $"https://{LocalNodeTag}.dbs.local.ravendb.net:{localNode.Port}";
-                else if (setupMode == SetupMode.Secured)
-                {
-                    var cn = localNodeCert.SubjectName.Name;
-                    localServerUrl = $"https://{cn}:{localNode.Port}";
-                }
+                // TODO go over all occurences of node tag, use lower everywhere...
+                var localServerUrl = (setupMode == SetupMode.LetsEncrypt)
+                    ? $"https://{LocalNodeTag.ToLower()}.dbs.local.ravendb.net:{localNode.Port}"
+                    : setupInfo.NodeSetupInfos[LocalNodeTag].ServerUrl;
 
                 await AssertServerCanStartSecured(localNodeCert, localServerUrl, ips, SettingsPath, token, setupInfo);
 
                 // Load the certificate in the local server, so we can generate client certificates later
-                var pass = setupMode == SetupMode.LetsEncrypt ? null : localNode.Password;
-                serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(localNode.Certificate, "Setup Validation", localNodeCert, localCertBytes, pass);
             }
             catch (Exception e)
             {
@@ -487,7 +480,7 @@ namespace Raven.Server.Commercial
                 Syscall.FsyncDirectoryFor(settingsPath);
         }
 
-        private static async Task<byte[]> CreateSettingsZipAndOptionallyWriteToLocalServer(CancellationToken token, SetupMode setupMode, SetupInfo setupInfo)
+        private static async Task<byte[]> CreateSettingsZipAndOptionallyWriteToLocalServer(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
             try
             {
@@ -497,49 +490,96 @@ namespace Raven.Server.Commercial
                     {
                         var originalSettings = File.ReadAllText(SettingsPath);
                         dynamic jsonObj = JsonConvert.DeserializeObject(originalSettings);
-                        X509Certificate2 nodeCert = null;
 
-                        if (setupMode == SetupMode.LetsEncrypt)
+                        progress.AddInfo("Loading and validating server certificate.");
+                        onProgress(progress);
+                        byte[] serverCertBytes;
+
+                        try
                         {
-                            try
-                            {
-                                nodeCert = setupInfo.NodeSetupInfos[LocalNodeTag].Password == null
-                                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[LocalNodeTag].Certificate))
-                                    : new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[LocalNodeTag].Certificate), setupInfo.NodeSetupInfos[LocalNodeTag].Password);
-                            }
-                            catch (Exception e)
-                            {
-                                throw new InvalidOperationException($"Setup failed.Could not load the certificate for node '{LocalNodeTag}'.", e);
-                            }
+                            var base64 = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate;
+                            serverCertBytes = Convert.FromBase64String(base64);
+                            var serverCert = setupInfo.NodeSetupInfos[LocalNodeTag].Password == null
+                                ? new X509Certificate2(serverCertBytes)
+                                : new X509Certificate2(serverCertBytes, setupInfo.NodeSetupInfos[LocalNodeTag].Password);
+                            serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.NodeSetupInfos[LocalNodeTag].Password);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException($"Could not load the certificate for node '{LocalNodeTag}' in the local server.", e);
                         }
 
+                        progress.AddInfo("Generaing the client certificate.");
+                        onProgress(progress);
+                        X509Certificate2 clientCert;
+
+                        try
+                        {
+                            clientCert = await GenerateCertificateTask($"{setupInfo.Domain}.client.certificate", serverStore);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException($"Could not generate a client certificate '{LocalNodeTag}' in the local server.", e);
+                        }
+
+                        progress.AddInfo("Writing certificates to zip archive.");
+                        onProgress(progress);
+                        try
+                        {
+                            var entry = archive.CreateEntry($"{setupInfo.Domain}.server.certificate.pfx");
+                            using (var entryStream = entry.Open())
+                            using (var writer = new BinaryWriter(entryStream))
+                            {
+                                writer.Write(serverCertBytes);
+                                writer.Flush();
+                                await entryStream.FlushAsync(token);
+                            }
+
+                            entry = archive.CreateEntry($"{setupInfo.Domain}.client.certificate.pfx");
+                            using (var entryStream = entry.Open())
+                            using (var writer = new BinaryWriter(entryStream))
+                            {
+                                writer.Write(clientCert.Export(X509ContentType.Pfx));
+                                writer.Flush();
+                                await entryStream.FlushAsync(token);
+                            }
+
+                            entry = archive.CreateEntry($"{setupInfo.Domain}.client.certificate.pem");
+                            using (var entryStream = entry.Open())
+                            using (var writer = new StreamWriter(entryStream))
+                            {
+                                var builder = new StringBuilder();
+                                builder.AppendLine("-----BEGIN CERTIFICATE-----");
+                                builder.AppendLine(Convert.ToBase64String(clientCert.Export(X509ContentType.Cert), Base64FormattingOptions.InsertLineBreaks));
+                                builder.AppendLine("-----END CERTIFICATE-----");
+
+                                writer.Write(builder.ToString());
+                                writer.Flush();
+                                await entryStream.FlushAsync(token);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to write the certificates to a zip archive.", e);
+                        }
+                        
                         jsonObj["Setup.Mode"] = setupMode.ToString();
 
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
-                            
+                            progress.AddInfo($"Creating settings file 'settings.josn' for node {node.Key}.");
+                            onProgress(progress);
+
                             if (setupMode == SetupMode.Secured)
                             {
-                                try
-                                {
-                                    nodeCert = node.Value.Password == null
-                                        ? new X509Certificate2(Convert.FromBase64String(node.Value.Certificate))
-                                        : new X509Certificate2(Convert.FromBase64String(node.Value.Certificate), node.Value.Password);
-                                }
-                                catch (Exception e)
-                                {
-                                    throw new InvalidOperationException($"Setup failed.Could not load the provided certificate for node '{node.Key}'.", e);
-                                }
-
-                                var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
-                                jsonObj["ServerUrl"] = $"https://{cn}:{node.Value.Port}";
+                                jsonObj["ServerUrl"] = node.Value.ServerUrl;
                                 jsonObj["Security.Certificate.Base64"] = node.Value.Certificate;
                                 jsonObj["Security.Certificate.Password"] = node.Value.Password;
                             }
                             else if(setupMode == SetupMode.LetsEncrypt)
                             {
                                 jsonObj["ServerUrl"] = $"https://{node.Key.ToLower()}.{setupInfo.Domain}.dbs.local.ravendb.net:{node.Value.Port}";
-                                jsonObj["Security.Certificate.Base64"] = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate; //same certificate for all nodes
+                                jsonObj["Security.Certificate.Base64"] = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate;
                             }
                             
                             var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
@@ -552,31 +592,19 @@ namespace Raven.Server.Commercial
                                 }
                                 catch (Exception e)
                                 {
-                                    throw new InvalidOperationException($"Failed to update {SettingsPath} for local node '{node.Key}' with new configuration.", e);
+                                    throw new InvalidOperationException("Failed to write settings file 'settings.josn' for the local sever.", e);
                                 }
                             }
 
+                            progress.AddInfo($"Adding settings file '{node.Key}.settings.json' to zip archive.");
+                            onProgress(progress);
                             try
                             {
-                                var entry = archive.CreateEntry($"{node.Key}.settings.json");
+                                var entry = archive.CreateEntry($"{node.Key}\\settings.json");
                                 using (var entryStream = entry.Open())
                                 using (var writer = new StreamWriter(entryStream))
                                 {
                                     writer.Write(jsonString);
-                                    writer.Flush();
-                                    await entryStream.FlushAsync(token);
-                                }
-
-                                entry = archive.CreateEntry($"{node.Key}.Certificate.pem");
-                                using (var entryStream = entry.Open())
-                                using (var writer = new StreamWriter(entryStream))
-                                {
-                                    var builder = new StringBuilder();
-                                    builder.AppendLine("-----BEGIN CERTIFICATE-----");
-                                    builder.AppendLine(Convert.ToBase64String(nodeCert?.Export(X509ContentType.Cert), Base64FormattingOptions.InsertLineBreaks));
-                                    builder.AppendLine("-----END CERTIFICATE-----");
-                                    
-                                    writer.Write(builder.ToString());
                                     writer.Flush();
                                     await entryStream.FlushAsync(token);
                                 }
@@ -695,7 +723,7 @@ namespace Raven.Server.Commercial
         }
 
         // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
-        public static async Task<byte[]> GenerateCertificateTask(string name,  ServerStore serverStore)
+        public static async Task<X509Certificate2> GenerateCertificateTask(string name,  ServerStore serverStore)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException($"{nameof(name)} is a required field in the certificate definition");
@@ -724,22 +752,7 @@ namespace Raven.Server.Commercial
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
-            return selfSignedCertificate.Export(X509ContentType.Pfx);
-        }
-
-        public static Task RenewLetsEncryptCertificate(ServerStore serverStore)
-        {
-            var serverCertificate = serverStore.Server.ClusterCertificateHolder.Certificate;
-            if (serverCertificate != null && (serverCertificate.NotAfter - DateTime.Today).TotalDays > 31)
-                return Task.CompletedTask;
-
-            // Need to renew:
-            // 1. read license from cluster
-            // 2. contact grisha and ask for email
-            // 3. extract the domain from current certificate
-            // 4. create new LetsEncryptSetupInfo and call FetchCertificateTask
-
-            return Task.CompletedTask;
+            return selfSignedCertificate;
         }
     }
 }
