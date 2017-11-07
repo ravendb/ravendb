@@ -74,7 +74,7 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                LogErrorAndThrow(onProgress, progress, $"Setup failed. Could not create configuration file(s). Exception:{Environment.NewLine}{e}", e);
+                LogErrorAndThrow(onProgress, progress, $"Setup failed. Could not create configuration file(s).", e);
             }
 
             progress.Processed++;
@@ -110,9 +110,13 @@ namespace Raven.Server.Commercial
                         account.Data.Agreement = account.GetTermsOfServiceUri();
                         await acmeClient.UpdateRegistration(account);
 
-                        foreach (var node in setupInfo.NodeSetupInfos)
+                        var tags = setupInfo.IsWildcard 
+                            ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 
+                            : setupInfo.NodeSetupInfos.Select(node => node.Key[0]);
+                      
+                        foreach (var tag in tags)
                         {
-                            var host = $"{node.Key}.{setupInfo.Domain}";
+                            var host = $"{tag.ToString().ToLower()}.{setupInfo.Domain.ToLower()}";
                             var fullHost = host + ".dbs.local.ravendb.net";
                             var authz = acmeClient.NewAuthorization(new AuthorizationIdentifier
                             {
@@ -122,7 +126,7 @@ namespace Raven.Server.Commercial
                             {
                                 return t.Result.Data.Challenges.First(c => c.Type == ChallengeTypes.Dns01);
                             }, token);
-                            dictionary[node.Key] = authz;
+                            dictionary[tag.ToString()] = authz;
                         }
 
                         await Task.WhenAll(dictionary.Values.ToArray());
@@ -130,13 +134,12 @@ namespace Raven.Server.Commercial
                     }
                     catch (Exception e)
                     {
-                        LogErrorAndThrow(onProgress, progress, $"Failed to receive challenge(s) information from Let's Encrypt. Exception:{Environment.NewLine}{e}", e);
+                        LogErrorAndThrow(onProgress, progress, "Failed to receive challenge(s) information from Let's Encrypt.", e);
                     }
 
                     progress.Processed++;
                     progress.AddInfo("Successfully received challenge(s) information from Let's Encrypt.");
-                    progress.AddInfo("updating DNS record(s) and challenge(s) in dbs.local.ravendb.net. This operation may take a long time, between 30 seconds and " +
-                                     "a few minutes, depending on the number of domains(nodes)");
+                    progress.AddInfo("updating DNS record(s) and challenge(s) in dbs.local.ravendb.net.");
                     onProgress(progress);
 
                     try
@@ -145,12 +148,12 @@ namespace Raven.Server.Commercial
                     }
                     catch (Exception e)
                     {
-                        LogErrorAndThrow(onProgress, progress, $"Failed to update DNS record(s) and challenge(s) in dbs.local.ravendb.net. Exception:{Environment.NewLine}{e}", e);
+                        LogErrorAndThrow(onProgress, progress, "Failed to update DNS record(s) and challenge(s) in dbs.local.ravendb.net.", e);
                     }
 
                     progress.Processed++;
                     progress.AddInfo("Successfully updated DNS record(s) and challenge(s) in dbs.local.ravendb.net.");
-                    progress.AddInfo($"Completing Let's Encrypt challenge(s) for {setupInfo.Domain}.dbs.local.ravendb.net.");
+                    progress.AddInfo($"Completing Let's Encrypt challenge(s) for {setupInfo.Domain.ToLower()}.dbs.local.ravendb.net.");
                     onProgress(progress);
 
                     AcmeCertificate cert = null;
@@ -166,31 +169,34 @@ namespace Raven.Server.Commercial
                         var csr = new CertificationRequestBuilder();
                         var lowerDomain = setupInfo.Domain.ToLower();
                         csr.AddName($"CN=a.{lowerDomain}.dbs.local.ravendb.net");
-                        // we need at least one SAN, browsers today require this
-                        csr.SubjectAlternativeNames.Add($"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
-                        foreach (var node in setupInfo.NodeSetupInfos)
-                        {
-                            if (node.Key == LocalNodeTag)
-                                continue;
-                            csr.SubjectAlternativeNames.Add($"{node.Key.ToLower()}.{lowerDomain}.dbs.local.ravendb.net");
-                        }
+
+                        if (setupInfo.IsWildcard)
+                            foreach (var lowerTag in "abcdefghijklmnopqrstuvwxyz")
+                            {
+                                csr.SubjectAlternativeNames.Add($"{lowerTag}.{lowerDomain}.dbs.local.ravendb.net");
+                            }
+                        else
+                            foreach (var node in setupInfo.NodeSetupInfos)
+                            {
+                                csr.SubjectAlternativeNames.Add($"{node.Key.ToLower()}.{lowerDomain}.dbs.local.ravendb.net");
+                            }
+
                         cert = await acmeClient.NewCertificate(csr);
                     }
                     catch (Exception e)
                     {
-                        LogErrorAndThrow(onProgress, progress, $"Failed to aquire certificate from Let's Encrypt. Exception:{Environment.NewLine}{e}", e);
+                        LogErrorAndThrow(onProgress, progress, "Failed to aquire certificate from Let's Encrypt.", e);
                     }
 
                     try
                     {
                         var pfxBuilder = cert.ToPfx();
-
-                        var certBytes = pfxBuilder.Build(setupInfo.Domain + " cert", "");
-                        setupInfo.NodeSetupInfos[LocalNodeTag].Certificate = Convert.ToBase64String(certBytes);
+                        var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
+                        setupInfo.Certificate = Convert.ToBase64String(certBytes);
                     }
                     catch (Exception e)
                     {
-                        LogErrorAndThrow(onProgress, progress, $"Failed to build certificate from Let's Encrypt. Exception:{Environment.NewLine}{e}", e);
+                        LogErrorAndThrow(onProgress, progress, "Failed to build certificate from Let's Encrypt.", e);
                     }
 
                     progress.Processed++;
@@ -204,7 +210,7 @@ namespace Raven.Server.Commercial
                     }
                     catch (Exception e)
                     {
-                        LogErrorAndThrow(onProgress, progress, $"Failed to create configuration settings. Exception:{Environment.NewLine}{e}", e);
+                        LogErrorAndThrow(onProgress, progress, "Failed to create configuration settings.", e);
                     }
 
                     progress.Processed++;
@@ -226,7 +232,6 @@ namespace Raven.Server.Commercial
             throw new InvalidOperationException(msg, e);
         }
 
-        // Update DNS record(s) and set the let's encrypt challenge(s) in dbs.local.ravendb.net
         private static async Task UpdateDnsRecordsTask(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, Dictionary<string, string> map, SetupInfo setupInfo)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
@@ -256,7 +261,8 @@ namespace Raven.Server.Commercial
                 try
                 {
                     progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
-                    progress.AddInfo("Waiting...");
+                    progress.AddInfo("Please wait between 30 seconds and a few minutes, depending on the number of domains(nodes).");
+                    progress.AddInfo("Waiting for DNS records to update...");
                     onProgress(progress);
                     response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
@@ -357,37 +363,31 @@ namespace Raven.Server.Commercial
             try
             {
                 var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
-                // can only do this for local cert
-                if (PlatformDetails.RunningOnPosix)
-                    AdminCertificatesHandler.ValidateCaExistsInOsStores(localNode.Certificate, "local certificate", serverStore);
 
                 var ips = localNode.Ips.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
 
-                X509Certificate2 localNodeCert;
+                X509Certificate2 serverCert;
                 try
                 {
-                    var localCertBytes = Convert.FromBase64String(localNode.Certificate);
-                    localNodeCert = localNode.Password == null
+                    var localCertBytes = Convert.FromBase64String(setupInfo.Certificate);
+                    serverCert = string.IsNullOrEmpty(setupInfo.Password)
                         ? new X509Certificate2(localCertBytes)
-                        : new X509Certificate2(localCertBytes, localNode.Password);
+                        : new X509Certificate2(localCertBytes, setupInfo.Password);
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Validation failed.Could not load the provided certificate for the local node '{LocalNodeTag}'.", e);
+                    throw new InvalidOperationException("Validation failed. Could not load the provided certificate.", e);
                 }
 
-                // TODO go over all occurences of node tag, use lower everywhere...
                 var localServerUrl = (setupMode == SetupMode.LetsEncrypt)
-                    ? $"https://{LocalNodeTag.ToLower()}.dbs.local.ravendb.net:{localNode.Port}"
+                    ? $"https://{LocalNodeTag.ToLower()}.{setupInfo.Domain.ToLower()}dbs.local.ravendb.net:{localNode.Port}"
                     : setupInfo.NodeSetupInfos[LocalNodeTag].ServerUrl;
 
-                await AssertServerCanStartSecured(localNodeCert, localServerUrl, ips, SettingsPath, token, setupInfo);
-
-                // Load the certificate in the local server, so we can generate client certificates later
+                await AssertServerCanStartSecured(serverCert, localServerUrl, ips, token, setupInfo);
             }
             catch (Exception e)
             {
-                LogErrorAndThrow(onProgress, progress, $"Validation failed. Exception:{Environment.NewLine}{e}", e);
+                LogErrorAndThrow(onProgress, progress, "Validation failed.", e);
             }
 
             progress.Processed++;
@@ -411,14 +411,14 @@ namespace Raven.Server.Commercial
                         throw new ArgumentException("Invalid domain name.");
                 }
 
+                if (setupMode == SetupMode.Secured && string.IsNullOrWhiteSpace(setupInfo.Certificate))
+                    throw new ArgumentException($"{nameof(setupInfo.Certificate)} is a mandatory property for a secured setup");
+
                 foreach (var node in setupInfo.NodeSetupInfos)
                 {
-                    if (string.IsNullOrWhiteSpace(node.Value.Certificate) && setupMode == SetupMode.Secured)
-                        throw new ArgumentException($"{nameof(node.Value.Certificate)} is a mandatory property for a secured setup");
-
-                    if (string.IsNullOrWhiteSpace(node.Key))
-                        throw new ArgumentException("Node Tag is a mandatory property for a secured setup");
-
+                    if (string.IsNullOrWhiteSpace(node.Key) || node.Key.Length != 1 || !char.IsLetter(node.Key[0]) || !char.IsUpper(node.Key[0]))
+                        throw new ArgumentException("Node Tag [A-Z] (capital) is a mandatory property for a secured setup");
+                    
                     foreach (var ip in node.Value.Ips)
                     {
                         if (IsValidIp(ip) == false)
@@ -497,16 +497,22 @@ namespace Raven.Server.Commercial
 
                         try
                         {
-                            var base64 = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate;
+                            var base64 = setupInfo.Certificate;
                             serverCertBytes = Convert.FromBase64String(base64);
-                            var serverCert = setupInfo.NodeSetupInfos[LocalNodeTag].Password == null
+                            var serverCert = string.IsNullOrEmpty(setupInfo.Password)
                                 ? new X509Certificate2(serverCertBytes)
-                                : new X509Certificate2(serverCertBytes, setupInfo.NodeSetupInfos[LocalNodeTag].Password);
-                            serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.NodeSetupInfos[LocalNodeTag].Password);
+                                : new X509Certificate2(serverCertBytes, setupInfo.Password);
+
+                            serverStore.EnsureNotPassive();
+
+                            serverStore.Server.ClusterCertificateHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.Password);
+
+                            if (PlatformDetails.RunningOnPosix)
+                                AdminCertificatesHandler.ValidateCaExistsInOsStores(base64, "setup certificate", serverStore);
                         }
                         catch (Exception e)
                         {
-                            throw new InvalidOperationException($"Could not load the certificate for node '{LocalNodeTag}' in the local server.", e);
+                            throw new InvalidOperationException("Could not load the certificate in the local server.", e);
                         }
 
                         progress.AddInfo("Generaing the client certificate.");
@@ -515,18 +521,19 @@ namespace Raven.Server.Commercial
 
                         try
                         {
-                            clientCert = await GenerateCertificateTask($"{setupInfo.Domain}.client.certificate", serverStore);
+                            // requires server certificate to be loaded
+                            clientCert = await GenerateCertificateTask($"{setupInfo.Domain.ToLower()}.client.certificate", serverStore);
                         }
                         catch (Exception e)
                         {
-                            throw new InvalidOperationException($"Could not generate a client certificate '{LocalNodeTag}' in the local server.", e);
+                            throw new InvalidOperationException($"Could not generate a client certificate for '{setupInfo.Domain.ToLower()}'.", e);
                         }
 
                         progress.AddInfo("Writing certificates to zip archive.");
                         onProgress(progress);
                         try
                         {
-                            var entry = archive.CreateEntry($"{setupInfo.Domain}.server.certificate.pfx");
+                            var entry = archive.CreateEntry($"{setupInfo.Domain.ToLower()}.server.certificate.pfx");
                             using (var entryStream = entry.Open())
                             using (var writer = new BinaryWriter(entryStream))
                             {
@@ -535,7 +542,7 @@ namespace Raven.Server.Commercial
                                 await entryStream.FlushAsync(token);
                             }
 
-                            entry = archive.CreateEntry($"{setupInfo.Domain}.client.certificate.pfx");
+                            entry = archive.CreateEntry($"{setupInfo.Domain.ToLower()}.client.certificate.pfx");
                             using (var entryStream = entry.Open())
                             using (var writer = new BinaryWriter(entryStream))
                             {
@@ -544,13 +551,13 @@ namespace Raven.Server.Commercial
                                 await entryStream.FlushAsync(token);
                             }
 
-                            entry = archive.CreateEntry($"{setupInfo.Domain}.client.certificate.pem");
+                            entry = archive.CreateEntry($"{setupInfo.Domain.ToLower()}.client.certificate.pem");
                             using (var entryStream = entry.Open())
                             using (var writer = new StreamWriter(entryStream))
                             {
                                 var builder = new StringBuilder();
                                 builder.AppendLine("-----BEGIN CERTIFICATE-----");
-                                builder.AppendLine(Convert.ToBase64String(clientCert.Export(X509ContentType.Cert), Base64FormattingOptions.InsertLineBreaks));
+                                builder.AppendLine(Convert.ToBase64String(clientCert.Export(X509ContentType.Cert), Base64FormattingOptions.InsertLineBreaks)); //Todo test this. does it includes the private key
                                 builder.AppendLine("-----END CERTIFICATE-----");
 
                                 writer.Write(builder.ToString());
@@ -573,13 +580,13 @@ namespace Raven.Server.Commercial
                             if (setupMode == SetupMode.Secured)
                             {
                                 jsonObj["ServerUrl"] = node.Value.ServerUrl;
-                                jsonObj["Security.Certificate.Base64"] = node.Value.Certificate;
-                                jsonObj["Security.Certificate.Password"] = node.Value.Password;
+                                jsonObj["Security.Certificate.Base64"] = setupInfo.Certificate;
+                                jsonObj["Security.Certificate.Password"] = setupInfo.Password;
                             }
                             else if(setupMode == SetupMode.LetsEncrypt)
                             {
-                                jsonObj["ServerUrl"] = $"https://{node.Key.ToLower()}.{setupInfo.Domain}.dbs.local.ravendb.net:{node.Value.Port}";
-                                jsonObj["Security.Certificate.Base64"] = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate;
+                                jsonObj["ServerUrl"] = $"https://{node.Key.ToLower()}.{setupInfo.Domain.ToLower()}.dbs.local.ravendb.net:{node.Value.Port}";
+                                jsonObj["Security.Certificate.Base64"] = setupInfo.Certificate;
                             }
                             
                             var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
@@ -596,7 +603,7 @@ namespace Raven.Server.Commercial
                                 }
                             }
 
-                            progress.AddInfo($"Adding settings file '{node.Key}.settings.json' to zip archive.");
+                            progress.AddInfo($"Adding settings file for node '{node.Key}' to zip archive.");
                             onProgress(progress);
                             try
                             {
@@ -611,7 +618,7 @@ namespace Raven.Server.Commercial
                             }
                             catch (Exception e)
                             {
-                                throw new InvalidOperationException($"Failed to to create zip archive '{node.Key}.settings.json'.", e);
+                                throw new InvalidOperationException($"Failed to to create zip archive for node '{node.Key}'.", e);
                             }
                         }
                     }
@@ -649,9 +656,9 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task AssertServerCanStartSecured(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, string settingsPath, CancellationToken token, SetupInfo setupInfo)
+        public static async Task AssertServerCanStartSecured(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, CancellationToken token, SetupInfo setupInfo)
         {
-            var configuration = new RavenConfiguration(null, ResourceType.Server, settingsPath);
+            var configuration = new RavenConfiguration(null, ResourceType.Server, SettingsPath);
             configuration.Initialize();
             var guid = Guid.NewGuid().ToString();
 
@@ -669,7 +676,7 @@ namespace Raven.Server.Commercial
                             var defaultIp = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port == 0 ? 443 : port);
                             options.Listen(defaultIp, listenOptions => listenOptions.UseHttps(serverCertificate));
                             if (Logger.IsInfoEnabled)
-                                Logger.Info($"List of ip addresses for node {LocalNodeTag} is empty. Webhost listening to {defaultIp}");
+                                Logger.Info($"List of ip addresses for node '{LocalNodeTag}' is empty. Webhost listening to {defaultIp}");
                         }
 
                         foreach (var addr in addresses)
@@ -677,7 +684,7 @@ namespace Raven.Server.Commercial
                             options.Listen(addr, listenOptions => listenOptions.UseHttps(serverCertificate));
                         }
                     })
-                    .UseSetting(WebHostDefaults.ApplicationKey, "Simulation")
+                    .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
                     .ConfigureServices(collection =>
                     {
                         collection.AddSingleton(typeof(IStartup), responder);
@@ -689,8 +696,8 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to start webhost with node '{LocalNodeTag}' configuration.{Environment.NewLine}" +
-                                                    $"Settings file:{settingsPath}.{Environment.NewLine} " +
+                throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}' configuration.{Environment.NewLine}" +
+                                                    $"Settings file:{SettingsPath}.{Environment.NewLine} " +
                                                     $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
             }
 
@@ -703,7 +710,7 @@ namespace Raven.Server.Commercial
                 string result = null;
                 try
                 {
-                    var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(2).Token);  //2 seconds enough?
+                    var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(2).Token);
                     response = await client.GetAsync("/are-you-there?", cts.Token);
                     response.EnsureSuccessStatusCode();
                     result = await response.Content.ReadAsStringAsync();
@@ -715,7 +722,7 @@ namespace Raven.Server.Commercial
                 catch (Exception e)
                 {
                     throw new InvalidOperationException($"Failed to start contact server {serverUrl}.{Environment.NewLine}" +
-                                                        $"Settings file:{settingsPath}.{Environment.NewLine}" +
+                                                        $"Settings file:{SettingsPath}.{Environment.NewLine}" +
                                                         $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
                                                         $"Response: {response?.StatusCode}.{Environment.NewLine}{result}", e);
                 }
@@ -725,9 +732,6 @@ namespace Raven.Server.Commercial
         // Duplicate of AdminCertificatesHandler.GenerateCertificateInternal stripped from authz checks, used by an unauthenticated client during setup only
         public static async Task<X509Certificate2> GenerateCertificateTask(string name,  ServerStore serverStore)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException($"{nameof(name)} is a required field in the certificate definition");
-
             if (serverStore.Server.ClusterCertificateHolder?.Certificate == null)
                 throw new InvalidOperationException($"Cannot generate the client certificate '{name}' becuase the server certificate is not loaded.");
             
@@ -743,11 +747,6 @@ namespace Raven.Server.Commercial
                 SecurityClearance = SecurityClearance.ClusterAdmin,
                 Thumbprint = selfSignedCertificate.Thumbprint
             };
-
-            if (PlatformDetails.RunningOnPosix)
-            {
-                AdminCertificatesHandler.ValidateCaExistsInOsStores(newCertDef.Certificate, newCertDef.Name, serverStore);
-            }
 
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
