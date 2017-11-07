@@ -92,6 +92,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 2,
                         //MaxResults = 2,
                         IncludeRemainingTerms = true
                     }
@@ -109,7 +110,6 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Where(x => x.DateOfListing > new DateTime(2000, 1, 1))
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -147,6 +147,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 3,
                         //MaxResults = 3,
                         TermSortMode = FacetTermSortMode.ValueDesc,
                         IncludeRemainingTerms = true
@@ -165,7 +166,6 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Query<Camera>("CameraCost")
                         .Where(x => x.DateOfListing > new DateTime(2000, 1, 1))
-                        .Take(3)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -204,6 +204,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 2,
                         //MaxResults = 2,
                         TermSortMode = FacetTermSortMode.CountAsc,
                         IncludeRemainingTerms = true
@@ -221,7 +222,6 @@ namespace SlowTests.Tests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Query<Camera>("CameraCost")
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -272,6 +272,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 20,
                         //MaxResults = 20,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
@@ -385,6 +386,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 2,
                         //MaxResults = 2,
                         IncludeRemainingTerms = true
                     }
@@ -440,6 +442,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 3,
                         //MaxResults = 3,
                         TermSortMode = FacetTermSortMode.ValueDesc,
                         IncludeRemainingTerms = true
@@ -458,7 +461,6 @@ namespace SlowTests.Tests.Faceted
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
                         .WhereGreaterThan(x => x.DateOfListing, new DateTime(2000, 1, 1))
-                        .Take(3)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -497,6 +499,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 2,
                         //MaxResults = 2,
                         TermSortMode = FacetTermSortMode.CountAsc,
                         IncludeRemainingTerms = true
@@ -514,7 +517,6 @@ namespace SlowTests.Tests.Faceted
                     s.SaveChanges();
 
                     var facetResults = s.Advanced.DocumentQuery<Camera>("CameraCost")
-                        .Take(2)
                         .AggregateUsing("facets/CameraFacets")
                         .Execute();
 
@@ -560,6 +562,7 @@ namespace SlowTests.Tests.Faceted
                     FieldName = "Manufacturer",
                     Options = new FacetOptions
                     {
+                        PageSize = 20,
                         //MaxResults = 20,
                         TermSortMode = FacetTermSortMode.CountDesc,
                         IncludeRemainingTerms = true
