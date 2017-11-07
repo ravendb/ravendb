@@ -181,8 +181,7 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            MethodInfo currentMethod = null;
-            throw new NotImplementedException("TODO ppekrol");
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(AggregateUsing));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
