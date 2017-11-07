@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -128,7 +129,7 @@ namespace SlowTests.Tests.DistinctFacets
         }
 
         [Fact]
-        public void CanGetDistinctResult_WithFacets()
+        public void DistinctResult_WithFacets_ShouldThrow()
         {
             using (var store = GetDocumentStore())
             {
@@ -136,54 +137,19 @@ namespace SlowTests.Tests.DistinctFacets
 
                 using (var session = store.OpenSession())
                 {
-                    var results = session.Advanced.DocumentQuery<Book, Books_Search>()
-                        .WhereEquals("PrimaryTag", "RavenDB").Boost(4)
-                        .OrElse()
-                        .WhereEquals("SecondayTag", "RavenDB").Boost(4)
-                        .Distinct()
-                        .SelectFields<Books_Search.Result>("Author")
-                        .AggregateBy(x => x.ByField("Category"))
-                        .Execute();
+                    var ex = Assert.Throws<InvalidOperationException>(() =>
+                    {
+                        session.Advanced.DocumentQuery<Book, Books_Search>()
+                            .WhereEquals("PrimaryTag", "RavenDB").Boost(4)
+                            .OrElse()
+                            .WhereEquals("SecondayTag", "RavenDB").Boost(4)
+                            .Distinct()
+                            .SelectFields<Books_Search.Result>("Author")
+                            .AggregateBy(x => x.ByField("Category"))
+                            .Execute();
+                    });
 
-                    Assert.Equal("databases", results["Category"].Values[0].Range);
-                    Assert.Equal(1, results["Category"].Values[0].Count);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanGetDistinctResult_WithFacets_LazyAndCached()
-        {
-            using (var store = GetDocumentStore())
-            {
-                SetupData(store);
-
-                using (store.AggressivelyCache())
-                using (var session = store.OpenSession())
-                {
-                    var results = session.Advanced.DocumentQuery<Book, Books_Search>()
-                        .WhereEquals("PrimaryTag", "RavenDB").Boost(4)
-                        .OrElse()
-                        .WhereEquals("SecondayTag", "RavenDB").Boost(4)
-                        .Distinct()
-                        .SelectFields<Books_Search.Result>("Author")
-                        .AggregateBy(x => x.ByField("Category"))
-                        .ExecuteLazy().Value;
-
-                    Assert.Equal("databases", results["Category"].Values[0].Range);
-                    Assert.Equal(1, results["Category"].Values[0].Count);
-
-                    results = session.Advanced.DocumentQuery<Book, Books_Search>()
-                        .WhereEquals("PrimaryTag", "RavenDB").Boost(4)
-                        .OrElse()
-                        .WhereEquals("SecondayTag", "RavenDB").Boost(4)
-                        .Distinct()
-                        .SelectFields<Books_Search.Result>("Author")
-                        .AggregateBy(x => x.ByField("Category"))
-                        .ExecuteLazy().Value;
-
-                    Assert.Equal("databases", results["Category"].Values[0].Range);
-                    Assert.Equal(1, results["Category"].Values[0].Count);
+                    Assert.Equal("Aggregation query can select only facets while it got DistinctToken token", ex.Message);
                 }
             }
         }

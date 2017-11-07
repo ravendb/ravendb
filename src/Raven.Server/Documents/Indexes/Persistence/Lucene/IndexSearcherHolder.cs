@@ -169,23 +169,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 GC.SuppressFinalize(this);
             }
-
-            public StringCollectionValue GetFieldsValues(int docId, uint fieldsHash, SelectField[] fields, JsonOperationContext context, IState state)
-            {
-                var key = Tuple.Create(docId, fieldsHash);
-
-                if (_docsCache.TryGetValue(key, out StringCollectionValue value))
-                    return value;
-
-                return _docsCache.GetOrAdd(key, _ =>
-                {
-                    var doc = _lazyIndexSearcher.Value.Doc(docId, state);
-                    return new StringCollectionValue((from field in fields
-                                                      from fld in doc.GetFields(field.Name)
-                                                      where fld.StringValue(state) != null
-                                                      select fld.StringValue(state)).ToList());
-                });
-            }
         }
 
         public class StringCollectionValue

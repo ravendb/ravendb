@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -25,20 +26,17 @@ namespace SlowTests.Tests.DistinctFacets
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var result = session.Advanced.DocumentQuery<SampleData, SampleData_Index>()
-                        .Distinct()
-                        .SelectFields<SampleData_Index.Result>("Name")
-                        .AggregateBy(x => x.ByField("Tag"))
-                        .AndAggregateBy(x => x.ByField("TotalCount"))
-                        .Execute();
+                    var ex = Assert.Throws<InvalidOperationException>(() =>
+                    {
+                        return session.Advanced.DocumentQuery<SampleData, SampleData_Index>()
+                            .Distinct()
+                            .SelectFields<SampleData_Index.Result>("Name")
+                            .AggregateBy(x => x.ByField("Tag"))
+                            .AndAggregateBy(x => x.ByField("TotalCount"))
+                            .Execute();
+                    });
 
-                    Assert.Equal(3, result["Tag"].Values.Count);
-
-                    Assert.Equal(5, result["TotalCount"].Values[0].Count);
-
-                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "0").Count);
-                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "1").Count);
-                    Assert.Equal(5, result["Tag"].Values.First(x => x.Range == "2").Count);
+                    Assert.Equal("Aggregation query can select only facets while it got DistinctToken token", ex.Message);
                 }
             }
         }

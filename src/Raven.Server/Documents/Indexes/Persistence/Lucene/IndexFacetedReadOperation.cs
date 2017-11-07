@@ -66,10 +66,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var query = facetQuery.Query;
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
-            uint fieldsHash = 0;
-            if (query.Metadata.IsDistinct)
-                fieldsHash = CalculateQueryFieldsHash(query);
-
             var baseQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
@@ -77,11 +73,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
                 {
-                    HandleFacets(context, query, returnedReaders, result, facetsByName, fieldsHash);
+                    HandleFacets(returnedReaders, result, facetsByName);
                     continue;
                 }
 
-                HandleRangeFacets(context, result, query, returnedReaders, fieldsHash);
+                HandleRangeFacets(result, returnedReaders);
             }
 
             UpdateFacetResults(results, query, facetsByName);
@@ -98,27 +94,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 .ToList();
         }
 
-        private void HandleRangeFacets(JsonOperationContext context, KeyValuePair<string, FacetedQueryParser.FacetResult> result, IndexQueryServerSide query, List<ReaderFacetInfo> returnedReaders, uint fieldsHash)
+        private void HandleRangeFacets(KeyValuePair<string, FacetedQueryParser.FacetResult> result, List<ReaderFacetInfo> returnedReaders)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
-
-            Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
-            HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-            if (query.Metadata.IsDistinct)
-                distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
             foreach (var readerFacetInfo in returnedReaders)
             {
                 var name = FieldUtil.ApplyRangeSuffixIfNecessary(result.Value.AggregateBy, result.Value.RangeType);
                 var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, name, _indexName, _state);
-                if (query.Metadata.IsDistinct)
-                {
-                    if (distinctItems.TryGetValue(result.Key, out alreadySeen) == false)
-                    {
-                        alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
-                        distinctItems[result.Key] = alreadySeen;
-                    }
-                }
 
                 var ranges = result.Value.Ranges;
                 foreach (var kvp in termsForField)
@@ -130,8 +113,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             var facetValue = result.Value.Result.Values[i];
 
-                            var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, query, fieldsHash,
-                                needToApplyAggregation, context);
+                            var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                             var intersectCount = intersectedDocuments.Count;
                             if (intersectCount == 0)
                                 continue;
@@ -151,14 +133,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void HandleFacets(JsonOperationContext context, IndexQueryServerSide query, List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValue>> facetsByName,
-            uint fieldsHash)
+        private void HandleFacets(List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
         {
-            Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
-            HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-            if (query.Metadata.IsDistinct)
-                distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
-
             foreach (var readerFacetInfo in returnedReaders)
             {
                 var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, result.Value.AggregateBy, _indexName, _state);
@@ -168,18 +144,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var kvp in termsForField)
                 {
-                    if (query.Metadata.IsDistinct)
-                    {
-                        if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
-                        {
-                            alreadySeen = new HashSet<IndexSearcherHolder.StringCollectionValue>();
-                            distinctItems[kvp.Key] = alreadySeen;
-                        }
-                    }
-
                     var needToApplyAggregation = result.Value.Aggregations.Count > 0;
-                    var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, query, fieldsHash,
-                        needToApplyAggregation, context);
+                    var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                     var intersectCount = intersectedDocuments.Count;
                     if (intersectCount == 0)
                         continue;
@@ -202,21 +168,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     }
                 }
             }
-        }
-
-        private static unsafe uint CalculateQueryFieldsHash(IndexQueryServerSide query)
-        {
-            uint hash = 0;
-
-            foreach (var field in query.Metadata.SelectFields)
-            {
-                fixed (char* p = field.Name.Value)
-                {
-                    hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * field.Name.Value.Length, hash);
-                }
-            }
-
-            return hash;
         }
 
         private static void UpdateFacetResults(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
@@ -343,7 +294,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         /// <summary>
         /// This method expects both lists to be sorted
         /// </summary>
-        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, IndexQueryServerSide query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
+        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, bool needToApplyAggregation)
         {
             ArraySegment<int> n, m;
             if (a.Count > b.Count)
@@ -363,7 +314,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             double o1 = nSize + mSize;
             double o2 = nSize * Math.Log(mSize, 2);
 
-            var isDistinct = query.Metadata.IsDistinct;
             var result = new IntersectDocs();
             if (needToApplyAggregation)
             {
@@ -389,10 +339,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     else
                     {
                         int docId = nVal;
-                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen, query, fieldsHash, context))
-                        {
-                            result.AddIntersection(docId);
-                        }
+                        result.AddIntersection(docId);
 
                         ni++;
                         mi++;
@@ -406,21 +353,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     int docId = m.Array[i];
                     if (Array.BinarySearch(n.Array, n.Offset, n.Count, docId) >= 0)
                     {
-                        if (isDistinct == false || IsDistinctValue(docId, alreadySeen, query, fieldsHash, context))
-                        {
-                            result.AddIntersection(docId);
-                        }
+                        result.AddIntersection(docId);
                     }
                 }
             }
             return result;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, IndexQueryServerSide query, uint fieldsHash, JsonOperationContext context)
-        {
-            var fields = _currentStateHolder.GetFieldsValues(docId, fieldsHash, query.Metadata.SelectFields, context, _state);
-            return alreadySeen.Add(fields);
         }
 
         public override void Dispose()
