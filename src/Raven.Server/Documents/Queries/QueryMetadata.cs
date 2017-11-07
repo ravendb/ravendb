@@ -548,19 +548,20 @@ namespace Raven.Server.Documents.Queries
             if (expression is ValueExpression ve)
             {
                 if (IsFacet)
-                    throw new InvalidOperationException("TODO ppekrol");
+                    ThrowFacetQueryMustContainsOnlyFacetInSelect(ve, parameters);
 
                 return SelectField.CreateValue(ve.Token, alias, ve.Value);
             }
             if (expression is FieldExpression fe)
             {
                 if (IsFacet)
-                    throw new InvalidOperationException("TODO ppekrol");
+                    ThrowFacetQueryMustContainsOnlyFacetInSelect(fe, parameters);
 
                 if (fe.IsQuoted && fe.Compound.Count == 1)
                     return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
                 return GetSelectValue(alias, fe, parameters);
             }
+
             if (expression is MethodExpression me)
             {
                 var methodName = me.Name.Value;
@@ -569,7 +570,7 @@ namespace Raven.Server.Documents.Queries
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out _))
                     {
                         if (IsFacet)
-                            throw new InvalidOperationException("TODO ppekrol");
+                            ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
                         var args = new SelectField[me.Arguments.Count];
                         for (int i = 0; i < me.Arguments.Count; i++)
@@ -588,7 +589,7 @@ namespace Raven.Server.Documents.Queries
                     if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
                     {
                         if (IsFacet)
-                            throw new InvalidOperationException("TODO ppekrol");
+                            ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
                         if (IsGroupBy)
                             ThrowInvalidIdInGroupByQuery(parameters);
@@ -626,7 +627,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 if (IsFacet)
-                    throw new InvalidOperationException("TODO ppekrol");
+                    ThrowFacetQueryMustContainsOnlyFacetInSelect(expression, parameters);
 
                 QueryFieldName fieldName = null;
 
@@ -663,7 +664,7 @@ namespace Raven.Server.Documents.Queries
         private FacetField CreateFacet(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
         {
             if (expression.Arguments.Count == 0)
-                throw new InvalidOperationException("TODO ppekrol");
+                ThrowFacetMethodMustHaveAtLeastOneArgument(parameters);
 
             QueryFieldName name = null;
             var result = new FacetField();
@@ -691,10 +692,10 @@ namespace Raven.Server.Documents.Queries
                     {
                         case MethodType.Id:
                             if (expression.Arguments.Count != 1)
-                                throw new InvalidOperationException("TODO ppekrol");
+                                ThrowInvalidFacetUsingSetupDocument(parameters);
 
                             if (me.Arguments.Count != 1)
-                                throw new InvalidOperationException("TODO ppekrol");
+                                ThrowInvalidArgumentToIdInFacet(parameters);
 
                             result.FacetSetupDocumentId = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
                             break;
@@ -711,7 +712,8 @@ namespace Raven.Server.Documents.Queries
                             AddFacetAggregation(me, result, FacetAggregation.Max, parameters);
                             break;
                         default:
-                            throw new InvalidOperationException("TODO ppekrol");
+                            ThrowInvalidAggregationMethod(parameters, me.Name);
+                            break;
                     }
 
                     continue;
@@ -729,7 +731,7 @@ namespace Raven.Server.Documents.Queries
                     continue;
                 }
 
-                throw new InvalidOperationException("TODO ppekrol");
+                ThrowInvalidArgumentExpressionInFacetQuery(argument, parameters);
             }
 
             result.Name = name;
@@ -741,36 +743,11 @@ namespace Raven.Server.Documents.Queries
         private void AddFacetAggregation(MethodExpression me, FacetField field, FacetAggregation aggregation, BlittableJsonReaderObject parameters)
         {
             if (me.Arguments.Count != 1)
-                throw new InvalidOperationException("TODO ppekrol");
+                ThrowInvalidNumberOfArgumentsOfFacetAggregation(aggregation, 1, me.Arguments.Count, parameters);
 
             var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
 
             field.AddAggregation(aggregation, methodFieldName);
-        }
-
-        private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("id() in simple select clause must only be used without arguments", QueryText, parameters);
-        }
-
-        private void ThrowInvalidAggregationMethod(BlittableJsonReaderObject parameters, string methodName)
-        {
-            throw new InvalidQueryException(methodName + " may only be used in group by queries", QueryText, parameters);
-        }
-
-        private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("Cannot use id() method in a group by query", QueryText, parameters);
-        }
-
-        private void ThrowFacetQueryCannotBeGroupBy(BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("Cannot use GROUP BY in a facet query", QueryText, parameters);
-        }
-
-        private void ThrowFacetQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("Cannot use SELECT DISTINCT in a facet query", QueryText, parameters);
         }
 
         private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)
@@ -957,6 +934,61 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException($"Unknown alias {alias}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})",
                 QueryText, parameters);
+        }
+
+                private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("id() in simple select clause must only be used without arguments", QueryText, parameters);
+        }
+
+        private void ThrowInvalidAggregationMethod(BlittableJsonReaderObject parameters, string methodName)
+        {
+            throw new InvalidQueryException(methodName + " may only be used in group by queries", QueryText, parameters);
+        }
+
+        private void ThrowInvalidIdInGroupByQuery(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use id() method in a group by query", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryCannotBeGroupBy(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use GROUP BY in a facet query", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use SELECT DISTINCT in a facet query", QueryText, parameters);
+        }
+
+        private void ThrowInvalidNumberOfArgumentsOfFacetAggregation(FacetAggregation method, int expected, int got, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Invalid number of arguments of {method} method in a facet query. Expected {expected}, got {got}", QueryText, parameters);
+        }
+
+        private void ThrowFacetMethodMustHaveAtLeastOneArgument(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("facet() method must have at least one argument", QueryText, parameters);
+        }
+
+        private void ThrowInvalidArgumentToIdInFacet(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("id() in facet query must have one argument which is identifier of a facet setup document", QueryText, parameters);
+        }
+
+        private void ThrowInvalidFacetUsingSetupDocument(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("facet() specyfying a facet setup document using id() call must not have any additional arguments", QueryText, parameters);
+        }
+
+        private void ThrowInvalidArgumentExpressionInFacetQuery(QueryExpression expression, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText()}.", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryMustContainsOnlyFacetInSelect(QueryExpression expression, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Unsupported expression of type {expression.GetType().Name} specified as an argument of facet(). Text: {expression.GetText()}.", QueryText, parameters);
         }
 
         public ExpressionEvaluator CmpXchgMethod;

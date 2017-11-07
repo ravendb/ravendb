@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Session.Tokens
                         aggregationToken = FacetAggregationToken.Sum(aggregation.Value);
                         break;
                     default:
-                        throw new InvalidOperationException("TODO ppekrol");
+                        throw new NotSupportedException($"Unsupported aggregation method: {aggregation.Key}");
                 }
 
                 token._aggregations.Add(aggregationToken);
