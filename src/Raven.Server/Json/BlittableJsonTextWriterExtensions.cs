@@ -106,53 +106,53 @@ namespace Raven.Server.Json
                 isFirstInternal = false;
 
                 writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(value.Average));
+                
                 if (value.Average.HasValue)
                 {
+                    writer.WritePropertyName(nameof(value.Average));
+
                     using (var lazyStringValue = context.GetLazyString(value.Average.ToInvariantString()))
                         writer.WriteDouble(new LazyNumberValue(lazyStringValue));
+
+                    writer.WriteComma();
                 }
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
+                
+                if (value.Max.HasValue)
+                {
+                    writer.WritePropertyName(nameof(value.Max));
+
+                    using (var lazyStringValue = context.GetLazyString(value.Max.ToInvariantString()))
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
+
+                    writer.WriteComma();
+                }
+                
+                if (value.Min.HasValue)
+                {
+                    writer.WritePropertyName(nameof(value.Min));
+
+                    using (var lazyStringValue = context.GetLazyString(value.Min.ToInvariantString()))
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
+
+                    writer.WriteComma();
+                }
+                
+                if (value.Sum.HasValue)
+                {
+                    writer.WritePropertyName(nameof(value.Sum));
+
+                    using (var lazyStringValue = context.GetLazyString(value.Sum.ToInvariantString()))
+                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
+
+                    writer.WriteComma();
+                }
 
                 writer.WritePropertyName(nameof(value.Count));
                 writer.WriteInteger(value.Count);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(value.Max));
-                if (value.Max.HasValue)
-                {
-                    using (var lazyStringValue = context.GetLazyString(value.Max.ToInvariantString()))
-                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
-                }
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(value.Min));
-                if (value.Min.HasValue)
-                {
-                    using (var lazyStringValue = context.GetLazyString(value.Min.ToInvariantString()))
-                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
-                }
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
                 writer.WritePropertyName(nameof(value.Range));
                 writer.WriteString(value.Range);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(value.Sum));
-                if (value.Sum.HasValue)
-                {
-                    using (var lazyStringValue = context.GetLazyString(value.Sum.ToInvariantString()))
-                        writer.WriteDouble(new LazyNumberValue(lazyStringValue));
-                }
-                else
-                    writer.WriteNull();
 
                 writer.WriteEndObject();
             }
