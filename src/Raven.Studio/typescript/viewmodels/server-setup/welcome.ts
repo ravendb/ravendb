@@ -23,8 +23,10 @@ class welcome extends setupStep {
             case "Unsecured":
                 router.navigate("#unsecured");
                 break;
-            case "LetsEncrypt":
             case "Secured":
+                router.navigate("#nodes");
+                break;
+            case "LetsEncrypt":
                 router.navigate("#license");
                 break;
         }
