@@ -1,7 +1,7 @@
-<h3>Unsecured mode setup</h3>
+<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right">2</strong>Unsecured mode setup</h2>
+<form class="flex-form" data-bind="with: model.unsecureSetup, submit: save">
+    <div class="panel padding padding-lg">
 
-<div>
-    <form class="flex-form" data-bind="with: model.unsecureSetup, submit: save">
         <div class="margin-bottom">
             <div class="form-group" data-bind="validationElement: serverUrl">
                 <label for="serverUrl" class="control-label">Server url <i class="icon-info text-info"></i> <i class="required"></i></label>
@@ -21,8 +21,8 @@
         </div>
 
         <div class="padding margin-bottom bg-warning" data-bind="visible: shouldDisplayUnsafeModeWarning">
-            RavenDB server will be running in a potentially unsafe mode.<br/>
-            <br/>
+            RavenDB server will be running in a potentially unsafe mode.<br />
+            <br />
 
             <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
                 <input id="unsafeNetworkWarning" type="checkbox" data-bind="checked: unsafeNetworkConfirm">
@@ -33,13 +33,15 @@
             </div>
         </div>
 
-        <button type="button" class="btn btn-default" data-bind="click: $root.back">
+    </div>
+    <div class="navigation padding padding-lg flex-horizontal">
+        <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
             <i class="icon-arrow-left"></i><span>Back</span>
         </button>
-        <button type="submit" class="btn btn-primary">
+        <div class="flex-separator"></div>
+        <button type="submit" class="btn btn-primary btn-lg">
             <span>Next</span> <i class="icon-arrow-right"></i>
         </button>
+    </div>
 
-    </form>
-</div>
-      
+</form>
