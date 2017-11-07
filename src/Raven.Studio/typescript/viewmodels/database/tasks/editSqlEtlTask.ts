@@ -24,9 +24,12 @@ class editSqlEtlTask extends viewModelBase {
     
     editedSqlEtl = ko.observable<ongoingTaskSqlEtlEditModel>();
     isAddingNewSqlEtlTask = ko.observable<boolean>(true);
+    
     transformationScriptSelectedForEdit = ko.observable<ongoingTaskSqlEtlTransformationModel>();
     editedTransformationScriptSandbox = ko.observable<ongoingTaskSqlEtlTransformationModel>();
-    editedSqlTable = ko.observable<ongoingTaskSqlEtlTableModel>();
+
+    sqlTableSelectedForEdit = ko.observable<ongoingTaskSqlEtlTableModel>();
+    editedSqlTableSandbox = ko.observable<ongoingTaskSqlEtlTableModel>();
 
     possibleMentors = ko.observableArray<string>([]);
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]); 
@@ -91,8 +94,10 @@ class editSqlEtlTask extends viewModelBase {
             // 2. Creating a New task
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
-            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
-            this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
+            
+            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());          
+            this.editedSqlTableSandbox(ongoingTaskSqlEtlTableModel.empty());  
+            
             deferred.resolve();
         }
         
@@ -144,8 +149,7 @@ class editSqlEtlTask extends viewModelBase {
            return collectionsTracker.default.getCollectionNames(); 
         });
         
-        
-        this.showEditSqlTableArea = ko.pureComputed((() => !!this.editedSqlTable()));
+        this.showEditSqlTableArea = ko.pureComputed(() => !!this.editedSqlTableSandbox());
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
         
         this.initDirtyFlag();
@@ -156,7 +160,7 @@ class editSqlEtlTask extends viewModelBase {
     private initDirtyFlag() {
         const innerDirtyFlag = ko.pureComputed(() => this.editedSqlEtl().dirtyFlag().isDirty());
         const editedScriptFlag = ko.pureComputed(() => !!this.editedTransformationScriptSandbox() && this.editedTransformationScriptSandbox().dirtyFlag().isDirty());
-        const editedSqlTableFlag = ko.pureComputed(() => !!this.editedSqlTable() && this.editedSqlTable().dirtyFlag().isDirty());
+        const editedSqlTableFlag = ko.pureComputed(() => !!this.editedSqlTableSandbox() && this.editedSqlTableSandbox().dirtyFlag().isDirty());
         
         const scriptsCount = ko.pureComputed(() => this.editedSqlEtl().transformationScripts().length);
         const tablesCount = ko.pureComputed(() => this.editedSqlEtl().sqlTables().length);
@@ -235,7 +239,7 @@ class editSqlEtlTask extends viewModelBase {
         
         // 1. Validate *edited sql table*
         if (this.showEditSqlTableArea()) {
-            if (!this.isValid(this.editedSqlTable().validationGroup)) {                
+            if (!this.isValid(this.editedSqlTableSandbox().validationGroup)) {                
                 hasAnyErrors = true;
             } 
             else {
@@ -377,7 +381,6 @@ class editSqlEtlTask extends viewModelBase {
         return editSqlEtlTask.scriptNamePrefix + (maxNumber + 1);
     }
 
-
     removeTransformationScript(model: ongoingTaskSqlEtlTransformationModel) {
         this.editedSqlEtl().transformationScripts.remove(x => model.name() === x.name());
         
@@ -411,46 +414,84 @@ class editSqlEtlTask extends viewModelBase {
     /********************************/
 
     addNewSqlTable() {
-        this.editedSqlTable(ongoingTaskSqlEtlTableModel.empty());
-        // todo: handle dirty flag (reset) 
+        this.sqlTableSelectedForEdit(null);
+        this.editedSqlTableSandbox(ongoingTaskSqlEtlTableModel.empty());
     }
 
     cancelEditedSqlTable() {
-        this.editedSqlTable(null);
-        // todo: handle dirty flag (reset)     
+        this.editedSqlTableSandbox(null);
+        this.sqlTableSelectedForEdit(null);
     }   
        
     saveEditedSqlTable() {
-        const sqlTable = this.editedSqlTable();
-        if (!this.isValid(sqlTable.validationGroup)) {
+        const sqlTableToSave = this.editedSqlTableSandbox();
+        const newSqlTable = new ongoingTaskSqlEtlTableModel(sqlTableToSave.toDto(), false);      
+        const overwriteAction = $.Deferred<boolean>();
+
+        if (!this.isValid(sqlTableToSave.validationGroup)) {
             return;
         }
 
-        if (sqlTable.isNew()) {
-            const newSqlTable = new ongoingTaskSqlEtlTableModel(sqlTable.toDto(), false);
-            newSqlTable.dirtyFlag().forceDirty();
-            this.editedSqlEtl().sqlTables.push(newSqlTable);
-        } else {
-            const oldItem = this.editedSqlEtl().sqlTables().find(x => x.tableName() === sqlTable.tableName());
-            const newItem = new ongoingTaskSqlEtlTableModel(sqlTable.toDto(), false);
-            
-            if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
-                newItem.dirtyFlag().forceDirty();
-            }
-            
-            this.editedSqlEtl().sqlTables.replace(oldItem,  newItem);
-        }
+        const existingSqlTable = this.editedSqlEtl().sqlTables().find(x => x.tableName() === newSqlTable.tableName());
         
-        this.editedSqlEtl().sqlTables.sort((a, b) => a.tableName().toLowerCase().localeCompare(b.tableName().toLowerCase()));
-        this.editedSqlTable(null);
+        if ((!!existingSqlTable && sqlTableToSave.isNew()) || 
+            (!!existingSqlTable && (existingSqlTable.tableName() !== this.sqlTableSelectedForEdit().tableName()))) 
+        {
+            // Table name exists - offer to overwrite
+            this.confirmationMessage(`Table ${existingSqlTable.tableName()} already exists in SQL Tables list`,
+                                     `Do you want to overwrite table ${existingSqlTable.tableName()} data ?`,
+                                     ["No", "Yes, overwrite"])
+                .done(result => {
+                    if (result.can) {
+                        this.overwriteExistingSqlTable(existingSqlTable, newSqlTable);
+                        overwriteAction.resolve(true);
+                    }
+                    else {
+                        overwriteAction.resolve(false);
+                    }
+                });
+        }
+        else {
+            // New sql table
+            if (sqlTableToSave.isNew()) {
+                this.editedSqlEtl().sqlTables.push(newSqlTable);
+                newSqlTable.dirtyFlag().forceDirty();
+                overwriteAction.resolve(true);
+            }
+            // Update existing sql table (table name is the same)
+            else {
+                const sqlTableToUpdate = this.editedSqlEtl().sqlTables().find(x => x.tableName() === this.sqlTableSelectedForEdit().tableName());
+                this.overwriteExistingSqlTable(sqlTableToUpdate, newSqlTable);
+                overwriteAction.resolve(true);
+            }           
+        } 
+
+        overwriteAction.done(() => {
+            this.editedSqlEtl().sqlTables.sort((a, b) => a.tableName().toLowerCase().localeCompare(b.tableName().toLowerCase()));
+            if (overwriteAction) { this.editedSqlTableSandbox(null); } 
+        });
     }
     
-    deleteSqlTable(sqlTable: ongoingTaskSqlEtlTableModel) {
-        this.editedSqlEtl().sqlTables.remove(x => sqlTable.tableName() === x.tableName());
-    }
+    overwriteExistingSqlTable(oldItem: ongoingTaskSqlEtlTableModel, newItem: ongoingTaskSqlEtlTableModel) {
+        if (oldItem.dirtyFlag().isDirty() || newItem.hasUpdates(oldItem)) {
+            newItem.dirtyFlag().forceDirty();
+        }
+        
+        this.editedSqlEtl().sqlTables.replace(oldItem,  newItem);        
+    }    
+    
+    deleteSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {
+        this.editedSqlEtl().sqlTables.remove(x => sqlTableModel.tableName() === x.tableName());
 
-    editSqlTable(sqlTable: ongoingTaskSqlEtlTableModel) {
-        this.editedSqlTable(new ongoingTaskSqlEtlTableModel(sqlTable.toDto(), false));
+        if (this.sqlTableSelectedForEdit() === sqlTableModel) {
+            this.editedSqlTableSandbox(null);
+            this.sqlTableSelectedForEdit(null);
+        }
+    }    
+    
+    editSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {          
+        this.sqlTableSelectedForEdit(sqlTableModel);
+        this.editedSqlTableSandbox(new ongoingTaskSqlEtlTableModel(sqlTableModel.toDto(), false));
     }
 }
 
