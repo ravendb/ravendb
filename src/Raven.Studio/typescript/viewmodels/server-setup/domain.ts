@@ -1,6 +1,8 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
 import claimDomainCommand = require("commands/setup/claimDomainCommand");
+import nodeInfo = require("models/setup/nodeInfo");
+import ipEntry = require("models/setup/ipEntry");
 
 
 class domain extends setupStep {
@@ -40,10 +42,27 @@ class domain extends setupStep {
             if (this.isValid(domainModel.validationGroup)) {
                 this.claimDomainIfNeeded()
                     .done(() => {
+                        this.tryPopulateNodesInfo();
                         router.navigate("#agreement");
                     });
             }
         });
+    }
+    
+    private tryPopulateNodesInfo() {
+        const domains = this.model.userDomains();
+        const chosenDomain = this.model.domain().domain();
+        if (domains) {
+            const existingDomainInfo = domains.Domains[chosenDomain];
+            const nodes = existingDomainInfo.map(info => {
+                const entry = nodeInfo.empty(this.model.useOwnCertificates);
+                entry.nodeTag(info.SubDomain);
+                entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
+                return entry;
+            });
+            
+            this.model.nodes(nodes);
+        }
     }
     
     private claimDomainIfNeeded(): JQueryPromise<void> {

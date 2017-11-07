@@ -13,6 +13,8 @@ class finish extends setupStep {
     private websocket: serverNotificationCenterClient;
     
     messages = ko.observableArray<string>([]);
+
+    canRestart = ko.observable<boolean>(false);
     
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     
@@ -84,6 +86,7 @@ class finish extends setupStep {
             switch (operation.State.Status) {
                 case "Completed":
                     dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
+                    this.canRestart(true); //TODO: make sure we completed both setup + validation operations 
                     break;
                 case "InProgress":
                     dto = operation.State.Progress as Raven.Server.Commercial.SetupProgressAndResult;

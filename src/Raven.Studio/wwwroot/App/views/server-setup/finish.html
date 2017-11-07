@@ -6,7 +6,7 @@
 <pre><!-- ko foreach: messages --><span data-bind="text: $data"></span>
 <!-- /ko --></pre>
 
-<div class="text-center">
+<div class="text-center" data-bind="visible: canRestart">
     <button class="btn btn-primary" data-bind="click: restart">Restart server</button>
 </div>
       

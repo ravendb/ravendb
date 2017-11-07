@@ -63,20 +63,21 @@ class nodes extends setupStep {
             router.navigate("#finish");
         }
     }
-    
+
     back() {
         switch (this.model.mode()) {
             case "LetsEncrypt":
                 router.navigate("#agreement");
                 break;
-            case "Secured":
-                router.navigate("#license");
-                break;
+            default:
+                router.navigate("#welcome");
         }
     }
   
     addNode() {
-        this.model.nodes.push(nodeInfo.empty(this.model.useOwnCertificates));
+        const node = nodeInfo.empty(this.model.useOwnCertificates);
+        this.model.nodes.push(node);
+        this.editedNode(node);
         this.updateNodeTags();
     }
 
