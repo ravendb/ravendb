@@ -28,7 +28,7 @@ class agreement extends setupStep {
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
-        if (mode && mode === "LetsEncrypt" && this.model.domain().userEmail()) { //TODO: + validate previous step
+        if (mode && mode === "LetsEncrypt" && this.model.domain().userEmail()) {
             return $.when({ can: true });
         }
 

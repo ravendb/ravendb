@@ -351,7 +351,7 @@ namespace Raven.Server.Web.System
                 await ServerStore.Operations.AddOperation(
                     null,
                     "Setting up RavenDB in secured mode.",
-                    Documents.Operations.Operations.OperationType.Setup,
+                    Documents.Operations.Operations.OperationType.ValidateSetup,
                     progress => SetupManager.SetupValidateTask(progress, operationCancelToken.Token, setupInfo, ServerStore, setupMode),
                     operationId.Value, operationCancelToken);
                 

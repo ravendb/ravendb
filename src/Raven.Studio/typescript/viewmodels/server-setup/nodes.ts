@@ -4,8 +4,6 @@ import nodeInfo = require("models/setup/nodeInfo");
 
 import serverSetup = require("models/setup/serverSetup");
 
-//TODO: validate certificate password
-
 class nodes extends setupStep {
 
     editedNode = ko.observable<nodeInfo>();

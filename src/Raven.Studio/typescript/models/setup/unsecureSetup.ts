@@ -1,7 +1,5 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-type configurationMode = "Unsecured" | "Secured" | "LetsEncrypt"; //tODO use enum SetupMode
-
 class unsecureSetup {
     static readonly localNetworks = [ "127.0.0.1", "localhost", "::1"];
     
