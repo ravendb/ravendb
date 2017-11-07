@@ -13,6 +13,7 @@ import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/t
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDatabaseGroup");
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
+import license = require("models/auth/licenseModel");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -28,6 +29,7 @@ class manageDatabaseGroup extends viewModelBase {
     nodes: KnockoutComputed<databaseGroupNode[]>;
     deletionInProgress: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
+    showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
 
     constructor() {
         super();
@@ -48,11 +50,15 @@ class manageDatabaseGroup extends viewModelBase {
             const existingTags = this.nodes().map(x => x.tag());
             return _.without(tags, ...existingTags).length > 0;
         });
-        
+
         this.deletionInProgress = ko.pureComputed(() => {
             const dbInfo = this.currentDatabaseInfo();
             return dbInfo ? dbInfo.deletionInProgress() : [];
-        })
+        });
+
+        this.showDynamicNodeDistributionWarning = ko.pureComputed(() => {
+            return !license.licenseStatus().HasDynamicNodesDistribution;
+        });
     }
 
     activate(args: any) {
