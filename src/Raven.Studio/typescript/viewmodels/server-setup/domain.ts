@@ -1,7 +1,7 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
 import claimDomainCommand = require("commands/setup/claimDomainCommand");
-import registrationInfoCommand = require("commands/setup/registrationInfoCommand");
+
 
 class domain extends setupStep {
 
@@ -19,23 +19,6 @@ class domain extends setupStep {
         return $.when({redirect: "#welcome"});
     }
 
-    activate(args: any) {
-        super.activate(args);
-
-        return new registrationInfoCommand(this.model.license().toDto())
-            .execute()
-            .done((result) => {
-                const domainModel = this.model.domain();
-
-                domainModel.userEmail(result.Email);
-                domainModel.availableDomains(Object.keys(result.Domains));
-                
-                if (domainModel.availableDomains().length === 1) {
-                    domainModel.domain(domainModel.availableDomains()[0]);
-                }
-            });
-    }
-    
     save() {
         const domainModel = this.model.domain();
         this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
@@ -49,7 +32,6 @@ class domain extends setupStep {
     }
     
     private claimDomainIfNeeded(): JQueryPromise<void> {
-        
         const domainModel = this.model.domain();
         
         if (_.includes(domainModel.availableDomains(), domainModel.domain())) {

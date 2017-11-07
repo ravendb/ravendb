@@ -35,7 +35,9 @@ class agreement extends setupStep {
         return $.when({ redirect: "#welcome" });
     }
     
-    activate() {
+    activate(args: any) {
+        super.activate(args);
+        
         return new loadAgreementCommand(this.model.domain().userEmail())
             .execute()
             .done(url => {

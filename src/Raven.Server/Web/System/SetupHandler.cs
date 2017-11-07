@@ -34,7 +34,7 @@ namespace Raven.Server.Web.System
             {
                 content.Headers.TryAddWithoutValidation("Content-Type", (IEnumerable<string>)contentType);
             }
-            var response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/" + action, content).ConfigureAwait(false);
+            var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
 
             HttpContext.Response.StatusCode = (int)response.StatusCode;
             using (var responseStream = await response.Content.ReadAsStreamAsync())
