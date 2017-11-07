@@ -4,7 +4,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -19,6 +18,7 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 
 namespace Raven.Client.Documents.BulkInsert
 {
@@ -151,6 +151,64 @@ namespace Raven.Client.Documents.BulkInsert
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
+            _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
+            {
+                try
+                {
+                    Exception flushEx = null;
+
+                    if (_stream != null)
+                    {
+                        try
+                        {
+                            _jsonWriter.WriteEndArray();
+                            _jsonWriter.Flush();
+                            _compressedStream?.Dispose();
+                            await _stream.FlushAsync(_token).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            flushEx = e;
+                        }
+                    }
+
+                    _streamExposerContent.Done();
+
+                    if (_operationId == -1)
+                    {
+                        // closing without calling a single store. 
+                        return;
+                    }
+
+                    if (_bulkInsertExecuteTask != null)
+                    {
+                        try
+                        {
+                            await _bulkInsertExecuteTask.ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            var errors = new List<Exception>(3) { e };
+                            if (flushEx != null)
+                                errors.Add(flushEx);
+                            var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                            if (error != null)
+                            {
+                                errors.Add(error);
+                            }
+                            errors.Reverse();
+                            throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
+
+                        }
+                    }
+                }
+                finally
+                {
+                    _streamExposerContent?.Dispose();
+                    _resetContext.Dispose();
+                }
+            });
+            
             _token = token;
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
@@ -205,8 +263,7 @@ namespace Raven.Client.Documents.BulkInsert
                 Collection = _requestExecutor.Conventions.GetCollectionName(entity)
             };
 
-            JsonOperationContext tempContext;
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out tempContext))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out var tempContext))
             {
                 if (metadata != null)
                 {
@@ -271,7 +328,7 @@ namespace Raven.Client.Documents.BulkInsert
         }
 
 
-        private GZipStream _compressedStream = null;
+        private GZipStream _compressedStream;
 
         private async Task EnsureStream()
         {
@@ -328,72 +385,25 @@ namespace Raven.Client.Documents.BulkInsert
             AsyncHelpers.RunSync(DisposeAsync);
         }
 
-        public async Task DisposeAsync()
+        /// <summary>
+        /// The problem with this function is that it could be run but not
+        /// awaited. If this happens, then we could concurrently dispose the
+        /// bulk insert operation from two different threads. This is the
+        /// reason we are using a dispose once.
+        /// </summary>
+        private readonly DisposeOnceAsync<SingleAttempt> _disposeOnce;
+        public Task DisposeAsync()
         {
-            try
-            {
-                Exception flushEx = null;
-
-                if (_stream != null)
-                {
-                    try
-                    {
-                        _jsonWriter.WriteEndArray();
-                        _jsonWriter.Flush();
-                        _compressedStream?.Dispose();
-                        await _stream.FlushAsync(_token).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        flushEx = e;
-                    }
-                }
-
-                _streamExposerContent.Done();
-
-                if (_operationId == -1)
-                {
-                    // closing without calling a single store. 
-                    return;
-                }
-
-                if (_bulkInsertExecuteTask != null)
-                {
-                    try
-                    {
-                        await _bulkInsertExecuteTask.ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        var errors = new List<Exception>(3) { e };
-                        if (flushEx != null)
-                            errors.Add(flushEx);
-                        var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                        if (error != null)
-                        {
-                            errors.Add(error);
-                        }
-                        errors.Reverse();
-                        throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
-
-                    }
-                }
-            }
-            finally
-            {
-                _streamExposerContent?.Dispose();
-                _resetContext.Dispose();
-            }
+            return _disposeOnce.DisposeAsync();
         }
 
         private string GetId(object entity)
         {
-            string id;
-            if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id) == false)
-            {
-                id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
-                _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
-            }
+            if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id))
+                return id;
+            
+            id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
+            _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             return id;
         }
     }
