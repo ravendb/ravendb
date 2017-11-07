@@ -9,32 +9,40 @@
                     <div class="col-sm-6">
                         <button data-bind="click: chooseGenerate" class="btn btn-block btn-default">
                             <i class="icon-lock icon-xl"></i>
-                            <p class="lead">Let's Encrypt</p>
+                            <p class="lead">Generate <br />Let's Encrypt Certificate</p>
                         </button>
 
                         <ul class="list">
-                            <li><i class="icon-plus"></i><span>running on https</span></li>
-                            <li><i class="icon-plus"></i><span>automatic certificate generation</span></li>
-                            <li><i class="icon-plus"></i><span>automatic server name generation</span></li>
+                            <li><i class="icon-plus"></i><span>secured communication via SSL/TLS 1.2</span></li>
+                            <li><i class="icon-plus"></i><span>authentication via X509 client certificates</span></li>
+                            <li><i class="icon-plus"></i><span>automatic certificate generation and renewal</span></li>
+                            <li><i class="icon-plus"></i><span>hassle free and automatic</span></li>
+                            <li><i class="icon-minus"></i><span>requires access to the public Internet</span></li>
                         </ul>
 
                         <div class="small padding">
-                            Secure and easy to setup. Uses automatically generated server certificate.
+                            Secure and easy to setup. Uses automatically generated server certificate via Let's Encrypt.
+                            Reduce administration overhead and easily deploy both inside your organization and public facing
+                            databases by handling all the certificates generation for you.
                         </div>
                     </div>
                     <div class="col-sm-6">
                         <button data-bind="click: chooseSecured" class="btn btn-block btn-default">
                             <i class="icon-lock icon-xl"></i>
-                            <p class="lead">Own certificate</p>
+                            <p class="lead">Provide your certificate</p>
                         </button>
 
                         <ul class="list">
-                            <li><i class="icon-plus"></i><span>running on https</span></li>
-                            <li><i class="icon-minus"></i><span>manual certificate generation</span></li>
+                            <li><i class="icon-plus"></i><span>secured communication via SSL/TLS 1.2</span></li>
+                            <li><i class="icon-plus"></i><span>authentication via X509 client certificates</span></li>
+                            <li><i class="icon-plus"></i><span>does not require access to the public Internet</span></li>
+                            <li><i class="icon-minus"></i><span>manual certificate generation and renewal</span></li>
                         </ul>
 
                         <div class="small padding">
-                            Best to use with corporate configurations and other requiring the certificate to satisfy specific parameters.
+                            Best to use with corporate configurations with existing PKI infrastructure or those chosing to control
+                            their certificate's creation on their own. Can be used in secured setups without external access required.
+                            Administrator takes care for the server certificates generation and renewal.
                         </div>
                     </div>
                 </div>
@@ -54,11 +62,13 @@
                 <ul class="list">
                     <li><i class="icon-plus"></i><span>ready to use in no time</span></li>
                     <li><i class="icon-minus"></i><span>unsecured, running on http</span></li>
-                    <li><i class="icon-minus"></i><span>authentication disabled</span></li>
+                    <li><i class="icon-minus"></i><span>no authentication</span></li>
+                    <li><i class="icon-minus"></i><span>cannot host encrypted databases</span></li>
                 </ul>
 
                 <div class="small padding">
-                    Perfect for development and enviroments not requiring <strong>any</strong> level of security.
+                    Useful for local development and enviroments without <strong>any</strong> requirements for security.
+                    <strong>Not</strong> suitable for public facing servers and to store production data.
                 </div>
             </div>
         </div>
