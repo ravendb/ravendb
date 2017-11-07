@@ -7,7 +7,7 @@ class nodeInfo {
     
     useOwnCertificates: KnockoutObservable<boolean>;
     
-    nodeTag = ko.observable<string>(); //TODO: do we need it
+    nodeTag = ko.observable<string>();
     ips = ko.observableArray<ipEntry>([]);
     port = ko.observable<string>();
     certificate = ko.observable<string>();
@@ -15,8 +15,6 @@ class nodeInfo {
     certificateFileName = ko.observable<string>();
     
     certificateCNs = ko.observableArray<string>([]);
-    
-    ipInput = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
     
@@ -28,6 +26,8 @@ class nodeInfo {
         
         this.certificate.subscribe(fetchCNsThrottled);
         this.certificatePassword.subscribe(fetchCNsThrottled);
+        
+        this.ips.push(new ipEntry());
     }
     
     private fetchCNs() {
@@ -56,23 +56,26 @@ class nodeInfo {
             number: true
         });
         
+        this.ips.extend({
+            validation: [
+                {
+                    validator: () => this.ips().length > 0,
+                    message: "Please define at least one IP for this node"
+                }
+            ]
+        });
+
         this.validationGroup = ko.validatedObservable({
             nodeTag: this.nodeTag,
             port: this.port, 
             certificate: this.certificate,
-            certificatePassword: this.certificatePassword
-            //TODO: ips, 
+            certificatePassword: this.certificatePassword,
+            ips: this.ips
         });
     }
-    
-    addIp() {
-        if (this.ipInput()) {
-            const entry = new ipEntry();
-            entry.ip(this.ipInput());
-            this.ips.push(entry);
-            
-            this.ipInput("");
-        }
+
+    addIpAddress() {
+        this.ips.push(new ipEntry());
     }
 
     removeIp(ipEntry: ipEntry) {

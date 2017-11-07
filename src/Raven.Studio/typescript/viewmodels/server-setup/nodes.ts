@@ -8,6 +8,8 @@ import serverSetup = require("models/setup/serverSetup");
 
 class nodes extends setupStep {
 
+    editedNode = ko.observable<nodeInfo>();
+    
     provideCertificates = ko.pureComputed(() => {
         const mode = this.model.mode();
         return mode && mode === "Secured";
@@ -16,7 +18,7 @@ class nodes extends setupStep {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("removeNode");
+        this.bindToCurrentInstance("removeNode", "editNode");
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -26,7 +28,15 @@ class nodes extends setupStep {
             return $.when({ can: true });
         }
 
-        return $.when({redirect: "#welcome" });
+        return $.when({ redirect: "#welcome" });
+    }
+    
+    compositionComplete() {
+        super.compositionComplete();
+        
+        if (this.model.nodes().length) {
+            this.editedNode(this.model.nodes()[0]);
+        }
     }
     
     save() {
@@ -37,6 +47,12 @@ class nodes extends setupStep {
             if (!this.isValid(node.validationGroup)) {
                 isValid = false;
             }
+            
+            node.ips().forEach(entry => {
+                if (!this.isValid(entry.validationGroup)) {
+                    isValid = false;
+                }
+            });
         });
         
         if (!this.isValid(this.model.nodesValidationGroup)) {
@@ -61,22 +77,30 @@ class nodes extends setupStep {
   
     addNode() {
         this.model.nodes.push(nodeInfo.empty(this.model.useOwnCertificates));
+        this.updateNodeTags();
     }
 
+    editNode(node: nodeInfo) {
+        this.editedNode(node);
+    }
+    
     removeNode(node: nodeInfo) {
         this.model.nodes.remove(node);
+        if (this.editedNode() === node) {
+            this.editedNode(null);
+        }
+        
+        this.updateNodeTags();
+    }
+    
+    updateNodeTags() {
+        let idx = 0;
+        this.model.nodes().forEach(node => {
+           node.nodeTag(serverSetup.nodesTags[idx]);
+           idx++;
+        });
     }
 
-    getLabelFor(idx: number) {
-        
-        const fullUrl =  this.model.mode() === "LetsEncrypt";
-        const tag = serverSetup.nodesTags[idx];
-        if (fullUrl) {
-            return tag + "." + this.model.domain().domain() + ".dbs.local.ravendb.net";
-        } else {
-            return tag;
-        }
-    }
 }
 
 export = nodes;
