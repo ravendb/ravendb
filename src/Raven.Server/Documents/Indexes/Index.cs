@@ -1874,6 +1874,7 @@ namespace Raven.Server.Documents.Indexes
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
                                 result.Results = reader.FacetedQuery(facetQuery, documentsContext, GetOrAddSpatialField, token.Token);
+                                result.TotalResults = result.Results.Count;
                                 return result;
                             }
                         }
