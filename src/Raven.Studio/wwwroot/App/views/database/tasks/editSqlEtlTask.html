@@ -137,7 +137,7 @@
             <div class="sql-tables-list margin-bottom">
                 <!-- Sql table edit area -->
                 <div class="panel" data-bind="visible: showEditSqlTableArea()">
-                    <div class="padding padding-sm flex-horizontal item" data-bind="with: editedSqlTable">
+                    <div class="padding padding-sm flex-horizontal item" data-bind="with: editedSqlTableSandbox()">
                         <div class="flex-grow" data-bind="validationElement: tableName"> 
                             <!-- todo 1: why not red on the FIRST Time ? only after saving at least once.. -->
                             <!-- todo 2: where to place the message - if placed it has an offset, so for now msg is removed... -->
@@ -191,7 +191,7 @@
             </div>
             <!-- The transformation scripts -->
             <div class="etl-list" data-bind="with: editedSqlEtl">
-                <div data-bind="if: transformationScripts().length === 0 && !$root.editedTransformationScriptSandbox()">
+                <div data-bind="if: transformationScripts().length === 0 && !$root.showEditTransformationArea()">
                     <div>
                         <h3 class="text-center text-muted" data-bind="css: { 'text-danger': !transformationScripts.isValid() && transformationScripts.isModified() }">No transformation scripts have been defined.</h3>
                     </div>
