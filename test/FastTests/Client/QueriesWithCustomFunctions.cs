@@ -2567,6 +2567,47 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
             }
         }
 
+        [Fact]
+        public void Should_quote_alias_if_its_a_reserved_word()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order
+                    {
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine
+                            {
+                                PricePerUnit = 25,
+                                Discount = (decimal)0.1,
+                                Quantity = 4
+                            }
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from order in session.Query<Order>()
+                                select new
+                                {
+                                    Total = order.Lines.Sum(l => l.PricePerUnit * l.Quantity * (1 - l.Discount))
+                                };
+
+
+                    Assert.Equal("FROM Orders as 'order' " +
+                                 "SELECT { Total : order.Lines.map(function(l){return l.PricePerUnit*l.Quantity*(1-l.Discount);}).reduce(function(a, b) { return a + b; }, 0) }"
+                                 , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(90, queryResult[0].Total);
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
