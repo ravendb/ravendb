@@ -329,6 +329,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ClaimDomainInfo));
             scripter.AddType(typeof(SetupProgressAndResult));
             scripter.AddType(typeof(UserDomainsWithIps));
+            scripter.AddType(typeof(SetupMode));
 
             return scripter;
         }
