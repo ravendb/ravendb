@@ -139,7 +139,7 @@ namespace FastTests
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
             if (database == null)
             {
                 // Throw and get more info why database is null
