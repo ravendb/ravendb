@@ -6,8 +6,8 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -15,9 +15,9 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 
 namespace Raven.Client.Documents.BulkInsert
@@ -140,15 +140,16 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly JsonOperationContext _context;
         private readonly IDisposable _resetContext;
 
-        private BlittableJsonTextWriter _jsonWriter;
         private Stream _stream;
         private readonly StreamExposerContent _streamExposerContent;
-
         private bool _first = true;
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
-
+        private readonly JsonSerializer _defaultSerializer;
+        private readonly Func<object, StreamWriter, bool> _customEntitySerializer;
+        private readonly Func<object, StreamWriter, bool> _customMetadataSerializer;
+        
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
@@ -161,8 +162,11 @@ namespace Raven.Client.Documents.BulkInsert
                     {
                         try
                         {
-                            _jsonWriter.WriteEndArray();
-                            _jsonWriter.Flush();
+                            _currentWriter.Write(']');
+                            _currentWriter.Flush();
+                            await _asyncWrite.ConfigureAwait(false);
+                            ((MemoryStream)_currentWriter.BaseStream).TryGetBuffer(out var buffer);
+                            await _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token).ConfigureAwait(false);
                             _compressedStream?.Dispose();
                             await _stream.FlushAsync(_token).ConfigureAwait(false);
                         }
@@ -211,9 +215,15 @@ namespace Raven.Client.Documents.BulkInsert
             
             _token = token;
             _requestExecutor = store.GetRequestExecutor(database);
+            _currentWriter = new StreamWriter(new MemoryStream());
+            _backgroundWriter = new StreamWriter(new MemoryStream());
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _streamExposerContent = new StreamExposerContent();
-
+            
+            _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
+            _customEntitySerializer = _requestExecutor.Conventions.SerializeEntityToJsonStream;
+            _customMetadataSerializer = _requestExecutor.Conventions.SerializeMetaDataToJsonStream;
+            
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
@@ -258,51 +268,67 @@ namespace Raven.Client.Documents.BulkInsert
                 await EnsureStream().ConfigureAwait(false);
             }
 
-            var docInfo = new DocumentInfo
-            {
-                Collection = _requestExecutor.Conventions.GetCollectionName(entity)
-            };
-
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out var tempContext))
-            {
-                if (metadata != null)
+            if (metadata == null)
                 {
-                    docInfo.MetadataInstance = metadata;
-                    docInfo.Metadata = EntityToBlittable.ConvertEntityToBlittable(metadata, _requestExecutor.Conventions, tempContext);
+                    metadata = new MetadataAsDictionary();
                 }
-
-                using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _requestExecutor.Conventions, tempContext, docInfo))
+                if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
                 {
-                    if (_first == false)
-                    {
-                        _jsonWriter.WriteComma();
-                    }
-                    _first = false;
+                    var collection = _requestExecutor.Conventions.GetCollectionName(entity);
+                    metadata.Add(Constants.Documents.Metadata.Collection, collection);
+                }
+                
+                if (_first == false)
+                {
+                    _currentWriter.Write(',');
+                }
+                _first = false;
+                try
+                {
+                    _currentWriter.Write("{'Id':'");
+                    _currentWriter.Write(id);
+                    _currentWriter.Write("','Type':'PUT','Document':");
 
-                    var cmd = new DynamicJsonValue
+                    if (_customEntitySerializer == null || _customEntitySerializer(entity, _currentWriter) == false)
                     {
-                        [nameof(PutCommandDataWithBlittableJson.Type)] = "PUT",
-                        [nameof(PutCommandDataWithBlittableJson.Id)] = id,
-                        [nameof(PutCommandDataWithBlittableJson.Document)] = doc
-                    };
-
-                    try
-                    {
-                        tempContext.Write(_jsonWriter, cmd);
+                        _defaultSerializer.Serialize(_currentWriter, entity);
                     }
-                    catch (Exception e)
+                    
+                    _currentWriter.Flush();
+                    _currentWriter.BaseStream.Position--;
+                    _currentWriter.Write(",'@metadata':");
+                    
+                    if (_customMetadataSerializer == null || _customMetadataSerializer(entity, _currentWriter) == false)
                     {
-                        var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                        if (error != null)
-                        {
-                            throw error;
-                        }
-                        await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+                        _defaultSerializer.Serialize(_currentWriter, metadata);
+                    }
+                    
+                    _currentWriter.Write("}}");
+                    _currentWriter.Flush();
+                    if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
+                        _asyncWrite.IsCompleted)
+                    {
+                        await _asyncWrite.ConfigureAwait(false);
+
+                        var tmp = _currentWriter;
+                        _currentWriter = _backgroundWriter;
+                        _backgroundWriter = tmp;
+                        _currentWriter.BaseStream.SetLength(0);
+                        ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                        _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
                     }
                 }
-            }
+                catch (Exception e)
+                {
+                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                    if (error != null)
+                    {
+                        throw error;
+                    }
+                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+                }
         }
-
+        
         private static void VerifyValidId(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -329,6 +355,11 @@ namespace Raven.Client.Documents.BulkInsert
 
 
         private GZipStream _compressedStream;
+        private Stream _requestBodyStream;
+        private StreamWriter _currentWriter, _backgroundWriter;
+        private Task _asyncWrite = Task.CompletedTask;
+        private int _maxSizeInBuffer = 1024 * 1024;
+ 
 
         private async Task EnsureStream()
         {
@@ -342,15 +373,14 @@ namespace Raven.Client.Documents.BulkInsert
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
 
-            var requestBodyStream = _stream;
+            _requestBodyStream = _stream;
             if (CompressionLevel != CompressionLevel.NoCompression)
             {
                 _compressedStream = new GZipStream(_stream, CompressionLevel, leaveOpen: true);
-                requestBodyStream = _compressedStream;
+                _requestBodyStream = _compressedStream;
             }
-
-            _jsonWriter = new BlittableJsonTextWriter(_context, requestBodyStream);
-            _jsonWriter.WriteStartArray();
+            
+            _currentWriter.Write('[');
         }
 
         private async Task ThrowOnUnavailableStream(string id, Exception innerEx)
