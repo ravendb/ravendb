@@ -41,7 +41,7 @@ namespace SlowTests.Issues
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var url = storeB.Urls.First() + " ";
+                var url = " " + storeB.Urls.First() + " ";
                 DoReplicationTest(storeA, storeB, url);
             }
         }       
