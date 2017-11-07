@@ -95,7 +95,7 @@ namespace Raven.Server.Commercial
 
             ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo);
 
-            progress.AddInfo($"Getting challenge from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
+            progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
             onProgress(progress);
 
             try
@@ -141,7 +141,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await UpdateDnsRecordsTask(onProgress, token, map, setupInfo);
+                        await UpdateDnsRecordsTask(onProgress, progress, token, map, setupInfo);
                     }
                     catch (Exception e)
                     {
@@ -164,14 +164,15 @@ namespace Raven.Server.Commercial
                         await Task.WhenAll(tasks);
 
                         var csr = new CertificationRequestBuilder();
-                        csr.AddName($"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
+                        var lowerDomain = setupInfo.Domain.ToLower();
+                        csr.AddName($"CN=a.{lowerDomain}.dbs.local.ravendb.net");
                         // we need at least one SAN, browsers today require this
                         csr.SubjectAlternativeNames.Add($"{LocalNodeTag}.{setupInfo.Domain}.dbs.local.ravendb.net");
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
                             if (node.Key == LocalNodeTag)
                                 continue;
-                            csr.SubjectAlternativeNames.Add($"{node.Key}.{setupInfo.Domain}.dbs.local.ravendb.net");
+                            csr.SubjectAlternativeNames.Add($"{node.Key.ToLower()}.{lowerDomain}.dbs.local.ravendb.net");
                         }
                         cert = await acmeClient.NewCertificate(csr);
                     }
@@ -226,7 +227,7 @@ namespace Raven.Server.Commercial
         }
 
         // Update DNS record(s) and set the let's encrypt challenge(s) in dbs.local.ravendb.net
-        private static async Task UpdateDnsRecordsTask(Action<IOperationProgress> onProgress, CancellationToken token, Dictionary<string, string> map, SetupInfo setupInfo)
+        private static async Task UpdateDnsRecordsTask(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, Dictionary<string, string> map, SetupInfo setupInfo)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {
@@ -239,6 +240,8 @@ namespace Raven.Server.Commercial
 
                 foreach (var domainAndChallenge in map)
                 {
+                    progress.AddInfo($"Creating Dns record/challenge for node {domainAndChallenge.Key}.");
+                    onProgress(progress);
                     var regNodeInfo = new RegistrationNodeInfo()
                     {
                         SubDomain = domainAndChallenge.Key,
@@ -252,7 +255,10 @@ namespace Raven.Server.Commercial
                 HttpResponseMessage response;
                 try
                 {
-                    response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/register",
+                    progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
+                    progress.AddInfo("Waiting...");
+                    onProgress(progress);
+                    response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -298,6 +304,9 @@ namespace Raven.Server.Commercial
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
 
                     } while (registrationResult.Status == "PENDING");
+                    progress.AddInfo("Got successful response from api.ravendb.net.");
+                    progress.AddInfo("Waiting...");
+                    onProgress(progress);
                 }
                 catch (Exception e)
                 {
@@ -488,12 +497,27 @@ namespace Raven.Server.Commercial
                     {
                         var originalSettings = File.ReadAllText(SettingsPath);
                         dynamic jsonObj = JsonConvert.DeserializeObject(originalSettings);
+                        X509Certificate2 nodeCert = null;
+
+                        if (setupMode == SetupMode.LetsEncrypt)
+                        {
+                            try
+                            {
+                                nodeCert = setupInfo.NodeSetupInfos[LocalNodeTag].Password == null
+                                    ? new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[LocalNodeTag].Certificate))
+                                    : new X509Certificate2(Convert.FromBase64String(setupInfo.NodeSetupInfos[LocalNodeTag].Certificate), setupInfo.NodeSetupInfos[LocalNodeTag].Password);
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException($"Setup failed.Could not load the certificate for node '{LocalNodeTag}'.", e);
+                            }
+                        }
+
                         jsonObj["Setup.Mode"] = setupMode.ToString();
 
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
-                            X509Certificate2 nodeCert = null;
-                            var nodeServerUrl = string.Empty;
+                            
                             if (setupMode == SetupMode.Secured)
                             {
                                 try
@@ -501,31 +525,23 @@ namespace Raven.Server.Commercial
                                     nodeCert = node.Value.Password == null
                                         ? new X509Certificate2(Convert.FromBase64String(node.Value.Certificate))
                                         : new X509Certificate2(Convert.FromBase64String(node.Value.Certificate), node.Value.Password);
-                                    var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
-                                    nodeServerUrl = $"https://{cn}:{node.Value.Port}";
                                 }
                                 catch (Exception e)
                                 {
                                     throw new InvalidOperationException($"Setup failed.Could not load the provided certificate for node '{node.Key}'.", e);
                                 }
-                            }
-                            else if(setupMode == SetupMode.LetsEncrypt)
-                            {
-                                nodeServerUrl = $"https://{node.Key}.dbs.local.ravendb.net:{node.Value.Port}";
-                            }
 
-                            jsonObj["ServerUrl"] = nodeServerUrl;
-
-                            if (setupMode == SetupMode.LetsEncrypt)
-                            {
-                                jsonObj["Security.Certificate.Base64"] = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate;
-                            }
-                            else if (setupMode == SetupMode.Secured)
-                            {
+                                var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
+                                jsonObj["ServerUrl"] = $"https://{cn}:{node.Value.Port}";
                                 jsonObj["Security.Certificate.Base64"] = node.Value.Certificate;
                                 jsonObj["Security.Certificate.Password"] = node.Value.Password;
                             }
-
+                            else if(setupMode == SetupMode.LetsEncrypt)
+                            {
+                                jsonObj["ServerUrl"] = $"https://{node.Key.ToLower()}.{setupInfo.Domain}.dbs.local.ravendb.net:{node.Value.Port}";
+                                jsonObj["Security.Certificate.Base64"] = setupInfo.NodeSetupInfos[LocalNodeTag].Certificate; //same certificate for all nodes
+                            }
+                            
                             var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
                             if (node.Key == LocalNodeTag && setupInfo.ModifyLocalServer)
