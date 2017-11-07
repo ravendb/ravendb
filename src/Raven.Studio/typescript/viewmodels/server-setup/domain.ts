@@ -5,11 +5,15 @@ import registrationInfoCommand = require("commands/setup/registrationInfoCommand
 
 class domain extends setupStep {
 
+    spinners = {
+        save: ko.observable<boolean>(false)
+    };
+    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
-        if (mode && mode === "LetsEncrypt") { //TODO: + validate previous step
-            return $.when({can: true});
+        if (mode && mode === "LetsEncrypt") {
+            return $.when({ can: true });
         }
 
         return $.when({redirect: "#welcome"});
@@ -32,15 +36,10 @@ class domain extends setupStep {
             });
     }
     
-    
-    //TODO handle back in view model
-
-
     save() {
         const domainModel = this.model.domain();
         this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
             if (this.isValid(domainModel.validationGroup)) {
-
                 this.claimDomainIfNeeded()
                     .done(() => {
                         router.navigate("#agreement");
@@ -50,19 +49,25 @@ class domain extends setupStep {
     }
     
     private claimDomainIfNeeded(): JQueryPromise<void> {
+        
         const domainModel = this.model.domain();
         
-        if (domainModel.availableDomains().length === 0) {
-            const task = $.Deferred<void>();
-            new claimDomainCommand(domainModel.domain(), this.model.license().toDto())
-                .execute()
-                .done(() => task.resolve())
-                .fail(() => task.reject());
-            
-            return task;
+        if (_.includes(domainModel.availableDomains(), domainModel.domain())) {
+            // no need to claim it
+            return $.when<void>();
         }
+
+        this.spinners.save(true);
         
-        return $.when<void>();
+        const task = $.Deferred<void>();
+        new claimDomainCommand(domainModel.domain(), this.model.license().toDto())
+            .execute()
+            .done(() => task.resolve())
+            .fail(() => task.reject())
+            .always(() => this.spinners.save(false));
+        
+        return task;
+        
     }
 
 }
