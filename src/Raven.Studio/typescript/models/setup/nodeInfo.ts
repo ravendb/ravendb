@@ -113,7 +113,8 @@ class nodeInfo {
             Certificate: this.certificate(),
             Password: this.certificatePassword(),
             Ips: this.ips().map(x => x.ip()),
-            Port: parseInt(this.port(), 10)
+            Port: parseInt(this.port(), 10),
+            ServerUrl: "need to compute it from provided certificate"
         };
     }
 }

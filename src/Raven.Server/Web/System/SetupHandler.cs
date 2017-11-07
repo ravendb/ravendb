@@ -250,7 +250,7 @@ namespace Raven.Server.Web.System
                     null,
                     "Setting up RavenDB in secured mode.",
                     Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo),
+                    progress => SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
                     operationId.Value, operationCancelToken);
                 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
@@ -313,7 +313,7 @@ namespace Raven.Server.Web.System
                 var operationResult = await ServerStore.Operations.AddOperation(
                     null, "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo),
+                    progress => SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
                     operationId.Value, operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
@@ -335,7 +335,7 @@ namespace Raven.Server.Web.System
             var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
 
             var setupModeString = GetQueryStringValueAndAssertIfSingleAndNotEmpty("setupMode");
-            SetupMode setupMode = (SetupMode)Enum.Parse(typeof(SetupMode), setupModeString);
+            var setupMode = (SetupMode)Enum.Parse(typeof(SetupMode), setupModeString);
 
             var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
             var operationId = GetLongQueryString("operationId", false);
@@ -355,43 +355,6 @@ namespace Raven.Server.Web.System
                     progress => SetupManager.SetupValidateTask(progress, operationCancelToken.Token, setupInfo, ServerStore, setupMode),
                     operationId.Value, operationCancelToken);
                 
-            }
-        }
-
-        [RavenAction("/setup/generate", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task SetupGenerate()
-        {
-            AssertOnlyInSetupMode();
-
-            ServerStore.EnsureNotPassive();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            {
-                var operationId = GetLongQueryString("operationId", false);
-                if (operationId.HasValue == false)
-                    operationId = ServerStore.Operations.GetNextOperationId();
-
-                var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("Name");
-
-                byte[] pfx = null;
-                
-                await ServerStore.Operations.AddOperation(
-                        null, "Generate certificate: " + name,
-                        Documents.Operations.Operations.OperationType.CertificateGeneration,
-                        async onProgress =>
-                        {
-                            pfx = await SetupManager.GenerateCertificateTask(name, ServerStore);
-
-                            return ClientCertificateGenerationResult.Instance;
-                        },
-                        operationId.Value);
-                
-                var contentDisposition = $"attachment; filename={name}.pfx";
-                HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                HttpContext.Response.ContentType = "binary/octet-stream";
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             }
         }
 
@@ -428,7 +391,7 @@ namespace Raven.Server.Web.System
                     null,
                     "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo),
+                    progress => SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
                     operationId, operationCancelToken);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
