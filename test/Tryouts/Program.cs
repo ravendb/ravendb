@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FastTests.Issues;
 using FastTests.Server.Documents.Indexing.MapReduce;
 using Raven.Server.Utils;
+using SlowTests.Issues;
 using SlowTests.Voron.Issues;
 
 /*
@@ -34,8 +35,8 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Voron.Bugs.RavenDB_6971())
-                    test.Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart();
+                using (var test = new SlowTests.Server.Documents.CompactDatabaseTest())
+                    test.CanCompactDatabase().Wait();
 
             }
         }
