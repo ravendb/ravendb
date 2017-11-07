@@ -52,15 +52,8 @@ class license extends setupStep {
     private loadRegistrationInfo() {
         return new registrationInfoCommand(this.model.license().toDto())
             .execute()
-            .done((result) => {
-                const domainModel = this.model.domain();
-
-                domainModel.userEmail(result.Email);
-                domainModel.availableDomains(Object.keys(result.Domains));
-
-                if (domainModel.availableDomains().length === 1) {
-                    domainModel.domain(domainModel.availableDomains()[0]);
-                }
+            .done((result: Raven.Server.Commercial.UserDomainsWithIps) => {
+                this.model.userDomains(result);
             });
     }
 

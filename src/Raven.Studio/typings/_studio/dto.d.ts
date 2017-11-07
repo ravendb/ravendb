@@ -381,11 +381,6 @@ type dashboardChartTooltipProviderArgs = {
     values: dictionary<number>;
 }
 
-interface registrationInfoResult {
-    Email: string;  
-    Domains: dictionary<Array<string>>;
-}
-
 interface domainAvailabilityResult {
     Available: boolean;
     IsOwnedByMe: boolean;
