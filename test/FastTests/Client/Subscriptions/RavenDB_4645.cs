@@ -28,7 +28,7 @@ namespace FastTests.Client.Subscriptions
 
                 var id = store.Subscriptions.Create<Company>();
 
-                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch =  5 
                 });

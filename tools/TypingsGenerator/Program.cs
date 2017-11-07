@@ -140,7 +140,7 @@ namespace TypingsGenerator
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));
-            scripter.AddType(typeof(SubscriptionConnectionOptions));
+            scripter.AddType(typeof(SubscriptionWorkerOptions));
             scripter.AddType(typeof(SubscriptionTryout));
 
             // changes

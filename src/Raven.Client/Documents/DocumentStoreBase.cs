@@ -140,7 +140,7 @@ namespace Raven.Client.Documents
 
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
-        public IReliableSubscriptions Subscriptions { get; }
+        public DocumentSubscriptions Subscriptions { get; }
 
         protected void EnsureNotClosed()
         {

@@ -24,7 +24,7 @@ namespace FastTests.Client.Subscriptions
 
                 var subscriptionId = store.Subscriptions.Create<User>(options: subscriptionCreationParams);
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("get-users"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("get-users"));
 
                 var users = new BlockingCollection<User>();
 
@@ -58,7 +58,7 @@ namespace FastTests.Client.Subscriptions
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
                 var users = new BlockingCollection<User>();
                 
@@ -79,8 +79,8 @@ namespace FastTests.Client.Subscriptions
                 User user;
                 Assert.True(users.TryTake(out user, _reasonableWaitTime));
 
-                var concurrentSubscription = store.Subscriptions.Open<User>(
-                    new SubscriptionConnectionOptions(subscriptionId)
+                var concurrentSubscription = store.Subscriptions.GetSubscriptionWorker<User>(
+                    new SubscriptionWorkerOptions(subscriptionId)
                     {
                         Strategy = SubscriptionOpeningStrategy.TakeOver
                     });
@@ -132,7 +132,7 @@ namespace FastTests.Client.Subscriptions
             {
                 
                 var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
                 var beforeAckMre = new ManualResetEvent(false);
                 var users = new BlockingCollection<User>();
@@ -169,7 +169,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
                 var users = new BlockingCollection<User>();
                 using (var session = store.OpenSession())
                 {
@@ -205,7 +205,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var subscriptionId = store.Subscriptions.Create<User>();
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
                 
                 using (var session = store.OpenSession())
                 {

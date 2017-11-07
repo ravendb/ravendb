@@ -36,7 +36,7 @@ select project(d)
 "
                 });
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
                 var exceptions = new List<Exception>();
 
@@ -125,7 +125,7 @@ select project(d)
 "
                 });
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
                 var exceptions = new List<Exception>();
 

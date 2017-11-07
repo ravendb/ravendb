@@ -58,7 +58,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -127,7 +127,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -210,7 +210,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<Node>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(id)))
                 {
                     var nodes = new BlockingCollection<Node>();
 
@@ -277,7 +277,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -384,7 +384,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -463,7 +463,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -538,7 +538,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -591,7 +591,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -645,7 +645,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -699,7 +699,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -752,7 +752,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -805,7 +805,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 
@@ -867,7 +867,7 @@ namespace FastTests.Client.Subscriptions
 
                 using (
                     var subscription =
-                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                        store.Subscriptions.GetSubscriptionWorker<SupportCall>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<SupportCall>();
 

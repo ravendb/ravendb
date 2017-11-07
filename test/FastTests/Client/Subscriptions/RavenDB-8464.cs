@@ -33,7 +33,7 @@ namespace FastTests.Client.Subscriptions
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 string cv;
 
-                using (var subscription = store.Subscriptions.Open<User>(subsId))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subsId))
                 {
                     var amre = new AsyncManualResetEvent();
 

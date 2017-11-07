@@ -30,7 +30,7 @@ namespace SlowTests.Tests
                 };
 
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
-                using (var subscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
                 {
 
                     var bc = new BlockingCollection<Thing>();

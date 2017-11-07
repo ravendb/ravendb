@@ -50,7 +50,7 @@ namespace FastTests.Client.Subscriptions
                     ChangeVector = lastChangeVector
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
-                using (var subscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
                 {
                     var list = new BlockingCollection<Thing>();
                     GC.KeepAlive(subscription.Run(u =>
@@ -87,7 +87,7 @@ namespace FastTests.Client.Subscriptions
                 };
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (
-                    var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                     {
                         TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(20)
                     }))
@@ -115,7 +115,7 @@ namespace FastTests.Client.Subscriptions
                     Assert.False(acceptedSubscriptionList.TryTake(out thing, 50));
                     // open second subscription
                     using (var rejectedSubscription =
-                        store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                        store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                         {
                             Strategy = SubscriptionOpeningStrategy.OpenIfFree,
                             TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(2000)
@@ -155,7 +155,7 @@ namespace FastTests.Client.Subscriptions
                 await CreateDocuments(store, 5);
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
                 using (
-                    var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
                 {
 
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
@@ -188,7 +188,7 @@ namespace FastTests.Client.Subscriptions
                     // open second subscription
                     using (
                         var waitingSubscription =
-                            store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)
+                            store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)
                             {
                                 Strategy = SubscriptionOpeningStrategy.WaitForFree,
                                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(250)
@@ -240,7 +240,7 @@ namespace FastTests.Client.Subscriptions
                 var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (
-                    var acceptedSubscription = store.Subscriptions.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                    var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsId)))
                 {
                     var acceptedSusbscriptionList = new BlockingCollection<Thing>();
                     var takingOverSubscriptionList = new BlockingCollection<Thing>();
@@ -279,8 +279,8 @@ namespace FastTests.Client.Subscriptions
                     Assert.False(acceptedSusbscriptionList.TryTake(out thing));
 
                     // open second subscription
-                    using (var takingOverSubscription = store.Subscriptions.Open<Thing>(
-                        new SubscriptionConnectionOptions(subsId)
+                    using (var takingOverSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(
+                        new SubscriptionWorkerOptions(subsId)
                     {
                         
                         Strategy = SubscriptionOpeningStrategy.TakeOver

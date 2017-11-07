@@ -64,7 +64,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions("1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions("1"));
                 var ex = await Assert.ThrowsAsync<SubscriptionDoesNotExistException>(() => subscription.Run(x => { }));
             }
         }
@@ -75,7 +75,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
                     using (var session = store.OpenSession())
                     {
@@ -88,7 +88,7 @@ namespace FastTests.Client.Subscriptions
 
                     await amre.WaitAsync(_reasonableWaitTime);
 
-                    using (var secondSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                    using (var secondSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                     {
                         Strategy = SubscriptionOpeningStrategy.OpenIfFree
                     }))
@@ -114,7 +114,7 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 var id = store.Subscriptions.Create<User>();
-                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)))
                 {
 
                     var keys = new BlockingCollection<string>();
@@ -155,7 +155,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create<User>();
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
                     var names = new BlockingCollection<string>();
                     
@@ -218,7 +218,7 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 var id = store.Subscriptions.Create<Company>();
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 25
                 }
@@ -264,7 +264,7 @@ namespace FastTests.Client.Subscriptions
 
                 var id = store.Subscriptions.Create<User>();
 
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 31
                 }))
@@ -297,7 +297,7 @@ namespace FastTests.Client.Subscriptions
                               Where startsWith(id(u),'users/favorite/)"
                 });
 
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 15
                 }))
@@ -342,8 +342,8 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(1, subscriptionDocuments.Count);
                 Assert.Equal("from Users as doc", subscriptionDocuments[0].Query);
 
-                var subscription = store.Subscriptions.Open(
-                    new SubscriptionConnectionOptions(subscriptionDocuments[0].SubscriptionName));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(
+                    new SubscriptionWorkerOptions(subscriptionDocuments[0].SubscriptionName));
 
                 var docs = new CountdownEvent(1);
                 
@@ -369,7 +369,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(0, subscriptionDocuments.Count);
 
                 var allId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var allSubscription = store.Subscriptions.Open(allId))
+                using (var allSubscription = store.Subscriptions.GetSubscriptionWorker(allId))
                 {
                     var allDocs = new CountdownEvent(500);
                     
@@ -378,7 +378,7 @@ namespace FastTests.Client.Subscriptions
                     {
                         Query = @"from Users where Age <0"
                     });
-                    using (var filteredUsersSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(filteredUsersId)))
+                    using (var filteredUsersSubscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(filteredUsersId)))
                     {
                         var usersDocs = new CountdownEvent(1);
                         
@@ -407,7 +407,7 @@ namespace FastTests.Client.Subscriptions
 
             IDocumentStore store = null;
             RavenServer server = null;
-            Subscription<dynamic> subscription = null;
+            SubscriptionWorker<dynamic> subscriptionWorker = null;
             try
             {
                 server = GetNewServer(runInMemory: false, customSettings: new Dictionary<string, string>()
@@ -438,7 +438,7 @@ namespace FastTests.Client.Subscriptions
 
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
 
-                subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1),
                     MaxDocsPerBatch = 1
@@ -447,7 +447,7 @@ namespace FastTests.Client.Subscriptions
 
                 var gotBatch = new ManualResetEventSlim();
                 var gotArek = new ManualResetEventSlim();
-                var t = subscription.Run(x =>
+                var t = subscriptionWorker.Run(x =>
                 {
                     gotBatch.Set();
 
@@ -485,7 +485,7 @@ namespace FastTests.Client.Subscriptions
             }
             finally
             {
-                subscription?.Dispose();
+                subscriptionWorker?.Dispose();
                 store?.Dispose();
                 server.Dispose();
             }
@@ -494,33 +494,33 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public async Task CanReleaseSubscription()
         {
-            Subscription<dynamic> subscription = null;
-            Subscription<dynamic> throwingSubscription = null;
-            Subscription<dynamic> notThrowingSubscription = null;
+            SubscriptionWorker<dynamic> subscriptionWorker = null;
+            SubscriptionWorker<dynamic> throwingSubscriptionWorker = null;
+            SubscriptionWorker<dynamic> notThrowingSubscriptionWorker = null;
 
             var store = GetDocumentStore();
             try
             {
                 Server.ServerStore.Observer.Suspended = true;
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                subscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.OpenIfFree
                 });
                 var mre = new AsyncManualResetEvent();
                 PutUserDoc(store);
-                var t = subscription.Run(x =>
+                var t = subscriptionWorker.Run(x =>
                 {
                     mre.Set();
                 });
                 Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 mre.Reset();
 
-                throwingSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                throwingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     Strategy = SubscriptionOpeningStrategy.OpenIfFree
                 });
-                var subscriptionTask = throwingSubscription.Run(x => { });
+                var subscriptionTask = throwingSubscriptionWorker.Run(x => { });
 
                 Assert.True(await Assert.ThrowsAsync<SubscriptionInUseException>(() =>
                 {
@@ -529,9 +529,9 @@ namespace FastTests.Client.Subscriptions
 
                 store.Subscriptions.DropConnection(id);
 
-                notThrowingSubscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id));
+                notThrowingSubscriptionWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id));
 
-                t = notThrowingSubscription.Run(x =>
+                t = notThrowingSubscriptionWorker.Run(x =>
                 {
                     mre.Set();
                 });
@@ -542,9 +542,9 @@ namespace FastTests.Client.Subscriptions
             }
             finally
             {
-                subscription?.Dispose();
-                throwingSubscription?.Dispose();
-                notThrowingSubscription?.Dispose();
+                subscriptionWorker?.Dispose();
+                throwingSubscriptionWorker?.Dispose();
+                notThrowingSubscriptionWorker?.Dispose();
                 store.Dispose();
             }
         }
@@ -564,7 +564,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(id)))
                 {
 
                     var docs = new BlockingCollection<User>();
@@ -590,7 +590,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
                 {
                     PutUserDoc(store);
                     var subscriptionTask = subscription.Run(x => throw new Exception("Fake exception"));
@@ -611,7 +611,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     IgnoreSubscriberErrors = true
                 }))
@@ -674,7 +674,7 @@ namespace FastTests.Client.Subscriptions
                     Filter = x => x.Address.Street == "1st Street" && x.Address.ZipCode != 999
                 });
 
-                using (var carolines = store.Subscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)
+                using (var carolines = store.Subscriptions.GetSubscriptionWorker<PersonWithAddress>(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 5
                 }))
@@ -711,7 +711,7 @@ namespace FastTests.Client.Subscriptions
                 Server.ServerStore.Observer.Suspended = true;
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
 
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(id)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(1)
                 }))
@@ -763,7 +763,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.Open<User>(id))
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(id))
                 {
                     var users = new BlockingCollection<User>();
                     
@@ -806,8 +806,8 @@ namespace FastTests.Client.Subscriptions
         [Fact]
         public void DisposingOneSubscriptionShouldNotAffectOnNotificationsOfOthers()
         {
-            Subscription<User> subscription1 = null;
-            Subscription<User> subscription2 = null;
+            SubscriptionWorker<User> subscription1 = null;
+            SubscriptionWorker<User> subscription2 = null;
             var store = GetDocumentStore();
             try
             {
@@ -821,11 +821,11 @@ namespace FastTests.Client.Subscriptions
                     s.SaveChanges();
                 }
 
-                subscription1 = store.Subscriptions.Open<User>(id1);
+                subscription1 = store.Subscriptions.GetSubscriptionWorker<User>(id1);
                 var items1 = new BlockingCollection<User>();
                 subscription1.Run(x => x.Items.ForEach(i => items1.Add(i.Result)));
 
-                subscription2 = store.Subscriptions.Open<User>(id2);
+                subscription2 = store.Subscriptions.GetSubscriptionWorker<User>(id2);
                 var items2 = new BlockingCollection<User>();
                 subscription2.Run(x => x.Items.ForEach(i => items2.Add(i.Result)));
 
@@ -868,7 +868,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {                
                 var subscriptionId = store.Subscriptions.Create(new SubscriptionCreationOptions<User>());
-                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1
                 }))
@@ -987,7 +987,7 @@ namespace FastTests.Client.Subscriptions
 
                 var id = store.Subscriptions.Create(new SubscriptionCreationOptions<Company>());
 
-                var subscription = store.Subscriptions.Open<Company>(new SubscriptionConnectionOptions(id)
+                var subscription = store.Subscriptions.GetSubscriptionWorker<Company>(new SubscriptionWorkerOptions(id)
                 {
                     MaxDocsPerBatch = 1,
                     IgnoreSubscriberErrors = true

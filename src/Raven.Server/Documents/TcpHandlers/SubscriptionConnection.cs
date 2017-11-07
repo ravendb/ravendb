@@ -43,9 +43,9 @@ namespace Raven.Server.Documents.TcpHandlers
         public readonly CancellationTokenSource CancellationTokenSource;
         private readonly AsyncManualResetEvent _waitForMoreDocuments;
 
-        private SubscriptionConnectionOptions _options;
+        private SubscriptionWorkerOptions _options;
 
-        public SubscriptionConnectionOptions Options => _options;
+        public SubscriptionWorkerOptions Options => _options;
 
         public IDisposable DisposeOnDisconnect;
 
@@ -114,9 +114,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
-
-
-            _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
+            
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionConnectionDetails(SubscriptionId,_options.SubscriptionName);
 
             (Collection, (Script, Functions), Revisions) = ParseSubscriptionQuery(SubscriptionState.Query);

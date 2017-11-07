@@ -65,9 +65,8 @@ namespace FastTests.Client.Subscriptions
                     }
                 );
 
-                using (
-                    var subscription =
-                        store.Subscriptions.Open<PersonWithAddress>(new SubscriptionConnectionOptions(id)))
+                using (var subscription =
+                        store.Subscriptions.GetSubscriptionWorker<PersonWithAddress>(new SubscriptionWorkerOptions(id)))
                 {
                     var users = new BlockingCollection<PersonWithAddress>();
 

@@ -42,7 +42,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -84,7 +84,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -127,7 +127,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -174,7 +174,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -216,7 +216,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -258,7 +258,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -300,7 +300,7 @@ namespace FastTests.Client.Subscriptions
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>
@@ -346,7 +346,7 @@ From Users as u Where u.Name = 'my\\id'
                     session.SaveChanges();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(subscriptionName);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(subscriptionName);
                 var amre = new AsyncManualResetEvent();
                 var users = new List<User>();
                 _ = subscription.Run(x =>

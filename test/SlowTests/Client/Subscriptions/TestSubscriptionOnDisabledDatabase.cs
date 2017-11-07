@@ -28,7 +28,7 @@ namespace SlowTests.Client.Subscriptions
                     Name = "Subs1"
                 });
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
 
                 using (var session = store.OpenSession())
                 {
@@ -65,7 +65,7 @@ namespace SlowTests.Client.Subscriptions
                 store.Admin.Server.Send(new ToggleDatabasesStateOperation(store.Database, false));
 
 
-                subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
+                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
 
                 subscription.AfterAcknowledgment += batch =>
                 {

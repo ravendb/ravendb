@@ -67,7 +67,7 @@ namespace Subscriptions.Benchmark
                 }
 
 
-                using (var subscription = _store.Subscriptions.Open(new SubscriptionConnectionOptions(_subscriptionName)
+                using (var subscription = _store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(_subscriptionName)
                 {
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))

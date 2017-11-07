@@ -130,7 +130,7 @@ namespace RachisTests
                     await session.SaveChangesAsync();
                 }
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
 
                 subscription.AfterAcknowledgment += b => { reachedMaxDocCountMre.Set(); return Task.CompletedTask; };
 
@@ -282,7 +282,7 @@ namespace RachisTests
 
                 var subscriptionId = await store.Subscriptions.CreateAsync<Revision<User>>().ConfigureAwait(false);
 
-                var subscription = store.Subscriptions.Open<Revision<User>>(new SubscriptionConnectionOptions(subscriptionId)
+                var subscription = store.Subscriptions.GetSubscriptionWorker<Revision<User>>(new SubscriptionWorkerOptions(subscriptionId)
                 {
                     MaxDocsPerBatch = 1,
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(100)
@@ -481,7 +481,7 @@ namespace RachisTests
             }
         }
 
-        private async Task<Subscription<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre, int batchSize, string mentor = null)
+        private async Task<SubscriptionWorker<User>> CreateAndInitiateSubscription(IDocumentStore store, string defaultDatabase, List<User> usersCount, AsyncManualResetEvent reachedMaxDocCountMre, int batchSize, string mentor = null)
         {
             var proggress = new SubscriptionProggress()
             {
@@ -492,7 +492,7 @@ namespace RachisTests
                 MentorNode = mentor
             }).ConfigureAwait(false);
 
-            var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+            var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize
@@ -621,7 +621,7 @@ namespace RachisTests
 
                 await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
 
-                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = 20,
@@ -670,7 +670,7 @@ namespace RachisTests
                     Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
                 }
 
-                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = 20,
@@ -734,7 +734,7 @@ namespace RachisTests
                     Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
                 }
 
-                using (var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = 20,

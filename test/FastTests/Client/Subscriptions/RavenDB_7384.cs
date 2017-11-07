@@ -30,7 +30,7 @@ namespace FastTests.Client.Subscriptions
                     Name = "Subs1"
                 });
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
 
                 var results = new List<User>();
                 var mre = new AsyncManualResetEvent();
@@ -81,7 +81,7 @@ namespace FastTests.Client.Subscriptions
                     Query = "from Users as u select {Name:'David'}"
                 });
 
-                var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
 
                 var results = new List<User>();
                 var mre = new AsyncManualResetEvent();
@@ -132,7 +132,7 @@ namespace FastTests.Client.Subscriptions
 
 
                 // reconnecting and making sure that the new script is in power
-                subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("Subs1"));
+                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1"));
 
                 subscriptionTask = subscription.Run(batch =>
                 {

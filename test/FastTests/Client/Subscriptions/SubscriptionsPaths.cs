@@ -53,7 +53,7 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionID = store.Subscriptions.Create<Node>(
                         node => node.Children.SelectMany(x => x.Children).All(x => x.Name == "Grandchild"));
 
-                var subscription = store.Subscriptions.Open<Node>(subscriptionID);
+                var subscription = store.Subscriptions.GetSubscriptionWorker<Node>(subscriptionID);
 
                 var keys = new BlockingCollection<Node>();
                 subscription.Run(x => x.Items.ForEach(i => keys.Add(i.Result)));
@@ -110,7 +110,7 @@ declare function areAllGrandchildsGrandchilds(doc){
 From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 });
 
-                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionID));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionID));
 
                 var keys = new BlockingCollection<object>();
                 subscription.Run(x => x.Items.ForEach(i => keys.Add(i.Result)));
@@ -156,7 +156,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 node.Children.All(x => 
                     x.Children.All(i => i.Name == "Parent")));
 
-                var subscription = store.Subscriptions.Open<Node>(new SubscriptionConnectionOptions(subscriptionID));
+                var subscription = store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(subscriptionID));
 
                 var keys = new BlockingCollection<Node>();
                 subscription.Run(x => x.Items.ForEach(i => keys.Add(i.Result)));
@@ -218,7 +218,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 });
 
 
-                var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionID));
+                var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subscriptionID));
 
                 var keys = new BlockingCollection<object>();
                 subscription.Run(x => x.Items.ForEach(i => keys.Add(i.Result)));

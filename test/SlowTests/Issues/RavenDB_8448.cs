@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                 });
 
                 var users = new BlockingCollection<User>();
-                using (var s = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions("test")))
+                using (var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("test")))
                 {
                     var t = s.Run(batch =>
                     {

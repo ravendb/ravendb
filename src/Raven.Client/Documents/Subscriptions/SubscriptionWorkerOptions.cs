@@ -60,9 +60,12 @@ namespace Raven.Client.Documents.Subscriptions
         public string Message { get; set; }
     }
 
-    public class SubscriptionConnectionOptions
+    /// <summary>
+    /// Holds subscription connection properties, control both how client and server side behaves   
+    /// </summary>
+    public class SubscriptionWorkerOptions
     {
-        private SubscriptionConnectionOptions()
+        private SubscriptionWorkerOptions()
         {
             // for deserialization
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
@@ -71,7 +74,11 @@ namespace Raven.Client.Documents.Subscriptions
             MaxErrorousPeriod = TimeSpan.FromMinutes(5);
         }
 
-        public SubscriptionConnectionOptions(string subscriptionName) : this()
+        /// <summary>
+        /// Create a subscription connection
+        /// </summary>
+        /// <param name="subscriptionName">Subscription name as received from CreateSubscription</param>
+        public SubscriptionWorkerOptions(string subscriptionName) : this()
         {
             if (string.IsNullOrEmpty(subscriptionName)) 
                 throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
@@ -82,7 +89,8 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Subscription name as received from CreateSubscription
         /// </summary>
-        public string SubscriptionName { get; set; }
+        // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local : It does not play nicely with JsonDeserializationBase.GenerateJsonDeserializationRoutine
+        public string SubscriptionName { get; private set; }
 
         /// <summary>
         /// Cooldown time between connection retry. Default: 5 seconds
