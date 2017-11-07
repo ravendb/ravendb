@@ -182,13 +182,20 @@
 
 <script type="text/html" id="db-group-settings-template">
     <div class="row settings-item">
-        <div class="col-xs-offset-1 col-xs-8">
-            <div class="control-label">Allow dynamic node distribution</div>
-        </div>
-        <div class="col-xs-3">
-            <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: currentDatabaseInfo().dynamicNodesDistribution">
-                <label></label>
+        <div data-bind="css: {'has-warning': $root.showDynamicNodeDistributionWarning()}">
+            <div class="col-xs-offset-1 col-xs-8">
+                <div class="control-label">Allow dynamic node distribution</div>
+            </div>
+            <div class="col-xs-3">
+                <div class="toggle">
+                    <input type="checkbox" class="styled" data-bind="checked: currentDatabaseInfo().dynamicNodesDistribution, enable:!$root.showDynamicNodeDistributionWarning()">
+                    <label></label>
+                </div>
+            </div>
+            <div class="col-xs-offset-1 col-xs-10">
+                <div class="help-block" data-bind="visible: $root.showDynamicNodeDistributionWarning">
+                    Your current license doesn't include the dynamic nodes distribution feature.
+                </div>
             </div>
         </div>
     </div>
