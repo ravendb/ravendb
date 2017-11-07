@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Linq
         private List<LoadToken> _loadTokens;
         private readonly Dictionary<string, string> _aliasesToIdPropery;
         private int _insideLet = 0;
-        private readonly string[] _aliasKeywords =
+        private readonly HashSet<string> _aliasKeywords = new HashSet<string>
         {
             "AS",
             "SELECT",
@@ -1981,7 +1981,7 @@ case "cmpxchg.match":
 
         private void AddFromAlias(string alias)
         {
-            if (_aliasKeywords.Contains(alias.ToUpper()))
+            if (_aliasKeywords.Contains(alias, StringComparer.OrdinalIgnoreCase))
             {
                 alias = "'" + alias + "'";
             }
