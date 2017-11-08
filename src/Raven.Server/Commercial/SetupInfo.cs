@@ -16,7 +16,6 @@ namespace Raven.Server.Commercial
         public string Email { get; set; }
         public string Domain { get; set; }
         public bool ModifyLocalServer { get; set; }
-        public bool IsWildcard { get; set; }
         public string Certificate { get; set; }
         public string Password { get; set; }
 
