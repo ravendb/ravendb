@@ -6,7 +6,6 @@ import endpoints = require("endpoints");
 import router = require("plugins/router");
 import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
-import validateSetupCommand = require("commands/setup/validateSetupCommand");
 
 class finish extends setupStep {
 
@@ -16,24 +15,11 @@ class finish extends setupStep {
     
     private websocket: serverNotificationCenterClient;
     
-    messages: KnockoutComputed<Array<string>>;
-    private configurationMessages = ko.observableArray<string>([]);
-    private validationMessages = ko.observableArray<string>([]);
+    messages = ko.observableArray<string>([]);
 
     canRestart = ko.observable<boolean>(false);
     
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
-    
-    constructor() {
-        super();
-        
-        this.messages = ko.pureComputed(() => {
-            const configMessages = this.configurationMessages();
-            const validationMessages = this.validationMessages();
-            
-            return _.concat(configMessages, validationMessages);
-        })
-    }
     
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
@@ -99,53 +85,31 @@ class finish extends setupStep {
     }
     
     private onChange(operation: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
-        if (operation.TaskType === "Setup" || operation.TaskType === "ValidateSetup") {
-            
+        if (operation.TaskType === "Setup") {
             let dto = null as Raven.Server.Commercial.SetupProgressAndResult;
             
             switch (operation.State.Status) {
                 case "Completed":
                     dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
-                    if (operation.TaskType === "Setup") {
-                        this.startValidation(dto);
-                    } else {
-                        // both setup and validation was completed - we can restart server and start using RavenDB 
-                        this.canRestart(true);
-                    }
+                    this.canRestart(true);
                     break;
                 case "InProgress":
                     dto = operation.State.Progress as Raven.Server.Commercial.SetupProgressAndResult;
                     break;
                 case "Faulted":
                     const failure = operation.State.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
-                    
-                    const messagesArray = operation.TaskType === "Setup" ? this.configurationMessages : this.validationMessages;
-                    messagesArray.push(failure.Message);
-                    messagesArray.push(failure.Error);
+                    this.messages.push(failure.Message);
+                    this.messages.push(failure.Error);
             }
             
             if (dto) {
                 switch (operation.TaskType) {
                     case "Setup":
-                        this.configurationMessages(dto.Messages);
-                        break;
-                    case "ValidateSetup":
-                        this.validationMessages(dto.Messages);
+                        this.messages(dto.Messages);
                         break;
                 }
             }
         }
-    }
-    
-    private startValidation(operationDto: Raven.Server.Commercial.SetupProgressAndResult) {
-        this.getNextOperationId()
-            .done((operationId: number) => {
-                this.websocket.watchOperation(operationId, e => this.onChange(e));
-                const dto = this.model.toSecuredDto();
-                dto.Certificate = operationDto.Certificate;
-                new validateSetupCommand(this.model.mode(), operationId, dto)
-                    .execute();
-            });
     }
     
     private finishConfiguration() {

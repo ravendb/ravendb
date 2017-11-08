@@ -45,7 +45,6 @@ namespace FastTests.Issues
             {
                 // empty for now
                 Operations.OperationType.Setup, // it is in secured setup
-                Operations.OperationType.ValidateSetup // secured setup 
             };
 
             var allKnownTypes = Enum.GetNames(typeof(Operations.OperationType)).ToHashSet();
