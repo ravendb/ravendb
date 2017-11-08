@@ -1,4 +1,4 @@
-<h2>Configuration completed!</h2>
+<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep"></strong>Finishing up</h2>
 
 <h4 class="margin-bottom">Thank you for choosing RavenDB</h4>
 
@@ -6,10 +6,12 @@
 <pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: $data"></span>
 <!-- /ko --></pre>
 
-<div class="text-center" data-bind="visible: canRestart">
-    <button type="button" class="btn btn-default" data-bind="click: back, disable: spinners.restart"><i class="icon-arrow-left"></i><span>Back</span></button>
-    
-    <button class="btn btn-primary" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart">
+<div class="navigation padding padding-lg flex-horizontal">
+    <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back, disable: spinners.restart">
+        <i class="icon-arrow-left"></i><span>Back</span>
+    </button>
+    <div class="flex-separator"></div>
+    <button class="btn btn-primary btn-lg" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart, visible: canRestart">
         <i class="icon-refresh"></i>
         <span>Restart server</span>
     </button>
