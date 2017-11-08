@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Queries
     {
         private readonly Dictionary<string, QueryFieldName> _aliasToName = new Dictionary<string, QueryFieldName>();
 
-        public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool isQuoted)> RootAliasPaths = new Dictionary<StringSegment, (string PropertyPath, bool Array, bool isQuoted)>();
+        public readonly Dictionary<StringSegment, (string PropertyPath, bool Array, bool Parameter)> RootAliasPaths = new Dictionary<StringSegment, (string, bool, bool)>();
 
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
         {
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Queries
                     sb.Append(", ");
                 sb.Append(alias.Key);
                 args[index++] = SelectField.Create(QueryFieldName.Empty, null, alias.Value.PropertyPath,
-                    alias.Value.Array, true, alias.Value.isQuoted);
+                    alias.Value.Array, true, alias.Value.Parameter);
             }
             if (index != 0)
                 sb.Append(", ");
@@ -317,16 +317,16 @@ namespace Raven.Server.Documents.Queries
 
                 var alias = load.Alias.Value;
 
-                var quoted = false;
+                var parameter = false;
                 string path;
                 if (load.Expression is FieldExpression fe)
                 {
                     path = fe.FieldValue;
-                    quoted = fe.IsQuoted;
                 }
                 else if (load.Expression is ValueExpression ve)
                 {
                     path = ve.Token;
+                    parameter = ve.Value == ValueTokenType.Parameter;
                 }
                 else
                 {
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Queries
                     alias = alias.Subsegment(0, alias.Length - 2);
                 }
                 path = ParseExpressionPath(load.Expression, path, parameters);
-                if (RootAliasPaths.TryAdd(alias, (path, array, quoted)) == false)
+                if (RootAliasPaths.TryAdd(alias, (path, array, parameter)) == false)
                 {
                     ThrowInvalidWith(load.Expression, "LOAD clause duplicate alias detected: ", parameters);
                 }
@@ -752,7 +752,7 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)
         {
-            (string Path, bool Array, bool quoted) sourceAlias;
+            (string Path, bool Array, bool parameter) sourceAlias;
             var name = new QueryFieldName(expressionField.FieldValue, expressionField.IsQuoted);
             bool hasSourceAlias = false;
             bool array = false;
