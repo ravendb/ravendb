@@ -74,8 +74,11 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                LogErrorAndThrow(onProgress, progress, $"Setup failed. Could not create configuration file(s).", e);
+                LogErrorAndThrow(onProgress, progress, "Setup failed. Could not create configuration file(s).", e);
             }
+
+            // return this to the studio so it can send it back on the validate stage
+            progress.Certificate = setupInfo.Certificate;
 
             progress.Processed++;
             progress.AddInfo("Successfully created new configuration settings.");
@@ -313,7 +316,6 @@ namespace Raven.Server.Commercial
 
                     } while (registrationResult.Status == "PENDING");
                     progress.AddInfo("Got successful response from api.ravendb.net.");
-                    progress.AddInfo("Waiting...");
                     onProgress(progress);
                 }
                 catch (Exception e)
@@ -381,10 +383,13 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException("Validation failed. Could not load the provided certificate.", e);
                 }
 
-                var localServerUrl = (setupMode == SetupMode.LetsEncrypt)
-                    ? $"https://{LocalNodeTag.ToLower()}.{setupInfo.Domain.ToLower()}dbs.local.ravendb.net:{localNode.Port}"
-                    : setupInfo.NodeSetupInfos[LocalNodeTag].ServerUrl;
+                if (setupMode == SetupMode.Secured)
+                    setupInfo.Domain = serverCert.GetNameInfo(X509NameType.DnsName, false);
 
+                var localServerUrl = (setupMode == SetupMode.LetsEncrypt)
+                    ? $"https://{LocalNodeTag.ToLower()}.{setupInfo.Domain.ToLower()}.dbs.local.ravendb.net:{localNode.Port}"
+                    : GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, localNode.Port, out var _);
+                
                 await AssertServerCanStartSecured(serverCert, localServerUrl, ips, token, setupInfo);
             }
             catch (Exception e)
@@ -482,6 +487,20 @@ namespace Raven.Server.Commercial
                 Syscall.FsyncDirectoryFor(settingsPath);
         }
 
+        private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, out string domain)
+        {
+            var cn = cert.GetNameInfo(X509NameType.DnsName, false);
+            if (cn[0] == '*')
+            {
+                var parts = cn.Split("*.");
+                domain = parts.Length > 1 ? parts[1] : parts[0];
+                return $"https://{nodeTag.ToLower()}.{domain}:{port}";
+            }
+
+            domain = cn;
+            return setupInfo.NodeSetupInfos[nodeTag].ServerUrl = $"https://{domain}:{port}";
+        }
+
         private static async Task<byte[]> CreateSettingsZipAndOptionallyWriteToLocalServer(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
             try
@@ -495,17 +514,23 @@ namespace Raven.Server.Commercial
 
                         progress.AddInfo("Loading and validating server certificate.");
                         onProgress(progress);
+                        X509Certificate2 serverCert;
                         byte[] serverCertBytes;
 
                         try
                         {
                             var base64 = setupInfo.Certificate;
                             serverCertBytes = Convert.FromBase64String(base64);
-                            var serverCert = string.IsNullOrEmpty(setupInfo.Password)
+                            serverCert = string.IsNullOrEmpty(setupInfo.Password)
                                 ? new X509Certificate2(serverCertBytes)
                                 : new X509Certificate2(serverCertBytes, setupInfo.Password);
 
-                            setupInfo.Domain = serverCert.GetNameInfo(X509NameType.DnsName, false);
+                            if (setupMode == SetupMode.Secured)
+                            {
+                                GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out var domain);
+                                setupInfo.Domain = domain;
+
+                            }
 
                             serverStore.EnsureNotPassive();
 
@@ -583,7 +608,7 @@ namespace Raven.Server.Commercial
 
                             if (setupMode == SetupMode.Secured)
                             {
-                                jsonObj["ServerUrl"] = node.Value.ServerUrl;
+                                jsonObj["ServerUrl"] = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port, out var _);
                                 jsonObj["Security.Certificate.Base64"] = setupInfo.Certificate;
                                 jsonObj["Security.Certificate.Password"] = setupInfo.Password;
                             }
