@@ -22,6 +22,7 @@ using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 using System.Diagnostics;
+using Raven.Client.Connection;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
@@ -37,6 +38,7 @@ namespace Raven.Database.FileSystem.Synchronization
         private readonly SynchronizationStrategy synchronizationStrategy;
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly SynchronizationTaskContext context;
+        private readonly HttpJsonRequestFactory _requestFactory = new HttpJsonRequestFactory(SynchronizationServerClient.DefaultNumberOfCachedRequests);
 
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
             new ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>>();
@@ -267,7 +269,7 @@ namespace Raven.Database.FileSystem.Synchronization
             if (string.IsNullOrEmpty(destination.AuthenticationScheme) == false)
                 conventions.AuthenticationScheme = destination.AuthenticationScheme;
 
-            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: conventions, apiKey: destination.ApiKey, credentials: credentials);
+            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: conventions, apiKey: destination.ApiKey, credentials: credentials, requestFactory: _requestFactory);
 
             RavenJObject destinationMetadata;
 
@@ -314,7 +316,7 @@ namespace Raven.Database.FileSystem.Synchronization
                     : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
             }
 
-            var destinationSyncClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey, credentials);
+            var destinationSyncClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey, credentials, requestFactory: _requestFactory);
 
             bool repeat;
 
@@ -853,6 +855,10 @@ namespace Raven.Database.FileSystem.Synchronization
                 {
                     Log.Warn("Synchronization task stopped with the following exception", aggregate.InnerException);
                 }
+            }
+            finally
+            {
+                _requestFactory.Dispose();
             }
 
             context.Dispose();
