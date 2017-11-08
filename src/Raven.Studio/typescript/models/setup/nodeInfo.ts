@@ -22,7 +22,6 @@ class nodeInfo {
 
     private initValidation() {
         this.port.extend({
-            required: true,
             number: true
         });
         
@@ -58,10 +57,15 @@ class nodeInfo {
     }
 
     toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
+        let serverUrl = "https://" + this.hostname();
+        if (this.port() && this.port() !== "443") {
+            serverUrl += ":" + this.port();
+        }
+        
         return {
             Ips: this.ips().map(x => x.ip()),
-            Port: parseInt(this.port(), 10),
-            ServerUrl: "https://" + this.hostname() + ":" + this.port()
+            Port: this.port() ? parseInt(this.port(), 10) : null,
+            ServerUrl: serverUrl
         };
     }
 }

@@ -544,7 +544,7 @@ namespace Raven.Server.Commercial
                             throw new InvalidOperationException("Could not load the certificate in the local server.", e);
                         }
 
-                        progress.AddInfo("Generaing the client certificate.");
+                        progress.AddInfo("Generating the client certificate.");
                         onProgress(progress);
                         X509Certificate2 clientCert;
 
