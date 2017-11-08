@@ -236,5 +236,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 return 0;
             return -1;
         }
+
+        public dynamic this[string key] => this;
+
+        public dynamic this[long key] => this;
+
+        public dynamic this[double key] => this;
     }
 }

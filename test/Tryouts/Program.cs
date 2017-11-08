@@ -35,9 +35,16 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Documents.CompactDatabaseTest())
-                    test.CanCompactDatabase().Wait();
-
+                using (var test = new RavenDB_9104())
+                    test.EmptyListAsync().Wait();
+                using (var test = new RavenDB_9104())
+                    test.ListContainingNullAsync().Wait();
+                using (var test = new RavenDB_9104())
+                    test.ListWithRatingAsync().Wait();
+                using (var test = new RavenDB_9104())
+                    test.ListWithRatingNullAsync().Wait();
+                using (var test = new RavenDB_9104())
+                    test.NullListAsync().Wait();
             }
         }
 
