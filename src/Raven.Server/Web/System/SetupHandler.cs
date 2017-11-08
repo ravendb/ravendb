@@ -154,6 +154,8 @@ namespace Raven.Server.Web.System
                 X509Extension sanNames;
                 X509Certificate2 certificate = null;
                 string cn;
+                IEnumerable<string> domains = new List<string>();
+
                 try
                 {
                     certificate = certDef.Password == null
@@ -162,6 +164,13 @@ namespace Raven.Server.Web.System
 
                     cn = certificate.GetNameInfo(X509NameType.DnsName, false);
                     sanNames = certificate.Extensions["2.5.29.17"]; // Alternative names
+                    
+                    if (cn[0] == '*')
+                    {
+                        var parts = cn.Split("*.");
+                        var domain = parts.Length > 1 ? parts[1] : parts[0];
+                        domains = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".Select(tag => $"{tag}.{domain}.");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -189,6 +198,13 @@ namespace Raven.Server.Web.System
                                 writer.WriteComma();
                             first = false;
                             writer.WriteString(value);
+                        }
+                        foreach (var domain in domains)
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+                            first = false;
+                            writer.WriteString(domain);
                         }
                         writer.WriteEndArray();
                     }

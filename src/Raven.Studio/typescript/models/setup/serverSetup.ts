@@ -68,8 +68,7 @@ class serverSetup {
             ModifyLocalServer: true,
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
-            Password: this.certificate().certificatePassword(),
-            IsWildcard: false //TODO: 
+            Password: this.certificate().certificatePassword()
         };
     }
 }
