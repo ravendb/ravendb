@@ -1,11 +1,17 @@
 .setup-shell {
+    height: auto;
+    min-height: 100%;
     overflow: auto;
     display: flex;
     flex-direction: column;
-    background: #22252b;
-    background: -moz-linear-gradient(to top, rgb(255, 13, 95) 0, rgba(202,28,89,1) 30px, rgb(161, 31, 76) 70px, rgba(34,37,43,1) 190px);
-    background: -webkit-linear-gradient(to top, rgb(255, 13, 95) 0, rgba(202,28,89,1) 30px, rgb(161, 31, 76) 70px, rgba(34,37,43,1) 190px);
-    background: linear-gradient(to top, rgb(255, 13, 95) 0, rgba(202,28,89,1) 30px, rgb(161, 31, 76) 70px, rgba(34,37,43,1) 190px);
+
+    #applicationHost {
+        background: #22252b;
+        background: -moz-linear-gradient(to top, rgb(255, 13, 95) 0, rgba(202,28,89,1) 30px, rgb(161, 31, 76) 70px, rgba(34,37,43,1) 190px);
+        background: -webkit-linear-gradient(to top, rgb(255, 13, 95) 0, rgba(202,28,89,1) 30px, rgb(161, 31, 76) 70px, rgba(34,37,43,1) 190px);
+        background: linear-gradient(to top, rgb(255, 13, 95) 0, rgba(202,28,89,1) 30px, rgb(161, 31, 76) 70px, rgba(34,37,43,1) 190px);
+        padding-bottom: 60px;
+    }
 
     #applicationHost, #page-host {
         display: flex;
@@ -27,8 +33,26 @@
         flex-direction: column;
     }
 
-    .btn-block {
-        min-height: 170px;
+    .btn-icon {
+        min-height: 210px;
+        display: block;
+        width: 100%;
+    }
+
+    .icon-xl {
+        margin-top: @grid-gutter-width/2;
+        padding-top: @grid-gutter-width;
+        padding-bottom: @grid-gutter-width/2;
+
+        &:before {
+            font-size: 80px
+        }
+    }
+
+    .icon-xl + .lead {
+        margin-bottom: @grid-gutter-width/2;
+        white-space: initial;
+        font-size: 18px;
     }
 
     .list {
@@ -45,13 +69,13 @@
             color: @brand-warning;
         }
     }
-    
+
     footer.status-footer {
-        position: absolute;
+        position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
-        
+
         .footer-item > div {
             padding: @grid-gutter-width/8 @grid-gutter-width/2;
         }
