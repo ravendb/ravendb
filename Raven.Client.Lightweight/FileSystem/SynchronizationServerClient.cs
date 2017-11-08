@@ -50,7 +50,7 @@ namespace Raven.Client.FileSystem
             get { return requestFactory; }
         }
 
-        private const int DefaultNumberOfCachedRequests = 2048; //put this in asyncserverclient
+        public const int DefaultNumberOfCachedRequests = 2048; //put this in asyncserverclient
 
         public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, FilesConvention convention = null, 
             OperationCredentials operationCredentials = null, HttpJsonRequestFactory requestFactory = null, NameValueCollection operationsHeaders = null)
