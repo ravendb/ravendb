@@ -370,7 +370,12 @@ namespace Raven.Server.Documents.Queries.Results
             _loadedDocuments[document.Id ?? string.Empty] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
-                if (fieldToFetch.QueryField.IsParameter)                  
+                if (fieldToFetch.QueryField.IsQuoted)
+                {
+                    _loadedDocumentIds.Add(fieldToFetch.QueryField.SourceAlias);
+                }
+
+                else if (fieldToFetch.QueryField.IsParameter)                  
                 {
                     if (_query.QueryParameters == null)
                         throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", _query.Query, (BlittableJsonReaderObject)null);

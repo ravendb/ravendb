@@ -2190,6 +2190,13 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     Assert.Equal("Jerry", queryResult[0].Name);
                     Assert.Equal(15, queryResult[0].Detail.Number);
 
+                    var rawQuery = session.Advanced.RawQuery<RawQueryResult>("from Users as u where u.LastName = \"Garcia\" " +
+                                                                             "load \"details/1\" as detail " +
+                                                                             "select { Name : u.Name, Detail : detail}").ToList();
+                                    
+                    Assert.Equal(1, rawQuery.Count);
+                    Assert.Equal("Jerry", rawQuery[0].Name);
+                    Assert.Equal(15, rawQuery[0].Detail.Number);
                 }
             }
         }
@@ -2859,6 +2866,11 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
         private class QueryResult
         {
             public string FullName { get; set; }
+        }
+        private class RawQueryResult
+        {
+            public string Name { get; set; }
+            public Detail Detail { get; set; }
         }
         private class IndexQueryResult
         {

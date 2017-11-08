@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsParameter;
 
+        public bool IsQuoted;
+
         public AggregationOperation AggregationOperation;
 
         public bool IsGroupByKey;
@@ -51,7 +53,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField Create(QueryFieldName name, string alias, string sourceAlias, bool array, bool hasSourceAlias, bool isParameter = false)
+        public static SelectField Create(QueryFieldName name, string alias, string sourceAlias, bool array, bool hasSourceAlias, bool isParameter = false, bool isQuoted = false)
         {
             return new SelectField
             {
@@ -60,7 +62,8 @@ namespace Raven.Server.Documents.Queries
                 SourceAlias = sourceAlias,
                 SourceIsArray = array,
                 HasSourceAlias = hasSourceAlias,
-                IsParameter = isParameter
+                IsParameter = isParameter,
+                IsQuoted = isQuoted
             };
         }
 
