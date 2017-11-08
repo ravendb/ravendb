@@ -42,7 +42,7 @@ class trafficWatch extends viewModelBase {
     activate(args: any) {
         super.activate(args);
         
-        if (args.filter) {
+        if (args && args.filter) {
             this.filter(args.filter);
         }
         this.updateHelpLink('EVEP6I');
