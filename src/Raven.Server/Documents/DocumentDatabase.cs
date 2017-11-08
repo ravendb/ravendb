@@ -824,12 +824,15 @@ namespace Raven.Server.Documents
             long sizeOnDiskInBytes = 0;
             foreach (var environment in storageEnvironments)
             {
+                if(environment == null)
+                    continue;
+
                 Transaction tx = null;
                 try
                 {
                     try
                     {
-                        tx = environment?.Environment.ReadTransaction();
+                        tx = environment.Environment.ReadTransaction();
                     }
                     catch (OperationCanceledException)
                     {
@@ -856,12 +859,15 @@ namespace Raven.Server.Documents
             var drives = DriveInfo.GetDrives();
             foreach (var environment in storageEnvironments)
             {
+                if (environment == null)
+                    continue;
+
                 Transaction tx = null;
                 try
                 {
                     try
                     {
-                        tx = environment?.Environment.ReadTransaction();
+                        tx = environment.Environment.ReadTransaction();
                     }
                     catch (OperationCanceledException)
                     {
