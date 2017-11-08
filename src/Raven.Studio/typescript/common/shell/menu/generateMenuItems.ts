@@ -27,8 +27,8 @@ function generateNoActiveDatabaseMenuItems() {
     const appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),
-        rootItems.dashboard(),
         getDatabasesMenuItem(appUrls),
+        rootItems.dashboard(),       
         getManageServerMenuItem(),
         rootItems.about()
     ];
@@ -43,11 +43,12 @@ function generateActiveDatabaseMenuItems() {
         getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
         
-        new separatorMenuItem('Server'),
-        rootItems.dashboard(),
+        new separatorMenuItem('Server'),        
         getDatabasesMenuItem(appUrls),
-        getManageServerMenuItem(),
-        rootItems.about()
+        rootItems.dashboard(),
+        getManageServerMenuItem(),       
+        rootItems.about(),
+        
     ];
 }
 

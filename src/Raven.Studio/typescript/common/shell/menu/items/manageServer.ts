@@ -35,6 +35,15 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forAddClusterNode,
             enabled: canReadOrWrite,
             itemRouteToHighlight: 'admin/settings/cluster'
+        }),           
+        new leafMenuItem({
+            route: 'admin/settings/clientConfiguration',
+            moduleId: 'viewmodels/manage/clientConfiguration',
+            title: 'Client Configuration',
+            nav: true,
+            css: 'icon-client-configuration',
+            dynamicHash: appUrl.forGlobalClientConfiguration,
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'admin/settings/debugInfo',
@@ -48,19 +57,10 @@ function getManageServerMenuItem() {
         new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
-            title: "Administrator JS Console",
+            title: "Admin JS Console",
             nav: true,
             css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/clientConfiguration',
-            moduleId: 'viewmodels/manage/clientConfiguration',
-            title: 'Client Configuration',
-            nav: true,
-            css: 'icon-client-configuration',
-            dynamicHash: appUrl.forGlobalClientConfiguration,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
@@ -86,7 +86,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/trafficWatch',
             title: 'Traffic Watch',
             nav: true,
-            css: 'icon-trafic-watch',
+            css: 'icon-traffic-watch',
             dynamicHash: appUrl.forTrafficWatch,
             enabled: accessHelper.isGlobalAdmin
         }),
@@ -151,6 +151,6 @@ function getManageServerMenuItem() {
         }),*/
     ];
 
-    return new intermediateMenuItem('Manage server', items, 'icon-manage-server');
+    return new intermediateMenuItem('Manage Server', items, 'icon-manage-server');
 }
 
