@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -66,14 +67,14 @@ namespace Raven.Client.Documents.Session
 
         private IEnumerator<StreamResult<T>> YieldResults<T>(IDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator)
         {
-            var projections = ((DocumentQuery<T>)query).FieldsToFetchToken?.Projections;
+            var fieldsToFetch = ((DocumentQuery<T>)query).FieldsToFetchToken;
 
             while (enumerator.MoveNext())
             {
                 var json = enumerator.Current;
                 query.InvokeAfterStreamExecuted(json);
 
-                yield return CreateStreamResult<T>(json, projections);
+                yield return CreateStreamResult<T>(json, fieldsToFetch);
             }
         }
 
@@ -96,7 +97,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, string[] projectionFields)
+        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, FieldsToFetchToken fieldsToFetch)
         {
             var metadata = json.GetMetadata();
             var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
@@ -106,7 +107,7 @@ namespace Raven.Client.Documents.Session
 
             //TODO - Investigate why ConvertToEntity fails if we don't call ReadObject before
             json = Context.ReadObject(json, id);
-            var entity = QueryOperation.Deserialize<T>(id, json, metadata, projectionFields, true, this);
+            var entity = QueryOperation.Deserialize<T>(id, json, metadata, fieldsToFetch, true, this);
 
             var streamResult = new StreamResult<T>
             {

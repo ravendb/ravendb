@@ -225,7 +225,7 @@ namespace Raven.Client.Documents.Session
             return new QueryOperation(TheSession,
                 IndexName,
                 indexQuery,
-                FieldsToFetchToken?.Projections,
+                FieldsToFetchToken,
                 TheWaitForNonStaleResults,
                 Timeout,
                 DisableEntitiesTracking);

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -22,16 +23,16 @@ namespace Raven.Client.Documents.Session
             private readonly AsyncDocumentSession _parent;
             private readonly IAsyncEnumerator<BlittableJsonReaderObject> _enumerator;
             private readonly IAsyncDocumentQuery<T> _query;
-            private readonly string[] _projectionFields;
+            private readonly FieldsToFetchToken _fieldsToFetch;
             private readonly CancellationToken _token;
 
-            public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, string[] projectionFields, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
+            public YieldStream(AsyncDocumentSession parent, IAsyncDocumentQuery<T> query, FieldsToFetchToken fieldsToFetch, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token)
             {
                 _parent = parent;
                 _enumerator = enumerator;
                 _token = token;
                 _query = query;
-                _projectionFields = projectionFields;
+                _fieldsToFetch = fieldsToFetch;
             }
 
             public StreamResult<T> Current { get; protected set; }
@@ -64,7 +65,7 @@ namespace Raven.Client.Documents.Session
                 metadata.TryGetId(out id);
 
                 json = _parent.Context.ReadObject(json, id);
-                var entity = QueryOperation.Deserialize<T>(id, json, metadata, _projectionFields, true, _parent);
+                var entity = QueryOperation.Deserialize<T>(id, json, metadata, _fieldsToFetch, true, _parent);
 
                 var streamResult = new StreamResult<T>
                 {
@@ -90,7 +91,7 @@ namespace Raven.Client.Documents.Session
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken))
         {
             var documentQuery = (AsyncDocumentQuery<T>)query;
-            var projectionFields = documentQuery.FieldsToFetchToken?.Projections;
+            var fieldsToFetch = documentQuery.FieldsToFetchToken;
             var indexQuery = query.GetIndexQuery();
 
             var streamOperation = new StreamOperation(this);
@@ -100,7 +101,7 @@ namespace Raven.Client.Documents.Session
 
             var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
             queryOperation.DisableEntitiesTracking = true;
-            return new YieldStream<T>(this, query, projectionFields, result, token);
+            return new YieldStream<T>(this, query, fieldsToFetch, result, token);
         }
 
         public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IQueryable<T> query, CancellationToken token = default(CancellationToken))

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Sparrow.Json;
@@ -22,14 +23,14 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly bool _indexEntriesOnly;
         private readonly TimeSpan? _timeout;
         private QueryResult _currentQueryResults;
-        private readonly string[] _projectionFields;
+        private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.NewClient.Client");
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
         public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
-                              string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
+                              FieldsToFetchToken fieldsToFetch, bool waitForNonStaleResults, TimeSpan? timeout,
                               bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             _session = session;
@@ -37,7 +38,7 @@ namespace Raven.Client.Documents.Session.Operations
             _indexQuery = indexQuery;
             _waitForNonStaleResults = waitForNonStaleResults;
             _timeout = timeout;
-            _projectionFields = projectionFields;
+            _fieldsToFetch = fieldsToFetch;
             DisableEntitiesTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
@@ -104,7 +105,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                 metadata.TryGetId(out var id);
 
-                list.Add(Deserialize<T>(id, document, metadata, _projectionFields, DisableEntitiesTracking, _session));
+                list.Add(Deserialize<T>(id, document, metadata, _fieldsToFetch, DisableEntitiesTracking, _session));
             }
 
             if (DisableEntitiesTracking == false)
@@ -113,30 +114,32 @@ namespace Raven.Client.Documents.Session.Operations
             return list;
         }
 
-        internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, string[] projectionFields, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
+        internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, FieldsToFetchToken fieldsToFetch, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
         {
             if (metadata.TryGetProjection(out var projection) == false || projection == false)
                 return session.TrackEntity<T>(id, document, metadata, disableEntitiesTracking);
 
-            if (projectionFields != null && projectionFields.Length == 1) // we only select a single field
+            if (fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
             {
                 var type = typeof(T);
                 var typeInfo = type.GetTypeInfo();
                 if (type == typeof(string) || typeInfo.IsValueType || typeInfo.IsEnum)
                 {
-                    var projectionField = projectionFields[0];
+                    var projectionField = fieldsToFetch.Projections[0];
                     T value;
                     return document.TryGet(projectionField, out value) == false
                         ? default(T)
                         : value;
                 }
 
-                if (document.TryGetMember(projectionFields[0], out object inner) == false)
+                if (document.TryGetMember(fieldsToFetch.Projections[0], out object inner) == false)
                     return default(T);
 
-                var innerJson = inner as BlittableJsonReaderObject;
-                if (innerJson != null)
-                    document = innerJson;
+                if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
+                {
+                    if (inner is BlittableJsonReaderObject innerJson) //extraction from original type 
+                        document = innerJson;
+                }
             }
 
             var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
