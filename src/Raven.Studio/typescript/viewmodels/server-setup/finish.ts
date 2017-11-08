@@ -130,10 +130,11 @@ class finish extends setupStep {
     }
     
     private startValidation(operationDto: Raven.Server.Commercial.SetupProgressAndResult) {
-        //TODO: what should we pass to validate endpoint?
         this.getNextOperationId()
             .done((operationId: number) => {
-                new validateSetupCommand(this.model.mode(), operationId, this.model.toSecuredDto())
+                const dto = this.model.toSecuredDto();
+                dto.Certificate = operationDto.Certificate;
+                new validateSetupCommand(this.model.mode(), operationId, dto)
                     .execute()
                     .done(() => {
                         this.websocket.watchOperation(operationId, e => this.onChange(e));
