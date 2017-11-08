@@ -110,11 +110,11 @@ namespace Raven.Server.Commercial
                         account.Data.Agreement = account.GetTermsOfServiceUri();
                         await acmeClient.UpdateRegistration(account);
 
-                        var tags = setupInfo.IsWildcard 
+                        /*var tags = setupInfo.IsWildcard 
                             ? "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 
-                            : setupInfo.NodeSetupInfos.Select(node => node.Key[0]);
+                            : setupInfo.NodeSetupInfos.Select(node => node.Key[0]);*/
                       
-                        foreach (var tag in tags)
+                        foreach (var tag in setupInfo.NodeSetupInfos.Select(node => node.Key[0]))
                         {
                             var host = $"{tag.ToString().ToLower()}.{setupInfo.Domain.ToLower()}";
                             var fullHost = host + ".dbs.local.ravendb.net";
@@ -170,12 +170,12 @@ namespace Raven.Server.Commercial
                         var lowerDomain = setupInfo.Domain.ToLower();
                         csr.AddName($"CN=a.{lowerDomain}.dbs.local.ravendb.net");
 
-                        if (setupInfo.IsWildcard)
+                        /*if (setupInfo.IsWildcard)
                             foreach (var lowerTag in "abcdefghijklmnopqrstuvwxyz")
                             {
                                 csr.SubjectAlternativeNames.Add($"{lowerTag}.{lowerDomain}.dbs.local.ravendb.net");
                             }
-                        else
+                        else*/
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {
                                 csr.SubjectAlternativeNames.Add($"{node.Key.ToLower()}.{lowerDomain}.dbs.local.ravendb.net");
@@ -193,6 +193,8 @@ namespace Raven.Server.Commercial
                         var pfxBuilder = cert.ToPfx();
                         var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
                         setupInfo.Certificate = Convert.ToBase64String(certBytes);
+                        // return this to the studio so it can send it back on the validate stage
+                        progress.Certificate = setupInfo.Certificate; 
                     }
                     catch (Exception e)
                     {
@@ -502,6 +504,8 @@ namespace Raven.Server.Commercial
                             var serverCert = string.IsNullOrEmpty(setupInfo.Password)
                                 ? new X509Certificate2(serverCertBytes)
                                 : new X509Certificate2(serverCertBytes, setupInfo.Password);
+
+                            setupInfo.Domain = serverCert.GetNameInfo(X509NameType.DnsName, false);
 
                             serverStore.EnsureNotPassive();
 
