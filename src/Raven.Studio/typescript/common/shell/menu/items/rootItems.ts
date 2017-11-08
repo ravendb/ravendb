@@ -17,8 +17,8 @@ function serverDashboard() {
     return new leafMenuItem({
         route: ["", "dashboard"],
         moduleId: 'viewmodels/resources/serverDashboard',
-        title: 'Server dashboard',
-        tooltip: "Server dashboard",
+        title: 'Server Dashboard',
+        tooltip: "Server Dashboard",
         nav: true,
         css: 'icon-dashboard',
         dynamicHash: appUrl.forServerDashboard

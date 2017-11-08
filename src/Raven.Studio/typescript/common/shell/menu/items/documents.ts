@@ -17,7 +17,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         }),
 
         new leafMenuItem({
-            title: "Revisions bin",
+            title: "Revisions Bin",
             nav: false,
             route: "databases/documents/revisions/bin",
             moduleId: "viewmodels/database/documents/revisionsBin",

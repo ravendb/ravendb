@@ -14,7 +14,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.query('')
         }),
         new leafMenuItem({
-            title: "List of indexes",
+            title: "List of Indexes",
             nav: true,
             route: "databases/indexes",
             moduleId: "viewmodels/database/indexes/indexes",
@@ -25,7 +25,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/indexes/performance',
             moduleId: 'viewmodels/database/indexes/indexPerformance',
-            title: 'Indexing performance',
+            title: 'Indexing Performance',
             tooltip: "Shows details about indexing peformance",
             nav: true,
             css: 'icon-index-batch-size',
@@ -34,7 +34,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/indexes/visualizer',
             moduleId: 'viewmodels/database/indexes/visualizer/visualizer',
-            title: 'Map/Reduce Visualizer',
+            title: 'Map-Reduce Visualizer',
             nav: true,
             css: 'icon-map-reduce-visualizer',
             dynamicHash: appUrls.visualizer
