@@ -3,12 +3,17 @@ import finishSetupCommand = require("commands/setup/finishSetupCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
+import router = require("plugins/router");
 import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import validateSetupCommand = require("commands/setup/validateSetupCommand");
 
 class finish extends setupStep {
 
+    spinners = {
+        restart: ko.observable<boolean>(false)
+    };
+    
     private websocket: serverNotificationCenterClient;
     
     messages: KnockoutComputed<Array<string>>;
@@ -151,7 +156,18 @@ class finish extends setupStep {
             });
     }
 
+    back() {
+        switch (this.model.mode()) {
+            case "Unsecured":
+                router.navigate("#unsecured");
+                break;
+            default:
+                router.navigate("#nodes");
+        }
+    }
+
     restart() {
+        this.spinners.restart(true);
         this.finishConfiguration();
     }
     

@@ -7,6 +7,11 @@
 <!-- /ko --></pre>
 
 <div class="text-center" data-bind="visible: canRestart">
-    <button class="btn btn-primary" data-bind="click: restart">Restart server</button>
+    <button type="button" class="btn btn-default" data-bind="click: back, disable: spinners.restart"><i class="icon-arrow-left"></i><span>Back</span></button>
+    
+    <button class="btn btn-primary" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart">
+        <i class="icon-refresh"></i>
+        <span>Restart server</span>
+    </button>
 </div>
       

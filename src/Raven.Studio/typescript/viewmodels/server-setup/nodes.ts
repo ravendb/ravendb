@@ -21,7 +21,7 @@ class nodes extends setupStep {
         this.bindToCurrentInstance("removeNode", "editNode");
         
         this.defineServerUrl = ko.pureComputed(() => {
-            return !this.model.certificate().wildcardCertificate();
+            return this.model.mode() === "Secured" && !this.model.certificate().wildcardCertificate();
         });
     }
 
