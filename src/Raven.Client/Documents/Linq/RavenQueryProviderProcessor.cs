@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Linq
         private List<LoadToken> _loadTokens;
         private readonly Dictionary<string, string> _aliasesToIdPropery;
         private int _insideLet = 0;
-        private readonly HashSet<string> _aliasKeywords = new HashSet<string>
+        private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "AS",
             "SELECT",
@@ -1995,7 +1995,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddFromAlias(string alias)
         {
-            if (_aliasKeywords.Contains(alias, StringComparer.OrdinalIgnoreCase))
+            if (_aliasKeywords.Contains(alias))
             {
                 alias = "'" + alias + "'";
             }
