@@ -874,6 +874,10 @@ namespace Raven.Server.Documents.Queries
                         throw new InvalidQueryException($"Unsupported method '{method.Name}' in GROUP BY", QueryText, parameters);
                 }
             }
+            else if (expression is ValueExpression val)
+            {
+                name = new QueryFieldName(val.GetText(), false);
+            }
             else
                 throw new InvalidQueryException($"Unsupported expression type '{expression.Type}' in GROUP BY", QueryText, parameters);
 
