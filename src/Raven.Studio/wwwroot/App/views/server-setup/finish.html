@@ -3,7 +3,7 @@
 <h4 class="margin-bottom">Thank you for choosing RavenDB</h4>
 
 
-<pre><!-- ko foreach: messages --><span data-bind="text: $data"></span>
+<pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: $data"></span>
 <!-- /ko --></pre>
 
 <div class="text-center" data-bind="visible: canRestart">
