@@ -180,6 +180,9 @@ namespace Raven.Server.ServerWide.Maintenance
             _tcp.Dispose();
             try
             {
+                if (_collectingTask == null)
+                    return;
+
                 if (_collectingTask.Wait(TimeSpan.FromSeconds(30)) == false)
                 {
                     _collectingTask.IgnoreUnobservedExceptions();
