@@ -8,6 +8,8 @@ class nodes extends setupStep {
 
     editedNode = ko.observable<nodeInfo>();
     
+    defineServerUrl: KnockoutComputed<boolean>;
+    
     provideCertificates = ko.pureComputed(() => {
         const mode = this.model.mode();
         return mode && mode === "Secured";
@@ -17,6 +19,10 @@ class nodes extends setupStep {
         super();
         
         this.bindToCurrentInstance("removeNode", "editNode");
+        
+        this.defineServerUrl = ko.pureComputed(() => {
+            return !this.model.certificate().wildcardCertificate();
+        });
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -76,7 +82,7 @@ class nodes extends setupStep {
     }
   
     addNode() {
-        const node = new nodeInfo();
+        const node = new nodeInfo(this.model.certificate().wildcardCertificate);
         this.model.nodes.push(node);
         this.editedNode(node);
         this.updateNodeTags();

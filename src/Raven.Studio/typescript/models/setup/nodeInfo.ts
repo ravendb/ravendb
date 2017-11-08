@@ -7,11 +7,14 @@ class nodeInfo {
     nodeTag = ko.observable<string>();
     ips = ko.observableArray<ipEntry>([]);
     port = ko.observable<string>();
-    serverUrl = ko.observable<string>(); //TODO: validation, binding etc
+    hostname = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
     
-    constructor() {
+    private hostnameIsRequired: () => boolean;
+    
+    constructor(hostnameIsRequired: () => boolean) {
+        this.hostnameIsRequired = hostnameIsRequired;
         this.initValidation();
         
         this.ips.push(new ipEntry());
@@ -21,6 +24,12 @@ class nodeInfo {
         this.port.extend({
             required: true,
             number: true
+        });
+        
+        this.hostname.extend({
+            requried: {
+                onlyIf: () => this.hostnameIsRequired()
+            }
         });
         
         this.ips.extend({
@@ -35,7 +44,8 @@ class nodeInfo {
         this.validationGroup = ko.validatedObservable({
             nodeTag: this.nodeTag,
             port: this.port, 
-            ips: this.ips
+            ips: this.ips,
+            serverUrl: this.hostname
         });
     }
 
@@ -51,7 +61,7 @@ class nodeInfo {
         return {
             Ips: this.ips().map(x => x.ip()),
             Port: parseInt(this.port(), 10),
-            ServerUrl: this.serverUrl()
+            ServerUrl: "https://" + this.hostname() + ":" + this.port()
         };
     }
 }
