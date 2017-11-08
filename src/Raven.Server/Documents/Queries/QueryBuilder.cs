@@ -794,7 +794,7 @@ namespace Raven.Server.Documents.Queries
                     yield return (value.Token.Value, ValueTokenType.String);
                     yield break;
                 case ValueTokenType.Long:
-                    var valueAsLong = long.Parse(value.Token.Value);
+                    var valueAsLong = ParseInt64WithSeparators(value.Token.Value);
                     yield return (valueAsLong, ValueTokenType.Long);
                     yield break;
                 case ValueTokenType.Double:
@@ -813,6 +813,28 @@ namespace Raven.Server.Documents.Queries
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value.Type), value.Type, null);
             }
+        }
+
+        public static long ParseInt64WithSeparators(string token)
+        {
+            long l = 0;
+            // this is known to be 0-9 with possibly _
+
+            for (var index = 0; index < token.Length; index++)
+            {
+                var ch = token[index];
+                if (ch == '_')
+                    continue;
+                if (ch < '0' || ch > '9')
+                    ThrowInvalidInt64(token);
+                l = (l*10) + (ch - '0');
+            }
+            return l;
+        }
+
+        private static void ThrowInvalidInt64(string token)
+        {
+            throw new ArgumentException("Expected valid number, but got: " + token, nameof(token));
         }
 
         public static (object Value, ValueTokenType Type) GetValue(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, QueryExpression expression, bool allowObjectsInParameters = false)
@@ -844,7 +866,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.String:
                     return (value.Token, ValueTokenType.String);
                 case ValueTokenType.Long:
-                    var valueAsLong = long.Parse(value.Token);
+                    var valueAsLong = QueryBuilder.ParseInt64WithSeparators(value.Token);
                     return (valueAsLong, ValueTokenType.Long);
                 case ValueTokenType.Double:
                     var valueAsDouble = double.Parse(value.Token, CultureInfo.InvariantCulture);
@@ -903,8 +925,7 @@ namespace Raven.Server.Documents.Queries
                     if (lsv != null)
                         return lsv.ToString();
 
-                    var lcsv = parameterValue as LazyCompressedStringValue;
-                    if (lcsv != null)
+                    if (parameterValue is LazyCompressedStringValue lcsv)
                         return lcsv.ToString();
 
                     return parameterValue.ToString();

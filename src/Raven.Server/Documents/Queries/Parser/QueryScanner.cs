@@ -70,6 +70,13 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (c >= '0' && c <= '9')
                     continue;
 
+                if (c == '_')
+                {
+                    if (result == NumberToken.Double)
+                        return null; // we allow 10_000 only for long numbers, not doubles
+                    continue;
+                }
+                
                 if (c != '.')
                     break;
 

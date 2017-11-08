@@ -156,6 +156,8 @@ namespace Raven.Server.Documents.Queries.AST
                     _writer.WriteEndObject();
                     break;
                 case ValueTokenType.Long:
+                    _writer.WriteValue(QueryBuilder.ParseInt64WithSeparators(expr.Token.Value));
+                    break;
                 case ValueTokenType.Double:
                     _writer.WriteRawValue(expr.Token.Value);
                     break;

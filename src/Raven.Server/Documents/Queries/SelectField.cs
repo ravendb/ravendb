@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Queries
             switch (type)
             {
                 case AST.ValueTokenType.Long:
-                    finalVal = long.Parse(val, CultureInfo.InvariantCulture);
+                    finalVal = QueryBuilder.ParseInt64WithSeparators(val);
                     break;
                 case AST.ValueTokenType.Double:
                     finalVal = double.Parse(val, CultureInfo.InvariantCulture);
