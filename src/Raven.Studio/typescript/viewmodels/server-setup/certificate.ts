@@ -68,10 +68,12 @@ class certificate extends setupStep {
 
     private fetchCNs() {
         const cert = this.model.certificate();
+        cert.certificateCNs([]);
+        
         new listHostsForCertificateCommand(cert.certificate(), cert.certificatePassword())
             .execute()
             .done((hosts: Array<string>) => {
-                cert.certificateCNs(hosts);
+                cert.certificateCNs(_.uniq(hosts));
             });
     }
 }
