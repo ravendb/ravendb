@@ -103,6 +103,8 @@ namespace Raven.Server.Commercial
 
             try
             {
+                // TODO: Check if we have matching cert cached in memory
+                // If so, we can proceed without talking to LE.
                 using (var acmeClient = new AcmeClient(LetsEncryptServer))
                 {
                     var dictionary = new Dictionary<string, Task<Challenge>>();
@@ -147,7 +149,13 @@ namespace Raven.Server.Commercial
 
                     try
                     {
+                        //TODO: Check if we already set the DNS records and we have a cached LE cert
+                        // Note that the user may chose to change the internal IP / port, but that is fine
+                        // As long as the cert is there, the hostnames match and the DNS records we update
+                        // are the same
                         await UpdateDnsRecordsTask(onProgress, progress, token, map, setupInfo);
+
+                        // Cache the current DNS topology so we can check it again
                     }
                     catch (Exception e)
                     {
@@ -196,6 +204,9 @@ namespace Raven.Server.Commercial
                         var pfxBuilder = cert.ToPfx();
                         var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
                         setupInfo.Certificate = Convert.ToBase64String(certBytes);
+
+                        //TODO: Cache this (in memory)
+
                         // return this to the studio so it can send it back on the validate stage
                         progress.Certificate = setupInfo.Certificate; 
                     }
@@ -691,70 +702,83 @@ namespace Raven.Server.Commercial
             configuration.Initialize();
             var guid = Guid.NewGuid().ToString();
 
+            IWebHost webHost = null;
             try
             {
-                var responder = new UniqueResponseResponder(guid);
 
-                var webHost = new WebHostBuilder()
-                    .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options =>
-                    {
-                        var port = setupInfo.NodeSetupInfos[LocalNodeTag].Port;
-                        if (addresses.Length == 0)
-                        {
-                            var defaultIp = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port == 0 ? 443 : port);
-                            options.Listen(defaultIp, listenOptions => listenOptions.UseHttps(serverCertificate));
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"List of ip addresses for node '{LocalNodeTag}' is empty. Webhost listening to {defaultIp}");
-                        }
-
-                        foreach (var addr in addresses)
-                        {
-                            options.Listen(addr, listenOptions => listenOptions.UseHttps(serverCertificate));
-                        }
-                    })
-                    .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
-                    .ConfigureServices(collection =>
-                    {
-                        collection.AddSingleton(typeof(IStartup), responder);
-                    })
-                    .UseShutdownTimeout(TimeSpan.FromMilliseconds(150))
-                    .Build();
-
-                webHost.Start();
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}' configuration.{Environment.NewLine}" +
-                                                    $"Settings file:{SettingsPath}.{Environment.NewLine} " +
-                                                    $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
-            }
-
-            using (var client = new HttpClient
-            {
-                BaseAddress = new Uri(serverUrl)
-            })
-            {
-                HttpResponseMessage response = null;
-                string result = null;
                 try
                 {
-                    var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(2).Token);
-                    response = await client.GetAsync("/are-you-there?", cts.Token);
-                    response.EnsureSuccessStatusCode();
-                    result = await response.Content.ReadAsStringAsync();
-                    if (result != guid)
-                    {
-                        throw new InvalidOperationException($"Expected result guid:{guid} but got {result}.");
-                    }
+                    var responder = new UniqueResponseResponder(guid);
+
+                    webHost = new WebHostBuilder()
+                        .CaptureStartupErrors(captureStartupErrors: true)
+                        .UseKestrel(options =>
+                        {
+                            var port = setupInfo.NodeSetupInfos[LocalNodeTag].Port;
+                            if (addresses.Length == 0)
+                            {
+                                var defaultIp = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port == 0 ? 443 : port);
+                                options.Listen(defaultIp, listenOptions => listenOptions.UseHttps(serverCertificate));
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"List of ip addresses for node '{LocalNodeTag}' is empty. Webhost listening to {defaultIp}");
+                            }
+
+                            foreach (var addr in addresses)
+                            {
+                                options.Listen(addr, listenOptions => listenOptions.UseHttps(serverCertificate));
+                            }
+                        })
+                        .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
+                        .ConfigureServices(collection =>
+                        {
+                            collection.AddSingleton(typeof(IStartup), responder);
+                        })
+                        .UseShutdownTimeout(TimeSpan.FromMilliseconds(150))
+                        .Build();
+
+                    webHost.Start();
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to start contact server {serverUrl}.{Environment.NewLine}" +
-                                                        $"Settings file:{SettingsPath}.{Environment.NewLine}" +
-                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
-                                                        $"Response: {response?.StatusCode}.{Environment.NewLine}{result}", e);
+                    throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}' configuration.{Environment.NewLine}" +
+                                                        $"Settings file:{SettingsPath}.{Environment.NewLine} " +
+                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
                 }
+
+                using (var client = new HttpClient
+                {
+                    BaseAddress = new Uri(serverUrl)
+                })
+                {
+                    HttpResponseMessage response = null;
+                    string result = null;
+                    try
+                    {
+                        using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+                        using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationTokenSource.Token))
+                        {
+                            response = await client.GetAsync("/are-you-there?", cts.Token);
+                            response.EnsureSuccessStatusCode();
+                            result = await response.Content.ReadAsStringAsync();
+                            if (result != guid)
+                            {
+                                throw new InvalidOperationException($"Expected result guid:{guid} but got {result}.");
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to contact server '{serverUrl}'.{Environment.NewLine}" +
+                                                            $"Settings file:{SettingsPath}.{Environment.NewLine}" +
+                                                            $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
+                                                            $"Response: {response?.StatusCode}.{Environment.NewLine}{result}", e);
+                    }
+                }
+            }
+            finally
+            {
+                if (webHost != null)
+                    await webHost.StopAsync(TimeSpan.Zero);
             }
         }
 
