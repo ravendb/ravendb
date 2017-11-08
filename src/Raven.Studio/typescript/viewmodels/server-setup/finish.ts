@@ -26,7 +26,7 @@ class finish extends setupStep {
             const configMessages = this.configurationMessages();
             const validationMessages = this.validationMessages();
             
-            return configMessages.concat(...validationMessages);
+            return _.concat(configMessages, validationMessages);
         })
     }
     
@@ -71,7 +71,10 @@ class finish extends setupStep {
     
     private saveUnsecuredConfiguration() {
         new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
-            .execute();
+            .execute()
+            .done(() => {
+                this.canRestart(true);
+            })
     }
 
     private saveSecuredConfiguration(url: string, dto: Raven.Server.Commercial.SetupInfo) {
@@ -132,13 +135,11 @@ class finish extends setupStep {
     private startValidation(operationDto: Raven.Server.Commercial.SetupProgressAndResult) {
         this.getNextOperationId()
             .done((operationId: number) => {
+                this.websocket.watchOperation(operationId, e => this.onChange(e));
                 const dto = this.model.toSecuredDto();
                 dto.Certificate = operationDto.Certificate;
                 new validateSetupCommand(this.model.mode(), operationId, dto)
-                    .execute()
-                    .done(() => {
-                        this.websocket.watchOperation(operationId, e => this.onChange(e));
-                    });
+                    .execute();
             });
     }
     

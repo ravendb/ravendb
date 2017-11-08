@@ -54,14 +54,16 @@ class domain extends setupStep {
         const chosenDomain = this.model.domain().domain();
         if (domains) {
             const existingDomainInfo = domains.Domains[chosenDomain];
-            const nodes = existingDomainInfo.map(info => {
-                const entry = new nodeInfo();
-                entry.nodeTag(info.SubDomain);
-                entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
-                return entry;
-            });
-            
-            this.model.nodes(nodes);
+            if (existingDomainInfo) {
+                const nodes = existingDomainInfo.map(info => {
+                    const entry = new nodeInfo();
+                    entry.nodeTag(info.SubDomain);
+                    entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
+                    return entry;
+                });
+
+                this.model.nodes(nodes);
+            }
         }
     }
     
