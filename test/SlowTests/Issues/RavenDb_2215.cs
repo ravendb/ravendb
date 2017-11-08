@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -165,27 +166,30 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var ex = Assert.Throws<InvalidOperationException>(() =>
+                    var ex = Assert.Throws<InvalidQueryException>(() =>
                         session.Query<SalesIndex.Result, SalesIndex>()
                             .Where(x => x.IsCancelled)
                             .AggregateBy(factory => factory.ByField(x => x.IsCancelled).SumOn(x => x.Nett))
                             .AndAggregateBy(factory => factory.ByField(x => x.IsCancelled).AverageOn(x => x.Val))
                             .Execute());
+
+                    Assert.Contains("Duplicate alias 'IsCancelled' detected", ex.Message);
                 }
+
                 using (var session = store.OpenSession())
                 {
-                    var ex = Assert.Throws<InvalidOperationException>(() =>
+                    var ex = Assert.Throws<InvalidQueryException>(() =>
                         session.Query<SalesIndex.Result, SalesIndex>()
                             .Where(x => x.IsCancelled)
                             .AggregateBy(factory => factory.ByField(x => x.IsCancelled).WithDisplayName("Name1").SumOn(x => x.Nett))
                             .AndAggregateBy(factory => factory.ByField(x => x.IsCancelled).WithDisplayName("Name1").AverageOn(x => x.Val))
                             .Execute());
+
+                    Assert.Contains("Duplicate alias 'Name1' detected", ex.Message);
                 }
-
-
             }
-
         }
+
         [Fact]
         public void CanQueryReturningMultipleValuesOnDifferentArguments()
         {

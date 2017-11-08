@@ -540,7 +540,7 @@ namespace Raven.Server.Documents.Queries
 
         private void ThrowInvalidDuplicateAliasInSelectClause(BlittableJsonReaderObject parameters, string finalAlias)
         {
-            throw new InvalidQueryException("Duplicate alias " + finalAlias + " detected", QueryText, parameters);
+            throw new InvalidQueryException($"Duplicate alias '{finalAlias}' detected", QueryText, parameters);
         }
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
