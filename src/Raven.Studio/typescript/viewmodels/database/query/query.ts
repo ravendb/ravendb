@@ -529,15 +529,15 @@ class query extends viewModelBase {
                 // When server resoponse is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
                 // If we ask browser to report the 304 state then 'reponse content' is empty 
                 // This is why we need to measure the execution time here ourselves..
-                const startTime = performance.now();                               
+                const startQueryTime = new Date().getTime();                             
                 
                 command.execute()
                     .always(() => {
                         this.isLoading(false);
                     })
                     .done((queryResults: pagedResultWithIncludes<document>) => {                                        
-                        const endTime = performance.now();                                              
-                        queryResults.additionalResultInfo.DurationInMs = generalUtils.formatMillis(Math.min(endTime-startTime, queryResults.additionalResultInfo.DurationInMs));
+                        const endQueryTime = new Date().getTime();
+                        queryResults.additionalResultInfo.DurationInMs = generalUtils.formatMillis(Math.min(endQueryTime-startQueryTime, queryResults.additionalResultInfo.DurationInMs));
                         
                         const emptyFieldsResult = queryForAllFields 
                             && queryResults.totalResultCount > 0 
