@@ -9,8 +9,12 @@ import serverNotificationCenterClient = require("common/serverNotificationCenter
 
 class finish extends setupStep {
 
+    configurationTask = $.Deferred<void>();
+    completedWithSuccess = ko.observable<boolean>();
+    
     spinners = {
-        restart: ko.observable<boolean>(false)
+        restart: ko.observable<boolean>(false),
+        finishing: ko.observable<boolean>(true)
     };
     
     currentStep: number;
@@ -18,9 +22,7 @@ class finish extends setupStep {
     private websocket: serverNotificationCenterClient;
     
     messages = ko.observableArray<string>([]);
-
     canRestart = ko.observable<boolean>(false);
-    
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
     
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -57,6 +59,7 @@ class finish extends setupStep {
         switch (this.model.mode()) {
             case "Unsecured":
                 this.saveUnsecuredConfiguration();
+                this.configurationTask.resolve();
                 break;
             case "LetsEncrypt":
                 this.saveSecuredConfiguration(endpoints.global.setup.setupLetsencrypt, this.model.toSecuredDto());
@@ -65,6 +68,18 @@ class finish extends setupStep {
                 this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
         }
+        
+        this.configurationTask
+            .done(() => {
+                this.canRestart(true);
+                this.completedWithSuccess(true);
+            })
+            .fail(() => {
+                this.completedWithSuccess(false);
+            })
+            .always(() => {
+                this.spinners.finishing(false);
+            });
     }
     
     private getNextOperationId(): JQueryPromise<number> {
@@ -78,8 +93,9 @@ class finish extends setupStep {
         new saveUnsecuredSetupCommand(this.model.unsecureSetup().toDto())
             .execute()
             .done(() => {
-                this.canRestart(true);
+                this.configurationTask.resolve();
             })
+            .fail(() => this.configurationTask.reject());
     }
 
     private saveSecuredConfiguration(url: string, dto: Raven.Server.Commercial.SetupInfo) {
@@ -105,7 +121,7 @@ class finish extends setupStep {
             switch (operation.State.Status) {
                 case "Completed":
                     dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
-                    this.canRestart(true);
+                    this.configurationTask.resolve();
                     break;
                 case "InProgress":
                     dto = operation.State.Progress as Raven.Server.Commercial.SetupProgressAndResult;
@@ -114,6 +130,7 @@ class finish extends setupStep {
                     const failure = operation.State.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
                     this.messages.push(failure.Message);
                     this.messages.push(failure.Error);
+                    this.configurationTask.reject();
             }
             
             if (dto) {
