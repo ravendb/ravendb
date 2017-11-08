@@ -139,8 +139,19 @@ namespace Sparrow.Json
                     var valueType = propertyType.GenericTypeArguments[1];
                     if (valueType == typeof(string))
                     {
-                        var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        var keyType = propertyType.GenericTypeArguments[0];
+                        if (keyType == typeof(string))
+                        {
+                            var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
+                            return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        }
+                        if (keyType.GetTypeInfo().IsEnum)
+                        {
+                            var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnumKeys), BindingFlags.NonPublic | BindingFlags.Static)
+                                .MakeGenericMethod(keyType);
+                            return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        }
+                        throw new NotSupportedException(propertyType.FullName + " is not supported by the deserializer, please add support to it");
                     }
                     if (valueType == typeof(Dictionary<string, string[]>))
                     {
@@ -356,7 +367,25 @@ namespace Sparrow.Json
             }
             return dic;
         }
+        private static Dictionary<TEnum, string> ToDictionaryOfEnumKeys<TEnum>(BlittableJsonReaderObject json, string name)
+        {
+            var dic = new Dictionary<TEnum, string>();
 
+            BlittableJsonReaderObject obj;
+            //should a "null" exist in json? -> not sure that "null" can exist there
+            if (json.TryGet(name, out obj) == false || obj == null)
+                return dic;
+
+            foreach (var propertyName in obj.GetPropertyNames())
+            {
+                object val;
+                if (obj.TryGet(propertyName, out val))
+                {
+                    dic[(TEnum)Enum.Parse(typeof(TEnum), propertyName, true)] = val?.ToString();
+                }
+            }
+            return dic;
+        }
         private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
         {
             var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
