@@ -361,9 +361,6 @@ namespace Raven.Server.Documents.Operations
         public enum OperationType
         {
             [Description("Setup")]
-            ValidateSetup,
-            
-            [Description("Setup")]
             Setup,
 
             [Description("Update by index")]
