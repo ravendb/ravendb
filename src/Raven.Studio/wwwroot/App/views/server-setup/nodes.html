@@ -1,10 +1,53 @@
-<div>
-    Please define nodes
-</div>
 
 <div>
     
     <form class="flex-form" data-bind="submit: save">
+        <div data-bind="if: provideCertificates">
+            <div>
+                Please provide certificate
+            </div>
+
+            <div class="panel padding padding-lg">
+                <div class="margin-bottom" data-bind="with: model">
+                    <div class="form-group" data-bind="validationElement: certificate">
+                        <label for="certificate" class="control-label">Certificate<i class="required"></i></label>
+                        <div class="flex-grow input-group file-input" data-bind="validationElement: certificate">
+                            <input type="file" tabindex="-1" name="importFile" id="certificate" accept=""  data-bind="event: { change: _.partial($root.fileSelected, $element) }">
+                            <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select .pfx file...'"></span>
+                            <span class="input-group-btn">
+                            <label for="certificate" class="btn btn-default">
+                                <i class="icon-document"></i>
+                                <span>Browse</span>
+                            </label>
+                        </span>
+                            <p class="help-block" data-bind="validationMessage: certificate"></p>
+                        </div>
+                    </div>
+
+                    <div class="form-group" data-bind="validationElement: certificatePassword">
+                        <label for="certificatePassword" class="control-label">Certificate passphrase</label>
+                        <div class="flex-grow">
+                            <input type="password" autocomplete="off" class="form-control" id="certificatePassword"
+                                   data-bind="textInput: certificatePassword">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="control-label">CN names:</label>
+                        <div class="flex-grow form-control-static">
+                            <ul data-bind="foreach: certificateCNs">
+                                <li data-bind="text: $data"></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            Please define nodes
+        </div>
+
         <div class="row">
             <div class="col-md-6">
                 <div data-bind="foreach: model.nodes">
@@ -74,39 +117,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <div class="form-group" data-bind="validationElement: certificate, visible: $root.provideCertificates">
-                        <label for="certificate" class="control-label">Certificate<i class="required"></i></label>
-                        <div class="flex-grow input-group file-input" data-bind="validationElement: certificate">
-                            <input type="file" tabindex="-1" name="importFile" id="certificate" accept=""  data-bind="event: { change: _.partial(fileSelected, $element) }">
-                            <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select .pfx file...'"></span>
-                            <span class="input-group-btn">
-                            <label for="certificate" class="btn btn-default">
-                                <i class="icon-document"></i>
-                                <span>Browse</span>
-                            </label>
-                        </span>
-                            <p class="help-block" data-bind="validationMessage: certificate"></p>
-                        </div>
-                    </div>
-
-                    <div class="form-group" data-bind="validationElement: certificatePassword, visible: $root.provideCertificates">
-                        <label for="certificatePassword" class="control-label">Certificate passphrase</label>
-                        <div class="flex-grow">
-                            <input type="password" autocomplete="off" class="form-control" id="certificatePassword"
-                                   data-bind="textInput: certificatePassword">
-                        </div>
-                    </div>
-
-                    <div class="form-group" data-bind="visible: $root.provideCertificates">
-                        <label class="control-label">CN names:</label>
-                        <div class="flex-grow form-control-static">
-                            <ul data-bind="foreach: certificateCNs">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>
