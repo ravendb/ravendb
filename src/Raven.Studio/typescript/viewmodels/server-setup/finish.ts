@@ -13,6 +13,8 @@ class finish extends setupStep {
         restart: ko.observable<boolean>(false)
     };
     
+    currentStep: number;
+    
     private websocket: serverNotificationCenterClient;
     
     messages = ko.observableArray<string>([]);
@@ -34,6 +36,18 @@ class finish extends setupStep {
     activate(args: any) {
         super.activate(args);
 
+        switch (this.model.mode()) {
+            case "Unsecured":
+                this.currentStep = 3;
+                break;
+            case "LetsEncrypt":
+                this.currentStep = 6;
+                break;
+            case "Secured":
+                this.currentStep = 4;
+                break;
+        }
+        
         this.websocket = new serverNotificationCenterClient();
     }
     
