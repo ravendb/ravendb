@@ -6,14 +6,13 @@ import serverSetup = require("models/setup/serverSetup");
 
 class nodes extends setupStep {
 
+    currentStep: number;
+    
     editedNode = ko.observable<nodeInfo>();
     
     defineServerUrl: KnockoutComputed<boolean>;
-    
-    provideCertificates = ko.pureComputed(() => {
-        const mode = this.model.mode();
-        return mode && mode === "Secured";
-    });
+    showDnsInfo: KnockoutComputed<boolean>;
+    provideCertificates: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -22,6 +21,13 @@ class nodes extends setupStep {
         
         this.defineServerUrl = ko.pureComputed(() => {
             return this.model.mode() === "Secured" && !this.model.certificate().wildcardCertificate();
+        });
+        
+        this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
+        
+        this.provideCertificates = ko.pureComputed(() => {
+            const mode = this.model.mode();
+            return mode && mode === "Secured";
         });
     }
 
@@ -33,6 +39,19 @@ class nodes extends setupStep {
         }
 
         return $.when({ redirect: "#welcome" });
+    }
+    
+    activate(args: any) {
+        super.activate(args);
+
+        switch (this.model.mode()) {
+            case "LetsEncrypt":
+                this.currentStep = 5;
+                break;
+            case "Secured":
+                this.currentStep = 3;
+                break;
+        }
     }
     
     compositionComplete() {

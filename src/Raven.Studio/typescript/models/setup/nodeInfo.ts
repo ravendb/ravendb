@@ -11,10 +11,10 @@ class nodeInfo {
     
     validationGroup: KnockoutValidationGroup;
     
-    private hostnameIsRequired: () => boolean;
+    private hostnameIsOptional: KnockoutObservable<boolean>;
     
-    constructor(hostnameIsRequired: () => boolean) {
-        this.hostnameIsRequired = hostnameIsRequired;
+    constructor(hostnameIsOptional: KnockoutObservable<boolean>) {
+        this.hostnameIsOptional = hostnameIsOptional;
         this.initValidation();
         
         this.ips.push(new ipEntry());
@@ -27,7 +27,7 @@ class nodeInfo {
         
         this.hostname.extend({
             requried: {
-                onlyIf: () => this.hostnameIsRequired()
+                onlyIf: () => !this.hostnameIsOptional()
             }
         });
         
@@ -55,17 +55,22 @@ class nodeInfo {
     removeIp(ipEntry: ipEntry) {
         this.ips.remove(ipEntry);
     }
-
-    toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
+    
+    getServerUrl() {
         let serverUrl = "https://" + this.hostname();
         if (this.port() && this.port() !== "443") {
             serverUrl += ":" + this.port();
         }
+        return serverUrl;
+    }
+
+    toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
+        
         
         return {
             Ips: this.ips().map(x => x.ip()),
             Port: this.port() ? parseInt(this.port(), 10) : null,
-            ServerUrl: serverUrl
+            ServerUrl: this.getServerUrl()
         };
     }
 }

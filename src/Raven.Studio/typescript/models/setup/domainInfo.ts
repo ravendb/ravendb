@@ -11,11 +11,14 @@ class domainInfo {
     
     availableDomains = ko.observableArray<string>([]);
     
+    fullDomain: KnockoutComputed<string>;
     validationGroup: KnockoutValidationGroup;
     
     constructor(licenseProvider: () => Raven.Server.Commercial.License) {
         this.initValidation();
         this.licenseProvider = licenseProvider;
+        
+        this.fullDomain = ko.pureComputed(() => this.domain() + ".dbs.local.ravendb.net");
     }
     
     private initValidation() {

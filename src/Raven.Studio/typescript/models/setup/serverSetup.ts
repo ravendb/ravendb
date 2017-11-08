@@ -54,6 +54,30 @@ class serverSetup {
         });
     }
 
+    getStudioUrl() {
+        switch (this.mode()) {
+            case "Unsecured":
+                return this.unsecureSetup().serverUrl();
+            case "LetsEncrypt":
+                return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
+            case "Secured":
+                const wildcard = this.certificate().wildcardCertificate();
+                if (wildcard) {
+                    const domain = this.certificate().certificateCNs()[0].replace("*", "a");
+                    return "https://" + domain + this.getPortPart();
+                } else {
+                    return this.nodes()[0].getServerUrl();
+                }
+            default:
+                return null;
+        }
+    }
+    
+    private getPortPart() {
+        const port = this.nodes()[0].port();
+        return port && port !== "443" ? ":" + port : "";
+    }
+
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
         this.nodes().forEach((node, idx) => {
