@@ -2158,13 +2158,14 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
 
         [Fact]
-        public void Query_With_Load_Where_Id_Is_Not_A_Path()
+        public void Can_Load_Static_Value()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2"}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia"}, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.Store(new Detail { Number = 15 }, "details/1");
                     session.SaveChanges();
                 }
@@ -2172,6 +2173,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
+                                where u.LastName == "Garcia"
                                 let detail = session.Load<Detail>("details/1")
                                 select new
                                 {
@@ -2179,8 +2181,8 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                                     Detail = detail
                                 };
 
-                    Assert.Equal("FROM Users as u LOAD \"details/1\" as detail " +
-                                 "SELECT { Name : u.Name, Detail : detail }", query.ToString());
+                    Assert.Equal("FROM Users as u WHERE u.LastName = $p0 " +
+                                 "LOAD $p1 as detail SELECT { Name : u.Name, Detail : detail }", query.ToString());
 
                     var queryResult = query.ToList();
 

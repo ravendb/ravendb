@@ -1938,7 +1938,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (loadSupport.HasLoad)
             {
-                var arg = ToJs(loadSupport.Arg);
+                string arg;
+                if (loadSupport.Arg is ConstantExpression constantExpression && constantExpression.Type == typeof(string))
+                {                    
+                    arg = _documentQuery.LoadParameter(constantExpression.Value);
+                }
+                else
+                {
+                    arg = ToJs(loadSupport.Arg);
+                }
+
                 var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
 
                 if (_loadTokens == null)

@@ -1627,5 +1627,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 whereToken?.AddAlias(fromAlias);
             }
         }
+
+        public string LoadParameter(object id)
+        {
+            return "$"+ AddQueryParameter(id);
+        }
     }
 }

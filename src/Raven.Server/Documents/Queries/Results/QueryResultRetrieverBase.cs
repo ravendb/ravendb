@@ -13,6 +13,7 @@ using Jint.Native.Object;
 using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
@@ -369,10 +370,17 @@ namespace Raven.Server.Documents.Queries.Results
             _loadedDocuments[document.Id ?? string.Empty] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
             {
-                if (fieldToFetch.QueryField.IsQuoted)
+                if (fieldToFetch.QueryField.IsParameter)                  
                 {
-                    _loadedDocumentIds.Add(fieldToFetch.QueryField.SourceAlias);
+                    if (_query.QueryParameters == null)
+                        throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", _query.Query, (BlittableJsonReaderObject)null);
+
+                    if (_query.QueryParameters.TryGetMember(fieldToFetch.QueryField.SourceAlias, out var id) == false)
+                        throw new InvalidQueryException($"Value of parameter '{fieldToFetch.QueryField.SourceAlias}' was not provided", _query.Query, _query.QueryParameters);
+
+                    _loadedDocumentIds.Add(id.ToString());
                 }
+
                 else
                 {
                     IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);

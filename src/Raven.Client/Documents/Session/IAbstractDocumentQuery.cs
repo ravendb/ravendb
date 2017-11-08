@@ -356,5 +356,7 @@ namespace Raven.Client.Documents.Session
         void AggregateUsing(string facetSetupDocumentKey);
 
         void AddFromAliasToWhereTokens(string fromAlias);
+
+        string LoadParameter(object id);
     }
 }
