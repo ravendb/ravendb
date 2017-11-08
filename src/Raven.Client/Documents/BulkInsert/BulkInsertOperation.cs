@@ -221,8 +221,8 @@ namespace Raven.Client.Documents.BulkInsert
             _streamExposerContent = new StreamExposerContent();
             
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
-            _customEntitySerializer = _requestExecutor.Conventions.SerializeEntityToJsonStream;
-            _customMetadataSerializer = _requestExecutor.Conventions.SerializeMetaDataToJsonStream;
+            _customEntitySerializer = _requestExecutor.Conventions.BulkInsertConvention.TrySerializeEntityToJsonStream;
+            _customMetadataSerializer = _requestExecutor.Conventions.BulkInsertConvention.TrySerializeMetadataToJsonStream;
             
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }

@@ -44,6 +44,41 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly List<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
 
+        public readonly BulkInsertConventions BulkInsertConvention;
+        
+        public class BulkInsertConventions
+        {
+            private readonly DocumentConventions _conventions;
+            private Func<object, StreamWriter, bool> _trySerializeEntityToJsonStream;
+            private Func<object, StreamWriter, bool> _trySerializeMetadataToJsonStream;
+            public Func<object, StreamWriter, bool> TrySerializeMetadataToJsonStream
+            {
+                get => _trySerializeMetadataToJsonStream;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+                    _trySerializeMetadataToJsonStream = value;
+                }
+            }
+            
+            public Func<object, StreamWriter, bool> TrySerializeEntityToJsonStream
+            {
+                get => _trySerializeEntityToJsonStream;
+                set
+                {
+                    _conventions.AssertNotFrozen();
+                    _trySerializeEntityToJsonStream = value;
+                }
+            }
+            
+            internal BulkInsertConventions(DocumentConventions conventions)
+            {
+                _conventions = conventions;
+                TrySerializeEntityToJsonStream = null;
+                TrySerializeMetadataToJsonStream = null;
+            }
+        }
+        
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
         /// </summary>
@@ -76,22 +111,13 @@ namespace Raven.Client.Documents.Conventions
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
-
-            SerializeEntityToJsonStream = null;
-            SerializeMetaDataToJsonStream = null;
+            
+            BulkInsertConvention = new BulkInsertConventions(this);
             
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
-        public Func<object, StreamWriter, bool> SerializeMetaDataToJsonStream
-        {
-            get => _serializeMetadataToJsonStream;
-            set
-            {
-                AssertNotFrozen();
-                _serializeMetadataToJsonStream = value;
-            }
-        }
+        
 
         private bool _frozen;
         private ClientConfiguration _originalConfiguration;
@@ -116,8 +142,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _throwIfQueryPageSizeIsNotSet;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
-        private Func<object, StreamWriter, bool> _serializeEntityToJsonStream;
-        private Func<object, StreamWriter, bool> _serializeMetadataToJsonStream;
+       
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
 
@@ -141,15 +166,7 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public Func<object, StreamWriter, bool> SerializeEntityToJsonStream
-        {
-            get => _serializeEntityToJsonStream;
-            set
-            {
-                AssertNotFrozen();
-                _serializeEntityToJsonStream = value;
-            }
-        }
+        
 
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" />
@@ -807,7 +824,7 @@ namespace Raven.Client.Documents.Conventions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AssertNotFrozen()
+        internal void AssertNotFrozen()
         {
             if (_frozen)
                 throw new InvalidOperationException($"Conventions has frozen after '{nameof(DocumentStore)}.{nameof(DocumentStore.Initialize)}()' and no changes can be applied to them.");
