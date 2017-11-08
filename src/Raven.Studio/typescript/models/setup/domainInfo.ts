@@ -14,6 +14,8 @@ class domainInfo {
     fullDomain: KnockoutComputed<string>;
     validationGroup: KnockoutValidationGroup;
     
+    reusingConfiguration = ko.observable<boolean>(false);
+    
     constructor(licenseProvider: () => Raven.Server.Commercial.License) {
         this.initValidation();
         this.licenseProvider = licenseProvider;

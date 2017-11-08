@@ -17,13 +17,29 @@ class finish extends setupStep {
         finishing: ko.observable<boolean>(true)
     };
     
+    expandSetupLog = ko.observable<boolean>(true);
+    showConfigurationLogToggle: KnockoutComputed<boolean>;
+    
     currentStep: number;
     
     private websocket: serverNotificationCenterClient;
     
     messages = ko.observableArray<string>([]);
     canRestart = ko.observable<boolean>(false);
+    readme = ko.observable<string>();
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
+    
+    constructor() {
+        super();
+        
+        this.showConfigurationLogToggle = ko.pureComputed(() => {
+            const isAnySecureOption = this.model.mode() !== "Unsecured";
+            const completed = this.completedWithSuccess();
+            
+            return isAnySecureOption && completed;
+        });
+    }
+    
     
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
@@ -73,6 +89,7 @@ class finish extends setupStep {
             .done(() => {
                 this.canRestart(true);
                 this.completedWithSuccess(true);
+                this.expandSetupLog(false);
             })
             .fail(() => {
                 this.completedWithSuccess(false);
@@ -121,6 +138,7 @@ class finish extends setupStep {
             switch (operation.State.Status) {
                 case "Completed":
                     dto = operation.State.Result as Raven.Server.Commercial.SetupProgressAndResult;
+                    this.readme(dto.Readme);
                     this.configurationTask.resolve();
                     break;
                 case "InProgress":

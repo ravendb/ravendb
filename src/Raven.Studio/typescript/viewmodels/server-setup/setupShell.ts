@@ -72,7 +72,13 @@ class setupShell extends viewModelBase {
     private setupRouting() {
         router.map(setupRoutes.get()).buildNavigationModel();
 
-        appUrl.mapUnknownRoutes(router);
+        router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
+            const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
+
+            messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+
+            location.href = "#welcome";
+        });
     }
 
     attached() {
