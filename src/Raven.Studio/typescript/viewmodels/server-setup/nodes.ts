@@ -16,7 +16,7 @@ class nodes extends setupStep {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("removeNode", "editNode", "fileSelected");
+        this.bindToCurrentInstance("removeNode", "editNode");
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -67,6 +67,9 @@ class nodes extends setupStep {
             case "LetsEncrypt":
                 router.navigate("#agreement");
                 break;
+            case "Secured":
+                router.navigate("#certificate");
+                break;
             default:
                 router.navigate("#welcome");
         }
@@ -100,27 +103,6 @@ class nodes extends setupStep {
         });
     }
 
-    fileSelected(fileInput: HTMLInputElement) {
-        if (fileInput.files.length === 0) {
-            return;
-        }
-
-        const fileName = fileInput.value;
-        const isFileSelected = fileName ? !!fileName.trim() : false;
-        this.model.certificateFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
-
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = () => {
-            const dataUrl = reader.result;
-            // dataUrl has following format: data:;base64,PD94bW... trim on first comma
-            this.model.certificate(dataUrl.substr(dataUrl.indexOf(",") + 1));
-        };
-        reader.onerror = function(error: any) {
-            alert(error);
-        };
-        reader.readAsDataURL(file);
-    }
 }
 
 export = nodes;

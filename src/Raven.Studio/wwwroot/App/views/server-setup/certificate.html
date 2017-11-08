@@ -1,0 +1,50 @@
+<form class="flex-form" data-bind="submit: save">
+    <div>
+        Please provide certificate
+    </div>
+
+    <div class="panel padding padding-lg">
+        <div class="margin-bottom" data-bind="with: model.certificate">
+            <div class="form-group" data-bind="validationElement: certificate">
+                <label for="certificate" class="control-label">Certificate<i class="required"></i></label>
+                <div class="flex-grow input-group file-input" data-bind="validationElement: certificate">
+                    <input type="file" tabindex="-1" name="importFile" id="certificate" accept=""
+                           data-bind="event: { change: _.partial($root.fileSelected, $element) }">
+                    <span class="static-name form-control"
+                          data-bind="text: $root.certificateFileName() || 'Select .pfx file...'"></span>
+                    <span class="input-group-btn">
+                        <label for="certificate" class="btn btn-default">
+                            <i class="icon-document"></i>
+                            <span>Browse</span>
+                        </label>
+                    </span>
+                    <p class="help-block" data-bind="validationMessage: certificate"></p>
+                </div>
+            </div>
+
+            <div class="form-group" data-bind="validationElement: certificatePassword">
+                <label for="certificatePassword" class="control-label">Certificate passphrase</label>
+                <div class="flex-grow">
+                    <input type="password" autocomplete="off" class="form-control" id="certificatePassword"
+                           data-bind="textInput: certificatePassword">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">CN names:</label>
+                <div class="flex-grow form-control-static">
+                    <ul data-bind="foreach: certificateCNs">
+                        <li data-bind="text: $data"></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <button type="button" class="btn btn-default" data-bind="click: back"><i
+            class="icon-arrow-left"></i><span>Back</span></button>
+        <button type="submit" class="btn btn-primary"><span>Next</span> <i class="icon-arrow-right"></i></button>
+    </div>
+</form>
+      
