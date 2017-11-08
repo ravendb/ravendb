@@ -54,6 +54,7 @@ class domain extends setupStep {
     }
     
     private tryPopulateNodesInfo() {
+        this.model.domain().reusingConfiguration(false);
         const domains = this.model.userDomains();
         const chosenDomain = this.model.domain().domain();
         if (domains) {
@@ -67,6 +68,7 @@ class domain extends setupStep {
                 });
                 
                 if (nodes.length > 0) {
+                    this.model.domain().reusingConfiguration(true);
                     this.model.nodes(nodes);
                 }
             }

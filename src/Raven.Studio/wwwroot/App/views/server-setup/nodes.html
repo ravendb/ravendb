@@ -10,6 +10,10 @@
                 This information will be used to populate DNS records of the <strong data-bind="text: model.domain().fullDomain"></strong> subdomain.
             </div>
         </div>
+        
+        <div class="margin-bottom bg-warning padding" data-bind="visible: $root.model.domain().reusingConfiguration">
+            <i class="icon-warning"></i> Configuration will overwrite existing DNS records for domain <strong data-bind="text: model.domain().fullDomain"></strong>. 
+        </div>
 
         <div class="panel padding padding-lg">
             <div>

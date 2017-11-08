@@ -660,16 +660,11 @@ class appUrl {
         router.mapUnknownRoutes((instruction: DurandalRouteInstruction) => {
             const queryString = !!instruction.queryString ? ("?" + instruction.queryString) : "";
 
-            if (instruction.fragment === "has-api-key" || instruction.fragment.startsWith("api-key")) {
-                // reload page to reinitialize shell and properly consume/provide OAuth token
-                location.reload();
-            } else {
-                messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
+            messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
-                const fragment = instruction.fragment;
-                const appUrls = appUrl.currentDbComputeds;
-                location.href = fragment.startsWith("admin/settings") ? appUrls.adminSettings() : appUrls.databasesManagement();
-            }
+            const fragment = instruction.fragment;
+            const appUrls = appUrl.currentDbComputeds;
+            location.href = fragment.startsWith("admin/settings") ? appUrls.adminSettings() : appUrls.databasesManagement();
         });
     }
 

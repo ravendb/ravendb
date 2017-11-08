@@ -211,6 +211,7 @@ namespace Raven.Server.Commercial
         public long Processed { get; set; }
         public long Total { get; set; }
         public string Certificate { get; set; }
+        public string Readme { get; set; }
         public readonly ConcurrentQueue<string> Messages;
         public byte[] SettingsZipFile; // not sent as part of the result
 
@@ -220,6 +221,7 @@ namespace Raven.Server.Commercial
         {
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
+            Readme = "JUST TESTING" + Environment.NewLine + "multi line text"; //TODO:Iftah
         }
 
         public string Message { get; private set; }
@@ -230,6 +232,7 @@ namespace Raven.Server.Commercial
             {
                 [nameof(Processed)] = Processed,
                 [nameof(Total)] = Total,
+                [nameof(Readme)] = Readme,
                 [nameof(Messages)] = Messages.ToArray()
             };
 
