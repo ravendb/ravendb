@@ -4,6 +4,7 @@ import unsecureSetup = require("models/setup/unsecureSetup");
 import licenseInfo = require("models/setup/licenseInfo");
 import domainInfo = require("models/setup/domainInfo");
 import nodeInfo = require("models/setup/nodeInfo");
+import listHostsForCertificateCommand = require("commands/setup/listHostsForCertificateCommand");
 
 
 class serverSetup {
@@ -18,15 +19,34 @@ class serverSetup {
     domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));
     unsecureSetup = ko.observable<unsecureSetup>(new unsecureSetup());
     nodes = ko.observableArray<nodeInfo>();
+
+    certificate = ko.observable<string>();
+    certificatePassword = ko.observable<string>();
+    certificateFileName = ko.observable<string>();
+
+    certificateCNs = ko.observableArray<string>([]);
+    
     useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
 
     nodesValidationGroup: KnockoutValidationGroup;
 
     constructor() {
-        const newNode = nodeInfo.empty(this.useOwnCertificates);
+        const newNode = new nodeInfo();
         newNode.nodeTag("A");
         this.nodes.push(newNode);
 
+        this.certificate.extend({
+            required: {
+                onlyIf: () => this.useOwnCertificates()
+            }
+        });
+
+        this.certificate.extend({
+            required: {
+                onlyIf: () => this.useOwnCertificates()
+            }
+        });
+        
         this.nodes.extend({
             validation: [
                 {
@@ -37,8 +57,23 @@ class serverSetup {
         });
 
         this.nodesValidationGroup = ko.validatedObservable({
-            nodes: this.nodes
+            nodes: this.nodes,
+            certificate: this.certificate,
+            certificatePassword: this.certificatePassword
         });
+
+        const fetchCNsThrottled = _.debounce(() => this.fetchCNs(), 700);
+
+        this.certificate.subscribe(fetchCNsThrottled);
+        this.certificatePassword.subscribe(fetchCNsThrottled);
+    }
+
+    private fetchCNs() {
+        new listHostsForCertificateCommand(this.certificate(), this.certificatePassword())
+            .execute()
+            .done((hosts: Array<string>) => {
+                this.certificateCNs(hosts);
+            });
     }
 
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
@@ -53,7 +88,10 @@ class serverSetup {
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),
             ModifyLocalServer: true,
-            NodeSetupInfos: nodesInfo
+            NodeSetupInfos: nodesInfo,
+            Certificate: this.certificate(),
+            Password: this.certificatePassword(),
+            IsWildcard: false //TODO: 
         };
     }
 }
