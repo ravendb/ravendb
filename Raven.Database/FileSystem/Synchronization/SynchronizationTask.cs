@@ -320,66 +320,68 @@ namespace Raven.Database.FileSystem.Synchronization
 
             do
             {
-                var lastETag = await destinationSyncClient.GetLastSynchronizationFromAsync(storage.Id).ConfigureAwait(false);
-
-                var activeTasks = synchronizationQueue.Active;
-                var filesNeedConfirmation = GetSyncingConfigurations(destination).Where(sync => activeTasks.All(x => x.FileName != sync.FileName)).ToList();
-
-                var confirmations = await ConfirmPushedFiles(filesNeedConfirmation, destinationSyncClient).ConfigureAwait(false);
-
-                var needSyncingAgain = new List<FileHeader>();
-
-                Debug.Assert(filesNeedConfirmation.Count == confirmations.Length);
-
-                for (int i = 0; i < confirmations.Length; i++)
-                {
-                    var confirmation = confirmations[i];
-
-                    if (confirmation.Status == FileStatus.Safe)
-                    {
-                        if (Log.IsDebugEnabled)
-                            Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
-
-                        RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
-                    }
-                    else
-                    {
-                        storage.Batch(accessor =>
-                        {
-                            var fileHeader = accessor.ReadFile(confirmation.FileName);
-
-                            if (fileHeader == null)
-                            {
-                                if (Log.IsDebugEnabled)
-                                    Log.Debug("Destination server {0} said that file '{1}' is {2} but such file no longer exists. Removing related syncing configuration", destination, confirmation.FileName, confirmation.Status);
-
-                                RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
-                            }
-                            else if (EtagUtil.IsGreaterThan(fileHeader.Etag, filesNeedConfirmation[i].FileETag))
-                            {
-                                if (Log.IsDebugEnabled)
-                                    Log.Debug("Destination server {0} said that file '{1}' is {2} but such file has been changed since we stored the syncing configuration. " +
-                                        "Stored etag in configuration is {3} while current file etag is {4}. Removing related syncing configuration", destination, confirmation.FileName, confirmation.Status, fileHeader.Etag, filesNeedConfirmation[i].FileETag);
-
-                                RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
-                            }
-                            else
-                            {
-                                needSyncingAgain.Add(fileHeader);
-
-                                if (Log.IsDebugEnabled)
-                                    Log.Debug("Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName, confirmation.Status);
-                            }
-                        });
-                    }
-                }
-
                 if (synchronizationQueue.NumberOfPendingSynchronizationsFor(destination.Url) < AvailableSynchronizationRequestsTo(destination.Url))
                 {
+                    var activeTasks = synchronizationQueue.Active;
+                    var filesNeedConfirmation = GetSyncingConfigurations(destination).Where(sync => activeTasks.All(x => x.FileName != sync.FileName)).ToList();
+
+                    var confirmations = await ConfirmPushedFiles(filesNeedConfirmation, destinationSyncClient).ConfigureAwait(false);
+
+                    var needSyncingAgain = new List<FileHeader>();
+
+                    Debug.Assert(filesNeedConfirmation.Count == confirmations.Length);
+
+                    for (int i = 0; i < confirmations.Length; i++)
+                    {
+                        var confirmation = confirmations[i];
+
+                        if (confirmation.Status == FileStatus.Safe)
+                        {
+                            if (Log.IsDebugEnabled)
+                                Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
+
+                            RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
+                        }
+                        else
+                        {
+                            storage.Batch(accessor =>
+                            {
+                                var fileHeader = accessor.ReadFile(confirmation.FileName);
+
+                                if (fileHeader == null)
+                                {
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("Destination server {0} said that file '{1}' is {2} but such file no longer exists. Removing related syncing configuration", destination, confirmation.FileName, confirmation.Status);
+
+                                    RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
+                                }
+                                else if (EtagUtil.IsGreaterThan(fileHeader.Etag, filesNeedConfirmation[i].FileETag))
+                                {
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("Destination server {0} said that file '{1}' is {2} but such file has been changed since we stored the syncing configuration. " +
+                                                  "Stored etag in configuration is {3} while current file etag is {4}. Removing related syncing configuration", destination, confirmation.FileName, confirmation.Status, fileHeader.Etag, filesNeedConfirmation[i].FileETag);
+
+                                    RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
+                                }
+                                else
+                                {
+                                    needSyncingAgain.Add(fileHeader);
+
+                                    if (Log.IsDebugEnabled)
+                                        Log.Debug("Destination server {0} said that file '{1}' is {2}.", destination, confirmation.FileName, confirmation.Status);
+                                }
+                            });
+                        }
+                    }
+
+                    var lastETag = await destinationSyncClient.GetLastSynchronizationFromAsync(storage.Id).ConfigureAwait(false);
+
                     repeat = await EnqueueMissingUpdatesAsync(destinationSyncClient, lastETag, needSyncingAgain).ConfigureAwait(false) == false;
                 }
                 else
-                    repeat = false;
+                {
+                    break;
+                }
             }
             while (repeat);
 

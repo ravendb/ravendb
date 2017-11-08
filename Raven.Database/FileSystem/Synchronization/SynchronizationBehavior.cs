@@ -107,7 +107,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 {
                     report.Exception = ex;
 
-                    Log.WarnException(string.Format("Error was occurred during deletion synchronization of file '{0}' from {1}", fileName, sourceFs), ex);
+                    Log.WarnException(string.Format("Error was occurred during {2} synchronization of file '{0}' from {1}", fileName, sourceFs, type), ex);
                 }
             }
 
