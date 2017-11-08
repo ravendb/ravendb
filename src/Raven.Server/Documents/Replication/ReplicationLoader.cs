@@ -430,6 +430,26 @@ namespace Raven.Server.Documents.Replication
             var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, _server.Engine.CurrentState) == _server.NodeTag).ToList();
             foreach (var externalReplication in newDestinations.ToList())
             {
+                if (string.IsNullOrEmpty(externalReplication.ConnectionStringName))
+                {
+                    var msg = $"The external replication {externalReplication.Name} to the database '{externalReplication.Database}' " +
+                              "has an empty connection string name.";
+
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info(msg);
+                    }
+                    
+                    _server.NotificationCenter.Add(AlertRaised.Create(
+                        "Connection string name is empty",
+                        msg,
+                        AlertType.Replication,
+                        NotificationSeverity.Error));
+                    
+                    newDestinations.Remove(externalReplication);
+                    continue; 
+                }
+                
                 if (newRecord.RavenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out var connectionString) == false)
                 {
                     if (_log.IsInfoEnabled)
