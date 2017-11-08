@@ -42,18 +42,6 @@ namespace Raven.Client.ServerWide
                 return;
             }
         }
-        
-        public static void EnsureUniqueDbAndConnectionString(List<ExternalReplication> watchers, ExternalReplication watcher)
-        {
-            var connecitonString = watcher.ConnectionStringName;
-            foreach (var w in watchers)
-            {
-                if (w.ConnectionStringName != connecitonString)
-                    continue;
-                watchers.Remove(watcher);
-                return;
-            }
-        }
 
         public override DynamicJsonValue ToJson()
         {
@@ -90,8 +78,10 @@ namespace Raven.Client.ServerWide
         public override bool IsEqualTo(ReplicationNode other)
         {
             var externalReplication = (ExternalReplication)other;
+            
             return base.IsEqualTo(other) && 
-                   string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase);
+                   string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
+                   TaskId == externalReplication.TaskId; 
         }
 
         public string GetMentorNode()

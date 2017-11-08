@@ -22,8 +22,6 @@ namespace Raven.Server.ServerWide.Commands
             if (Watcher == null)
                 return null;
 
-            ExternalReplication.EnsureUniqueDbAndConnectionString(record.ExternalReplication, Watcher);
-
             if (Watcher.TaskId == 0)
             {
                 Watcher.TaskId = etag;
