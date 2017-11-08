@@ -150,14 +150,7 @@ class finish extends setupStep {
     }
     
     private redirectToStudio() {
-        switch (this.model.mode()) {
-            case "Unsecured":
-                window.location.href = this.model.unsecureSetup().serverUrl();
-                break;
-        }
-
-        //TODO: finish me!
-
+        window.location.href = this.model.getStudioUrl();
     }
 
 }

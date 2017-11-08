@@ -1,33 +1,38 @@
-<div>
-    Domain selection step
-</div>
+<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right">3</strong>Choose domain</h2>
 
 <div>
     <form class="flex-form" data-bind="with: model.domain, submit: save">
 
-        <div class="form-group" data-bind="validationElement: domain">
-            <label for="domain_none" class="control-label">Domain<i class="required"></i></label>
-            <div class="flex-grow">
-                <input type="text" autocomplete="off" class="form-control" id="domain_none"
-                       placeholder="domain"
-                       data-bind="textInput: domain">
+        <div class="panel padding padding-lg">
+            <div class="form-group" data-bind="validationElement: domain">
+                <label for="domain_none" class="control-label">Domain<i class="required"></i></label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="domain_none"
+                           placeholder="domain"
+                           data-bind="textInput: domain">
+                </div>
+                <div class="form-control-static">.dbs.local.ravendb.net</div>
+                <!-- TODO autocomplete -->
             </div>
-            <div class="form-control-static">.dbs.local.ravendb.net</div>
-            <!-- TODO autocomplete -->
+    
+            <div class="form-group" data-bind="validationElement: userEmail">
+                <label for="userEmail" class="control-label">E-mail<i class="required"></i></label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="userEmail"
+                           placeholder="E-mail"
+                           data-bind="textInput: userEmail">
+                </div>
+            </div>
         </div>
 
-        <div class="form-group" data-bind="validationElement: userEmail">
-            <label for="userEmail" class="control-label">E-mail<i class="required"></i></label>
-            <div class="flex-grow">
-                <input type="text" autocomplete="off" class="form-control" id="userEmail"
-                       placeholder="E-mail"
-                       data-bind="textInput: userEmail">
-            </div>
-        </div>
-
-        <div>
-            <a href="#license" class="btn btn-default"><i class="icon-arrow-left"></i><span>Back</span></a>
-            <button type="submit" class="btn btn-primary" data-bind="css: { 'btn-spinner': $root.spinners.save() }, disable: $root.spinners.save"><span>Next</span> <i class="icon-arrow-right"></i></button>
+        <div class="navigation padding padding-lg flex-horizontal">
+            <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
+                <i class="icon-arrow-left"></i><span>Back</span>
+            </button>
+            <div class="flex-separator"></div>
+            <button type="submit" class="btn btn-primary btn-lg" data-bind="css: { 'btn-spinner': $root.spinners.save() }, disable: $root.spinners.save">
+                <span>Next</span> <i class="icon-arrow-right"></i>
+            </button>
         </div>
     </form>
 </div>

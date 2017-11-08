@@ -19,7 +19,7 @@ class agreement extends setupStep {
             validation: [
                 {
                     validator: (val: boolean) => val === true,
-                    message: "You must accept terms & conditions"
+                    message: "You must accept Let's Encrypt Subscriber Agreement"
                 }
             ]
         });
@@ -57,6 +57,10 @@ class agreement extends setupStep {
     private prepareIFrameContent() {
         const template = document.getElementById("iframe-agreement-template");
         return _.replace(template.innerHTML, /{{URL}}/g, this.url());
+    }
+    
+    back() {
+        router.navigate("#domain");
     }
     
     save() {

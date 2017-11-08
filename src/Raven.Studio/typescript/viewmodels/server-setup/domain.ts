@@ -36,6 +36,10 @@ class domain extends setupStep {
         }
     }
 
+    back() {
+        router.navigate("#license");
+    }
+    
     save() {
         const domainModel = this.model.domain();
         this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
