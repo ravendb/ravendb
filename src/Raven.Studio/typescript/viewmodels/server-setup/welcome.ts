@@ -24,7 +24,7 @@ class welcome extends setupStep {
                 router.navigate("#unsecured");
                 break;
             case "Secured":
-                router.navigate("#nodes");
+                router.navigate("#certificate");
                 break;
             case "LetsEncrypt":
                 router.navigate("#license");

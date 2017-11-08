@@ -110,14 +110,17 @@ class finish extends setupStep {
                     break;
                 case "Faulted":
                     const failure = operation.State.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
-                    this.messages([failure.Message, failure.Error]);
+                    
+                    const messagesArray = operation.TaskType === "Setup" ? this.configurationMessages : this.validationMessages;
+                    messagesArray.push(failure.Message);
+                    messagesArray.push(failure.Error);
             }
             
             if (dto) {
                 switch (operation.TaskType) {
                     case "Setup":
                         this.configurationMessages(dto.Messages);
-                        break
+                        break;
                     case "ValidateSetup":
                         this.validationMessages(dto.Messages);
                         break;

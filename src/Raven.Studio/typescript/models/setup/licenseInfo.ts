@@ -21,7 +21,10 @@ class licenseInfo {
     }
     
     toDto(): Raven.Server.Commercial.License {
-        return JSON.parse(this.license()) as Raven.Server.Commercial.License;
+        if (this.license()) {
+            return JSON.parse(this.license()) as Raven.Server.Commercial.License;
+        }
+        return null;
     }
 }
 

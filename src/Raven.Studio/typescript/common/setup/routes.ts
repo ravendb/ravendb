@@ -35,6 +35,11 @@ class routes {
                 moduleId: "viewmodels/server-setup/nodes",
                 nav: false
             },{
+                route: "certificate",
+                title: "RavenDB setup wizard",
+                moduleId: "viewmodels/server-setup/certificate",
+                nav: false
+            },{
                 route: "agreement",
                 title: "RavenDB setup wizard",
                 moduleId: "viewmodels/server-setup/agreement",
