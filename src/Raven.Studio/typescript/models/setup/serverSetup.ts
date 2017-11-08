@@ -24,7 +24,7 @@ class serverSetup {
     nodesValidationGroup: KnockoutValidationGroup;
 
     constructor() {
-        const newNode = new nodeInfo();
+        const newNode = new nodeInfo(this.certificate().wildcardCertificate);
         newNode.nodeTag("A");
         this.nodes.push(newNode);
 

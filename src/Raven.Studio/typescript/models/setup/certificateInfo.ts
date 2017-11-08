@@ -4,11 +4,21 @@ class certificateInfo {
     certificate = ko.observable<string>();
     certificatePassword = ko.observable<string>();
     certificateCNs = ko.observableArray<string>([]);
-    
+
+    wildcardCertificate: KnockoutComputed<boolean>;
+
     validationGroup: KnockoutValidationGroup;
 
     constructor() {
+        this.initValidation();
+        
+        this.wildcardCertificate = ko.pureComputed(() => {
+            const cns = this.certificateCNs();
+            return _.some(cns, x => x.startsWith("*"));
+        });
+    }
 
+    private initValidation() {
         this.certificate.extend({
             required: true
         });
@@ -19,7 +29,7 @@ class certificateInfo {
                 message: `Certificate must contain at least one CN or Subject Alternative Name.`
             }]
         });
-        
+
         this.validationGroup = ko.validatedObservable({
             certificate: this.certificate,
             certificatePassword: this.certificatePassword,

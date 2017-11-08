@@ -56,7 +56,7 @@ class domain extends setupStep {
             const existingDomainInfo = domains.Domains[chosenDomain];
             if (existingDomainInfo) {
                 const nodes = existingDomainInfo.map(info => {
-                    const entry = new nodeInfo();
+                    const entry = new nodeInfo(this.model.certificate().wildcardCertificate);
                     entry.nodeTag(info.SubDomain);
                     entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
                     return entry;

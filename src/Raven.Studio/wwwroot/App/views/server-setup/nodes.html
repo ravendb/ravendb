@@ -35,6 +35,20 @@
                         Node <span data-bind="text: nodeTag"></span>
                     </div>
 
+                    <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">
+                        <label class="control-label">Host name<i class="required"></i></label>
+                        <div class="flex-grow">
+                            <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                <span data-bind="text: hostname() || 'Select hostname'"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: $root.model.certificate().certificateCNs">
+                                <li><a href="#" data-bind="text: $data, click: $parent.hostname.bind($parent.hostname, $data)"></a></li>
+                            </ul>
+                            <span class="help-block" data-bind="validationMessage: hostname"></span>
+                        </div>
+                    </div>
+                    
                     <div class="form-group" data-bind="validationElement: port">
                         <label for="port" class="control-label">Port<i class="required"></i></label>
                         <div class="flex-grow">
