@@ -165,7 +165,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to extract CN and SAN from certificate {certificate?.FriendlyName}", e);
+                    throw new InvalidOperationException($"Failed to extract CN and SAN from certificate {certificate?.FriendlyName}. Maybe password is wrong?", e);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

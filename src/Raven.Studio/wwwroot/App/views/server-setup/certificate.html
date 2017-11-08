@@ -36,6 +36,10 @@
                     <ul data-bind="foreach: certificateCNs">
                         <li data-bind="text: $data"></li>
                     </ul>
+
+                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: certificateCNs">
+                        <div class="help-block" data-bind="validationMessage: certificateCNs"></div>
+                    </div>
                 </div>
             </div>
         </div>
