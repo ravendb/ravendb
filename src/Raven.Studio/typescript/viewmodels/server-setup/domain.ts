@@ -18,7 +18,7 @@ class domain extends setupStep {
             return $.when({ can: true });
         }
 
-        return $.when({redirect: "#welcome"});
+        return $.when({ redirect: "#welcome" });
     }
     
     activate(args: any) {
@@ -61,8 +61,10 @@ class domain extends setupStep {
                     entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
                     return entry;
                 });
-
-                this.model.nodes(nodes);
+                
+                if (nodes.length > 0) {
+                    this.model.nodes(nodes);
+                }
             }
         }
     }
