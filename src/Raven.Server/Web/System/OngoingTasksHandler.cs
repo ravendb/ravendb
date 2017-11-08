@@ -157,6 +157,7 @@ namespace Raven.Server.Web.System
                 DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationUrl = res.Url,
+                MentorNode = watcher.MentorNode,
                 TaskConnectionStatus = res.Status,
             };
             
