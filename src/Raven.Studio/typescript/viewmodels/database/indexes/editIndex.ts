@@ -109,8 +109,6 @@ class editIndex extends viewModelBase {
             const source = this.selectedSourcePreview();
             if (source) {
                 return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
-            } else {
-                return $("#additional-source-template").html();
             }
         })
     }
@@ -299,7 +297,8 @@ class editIndex extends viewModelBase {
     addAdditionalSourcesPopover() {
         const html = $("#additional-source-template").html();
         popoverUtils.longWithHover($("#additionalSources small.info"), {
-            content: html
+            content: html,
+            placement: "top"
         });
     }
 
