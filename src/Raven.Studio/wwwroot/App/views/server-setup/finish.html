@@ -1,13 +1,15 @@
-<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep"></strong>Finishing up</h2>
-
-<h4 class="margin-bottom">Thank you for choosing RavenDB</h4>
-
+<h2 class="margin-bottom margin-top margin-lg">
+    <strong class="margin-right" data-bind="text: currentStep"></strong>
+    <span data-bind="visible: spinners.finishing">Finishing up <i class="global-spinner"></i></span>
+    <span data-bind="visible: !spinners.finishing() && !completedWithSuccess()" class="text-danger">Configuration failed</span>
+    <span data-bind="visible: !spinners.finishing() && completedWithSuccess()" class="text-success">Configuration completed!</span>
+</h2>
 
 <pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: $data"></span>
 <!-- /ko --></pre>
 
 <div class="navigation padding padding-lg flex-horizontal">
-    <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back, disable: spinners.restart">
+    <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back, disable: spinners.restart, visible: !spinners.finishing()">
         <i class="icon-arrow-left"></i><span>Back</span>
     </button>
     <div class="flex-separator"></div>
