@@ -30,16 +30,20 @@ $commandArgs += "--ServerUrl=$($serverUrlScheme)://0.0.0.0:8080"
 $commandArgs += "--ServerUrl.Tcp=tcp://0.0.0.0:38888"
 $commandArgs += "--DataDir=`"$($env:DATA_DIR)`""
 
+$noSetup = $False;
+
 if ([string]::IsNullOrEmpty($env:UNSECURED_ACCESS_ALLOWED) -eq $False) {
     $commandArgs += "--Security.UnsecuredAccessAllowed=$($env:UNSECURED_ACCESS_ALLOWED)"
 }
 
 if ([string]::IsNullOrEmpty($env:PUBLIC_SERVER_URL) -eq $False) {
     $commandArgs += "--PublicServerUrl=$($env:PUBLIC_SERVER_URL)"
+    $noSetup = $True;
 }
 
 if ([string]::IsNullOrEmpty($env:PUBLIC_TCP_SERVER_URL) -eq $False) {
     $commandArgs += "--PublicServerUrl.Tcp=$($env:PUBLIC_TCP_SERVER_URL)"
+    $noSetup = $True;
 }
 
 if ([string]::IsNullOrEmpty($env:LOGS_MODE) -eq $False) {
@@ -49,6 +53,7 @@ if ([string]::IsNullOrEmpty($env:LOGS_MODE) -eq $False) {
 if ([string]::IsNullOrEmpty($env:CERTIFICATE_PATH) -eq $False) {
     $certificatePath = $env:CERTIFICATE_PATH;
     $commandArgs += "--Security.Certificate.Path=`"$certificatePath`""
+    $noSetup = $True;
 }
 
 if (([string]::IsNullOrEmpty($env:CERTIFICATE_PASSWORD) -eq $False) -and ([string]::IsNullOrEmpty($env:CERTIFICATE_PASSWORD_FILE) -eq $False)) {
@@ -66,6 +71,11 @@ if ([string]::IsNullOrEmpty($env:CERTIFICATE_PASSWORD_FILE) -eq $False) {
 
 if ([string]::IsNullOrEmpty($certificatePassword) -eq $False) {
     $commandArgs += "--Security.Certificate.Password=`"$certificatePassword`""
+    $noSetup = $True;
+}
+
+if ($noSetup) {
+    $commandArgs += "--Setup.Mode=`"None`""
 }
 
 $commandDesc = "Starting RavenDB server: $command $commandArgs" 
