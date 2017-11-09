@@ -446,7 +446,10 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
                                 Options.SubscriptionName,
-                                _lastChangeVector,
+                                // if this is a new subscription that we sent anything in this iteration, 
+                                // _lastChangeVector is null, so let's not change it
+                                _lastChangeVector ?? 
+                                    nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                                 subscriptionChangeVectorBeforeCurrentBatch);
                             subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
 
