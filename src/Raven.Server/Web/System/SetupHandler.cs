@@ -131,6 +131,7 @@ namespace Raven.Server.Web.System
                     writer.WriteString(netInterface.Description);
                     writer.WriteComma();
                     var ips = netInterface.GetIPProperties().UnicastAddresses.Select(addr => addr.Address.ToString()).ToList();
+                    ips.Add("0.0.0.0");
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
@@ -179,7 +180,8 @@ namespace Raven.Server.Web.System
                         writer.WriteComma();
                         writer.WritePropertyName("AlternativeNames");
                         writer.WriteStartArray();
-                        writer.WriteString("0.0.0.0");
+
+                        var first = true;
                         foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
                         {
                             string[] parts;
@@ -198,8 +200,11 @@ namespace Raven.Server.Web.System
                             }
 
                             var value = parts.Length > 0 ? parts[1] : null;
-                            
-                            writer.WriteComma();
+
+                            if (first == false)
+                                writer.WriteComma();
+                            first = false;
+
                             writer.WriteString(value);
                         }
                         writer.WriteEndArray();
