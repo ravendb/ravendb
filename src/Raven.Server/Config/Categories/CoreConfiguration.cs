@@ -108,7 +108,7 @@ namespace Raven.Server.Config.Categories
                 return serverUrlSettingUri.Host;
             }
 
-            throw new ArgumentException("Arguments serverWebUri and serverUrlSettingValue are invalid.");
+            throw new InvalidOperationException($"Arguments '{nameof(serverWebUri)}' and '{nameof(serverUrlSettingValue)}' are invalid.");
         }
 
         internal void ValidateServerUrls()

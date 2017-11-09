@@ -15,7 +15,7 @@ namespace Raven.Client.Http
             LastNodeId = lastNodeId;
         }
 
-        public void ReplaceCurrentNodeUrlWithClientRequestedUrl(string currentNodeTag, string clientRequestedUrl)
+        internal void ReplaceCurrentNodeUrlWithClientRequestedUrl(string currentNodeTag, string clientRequestedUrl)
         {
             foreach (var member in Members)
             {
