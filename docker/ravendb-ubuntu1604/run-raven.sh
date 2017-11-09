@@ -11,12 +11,16 @@ fi
 COMMAND="$COMMAND --ServerUrl=$SERVER_URL_SCHEME://0.0.0.0:8080"
 COMMAND="$COMMAND --ServerUrl.Tcp=tcp://0.0.0.0:38888"
 
+NO_SETUP=0
+
 if [ ! -z "$PUBLIC_SERVER_URL" ]; then
     COMMAND="$COMMAND --PublicServerUrl=$PUBLIC_SERVER_URL"
+    NO_SETUP=1
 fi
 
 if [ ! -z "$PUBLIC_TCP_SERVER_URL" ]; then
     COMMAND="$COMMAND --PublicServerUrl.Tcp=$PUBLIC_TCP_SERVER_URL"
+    NO_SETUP=1
 fi
 
 if [ ! -z "$UNSECURED_ACCESS_ALLOWED" ]; then
@@ -48,6 +52,7 @@ if [ ! -z "$CERTIFICATE_PASSWORD" ]; then
 fi
 
 if [ ! -z "$CERTIFICATE_PATH" ]; then
+    NO_SETUP=1
     COMMAND="$COMMAND --Security.Certificate.Path=\"$CERTIFICATE_PATH\""
 
     if [ ! -d "/usr/share/ca-certificates/ravendb" ]; then
@@ -85,6 +90,11 @@ fi
 
 if [ ! -z "$CERT_PASSWORD" ]; then
     COMMAND="$COMMAND --Security.Certificate.Password=\"$CERT_PASSWORD\""
+    NO_SETUP=1
+fi
+
+if [ $NO_SETUP == 1  ]; then
+    COMMAND="$COMMAND --Setup.Mode=\"None\""
 fi
 
 COMMAND="$COMMAND --print-id"
