@@ -24,6 +24,7 @@ using Voron.Impl;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Config;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 
@@ -44,6 +45,11 @@ namespace Raven.Server.Rachis
         internal override RachisStateMachine GetStateMachine()
         {
             return StateMachine;
+        }
+
+        public override void Notify(Notification notification)
+        {
+            _serverStore.NotificationCenter.Add(notification);
         }
 
         protected override void InitializeState(TransactionOperationContext context)
@@ -217,6 +223,8 @@ namespace Raven.Server.Rachis
         {
             _rand = seed.HasValue ? new Random(seed.Value) : new Random();
         }
+
+        public abstract void Notify(Notification notification);
 
         public void RandomizeTimeout(bool extend = false)
         {

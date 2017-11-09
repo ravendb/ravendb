@@ -616,6 +616,7 @@ namespace Raven.Server.Rachis
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(e));
+            _engine.Notify(alert);
             ErrorsList.Enqueue((node.Tag, alert));
             ErrorsList.Reduce(25);
         }
