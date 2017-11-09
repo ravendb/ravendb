@@ -49,8 +49,8 @@
             </div>
             <div class="col-md-6" data-bind="with: editedNode">
                 <div class="panel padding">
-                    <div>
-                        Node <strong><span data-bind="text: nodeTag"></span></strong>
+                    <div class="margin-bottom">
+                        Node <strong data-bind="text: $root.model.createFullNodeNameObservable($data)"></strong>    
                     </div>
 
                     <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">

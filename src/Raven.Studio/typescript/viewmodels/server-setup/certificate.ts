@@ -49,8 +49,23 @@ class certificate extends setupStep {
     save() {
         const certs = this.model.certificate();
         
+        this.tryToSetHostname();
+        
         if (this.isValid(certs.validationGroup)) {
             router.navigate("#nodes");
+        }
+    }
+    
+    private tryToSetHostname() {
+        // if user loaded certificate with single CN (but not wild cart)
+        // then populate node info with this information
+        
+        const certificate = this.model.certificate();
+        
+        if (this.model.mode() === "Secured" && !certificate.wildcardCertificate()) {
+            if (this.model.nodes().length === 1 && certificate.certificateCNs().length === 1) {
+                this.model.nodes()[0].hostname(certificate.certificateCNs()[0]);
+            }
         }
     }
 
