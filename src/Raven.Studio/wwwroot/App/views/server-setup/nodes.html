@@ -15,100 +15,103 @@
             <i class="icon-warning"></i> Configuration will overwrite existing DNS records for domain <strong data-bind="text: model.domain().fullDomain"></strong>. 
         </div>
 
-        <div class="panel padding padding-lg">
-            <div>
-                <button type="button" class="btn btn-default" data-bind="click: $root.addNode">
-                    <i class="icon-plus"></i> <span>Add node</span>
-                </button>
-            </div>
+        <div class=" margin-bottom">
+            <button type="button" class="btn btn-primary" data-bind="click: $root.addNode">
+                <i class="icon-plus"></i> <span>Add node</span>
+            </button>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div data-bind="foreach: model.nodes">
-                        <div class="panel padding">
+                <div data-bind="foreach: model.nodes">
+                    <div class="panel padding padding-sm flex-horizontal" 
+                         data-bind="css: { 'active': $data === $root.editedNode() }">
+                        <div class="flex-grow">
                             <div>
-                                Node <span data-bind="text: nodeTag"></span>
-
-                                <button data-bind="click: $root.editNode" class="btn btn-default pull-right" title="Edit this node">
-                                    <i class="icon-edit"></i>
-                                </button>
-
-                                <button data-bind="click: $root.removeNode" class="btn btn-danger pull-right" title="Delete this node">
-                                    <i class="icon-trash"></i>
-                                </button>
+                                Node <strong><span data-bind="text: nodeTag"></span></strong>    
                             </div>
                         </div>
-                    </div>
+                        <button data-bind="click: $root.editNode" class="btn btn-default" title="Edit this node">
+                            <i class="icon-edit"></i>
+                        </button>
 
-                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: model.nodes">
-                        <div class="help-block" data-bind="validationMessage: model.nodes"></div>
+                        <button data-bind="click: $root.removeNode" class="btn btn-danger" title="Delete this node">
+                            <i class="icon-trash"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="col-md-6" data-bind="with: editedNode">
-                    <div class="panel padding">
-                        <div>
-                            Node <span data-bind="text: nodeTag"></span>
-                        </div>
 
-                        <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">
-                            <label class="control-label">Host name<i class="required"></i></label>
-                            <div class="flex-grow">
-                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                    <span data-bind="text: hostname() || 'Select hostname'"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: $root.model.certificate().certificateCNs">
-                                    <li><a href="#" data-bind="text: $data, click: $parent.hostname.bind($parent.hostname, $data)"></a></li>
-                                </ul>
-                                <span class="help-block" data-bind="validationMessage: hostname"></span>
+                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: model.nodes">
+                    <div class="help-block" data-bind="validationMessage: model.nodes"></div>
+                </div>
+            </div>
+            <div class="col-md-6" data-bind="with: editedNode">
+                <div class="panel padding">
+                    <div>
+                        Node <strong><span data-bind="text: nodeTag"></span></strong>
+                    </div>
+
+                    <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">
+                        <label class="control-label">Host name<i class="required"></i></label>
+                        <div class="flex-grow">
+                            <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                <span data-bind="text: hostname() || 'Select hostname'"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: $root.model.certificate().certificateCNs">
+                                <li><a href="#" data-bind="text: $data, click: $parent.hostname.bind($parent.hostname, $data)"></a></li>
+                            </ul>
+                            <span class="help-block" data-bind="validationMessage: hostname"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" data-bind="validationElement: port">
+                        <label for="port" class="control-label">Port<i class="required"></i></label>
+                        <div class="flex-grow">
+                            <input type="text" autocomplete="off" class="form-control" id="port"
+                                   placeholder="Default: 443"
+                                   data-bind="textInput: port">
+                        </div>
+                    </div>
+
+                    <div data-bind="foreach: ips">
+                        <div class="form-group" data-bind="validationElement: ip">
+                            <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
+                                <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
+                            </label>
+                            <div class="flex-grow input-group">
+                                <input type="text" autocomplete="off" class="form-control"
+                                       placeholder="Enter server IP address"
+                                       data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
+                                <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="form-group" data-bind="validationElement: port">
-                            <label for="port" class="control-label">Port<i class="required"></i></label>
-                            <div class="flex-grow">
-                                <input type="text" autocomplete="off" class="form-control" id="port"
-                                       placeholder="Default: 443"
-                                       data-bind="textInput: port">
+                    <div class="form-group">
+                        <label class="control-label"></label>
+                        <div class="flex-grow">
+                            <div data-bind="validationElement: ips">
+                                <div class="help-block" data-bind="validationMessage: ips"></div>
                             </div>
                         </div>
+                    </div>
 
-                        <div data-bind="foreach: ips">
-                            <div class="form-group" data-bind="validationElement: ip">
-                                <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
-                                    <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
-                                </label>
-                                <div class="flex-grow input-group">
-                                    <input type="text" autocomplete="off" class="form-control"
-                                           placeholder="Enter server IP address"
-                                           data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
-                                    <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="control-label"></label>
-                            <div class="flex-grow">
-                                <div data-bind="validationElement: ips">
-                                    <div class="help-block" data-bind="validationMessage: ips"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="control-label"></label>
-                            <div class="flex-grow">
-                                <button class="btn btn-default" data-bind="click: addIpAddress">
-                                    <i class="icon-plus"></i>
-                                    <span>Add another IP address</span>
-                                </button>
-                            </div>
+                    <div class="form-group">
+                        <label class="control-label"></label>
+                        <div class="flex-grow">
+                            <button class="btn btn-default" data-bind="click: addIpAddress">
+                                <i class="icon-plus"></i>
+                                <span>Add another IP address</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
         
         <div class="navigation padding padding-lg flex-horizontal">
             <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">

@@ -66,8 +66,6 @@ class nodeInfo {
     }
 
     toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
-        
-        
         return {
             Ips: this.ips().map(x => x.ip()),
             Port: this.port() ? parseInt(this.port(), 10) : null,
