@@ -15,7 +15,6 @@ using Certes.Pkcs;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Raven.Client;
@@ -345,6 +344,7 @@ namespace Raven.Server.Commercial
                 try
                 {
                     RegistrationResult registrationResult;
+                    var i = 0;
                     do
                     {
                         try
@@ -369,6 +369,16 @@ namespace Raven.Server.Commercial
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
 
+                        if (i == 120)
+                            progress.AddInfo("This is taking too long, you might want to abort and restart.");
+                        if (i == 30)
+                            progress.AddInfo("Please be patient, updating DNS records takes time...");
+                        else if (i % 5 == 0)
+                            progress.AddInfo("Waiting...");
+                        
+                        onProgress(progress);
+
+                        i++;
                     } while (registrationResult.Status == "PENDING");
                     progress.AddInfo("Got successful response from api.ravendb.net.");
                     onProgress(progress);
