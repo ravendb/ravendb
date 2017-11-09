@@ -114,6 +114,9 @@ namespace Raven.Server.Web.System
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+                writer.WritePropertyName("MachineName");
+                writer.WriteString(Environment.MachineName);
+                writer.WriteComma();
                 writer.WritePropertyName("NetworkInterfaces");
                 writer.WriteStartArray();
                 var first = true;
