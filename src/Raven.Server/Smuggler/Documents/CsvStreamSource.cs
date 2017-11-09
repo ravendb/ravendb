@@ -132,12 +132,13 @@ namespace Raven.Server.Smuggler.Documents
             while (_csvReader.Read())
             {
                 ProcessFieldsIfNeeded();
-                yield return ConvertRecordToDocumentItem(_csvReader.CurrentRecord, _csvReader.FieldHeaders, _collection);
+                var context = actions.GetContextForNewDocument();
+                yield return ConvertRecordToDocumentItem(context, _csvReader.CurrentRecord, _csvReader.FieldHeaders, _collection);
             }
 
         }
 
-        private DocumentItem ConvertRecordToDocumentItem(string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
+        private DocumentItem ConvertRecordToDocumentItem(DocumentsOperationContext context, string[] csvReaderCurrentRecord, string[] csvReaderFieldHeaders, string collection)
         {
             try
             {
@@ -188,8 +189,8 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     Document = new Document
                     {
-                        Data = _context.ReadObject(data, idStr),
-                        Id = _context.GetLazyString(idStr),
+                        Data = context.ReadObject(data, idStr),
+                        Id = context.GetLazyString(idStr),
                         ChangeVector = string.Empty,
                         Flags = DocumentFlags.None,
                         NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
