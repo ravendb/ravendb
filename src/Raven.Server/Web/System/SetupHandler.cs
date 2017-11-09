@@ -5,17 +5,14 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Commercial;
-using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -73,7 +70,7 @@ namespace Raven.Server.Web.System
                     var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
 
-                    var fullResult = new UserDomainsWithIps()
+                    var fullResult = new UserDomainsWithIps
                     {
                         Email = results.Email,
                         Domains = new Dictionary<string, List<SubDomainAndIps>>()
@@ -216,8 +213,8 @@ namespace Raven.Server.Web.System
 
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
                 jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
-                jsonObj["Security.UnsecuredAccessAllowed"] = "PublicNetwork";
-                jsonObj["ServerUrl"] = setupInfo.ServerUrl;
+                jsonObj["Security.UnsecuredAccessAllowed"] = "PublicNetwork"; // TODO handle server side.
+                jsonObj["ServerUrl"] = string.Join(";", setupInfo.Addresses.Select(ip => "http://" + ip + ":" + setupInfo.Port));
                 jsonObj.Remove("PublicServerUrl");
                 if (string.IsNullOrEmpty(setupInfo.PublicServerUrl) == false)
                 {
@@ -329,38 +326,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.Body.Write(zip, 0, zip.Length);
             }
         }
-
-        [RavenAction("/setup/validate", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task SetupValidate()
-        {
-            AssertOnlyInSetupMode();
-
-            var stream = TryGetRequestFromStream("Options") ?? RequestBodyStream();
-
-            var setupModeString = GetQueryStringValueAndAssertIfSingleAndNotEmpty("setupMode");
-            var setupMode = (SetupMode)Enum.Parse(typeof(SetupMode), setupModeString);
-
-            var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
-            var operationId = GetLongQueryString("operationId", false);
-
-            if (operationId.HasValue == false)
-                operationId = ServerStore.Operations.GetNextOperationId();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(stream, "setup-validate"))
-            {
-                var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
-                
-                await ServerStore.Operations.AddOperation(
-                    null,
-                    "Setting up RavenDB in secured mode.",
-                    Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupValidateTask(progress, operationCancelToken.Token, setupInfo, ServerStore, setupMode),
-                    operationId.Value, operationCancelToken);
-                
-            }
-        }
-
+        
         [RavenAction("/setup/finish", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task SetupFinish()
         {

@@ -1178,12 +1178,12 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addDatabaseCommand);
         }
 
-        public void EnsureNotPassive()
+        public void EnsureNotPassive(string publicServerUrl = null)
         {
             if (_engine.CurrentState != RachisState.Passive)
                 return;
 
-            _engine.Bootstrap(_server.ServerStore.GetNodeHttpServerUrl());
+            _engine.Bootstrap(publicServerUrl  ?? _server.ServerStore.GetNodeHttpServerUrl());
             LicenseManager.TryActivateLicense();
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
