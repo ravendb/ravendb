@@ -39,11 +39,6 @@ class routes {
                 title: "RavenDB setup wizard",
                 moduleId: "viewmodels/server-setup/certificate",
                 nav: false
-            },{
-                route: "agreement",
-                title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/agreement",
-                nav: false
             }
         ] as Array<DurandalRouteConfiguration>;
 

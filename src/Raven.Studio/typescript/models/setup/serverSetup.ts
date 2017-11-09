@@ -20,11 +20,18 @@ class serverSetup {
     certificate = ko.observable<certificateInfo>(new certificateInfo());
 
     useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
+    hostnameIsNotRequired = ko.pureComputed(() => {
+        if (this.mode() !== "Secured") {
+            return true;
+        }
+        
+        return this.certificate().wildcardCertificate();
+    });
 
     nodesValidationGroup: KnockoutValidationGroup;
 
     constructor() {
-        const newNode = new nodeInfo(this.certificate().wildcardCertificate);
+        const newNode = new nodeInfo(this.hostnameIsNotRequired);
         newNode.nodeTag("A");
         this.nodes.push(newNode);
 

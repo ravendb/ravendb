@@ -1,23 +1,40 @@
 import setupStep = require("viewmodels/server-setup/setupStep");
 import router = require("plugins/router");
 import nodeInfo = require("models/setup/nodeInfo");
+import loadAgreementCommand = require("commands/setup/loadAgreementCommand");
 
 import serverSetup = require("models/setup/serverSetup");
 
 class nodes extends setupStep {
 
     currentStep: number;
+
+    agreementUrl = ko.observable<string>();
+    confirmation = ko.observable<boolean>(false);
+    confirmationValidationGroup = ko.validatedObservable({
+        confirmation: this.confirmation
+    });
     
     editedNode = ko.observable<nodeInfo>();
     
     defineServerUrl: KnockoutComputed<boolean>;
     showDnsInfo: KnockoutComputed<boolean>;
     provideCertificates: KnockoutComputed<boolean>;
+    showAgreement: KnockoutComputed<boolean>;
     
     constructor() {
         super();
         
         this.bindToCurrentInstance("removeNode", "editNode");
+
+        this.confirmation.extend({
+            validation: [
+                {
+                    validator: (val: boolean) => val === true,
+                    message: "You must accept Let's Encrypt Subscriber Agreement"
+                }
+            ]
+        });
         
         this.defineServerUrl = ko.pureComputed(() => {
             return this.model.mode() === "Secured" && !this.model.certificate().wildcardCertificate();
@@ -29,6 +46,8 @@ class nodes extends setupStep {
             const mode = this.model.mode();
             return mode && mode === "Secured";
         });
+        
+        this.showAgreement = ko.pureComputed(() => this.model.mode() == "LetsEncrypt");
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -46,11 +65,19 @@ class nodes extends setupStep {
 
         switch (this.model.mode()) {
             case "LetsEncrypt":
-                this.currentStep = 5;
+                this.currentStep = 4;
                 break;
             case "Secured":
                 this.currentStep = 3;
                 break;
+        }
+        
+        if (this.showAgreement()) {
+            return new loadAgreementCommand(this.model.domain().userEmail())
+                .execute()
+                .done(url => {
+                    this.agreementUrl(url);
+                });
         }
     }
     
@@ -65,6 +92,12 @@ class nodes extends setupStep {
     save() {
         const nodes = this.model.nodes();
         let isValid = true;
+        
+        if (this.showAgreement()) {
+            if (!this.isValid(this.confirmationValidationGroup)) {
+                isValid = false;
+            }
+        }
         
         nodes.forEach(node => {
             if (!this.isValid(node.validationGroup)) {
@@ -90,7 +123,7 @@ class nodes extends setupStep {
     back() {
         switch (this.model.mode()) {
             case "LetsEncrypt":
-                router.navigate("#agreement");
+                router.navigate("#domain");
                 break;
             case "Secured":
                 router.navigate("#certificate");
@@ -101,7 +134,7 @@ class nodes extends setupStep {
     }
   
     addNode() {
-        const node = new nodeInfo(this.model.certificate().wildcardCertificate);
+        const node = new nodeInfo(this.model.hostnameIsNotRequired);
         this.model.nodes.push(node);
         this.editedNode(node);
         this.updateNodeTags();
