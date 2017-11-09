@@ -37,17 +37,17 @@ namespace Raven.Server.Commercial
 
         public class NodeInfo
         {
-            public string ServerUrl { get; set; }
+            public string PublicServerUrl { get; set; }
             public int Port { get; set; }
-            public List<string> Ips { get; set; }
+            public List<string> Addresses { get; set; }
 
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
                 {
-                    [nameof(ServerUrl)] = ServerUrl,
+                    [nameof(PublicServerUrl)] = PublicServerUrl,
                     [nameof(Port)] = Port,
-                    [nameof(Ips)] = Ips.ToArray()
+                    [nameof(Addresses)] = new DynamicJsonArray(Addresses)
                 };
             }
         }
@@ -55,15 +55,17 @@ namespace Raven.Server.Commercial
 
     public class UnsecuredSetupInfo
     {
-        public string ServerUrl { get; set; }
+        public List<string> Addresses { get; set; }
         public string PublicServerUrl { get; set; }
+        public int Port { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(ServerUrl)] = ServerUrl,
-                [nameof(PublicServerUrl)] = PublicServerUrl
+                [nameof(Addresses)] = new DynamicJsonArray(Addresses),
+                [nameof(PublicServerUrl)] = PublicServerUrl,
+                [nameof(Port)] = Port
             };
         }
     }
@@ -115,7 +117,7 @@ namespace Raven.Server.Commercial
 
     public class RegistrationNodeInfo
     {
-        public List<string> Ips { get; set; }
+        public List<string> Addresses { get; set; }
         public string SubDomain { get; set; }
         public string Challenge { get; set; }
 
@@ -123,7 +125,7 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
-                [nameof(Ips)] = Ips.ToArray(),
+                [nameof(Addresses)] = new DynamicJsonArray(Addresses),
                 [nameof(SubDomain)] = SubDomain,
                 [nameof(Challenge)] = Challenge
             };
