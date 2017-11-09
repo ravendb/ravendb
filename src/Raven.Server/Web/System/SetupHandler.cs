@@ -185,7 +185,21 @@ namespace Raven.Server.Web.System
                         var first = true;
                         foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
                         {
-                            var parts = line.Split('=');
+                            string[] parts;
+
+                            if (line.Contains('='))
+                            {
+                                parts = line.Split('=');
+                            } 
+                            else if (line.Contains(':'))
+                            {
+                                parts = line.Split(':');
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException($"Could not parse SAN names: {line}");
+                            }
+
                             var value = parts.Length > 0 ? parts[1] : null;
 
                             if (first == false)
