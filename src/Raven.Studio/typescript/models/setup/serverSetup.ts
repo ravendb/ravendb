@@ -96,7 +96,13 @@ class serverSetup {
     getStudioUrl() {
         switch (this.mode()) {
             case "Unsecured":
-                return this.unsecureSetup().serverUrl();
+                const publicUrl = this.unsecureSetup().publicServerUrl();
+                
+                if (publicUrl) {
+                    return publicUrl;
+                }
+                const portPart = this.unsecureSetup().port() || '8080';
+                return "http://" + this.unsecureSetup().ips()[0].ip() + ':' + portPart; 
             case "LetsEncrypt":
                 return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
             case "Secured":

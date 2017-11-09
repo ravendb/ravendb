@@ -3,19 +3,52 @@
     <div class="panel padding padding-lg">
 
         <div class="margin-bottom">
-            <div class="form-group" data-bind="validationElement: serverUrl">
-                <label for="serverUrl" class="control-label">Server url <i class="icon-info text-info"></i> <i class="required"></i></label>
-                <div class="flex-grow">
-                    <input type="text" autocomplete="off" class="form-control" id="serverUrl"
-                           data-bind="textInput: serverUrl">
-                </div>
-            </div>
             <div class="form-group" data-bind="validationElement: publicServerUrl">
                 <label for="publicServerUrl" class="control-label">Public server url</label>
                 <div class="flex-grow">
                     <input type="text" autocomplete="off" class="form-control" id="publicServerUrl"
                            placeholder="The URL under which server is publicly available, used for inter-node communication and access from behind a firewall, proxy etc."
                            data-bind="textInput: publicServerUrl">
+                </div>
+            </div>
+            <div class="form-group" data-bind="validationElement: port">
+                <label for="port" class="control-label">Port</label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="port"
+                           placeholder="Default: 8080"
+                           data-bind="textInput: port">
+                </div>
+            </div>
+            <div data-bind="foreach: ips">
+                <div class="form-group" data-bind="validationElement: ip">
+                    <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
+                        <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
+                    </label>
+                    <div class="flex-grow input-group">
+                        <input type="text" autocomplete="off" class="form-control"
+                               placeholder="Enter server IP address"
+                               data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
+                    </div>
+                    <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label"></label>
+                <div class="flex-grow">
+                    <div data-bind="validationElement: ips">
+                        <div class="help-block" data-bind="validationMessage: ips"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label"></label>
+                <div class="flex-grow">
+                    <button class="btn btn-default" data-bind="click: addIpAddress">
+                        <i class="icon-plus"></i>
+                        <span>Add another IP address</span>
+                    </button>
                 </div>
             </div>
         </div>
