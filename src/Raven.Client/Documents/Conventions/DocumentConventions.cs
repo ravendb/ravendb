@@ -44,8 +44,8 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly List<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
 
-        public readonly BulkInsertConventions BulkInsertConvention;
-        
+        public readonly BulkInsertConventions BulkInsert;
+
         public class BulkInsertConventions
         {
             private readonly DocumentConventions _conventions;
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Conventions
                     _trySerializeMetadataToJsonStream = value;
                 }
             }
-            
+
             public Func<object, StreamWriter, bool> TrySerializeEntityToJsonStream
             {
                 get => _trySerializeEntityToJsonStream;
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Conventions
                     _trySerializeEntityToJsonStream = value;
                 }
             }
-            
+
             internal BulkInsertConventions(DocumentConventions conventions)
             {
                 _conventions = conventions;
@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Conventions
                 TrySerializeMetadataToJsonStream = null;
             }
         }
-        
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
         /// </summary>
@@ -111,13 +111,13 @@ namespace Raven.Client.Documents.Conventions
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
-            
-            BulkInsertConvention = new BulkInsertConventions(this);
-            
+
+            BulkInsert = new BulkInsertConventions(this);
+
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
-        
+
 
         private bool _frozen;
         private ClientConfiguration _originalConfiguration;
@@ -142,7 +142,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _throwIfQueryPageSizeIsNotSet;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
-       
+
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
 
@@ -165,8 +165,6 @@ namespace Raven.Client.Documents.Conventions
                 _readBalanceBehavior = value;
             }
         }
-
-        
 
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" />
