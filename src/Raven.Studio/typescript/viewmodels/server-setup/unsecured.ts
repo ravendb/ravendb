@@ -28,7 +28,19 @@ class unsecured extends setupStep {
     }
     
     save() {
-        if (this.isValid(this.model.unsecureSetup().validationGroup)) {
+        let isValid = true;
+
+        this.model.unsecureSetup().ips().forEach(entry => {
+            if (!this.isValid(entry.validationGroup)) {
+                isValid = false;
+            }
+        });
+        
+        if (!this.isValid(this.model.unsecureSetup().validationGroup)) {
+            isValid = false;
+        }
+        
+        if (isValid) {
             router.navigate("#finish");
         }
     }

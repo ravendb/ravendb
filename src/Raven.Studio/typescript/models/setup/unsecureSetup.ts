@@ -1,43 +1,34 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
+import ipEntry = require("models/setup/ipEntry");
+
 class unsecureSetup {
     static readonly localNetworks = [ "127.0.0.1", "localhost", "::1"];
     
-    serverUrl = ko.observable<string>(location.origin);
+    port = ko.observable<string>();
+    ips = ko.observableArray<ipEntry>([ipEntry.forIp("127.0.0.1")]);
     publicServerUrl = ko.observable<string>();
     unsafeNetworkConfirm = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
-    
     shouldDisplayUnsafeModeWarning: KnockoutComputed<boolean>;
     
     constructor() {
         this.initObservables();
         this.initValidation();
-        
-        this.unsafeNetworkConfirm.subscribe(v => console.log("value = " + v));
     }
     
     private initObservables() {
         this.shouldDisplayUnsafeModeWarning = ko.pureComputed(() => {
-            const serverUrlIsValid = this.serverUrl.isValid();
-            if (!serverUrlIsValid) {
-                return false;
-            }
+            const ips = this.ips().map(x => x.ip());
             
-            try {
-                const hostname = new URL(this.serverUrl()).hostname;
-                return !_.includes(unsecureSetup.localNetworks, hostname);
-            } catch (e) {
-                return false;
-            }
+            return _.some(ips, x => !_.includes(unsecureSetup.localNetworks, x));
         });
     }
     
     private initValidation() {
-        this.serverUrl.extend({
-            required: true,
-            validUrl: true
+        this.port.extend({
+            number: true
         });
 
         this.publicServerUrl.extend({
@@ -54,19 +45,37 @@ class unsecureSetup {
                 }
             ]
         });
+
+        this.ips.extend({
+            validation: [
+                {
+                    validator: () => this.ips().length > 0,
+                    message: "Please define at least one IP address"
+                }
+            ]
+        });
         
         this.validationGroup = ko.validatedObservable({
-            serverUrl: this.serverUrl,
+            port: this.port, 
             publicServerUrl: this.publicServerUrl,
-            unsafeNetworkConfirm: this.unsafeNetworkConfirm
+            unsafeNetworkConfirm: this.unsafeNetworkConfirm,
+            ips: this.ips
         })
+    }
+
+    addIpAddress() {
+        this.ips.push(new ipEntry());
+    }
+
+    removeIp(ipEntry: ipEntry) {
+        this.ips.remove(ipEntry);
     }
     
     toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
         return {
             PublicServerUrl: this.publicServerUrl() || undefined,
-            Port: null,  //TODO
-            Addresses: [] //TODO:
+            Port: this.port() ? parseInt(this.port(), 10) : 8080,
+            Addresses: this.ips().map(x => x.ip())
         }
     }
     
