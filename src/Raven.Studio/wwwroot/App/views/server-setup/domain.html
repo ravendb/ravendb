@@ -1,20 +1,32 @@
 <h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right">3.</strong>Choose domain</h2>
-
 <div>
     <form class="flex-form" data-bind="with: model.domain, submit: save">
-
-        <div class="panel padding padding-lg">
-            <div class="form-group" data-bind="validationElement: domain">
-                <label for="domain_none" class="control-label">Domain<i class="required"></i></label>
-                <div>
-                    <input type="text" autocomplete="off" class="form-control" id="domain_none"
-                           placeholder="domain"
-                           data-bind="textInput: domain">
+        <div class="panel padding padding-lg">            
+            <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: domain">                
+                <label class="control-label">Domain<i class="required"></i></label>   
+                <div class="flex-horizontal">
+                    <div class="flex-grow">                        
+                        <div class="dropdown btn-block">           
+                            <input type="text" class="form-control dropdown-toggle" 
+                                   placeholder="domain" data-toggle="dropdown"
+                                   data-bind="textInput: domain, attr: { id: 'domainInput' }" />                            
+                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>                            
+                            <ul class="dropdown-menu max-height" role="menu"                      
+                                data-bind="autoComplete: '#domainInput', foreach: $root.createDomainNameAutocompleter(domain)">                                
+                                <li role="presentation" data-bind="click: $parent.domain.bind($parent, $data)">
+                                    <a role="menuitem" tabindex="-1" href="#">
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
+                            </ul>                          
+                        </div>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: domain">
+                            <div class="help-block" data-bind="validationMessage: domain"></div>
+                        </div>                        
+                    </div>
+                    <div class="form-control-static">.dbs.local.ravendb.net</div>
                 </div>
-                <div class="form-control-static">.dbs.local.ravendb.net</div>
-                <!-- TODO autocomplete -->
-            </div>
-    
+            </div>          
             <div class="form-group" data-bind="validationElement: userEmail">
                 <label for="userEmail" class="control-label">E-mail<i class="required"></i></label>
                 <div class="flex-grow">
@@ -24,7 +36,6 @@
                 </div>
             </div>
         </div>
-
         <div class="navigation padding padding-lg flex-horizontal">
             <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
                 <i class="icon-arrow-left"></i><span>Back</span>
