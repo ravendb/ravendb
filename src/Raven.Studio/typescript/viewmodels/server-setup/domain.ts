@@ -4,7 +4,6 @@ import claimDomainCommand = require("commands/setup/claimDomainCommand");
 import nodeInfo = require("models/setup/nodeInfo");
 import ipEntry = require("models/setup/ipEntry");
 
-
 class domain extends setupStep {
 
     spinners = {
@@ -93,9 +92,20 @@ class domain extends setupStep {
             .always(() => this.spinners.save(false));
         
         return task;
-        
     }
 
+    createDomainNameAutocompleter(domainText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = domainText();
+            const availableDomains = this.model.domain().availableDomains();
+            
+            if (key) {
+                return availableDomains.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return availableDomains;
+            }           
+        });    
+    }
 }
 
 export = domain;
