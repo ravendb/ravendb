@@ -119,6 +119,7 @@ namespace Raven.Client.Util
                     case "Where":
                         newName = "filter";
                         break;
+                    case "IndexOf":
                     case "Contains":
                         newName = "indexOf";
                         break;
@@ -127,6 +128,10 @@ namespace Raven.Client.Util
                         context.PreventDefault();
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         return;
+
+                    case "Concat":
+                        newName = "concat";
+                        break;
                     case "ToDictionary":
                         {
                             context.PreventDefault();
@@ -172,6 +177,129 @@ namespace Raven.Client.Util
                             }
                             return;
                         }
+                    case "Last":
+                    case "LastOrDefault":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            if (methodCallExpression.Arguments.Count > 1)
+                            {
+                                writer.Write(".slice().reverse().find");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                return;
+                            }
+
+                            writer.Write("[");
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(".length-1]");
+                            return;
+
+                        }
+                    }
+                    case "ElementAt":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write("[");
+                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            writer.Write("]");
+                            return;
+
+                        }
+                    }
+                    case "Reverse":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write(".slice().reverse()");
+                            return;
+                        }
+                    }
+                    case "Max":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            if (methodCallExpression.Arguments.Count > 1)
+                            {
+                                writer.Write(".map");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            }
+                            writer.Write(".reduce(function(a, b) { return Math.max(a, b);})");
+                            return;
+
+                        }
+                    }
+                    case "Min":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            if (methodCallExpression.Arguments.Count > 1)
+                            {
+                                writer.Write(".map");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            }
+                            writer.Write(".reduce(function(a, b) { return Math.min(a, b);})");
+                            return;
+
+                        }
+                    }
+                    case "Skip":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write(".slice(");
+                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            writer.Write(", ");
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(".length)");
+                            return;
+                        }
+                    }
+                    case "Take":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write(".slice(0, ");
+                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            writer.Write(")");
+                            return;
+                        }
+                    }
+                    case "Distinct":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write(".filter((value, index) => ");
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(".indexOf(value) == index)");
+                            return;
+                        }
+                    }
+
                     default:
                         return;
                 }
@@ -204,7 +332,7 @@ namespace Raven.Client.Util
                     javascriptWriter.Write(".reduce(function(a, b) { return a + b; }, 0)");
                 }
 
-                if (newName == "indexOf")
+                if (methodName == "Contains")
                 {
                     javascriptWriter.Write(">=0");
                 }
@@ -217,6 +345,7 @@ namespace Raven.Client.Util
 
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
+
         }
 
         public class CmpXchgMatchSupport : JavascriptConversionExtension
