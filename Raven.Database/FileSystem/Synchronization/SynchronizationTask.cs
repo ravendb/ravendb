@@ -23,6 +23,7 @@ using Raven.Json.Linq;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
 using System.Diagnostics;
 using Raven.Client.Connection;
+using Raven.Client.Extensions;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
@@ -31,6 +32,7 @@ namespace Raven.Database.FileSystem.Synchronization
         private static readonly ILog Log = LogManager.GetCurrentClassLogger();
 
         internal const int NumberOfFilesToCheckForSynchronization = 100;
+        private const int DefaultNumberOfCachedRequests = 2048;
 
         private readonly NotificationPublisher publisher;
         private readonly ITransactionalStorage storage;
@@ -38,8 +40,8 @@ namespace Raven.Database.FileSystem.Synchronization
         private readonly SynchronizationStrategy synchronizationStrategy;
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly SynchronizationTaskContext context;
-        private readonly HttpJsonRequestFactory _requestFactory = new HttpJsonRequestFactory(SynchronizationServerClient.DefaultNumberOfCachedRequests);
-
+        private readonly ConcurrentDictionary<string, HttpJsonRequestFactory> _requestFactories = new ConcurrentDictionary<string, HttpJsonRequestFactory>();
+        
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
             new ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>>();
 
@@ -255,6 +257,27 @@ namespace Raven.Database.FileSystem.Synchronization
             return destinationSyncs;
         }
 
+        private HttpJsonRequestFactory GetRequestFactory(SynchronizationDestination destination)
+        {
+            return _requestFactories.GetOrAdd(destination.Url, url =>
+            {
+                var conventions = new FilesConvention();
+                string authenticationScheme = null;
+
+                if (string.IsNullOrEmpty(destination.AuthenticationScheme) == false)
+                {
+                    authenticationScheme = destination.AuthenticationScheme;
+                    conventions.AuthenticationScheme = destination.AuthenticationScheme;
+                }
+
+                var factory = new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: authenticationScheme);
+
+                SecurityExtensions.InitializeSecurity(conventions, factory, destination.ServerUrl, autoRefreshToken: false);
+
+                return factory;
+            });
+        }
+
         public async Task<SynchronizationReport> SynchronizeFileToAsync(string fileName, SynchronizationDestination destination)
         {
             ICredentials credentials = null;
@@ -269,7 +292,8 @@ namespace Raven.Database.FileSystem.Synchronization
             if (string.IsNullOrEmpty(destination.AuthenticationScheme) == false)
                 conventions.AuthenticationScheme = destination.AuthenticationScheme;
 
-            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: conventions, apiKey: destination.ApiKey, credentials: credentials, requestFactory: _requestFactory);
+            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: conventions,
+                apiKey: destination.ApiKey, credentials: credentials, requestFactory: GetRequestFactory(destination));
 
             RavenJObject destinationMetadata;
 
@@ -316,7 +340,8 @@ namespace Raven.Database.FileSystem.Synchronization
                     : new NetworkCredential(destination.Username, destination.Password, destination.Domain);
             }
 
-            var destinationSyncClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey, credentials, requestFactory: _requestFactory);
+            var destinationSyncClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey,
+                credentials, GetRequestFactory(destination));
 
             bool repeat;
 
@@ -859,7 +884,18 @@ namespace Raven.Database.FileSystem.Synchronization
             }
             finally
             {
-                _requestFactory.Dispose();
+                foreach (var factory in _requestFactories)
+                {
+                    try
+                    {
+                        factory.Value.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Log.IsDebugEnabled)
+                            Log.Debug("Synchronization task disposal thew an exception on request factory dispose. Exception: " + e);
+                    }
+                }
             }
 
             context.Dispose();
