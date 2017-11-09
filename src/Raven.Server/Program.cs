@@ -87,6 +87,10 @@ namespace Raven.Server
                     rerun = false;
 
                     configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
+                    
+                    if (configurationArgs != null)
+                        configuration.AddCommandLine(configurationArgs);
+
                     configuration.Initialize();
                 }
 
