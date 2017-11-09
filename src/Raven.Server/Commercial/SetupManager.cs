@@ -578,7 +578,7 @@ namespace Raven.Server.Commercial
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.Password);
 
                             if (PlatformDetails.RunningOnPosix)
-                                AdminCertificatesHandler.ValidateCaExistsInOsStores(base64, "setup certificate", serverStore);
+                                ValidateCaExistsInOsStores(base64, "setup certificate", serverStore);
 
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {
@@ -914,6 +914,73 @@ namespace Raven.Server.Commercial
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             return selfSignedCertificate;
+        }
+
+        // Duplicate of AdminCertificatesHandler.ValidateCaExistsInOsStores but this one adds the CA if it doesn't exist.
+        public static void ValidateCaExistsInOsStores(string base64Cert, string name, ServerStore serverStore)
+        {
+            var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(base64Cert));
+
+            var chain = new X509Chain
+            {
+                ChainPolicy =
+                    {
+                        RevocationMode = X509RevocationMode.NoCheck,
+                        RevocationFlag = X509RevocationFlag.ExcludeRoot,
+                        VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority,
+                        VerificationTime = DateTime.UtcNow,
+                        UrlRetrievalTimeout = new TimeSpan(0, 0, 0)
+                    }
+            };
+
+            if (chain.Build(x509Certificate2) == false)
+            {
+                var status = new StringBuilder();
+                if (chain.ChainStatus.Length != 0)
+                {
+                    status.Append("Chain Status:\r\n");
+                    foreach (var chainStatus in chain.ChainStatus)
+                        status.Append(chainStatus.Status + " : " + chainStatus.StatusInformation + "\r\n");
+                }
+
+                throw new InvalidOperationException($"The certificate chain for {name} is broken, admin assistance required. {status}");
+            }
+
+            var rootCert = AdminCertificatesHandler.GetRootCertificate(chain);
+            if (rootCert == null)
+                throw new InvalidOperationException($"The certificate chain for {name} is broken. Reason: partial chain, cannot extract CA from chain. Admin assistance required.");
+
+
+            using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadWrite))
+            using (var machineCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine, OpenFlags.ReadWrite))
+            using (var userRootStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
+            using (var userCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
+            {
+                // workaround for lack of cert store inheritance RavenDB-8904
+                if (machineCaStore.Certificates.Contains(rootCert) == false
+                    && machineRootStore.Certificates.Contains(rootCert) == false
+                    && userCaStore.Certificates.Contains(rootCert) == false
+                    && userRootStore.Certificates.Contains(rootCert) == false)
+                {
+                    // rootCert is not in the stores, if we're in docker we have permissions, so lets add the cert
+                    if (true/*todo check docker environment variable*/)
+                    {
+                        try
+                        {
+                            machineRootStore.Add(rootCert);
+                            userRootStore.Add(rootCert);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS. " +
+                                                                "Tried to register the CA in the trusted root store, but failed (permissions?). You need to do this manually and restart the setup.", e);
+                        }
+                    }
+
+                    throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS. " +
+                                                        "You need to do this manually and restart the setup. Please read the Linux setup section in the documentation.");
+                }
+            }
         }
     }
 }

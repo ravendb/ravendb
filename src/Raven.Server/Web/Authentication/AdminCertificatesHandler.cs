@@ -179,7 +179,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        private static X509Certificate2 GetRootCertificate(X509Chain chain)
+        public static X509Certificate2 GetRootCertificate(X509Chain chain)
         {
             if (chain.ChainElements.Count < 1)
                 return null;
