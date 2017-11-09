@@ -463,7 +463,7 @@ namespace RachisTests.DatabaseCluster
                 leader = Servers.Single(s => s.Disposed == false && s.ServerStore.IsLeader());
                 // remove and rejoin to change the url
                 await leader.ServerStore.RemoveFromClusterAsync(nodeTag);
-                await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.NodeHttpServerUrl, nodeTag);
+                await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag);
                 await Servers[1].ServerStore.WaitForState(RachisState.Follower);
                 await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
                 dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;

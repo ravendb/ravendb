@@ -108,6 +108,8 @@ namespace Raven.Server.Web.System
                     }
 
                     var clusterTopology = ServerStore.GetClusterTopology(context);
+                    clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
+
                     var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -137,6 +139,7 @@ namespace Raven.Server.Web.System
             }
             return Task.CompletedTask;
         }
+
 
         // we can't use '/database/is-loaded` because that conflict with the `/databases/<db-name>`
         // route prefix
@@ -292,7 +295,7 @@ namespace Raven.Server.Web.System
             string url = null;
 
             if (Server.ServerStore.NodeTag == tag)
-                url = ServerStore.NodeHttpServerUrl;
+                url = ServerStore.GetNodeHttpServerUrl(HttpContext.Request.GetClientRequestedNodeUrl());
 
             if (url == null)
                 url = clusterTopology.GetUrlFromTag(tag);
@@ -349,6 +352,7 @@ namespace Raven.Server.Web.System
             var disabled = dbRecord.Disabled;
             var topology = dbRecord.Topology;
             var clusterTopology = ServerStore.GetClusterTopology(context);
+            clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
             var nodesTopology = new NodesTopology();
 

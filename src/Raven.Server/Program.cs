@@ -114,14 +114,14 @@ namespace Raven.Server
                             new RuntimeSettings(Console.Out).Print();
 
                             if (CommandLineSwitches.LaunchBrowser)
-                                BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
+                                BrowserHelper.OpenStudioInBrowser(server.ServerStore.GetNodeHttpServerUrl());
 
                             new ClusterMessage(Console.Out, server.ServerStore).Print();
 
                             var prevColor = Console.ForegroundColor;
                             Console.Write("Server available on: ");
                             Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"{server.ServerStore.NodeHttpServerUrl}");
+                            Console.WriteLine($"{server.ServerStore.GetNodeHttpServerUrl()}");
                             Console.ForegroundColor = prevColor;
 
                             var tcpServerStatus = server.GetTcpServerStatus();

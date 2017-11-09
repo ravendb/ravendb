@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             foreach (var tagWithUrl in topology.AllNodes)
                             {
-                                if (tagWithUrl.Value.Contains(ServerStore.NodeHttpServerUrl))
+                                if (tagWithUrl.Value.Contains(ServerStore.GetNodeHttpServerUrl()))
                                     continue;
 
                                 try
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             var nodeUrlToDatabaseNames = CreateUrlToDatabaseNamesMapping(transactionOperationContext, databaseNames);
                             foreach (var urlToDatabaseNamesMap in nodeUrlToDatabaseNames)
                             {
-                                if (urlToDatabaseNamesMap.Key.Contains(ServerStore.NodeHttpServerUrl))
+                                if (urlToDatabaseNamesMap.Key.Contains(ServerStore.GetNodeHttpServerUrl()))
                                     continue; //skip writing local data, we do it separately
 
                                 try
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var bodyJson = new DynamicJsonValue
             {
-                [nameof(NodeDebugInfoRequestHeader.FromUrl)] = ServerStore.NodeHttpServerUrl,
+                [nameof(NodeDebugInfoRequestHeader.FromUrl)] = ServerStore.GetNodeHttpServerUrl(),
                 [nameof(NodeDebugInfoRequestHeader.DatabaseNames)] = databaseNames
             };
 

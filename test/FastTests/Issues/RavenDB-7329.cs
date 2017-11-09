@@ -11,12 +11,12 @@ namespace FastTests.Issues
         private const string FakeCertPath = "C:\\fake\\cert\\path.crt";
 
         [Fact]
-        public void GivenZerosInServerUrlShouldUseMachineNameForNodeUrl()
+        public void GivenZerosInServerUrlShouldUseWebUriForNodeUrl()
         {
             var config = GetConfiguration(serverUrl: "http://0.0.0.0:8080",
                 unsecuredAccessAddressRange: nameof(UnsecuredAccessAddressRange.PublicNetwork));
             var result = config.Core.GetNodeHttpServerUrl("http://localhost:8080");
-            Assert.Equal($"http://{Environment.MachineName}:8080".ToLowerInvariant(), result);
+            Assert.Equal($"http://localhost:8080".ToLowerInvariant(), result);
         }
 
         [Fact]
@@ -45,7 +45,7 @@ namespace FastTests.Issues
                 serverUrl: "http://0.0.0.0:8080", 
                 unsecuredAccessAddressRange: nameof(UnsecuredAccessAddressRange.PublicNetwork));
             var result = config.Core.GetNodeTcpServerUrl("http://localhost:8080", 38888);
-            Assert.Equal($"tcp://{Environment.MachineName}:38888".ToLowerInvariant(), result);
+            Assert.Equal($"tcp://localhost:38888".ToLowerInvariant(), result);
         }
 
         [Fact]

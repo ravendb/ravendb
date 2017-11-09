@@ -417,7 +417,7 @@ namespace FastTests.Client.Subscriptions
 
                 store = new DocumentStore()
                 {
-                    Urls = new[] { server.ServerStore.NodeHttpServerUrl },
+                    Urls = new[] { server.ServerStore.GetNodeHttpServerUrl() },
                     Database = "RavenDB_2627",
 
                 }.Initialize();

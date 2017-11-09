@@ -23,7 +23,7 @@ function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
         -t ravendb/ravendb:latest `
         -t ravendb/ravendb:ubuntu-latest
 
-    Remove-Item "./ravendb-ubuntu1604/$packageFileName"
+    Remove-Item "./ravendb-ubuntu1604/RavenDB.tar.bz2"
 }
 
 BuildUbuntuDockerImage ".." $Version

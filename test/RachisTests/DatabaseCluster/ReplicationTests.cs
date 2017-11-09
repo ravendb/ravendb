@@ -387,7 +387,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(1, tasks.Count);
             var repTask = tasks[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
-            Assert.Equal(watcherNode.ServerStore.NodeHttpServerUrl, repTask?.DestinationUrl);
+            Assert.Equal(watcherNode.ServerStore.GetNodeHttpServerUrl(), repTask?.DestinationUrl);
             Assert.Equal(repTask?.TaskName, watcher.Name);
 
             watcher.TaskId = Convert.ToInt64(repTask?.TaskId);
@@ -432,7 +432,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(1, tasks.Count);
             repTask = tasks[0] as OngoingTaskReplication;
             Assert.Equal(repTask?.DestinationDatabase, watcher.Database);
-            Assert.Equal(repTask?.DestinationUrl, watcherNode.ServerStore.NodeHttpServerUrl);
+            Assert.Equal(repTask?.DestinationUrl, watcherNode.ServerStore.GetNodeHttpServerUrl());
             Assert.Equal(repTask?.TaskName, watcher.Name);
 
             using (var store = new DocumentStore
