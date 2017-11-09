@@ -36,7 +36,7 @@ if ($(Test-Path $pkgFile) -eq $False) {
 
     try {
         Set-Location $projectDir
-        .\build.ps1 -Ubuntu16 -Debug
+        .\build.ps1 -LinuxX64 -Debug
         CheckLastExitCode
         write-host "Built RavenDB in Debug"
     }
