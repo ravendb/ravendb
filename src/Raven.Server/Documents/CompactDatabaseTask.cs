@@ -41,7 +41,7 @@ namespace Raven.Server.Documents
             var documentDatabase = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(_database);
             var configuration = _serverStore.DatabasesLandlord.CreateDatabaseConfiguration(_database);
 
-            using (await _serverStore.DatabasesLandlord.UnloadAndLockDatabase(_database))
+            using (await _serverStore.DatabasesLandlord.UnloadAndLockDatabase(_database, "it is been compacted"))
             using (var src = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
                 new CatastrophicFailureNotification(exception => throw new InvalidOperationException($"Failed to compact database {_database}", exception))))
             {

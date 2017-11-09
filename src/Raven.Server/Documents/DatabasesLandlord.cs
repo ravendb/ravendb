@@ -617,26 +617,24 @@ namespace Raven.Server.Documents
             });
         }
 
-        public async Task<IDisposable> UnloadAndLockDatabase(string dbName)
+        public async Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
         {
-            var tcs = new TaskCompletionSource<DocumentDatabase>();
+            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}" ));
 
             try
             {
-                var existing = DatabasesCache.Replace(dbName, tcs.Task);
+                var existing = DatabasesCache.Replace(dbName, tcs);
 
                 (await existing)?.Dispose();
 
                 return new DisposableAction(() =>
                 {
                     DatabasesCache.TryRemove(dbName, out var _);
-                    tcs.TrySetCanceled();
                 });
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 DatabasesCache.TryRemove(dbName, out var _);
-                tcs.TrySetException(e);
                 throw;
             }
 
