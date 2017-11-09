@@ -25,5 +25,27 @@ namespace Raven.Server.Extensions
             string path = (request.PathBase.HasValue || request.Path.HasValue) ? (request.PathBase + request.Path).ToString() : "/";
             return request.Scheme + "://" + request.Host + path + request.Query;
         }
+
+        public static string ExtractNodeUrlFromRequest(HttpRequest request)
+        {
+            string requestUrl = null;
+
+            if (request != null)
+            {
+                var uriBuilder = new UriBuilder(
+                    request.Scheme,
+                    request.Host.Host,
+                    request.Host.Port ?? 8080,
+                    string.Empty);
+                requestUrl = uriBuilder.ToString().TrimEnd('/');
+            }
+
+            return requestUrl;
+        }
+
+        public static string GetClientRequestedNodeUrl(this HttpRequest request)
+        {
+            return ExtractNodeUrlFromRequest(request);
+        }
     }
 }

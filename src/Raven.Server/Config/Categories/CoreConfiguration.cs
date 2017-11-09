@@ -96,13 +96,19 @@ namespace Raven.Server.Config.Categories
 
         private string GetNodeHost(Uri serverWebUri, string serverUrlSettingValue)
         {
-            if (Uri.TryCreate(serverUrlSettingValue, UriKind.Absolute, out var serverUrlSettingUri)
-                && UrlUtil.IsZeros(serverUrlSettingUri.Host))
+            if (serverWebUri != null 
+                && UrlUtil.IsZeros(serverWebUri.Host) == false)
+                return serverWebUri.Host;
+
+            if (Uri.TryCreate(serverUrlSettingValue, UriKind.Absolute, out var serverUrlSettingUri))
             {
-                return Environment.MachineName;
+                if (UrlUtil.IsZeros(serverUrlSettingUri.Host))
+                    return Environment.MachineName;
+
+                return serverUrlSettingUri.Host;
             }
 
-            return serverWebUri.Host;
+            throw new ArgumentException("Arguments serverWebUri and serverUrlSettingValue are invalid.");
         }
 
         internal void ValidateServerUrls()

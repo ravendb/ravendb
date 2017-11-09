@@ -557,7 +557,7 @@ namespace Raven.Server.Documents.Replication
 
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
         public string FromToString => $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl} " +
-                                      $"into database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.NodeTcpServerUrl}";
+                                      $"into database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.GetNodeTcpServerUrl()}";
         public IncomingConnectionInfo ConnectionInfo { get; }
         
         private readonly List<ReplicationItem> _replicatedItems = new List<ReplicationItem>();

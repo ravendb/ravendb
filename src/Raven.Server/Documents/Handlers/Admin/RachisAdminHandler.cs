@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -183,7 +184,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (topology.Members.Count == 0)
                 {
                     var tag = ServerStore.NodeTag ?? "A";
-                    var serverUrl = ServerStore.NodeHttpServerUrl;
+                    var serverUrl = ServerStore.GetNodeHttpServerUrl(HttpContext.Request.GetClientRequestedNodeUrl());
 
                     topology = new ClusterTopology(
                         "dummy",
@@ -196,6 +197,12 @@ namespace Raven.Server.Documents.Handlers.Admin
                         tag
                     );
                     nodeTag = tag;
+                }
+                else
+                {
+                    var isClientIndependent = GetBoolValueQueryString("client-independent", false) ?? false;
+                    if (isClientIndependent == false)
+                        topology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;

@@ -53,6 +53,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using static Raven.Server.Documents.Handlers.BatchRequestParser;
+using Raven.Server.Extensions;
 
 namespace Raven.Server.ServerWide
 {
@@ -1148,7 +1149,7 @@ namespace Raven.Server.ServerWide
 
         public void SecedeFromCluster()
         {
-            Engine.Bootstrap(NodeHttpServerUrl, forNewCluster: true);
+            Engine.Bootstrap(GetNodeHttpServerUrl(), forNewCluster: true);
         }
 
         public Task<(long Index, object Result)> WriteDatabaseRecordAsync(
@@ -1182,7 +1183,7 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState != RachisState.Passive)
                 return;
 
-            _engine.Bootstrap(_server.ServerStore.NodeHttpServerUrl);
+            _engine.Bootstrap(_server.ServerStore.GetNodeHttpServerUrl());
             LicenseManager.TryActivateLicense();
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
@@ -1560,37 +1561,22 @@ namespace Raven.Server.ServerWide
             return _engine.CurrentState + ", " + _engine.LastStateChangeReason;
         }
 
-        private string _nodeHttpServerUrl;
-
-        private string _nodeTcpServerUrl;
-
-        public string NodeHttpServerUrl
+        public string GetNodeHttpServerUrl(string clientRequestedNodeUrl = null)
         {
-            get
-            {
-                if (_nodeHttpServerUrl != null)
-                    return _nodeHttpServerUrl;
+            Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _server.WebUrl != null || clientRequestedNodeUrl != null);
 
-                Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _server.WebUrl != null);
-                return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(
-                    Configuration.Core.PublicServerUrl?.UriValue ?? _server.WebUrl
-                    );
-            }
+            return Configuration.Core.GetNodeHttpServerUrl(
+                (Configuration.Core.PublicServerUrl?.UriValue ?? clientRequestedNodeUrl) ?? _server.WebUrl
+            );
         }
 
-        public string NodeTcpServerUrl
+        public string GetNodeTcpServerUrl(string clientRequestedNodeUrl = null)
         {
-            get
-            {
-                if (_nodeTcpServerUrl != null)
-                    return _nodeTcpServerUrl;
-
-                var ravenServerWebUrl = _server.WebUrl;
-                if (ravenServerWebUrl == null)
-                    ThrowInvalidTcpUrlOnStartup();
-                var status = _server.GetTcpServerStatus();
-                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
-            }
+            var ravenServerWebUrl = clientRequestedNodeUrl ?? _server.WebUrl;
+            if (ravenServerWebUrl == null)
+                ThrowInvalidTcpUrlOnStartup();
+            var status = _server.GetTcpServerStatus();
+            return Configuration.Core.GetNodeTcpServerUrl(ravenServerWebUrl, status.Port);
         }
 
         private static void ThrowInvalidTcpUrlOnStartup()
@@ -1598,9 +1584,9 @@ namespace Raven.Server.ServerWide
             throw new InvalidOperationException("The server has yet to complete startup, cannot get NodeTcpServerUtl");
         }
 
-        public DynamicJsonValue GetTcpInfoAndCertificates()
+        public DynamicJsonValue GetTcpInfoAndCertificates(string clientRequestedNodeUrl)
         {
-            var tcpServerUrl = NodeTcpServerUrl;
+            var tcpServerUrl = GetNodeTcpServerUrl(clientRequestedNodeUrl);
             if (tcpServerUrl.StartsWith("tcp://localhost.fiddler:", StringComparison.OrdinalIgnoreCase))
                 tcpServerUrl = tcpServerUrl.Remove(15, 8);
 

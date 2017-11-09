@@ -15,6 +15,35 @@ namespace Raven.Client.Http
             LastNodeId = lastNodeId;
         }
 
+        public void ReplaceCurrentNodeUrlWithClientRequestedUrl(string currentNodeTag, string clientRequestedUrl)
+        {
+            foreach (var member in Members)
+            {
+                if (member.Key == currentNodeTag)
+                {
+                    Members[member.Key] = clientRequestedUrl;
+                    return;
+                }
+            }
+            foreach (var promotable in Promotables)
+            {
+                if (promotable.Key == currentNodeTag)
+                {
+                    Promotables[promotable.Key] = clientRequestedUrl;
+                    return;
+                }
+            }
+            foreach (var watcher in Watchers)
+            {
+                if (watcher.Key == currentNodeTag)
+                {
+                    Promotables[watcher.Key] = clientRequestedUrl;
+                    return;
+                }
+            }
+            
+        }
+
         public bool Contains(string node)
         {
             return Members.ContainsKey(node) || Promotables.ContainsKey(node) || Watchers.ContainsKey(node);

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
@@ -420,7 +421,7 @@ namespace Raven.Server.Documents.Replication
                     ["Type"] = "GetLastEtag",
                     [nameof(ReplicationLatestEtagRequest.SourceDatabaseId)] = _database.DbId.ToString(),
                     [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
-                    [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.NodeHttpServerUrl,
+                    [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl(),
                     [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
                     [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName
                 };
