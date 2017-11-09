@@ -65,7 +65,8 @@ class unsecureSetup {
     toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
         return {
             PublicServerUrl: this.publicServerUrl() || undefined,
-            ServerUrl: this.serverUrl()
+            Port: null,  //TODO
+            Addresses: [] //TODO:
         }
     }
     

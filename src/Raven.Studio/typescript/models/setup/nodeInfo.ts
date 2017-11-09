@@ -8,6 +8,7 @@ class nodeInfo {
     ips = ko.observableArray<ipEntry>([]);
     port = ko.observable<string>();
     hostname = ko.observable<string>();
+    isLocal: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup;
     
@@ -16,6 +17,10 @@ class nodeInfo {
     constructor(hostnameIsOptional: KnockoutObservable<boolean>) {
         this.hostnameIsOptional = hostnameIsOptional;
         this.initValidation();
+        
+        this.isLocal = ko.pureComputed(() => {
+            return this.nodeTag() === 'A';
+        });
         
         this.ips.push(new ipEntry());
     }

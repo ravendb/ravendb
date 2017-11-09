@@ -81,12 +81,24 @@
                             <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
                                 <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
                             </label>
-                            <div class="flex-grow input-group">
+                            <div class="flex-grow input-group" data-bind="validationOptions: { insertMessages: false }, css: { 'dropdown': $parent.isLocal }">
                                 <input type="text" autocomplete="off" class="form-control"
                                        placeholder="Enter server IP address"
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
-                                <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
+                                <span class="caret dropdown-toggle" data-toggle="dropdown" data-bind="visible: $parent.isLocal"></span>
+                                <ul class="dropdown-menu" role="menu" style="display: none;"
+                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.model.localIps, visible: $parent.isLocal">
+                                    <li role="presentation">
+                                        <a role="menuitem" tabindex="-1" href="#">
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
+                                    <div class="help-block" data-bind="validationMessage: ip"></div>
+                                </div>
                             </div>
+                            <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
                         </div>
                     </div>
 

@@ -9,6 +9,7 @@ import getServerBuildVersionCommand = require("commands/resources/getServerBuild
 import messagePublisher = require("common/messagePublisher");
 import extensions = require("common/extensions");
 import viewModelBase = require("viewmodels/viewModelBase");
+import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import requestExecution = require("common/notifications/requestExecution");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import buildInfo = require("models/resources/buildInfo");
@@ -24,6 +25,8 @@ class setupShell extends viewModelBase {
 
     constructor() {
         super();
+
+        autoCompleteBindingHandler.install();
 
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
         

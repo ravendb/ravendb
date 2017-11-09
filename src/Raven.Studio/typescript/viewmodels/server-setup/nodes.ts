@@ -80,6 +80,8 @@ class nodes extends setupStep {
                     this.agreementUrl(url);
                 });
         }
+        
+        //TODO: load IPS /setup/ips
     }
     
     compositionComplete() {
