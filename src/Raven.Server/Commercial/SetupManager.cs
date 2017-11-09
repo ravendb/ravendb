@@ -963,7 +963,7 @@ namespace Raven.Server.Commercial
                     && userRootStore.Certificates.Contains(rootCert) == false)
                 {
                     // rootCert is not in the stores, if we're in docker we have permissions, so lets add the cert
-                    if (true/*todo check docker environment variable*/)
+                    if (Environment.GetEnvironmentVariable("RAVEN_AUTO_INSTALL_CA") == "true")
                     {
                         try
                         {
