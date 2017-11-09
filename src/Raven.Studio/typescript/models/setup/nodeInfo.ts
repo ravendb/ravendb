@@ -26,9 +26,10 @@ class nodeInfo {
         });
         
         this.hostname.extend({
-            requried: {
-                onlyIf: () => !this.hostnameIsOptional()
-            }
+            validation: [{
+                validator: (val: string) => this.hostnameIsOptional() || _.trim(val),
+                message: "This field is required"
+            }]
         });
         
         this.ips.extend({
@@ -44,7 +45,7 @@ class nodeInfo {
             nodeTag: this.nodeTag,
             port: this.port, 
             ips: this.ips,
-            serverUrl: this.hostname
+            hostname: this.hostname
         });
     }
 
