@@ -50,7 +50,7 @@ namespace Raven.Client.FileSystem
             get { return requestFactory; }
         }
 
-        public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, HttpJsonRequestFactory requestFactory, FilesConvention convention = null, 
+        public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, HttpJsonRequestFactory requestFactory, FilesConvention convention, 
             OperationCredentials operationCredentials = null, NameValueCollection operationsHeaders = null)
         {
             serverUrl = serverUrl.TrimEnd('/');

@@ -40,7 +40,7 @@ namespace Raven.Database.FileSystem.Synchronization
         private readonly SynchronizationStrategy synchronizationStrategy;
         private readonly InMemoryRavenConfiguration systemConfiguration;
         private readonly SynchronizationTaskContext context;
-        private readonly ConcurrentDictionary<string, HttpJsonRequestFactory> _requestFactories = new ConcurrentDictionary<string, HttpJsonRequestFactory>();
+        private readonly ConcurrentDictionary<string, DestinationRequest> _requestFactories = new ConcurrentDictionary<string, DestinationRequest>();
         
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>> activeIncomingSynchronizations =
             new ConcurrentDictionary<string, ConcurrentDictionary<string, SynchronizationDetails>>();
@@ -266,7 +266,7 @@ namespace Raven.Database.FileSystem.Synchronization
             return destinationSyncs;
         }
 
-        private HttpJsonRequestFactory GetRequestFactory(SynchronizationDestination destination)
+        private DestinationRequest GetDestinationRequest(SynchronizationDestination destination)
         {
             return _requestFactories.GetOrAdd(destination.Url, url =>
             {
@@ -283,20 +283,21 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 SecurityExtensions.InitializeSecurity(conventions, factory, destination.ServerUrl, autoRefreshToken: false);
 
-                return factory;
+                return new DestinationRequest(factory, conventions);
             });
         }
 
         public async Task<SynchronizationReport> SynchronizeFileToAsync(string fileName, SynchronizationDestination destination)
         {
             ICredentials credentials = destination.Credentials;
+            
+            var factory = GetDestinationRequest(destination);
 
-            var conventions = new FilesConvention();
             if (string.IsNullOrEmpty(destination.AuthenticationScheme) == false)
-                conventions.AuthenticationScheme = destination.AuthenticationScheme;
+                factory.Conventions.AuthenticationScheme = destination.AuthenticationScheme;
 
-            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: conventions,
-                apiKey: destination.ApiKey, credentials: credentials, requestFactory: GetRequestFactory(destination));
+            var destinationClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, convention: factory.Conventions,
+                apiKey: destination.ApiKey, credentials: credentials, requestFactory: factory.RequestFactory);
 
             RavenJObject destinationMetadata;
 
@@ -338,8 +339,10 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             ICredentials credentials = destination.Credentials;
 
+            var request = GetDestinationRequest(destination);
+
             var destinationSyncClient = new SynchronizationServerClient(destination.ServerUrl, destination.FileSystem, destination.ApiKey,
-                credentials, GetRequestFactory(destination));
+                credentials, request.RequestFactory, request.Conventions);
 
             bool repeat;
 
@@ -900,7 +903,7 @@ namespace Raven.Database.FileSystem.Synchronization
                 {
                     try
                     {
-                        factory.Value.Dispose();
+                        factory.Value.RequestFactory.Dispose();
                     }
                     catch (Exception e)
                     {
@@ -911,6 +914,19 @@ namespace Raven.Database.FileSystem.Synchronization
             }
 
             context.Dispose();
+        }
+
+        public class DestinationRequest
+        {
+            public readonly HttpJsonRequestFactory RequestFactory;
+
+            public readonly FilesConvention Conventions;
+
+            public DestinationRequest(HttpJsonRequestFactory factory, FilesConvention conventions)
+            {
+                RequestFactory = factory;
+                Conventions = conventions;
+            }
         }
     }
 }
