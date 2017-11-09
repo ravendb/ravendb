@@ -47,10 +47,8 @@ namespace Raven.Client.FileSystem
             get { return requestFactory; }
         }
 
-        public const int DefaultNumberOfCachedRequests = 2048; //put this in asyncserverclient
-
-        public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, FilesConvention convention = null, 
-            OperationCredentials operationCredentials = null, HttpJsonRequestFactory requestFactory = null, NameValueCollection operationsHeaders = null)
+        public SynchronizationServerClient(string serverUrl, string fileSystem, string apiKey, ICredentials credentials, HttpJsonRequestFactory requestFactory, FilesConvention convention = null, 
+            OperationCredentials operationCredentials = null, NameValueCollection operationsHeaders = null)
         {
             serverUrl = serverUrl.TrimEnd('/');
             baseUrl = serverUrl + "/fs/" + Uri.EscapeDataString(fileSystem);
@@ -58,10 +56,7 @@ namespace Raven.Client.FileSystem
             this.filesConvention = convention ?? new FilesConvention();
             this.operationCredentials = operationCredentials ?? new OperationCredentials(apiKey, credentials);
 
-            this.requestFactory = requestFactory ?? new HttpJsonRequestFactory(DefaultNumberOfCachedRequests, authenticationScheme: Conventions.AuthenticationScheme);
-
-            if(requestFactory == null)
-                SecurityExtensions.InitializeSecurity(Conventions, RequestFactory, serverUrl, autoRefreshToken: false);
+            this.requestFactory = requestFactory;
 
             this.OperationsHeaders = operationsHeaders ?? new NameValueCollection();
         }
