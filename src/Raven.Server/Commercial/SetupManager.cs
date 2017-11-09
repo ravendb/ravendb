@@ -654,8 +654,6 @@ namespace Raven.Server.Commercial
                                 writer.Flush();
                                 await entryStream.FlushAsync(token);
                             }
-
-                            // TODO write readme here, also return it in result to studio
                         }
                         catch (Exception e)
                         {
@@ -712,6 +710,26 @@ namespace Raven.Server.Commercial
                             {
                                 throw new InvalidOperationException($"Failed to to create zip archive for node '{node.Key}'.", e);
                             }
+
+                            progress.AddInfo("Adding readme file to zip archive.");
+                            onProgress(progress);
+                            string readmeString = CreateReadmeText(); 
+                            try
+                            {
+                                var entry = archive.CreateEntry("readme.txt");
+                                using (var entryStream = entry.Open())
+                                using (var writer = new StreamWriter(entryStream))
+                                {
+                                    writer.Write(readmeString);
+                                    writer.Flush();
+                                    await entryStream.FlushAsync(token);
+                                }                            
+
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException($"Failed to to create zip archive for node '{node.Key}'.", e);
+                            }
                         }
                     }
                     return ms.ToArray();
@@ -721,6 +739,25 @@ namespace Raven.Server.Commercial
             {
                 throw new InvalidOperationException("Failed to create setting file(s).", e);
             }
+        }
+
+        private static string CreateReadmeText()
+        {
+            //todo 
+            /*
+             * We need to mention that the cert is in plain text in the settings.json
+              we can determine where file was saved. 
+              it would be nice to explicitly tell file name -> purpose
+              'You can now access your server securely' actually you have to restart server first
+              'If you are setting up a cluster' I think we can detect this case. About copying settings.json file I think it is worth to mention that user should override old one - so we have implicit hint what he should look for (directory with settings.json file)
+             */
+
+            return $"Your cluster settings zip file has been downloaded to PATH. It contains the server and client certificates and a settings.json file for each node." +
+                   $"\r\n\r\nYou can now access your server securely." +
+                   $"\r\n\r\nIf you are using Chrome or Edge, add the client certificate to the OS trusted root store. Then access the following URL: XXXXX" +
+                   $"\r\n\r\nIf you are using Firefox, the certificate must be imported directly to the browser." +
+                   $"\r\n\r\nIf you are setting up a cluster with more than one node, the other nodes must be started with these new configuration settings. You must copy the settings.json file to the directory where the server is located, on each machine hosting a node." +
+                   $"\r\n\r\nOnce the other nodes are started, the local node will detect it, and add them automatically to the cluster. ";
         }
 
         private class UniqueResponseResponder : IStartup
