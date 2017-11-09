@@ -37,7 +37,7 @@ namespace Raven.Server.Commercial
         public static string SettingsPath = Path.Combine(AppContext.BaseDirectory, "settings.json");
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
-        public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncryptStaging;
+        public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncrypt;
         
         public static async Task<Uri> LetsEncryptAgreement(string email)
         {
