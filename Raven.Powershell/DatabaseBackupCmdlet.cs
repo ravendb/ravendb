@@ -2,7 +2,9 @@
 using System.Linq;
 using System.Management.Automation;
 using Raven.Abstractions.Data;
+using Raven.Client.Connection;
 using Raven.Client.Document;
+using Raven.Json.Linq;
 
 namespace Raven.Powershell
 {
@@ -47,7 +49,11 @@ namespace Raven.Powershell
                     return;
                 }
 
-                var operation = store.DatabaseCommands.GlobalAdmin.StartBackup(BackupLocation, new DatabaseDocument(), incremental, DatabaseName);
+                var databaseId = "Raven/Databases/" + DatabaseName;
+
+                var databaseDocuments = store.DatabaseCommands.ForSystemDatabase().Get(databaseId).DataAsJson.Deserialize(typeof(DatabaseDocument), store.Conventions) as DatabaseDocument;
+                
+                var operation = store.DatabaseCommands.GlobalAdmin.StartBackup(BackupLocation, databaseDocuments, incremental, DatabaseName);
                 operation.OnProgressChanged += progress =>
                 {
                     WriteProgress(new ProgressRecord(0,"Database Backup", "Backing up the database.")
