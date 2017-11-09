@@ -1117,8 +1117,8 @@ namespace Raven.Client.FileSystem
             }
 
             public SynchronizationClient(AsyncFilesServerClient client, FilesConvention convention)
-                : base(client.ServerUrl, client.FileSystemName, client.ApiKey, client.PrimaryCredentials.Credentials,
-                    client.Conventions, client.PrimaryCredentials, client.RequestFactory, client.OperationsHeaders)
+                : base(client.ServerUrl, client.FileSystemName, client.ApiKey, client.PrimaryCredentials.Credentials, client.RequestFactory,
+                    client.Conventions, client.PrimaryCredentials, client.OperationsHeaders)
             {
                 credentials = client.PrimaryCredentials;
                 this.convention = convention;
