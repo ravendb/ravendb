@@ -7,6 +7,10 @@ class certificate extends setupStep {
     certificateFileName = ko.observable<string>();
     passwordInputVisible = ko.observable<boolean>(false);
     
+    spinners = {
+        hosts: ko.observable<boolean>(false)
+    };
+    
     constructor() {
         super();
         
@@ -81,6 +85,7 @@ class certificate extends setupStep {
         cert.certificateCNs([]);
         const password = cert.certificatePassword();
         
+        this.spinners.hosts(true);
         new listHostsForCertificateCommand(cert.certificate(), password)
             .execute()
             .done((hosts: Array<string>) => {
@@ -94,7 +99,8 @@ class certificate extends setupStep {
                 if (response.status === 400) {
                     this.passwordInputVisible(true);
                 }
-            });
+            })
+            .always(() => this.spinners.hosts(false));
     }
 }
 

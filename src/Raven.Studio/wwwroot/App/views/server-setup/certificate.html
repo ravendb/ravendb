@@ -37,7 +37,7 @@
                         <div data-bind="text: $data"></div>
                     </div>
 
-                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: certificateCNs">
+                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: certificateCNs, visible: !$root.spinners.hosts()">
                         <div class="help-block" data-bind="validationMessage: certificateCNs"></div>
                     </div>
                 </div>
