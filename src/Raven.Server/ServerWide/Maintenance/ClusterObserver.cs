@@ -565,8 +565,9 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (lastSentEtag < mentorsEtag)
                 {
-                    var msg = $"The database {dbName} on {promotable} not ready to be promoted, because the mentor hasn't sent all his documents.\n" +
-                              $"Last sent Etag: {lastSentEtag}, Mentor's Etag: {mentorsEtag}";
+                    var msg = $"The database {dbName} on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
+                              $"Last sent Etag: {lastSentEtag}" + Environment.NewLine +  
+                              $"Mentor's Etag: {mentorsEtag}";
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(msg);
@@ -596,7 +597,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
+                _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date." + Environment.NewLine);
             }
 
             if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
