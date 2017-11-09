@@ -61,25 +61,6 @@ class serverSetup {
         });
     }
 
-    getStudioUrl() {
-        switch (this.mode()) {
-            case "Unsecured":
-                return this.unsecureSetup().serverUrl();
-            case "LetsEncrypt":
-                return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
-            case "Secured":
-                const wildcard = this.certificate().wildcardCertificate();
-                if (wildcard) {
-                    const domain = this.certificate().certificateCNs()[0].replace("*", "a");
-                    return "https://" + domain + this.getPortPart();
-                } else {
-                    return this.nodes()[0].getServerUrl();
-                }
-            default:
-                return null;
-        }
-    }
-    
     private getPortPart() {
         const port = this.nodes()[0].port();
         return port && port !== "443" ? ":" + port : "";
@@ -101,6 +82,57 @@ class serverSetup {
             Certificate: this.certificate().certificate(),
             Password: this.certificate().certificatePassword()
         };
+    }
+    
+    private getDomainForWildcard(tag: string) {
+        if (this.certificate().certificateCNs().length === 0) {
+            return "";
+        }
+        return this.certificate().certificateCNs()[0].replace("*", "a");
+    }
+
+    getStudioUrl() {
+        switch (this.mode()) {
+            case "Unsecured":
+                return this.unsecureSetup().serverUrl();
+            case "LetsEncrypt":
+                return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
+            case "Secured":
+                const wildcard = this.certificate().wildcardCertificate();
+                if (wildcard) {
+                    const domain = this.getDomainForWildcard("a");
+                    return "https://" + domain + this.getPortPart();
+                } else {
+                    return this.nodes()[0].getServerUrl();
+                }
+            default:
+                return null;
+        }
+    }
+    
+    createFullNodeNameObservable(node: nodeInfo) {
+        return ko.pureComputed(() => {
+            const tag = node.nodeTag();
+            if (!tag) {
+                return "";
+            }
+            const mode = this.mode();
+            switch (mode) {
+                case "LetsEncrypt":
+                    return tag.toLocaleLowerCase() + "." + this.domain().fullDomain();
+                    
+                case "Secured":
+                    const wildcard = this.certificate().wildcardCertificate();
+                    
+                    if (wildcard) {
+                        return this.getDomainForWildcard(tag);
+                    } else {
+                        return tag;
+                    }
+                default:
+                    return null;
+            }
+        });
     }
 }
 

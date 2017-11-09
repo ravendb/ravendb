@@ -21,6 +21,7 @@ class nodes extends setupStep {
     showDnsInfo: KnockoutComputed<boolean>;
     provideCertificates: KnockoutComputed<boolean>;
     showAgreement: KnockoutComputed<boolean>;
+    showFullDomain: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -40,13 +41,13 @@ class nodes extends setupStep {
             return this.model.mode() === "Secured" && !this.model.certificate().wildcardCertificate();
         });
         
-        this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
-        
         this.provideCertificates = ko.pureComputed(() => {
             const mode = this.model.mode();
             return mode && mode === "Secured";
         });
-        
+
+        this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
+        this.showFullDomain = ko.pureComputed(() => this.model.mode() == "LetsEncrypt");
         this.showAgreement = ko.pureComputed(() => this.model.mode() == "LetsEncrypt");
     }
 
