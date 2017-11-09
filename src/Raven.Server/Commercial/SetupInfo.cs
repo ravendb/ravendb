@@ -117,7 +117,7 @@ namespace Raven.Server.Commercial
 
     public class RegistrationNodeInfo
     {
-        public List<string> Addresses { get; set; }
+        public List<string> Ips { get; set; }
         public string SubDomain { get; set; }
         public string Challenge { get; set; }
 
@@ -125,7 +125,7 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
-                [nameof(Addresses)] = new DynamicJsonArray(Addresses),
+                [nameof(Ips)] = new DynamicJsonArray(Ips),
                 [nameof(SubDomain)] = SubDomain,
                 [nameof(Challenge)] = Challenge
             };

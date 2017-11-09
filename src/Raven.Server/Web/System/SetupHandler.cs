@@ -18,6 +18,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web.System
 {
@@ -91,6 +92,8 @@ namespace Raven.Server.Web.System
                             }
                             catch (Exception e)
                             {
+                                continue;
+                                // need to log this?
                                 throw new InvalidOperationException($"Failed to query the ips for host {subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}", e);
                             }
                         }

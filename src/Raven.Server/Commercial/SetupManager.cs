@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using NetTopologySuite.Utilities;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -306,11 +307,11 @@ namespace Raven.Server.Commercial
                 {
                     progress.AddInfo($"Creating Dns record/challenge for node {domainAndChallenge.Key}.");
                     onProgress(progress);
-                    var regNodeInfo = new RegistrationNodeInfo()
+                    var regNodeInfo = new RegistrationNodeInfo
                     {
                         SubDomain = domainAndChallenge.Key,
                         Challenge = domainAndChallenge.Value,
-                        Addresses = setupInfo.NodeSetupInfos[domainAndChallenge.Key].Addresses
+                        Ips = setupInfo.NodeSetupInfos[domainAndChallenge.Key].Addresses
                     };
                     registrationInfo.SubDomains.Add(regNodeInfo);
                 }
@@ -344,7 +345,7 @@ namespace Raven.Server.Commercial
                 try
                 {
                     RegistrationResult registrationResult;
-                    var i = 0;
+                    var i = 1;
                     do
                     {
                         try
@@ -535,7 +536,36 @@ namespace Raven.Server.Commercial
                 return $"https://{nodeTag.ToLower()}.{domain}:{port}";
             }
 
-            domain = cn;
+            domain = cn; //default for one node case
+
+            var sanNames = cert.Extensions["2.5.29.17"];
+            // If we have alternative names, find the apropriate url using the node tag
+            foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string[] parts;
+
+                if (line.Contains('='))
+                {
+                    parts = line.Split('=');
+                }
+                else if (line.Contains(':'))
+                {
+                    parts = line.Split(':');
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Could not parse SAN names: {line}");
+                }
+
+                var value = parts.Length > 0 ? parts[1] : "";
+                
+                if (value.StartsWith(nodeTag, StringComparison.OrdinalIgnoreCase) == false)
+                    continue;
+
+                domain = value;
+                break;
+            }
+
             var url = $"https://{domain}";
             if (port != 443)
                 url += ":" + port;
@@ -559,12 +589,12 @@ namespace Raven.Server.Commercial
                         progress.AddInfo("Loading and validating server certificate.");
                         onProgress(progress);
                         byte[] serverCertBytes;
-
+                        X509Certificate2 serverCert;
                         try
                         {
                             var base64 = setupInfo.Certificate;
                             serverCertBytes = Convert.FromBase64String(base64);
-                            var serverCert = string.IsNullOrEmpty(setupInfo.Password)
+                            serverCert = string.IsNullOrEmpty(setupInfo.Password)
                                 ? new X509Certificate2(serverCertBytes)
                                 : new X509Certificate2(serverCertBytes, setupInfo.Password);
 
@@ -578,7 +608,7 @@ namespace Raven.Server.Commercial
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.Password);
 
                             if (PlatformDetails.RunningOnPosix)
-                                ValidateCaExistsInOsStores(base64, "setup certificate", serverStore);
+                                EnsureCaExistsInOsStores(base64, "setup certificate", serverStore);
 
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {
@@ -622,11 +652,13 @@ namespace Raven.Server.Commercial
                             throw new InvalidOperationException($"Could not generate a client certificate for '{setupInfo.Domain.ToLower()}'.", e);
                         }
 
+                        RegisterClientCertInOs(onProgress, progress, clientCert);
+
                         progress.AddInfo("Writing certificates to zip archive.");
                         onProgress(progress);
                         try
                         {
-                            var entry = archive.CreateEntry($"server/{setupInfo.Domain.ToLower()}.cluster.server.certificate.pfx");
+                            var entry = archive.CreateEntry($"server/cluster.server.certificate.{setupInfo.Domain.ToLower()}.pfx");
                             using (var entryStream = entry.Open())
                             using (var writer = new BinaryWriter(entryStream))
                             {
@@ -635,7 +667,7 @@ namespace Raven.Server.Commercial
                                 await entryStream.FlushAsync(token);
                             }
 
-                            entry = archive.CreateEntry($"{setupInfo.Domain.ToLower()}.admin.client.certificate.pfx");
+                            entry = archive.CreateEntry($"admin.client.certificate.{setupInfo.Domain.ToLower()}.pfx");
                             using (var entryStream = entry.Open())
                             using (var writer = new BinaryWriter(entryStream))
                             {
@@ -644,7 +676,7 @@ namespace Raven.Server.Commercial
                                 await entryStream.FlushAsync(token);
                             }
 
-                            entry = archive.CreateEntry($"{setupInfo.Domain.ToLower()}.admin.client.certificate.pem");
+                            entry = archive.CreateEntry($"admin.client.certificate.{setupInfo.Domain.ToLower()}.pem");
                             using (var entryStream = entry.Open())
                             using (var writer = new StreamWriter(entryStream))
                             {
@@ -682,6 +714,13 @@ namespace Raven.Server.Commercial
                                 return url;
                             }));
 
+                            if (string.IsNullOrEmpty(node.Value.PublicServerUrl))
+                                jsonObj["PublicServerUrl"] = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out var _);
+                            else
+                                jsonObj["PublicServerUrl"] = node.Value.PublicServerUrl;
+
+                            if (string.IsNullOrEmpty(setupInfo.Password) == false)
+                                jsonObj["Security.Certificate.Password"] = setupInfo.Password;
 
                             var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
@@ -712,28 +751,28 @@ namespace Raven.Server.Commercial
                             }
                             catch (Exception e)
                             {
-                                throw new InvalidOperationException($"Failed to to create zip archive for node '{node.Key}'.", e);
+                                throw new InvalidOperationException($"Failed to write settings.json for node '{node.Key}' in zip archive.", e);
+                            }
+                        }
+
+                        progress.AddInfo("Adding readme file to zip archive.");
+                        onProgress(progress);
+                        string readmeString = CreateReadmeText();
+                        try
+                        {
+                            var entry = archive.CreateEntry("readme.txt");
+                            using (var entryStream = entry.Open())
+                            using (var writer = new StreamWriter(entryStream))
+                            {
+                                writer.Write(readmeString);
+                                writer.Flush();
+                                await entryStream.FlushAsync(token);
                             }
 
-                            progress.AddInfo("Adding readme file to zip archive.");
-                            onProgress(progress);
-                            string readmeString = CreateReadmeText(); 
-                            try
-                            {
-                                var entry = archive.CreateEntry("readme.txt");
-                                using (var entryStream = entry.Open())
-                                using (var writer = new StreamWriter(entryStream))
-                                {
-                                    writer.Write(readmeString);
-                                    writer.Flush();
-                                    await entryStream.FlushAsync(token);
-                                }                            
-
-                            }
-                            catch (Exception e)
-                            {
-                                throw new InvalidOperationException($"Failed to to create zip archive for node '{node.Key}'.", e);
-                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to write readme.txt to zip archive.", e);
                         }
                     }
                     return ms.ToArray();
@@ -742,6 +781,24 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 throw new InvalidOperationException("Failed to create setting file(s).", e);
+            }
+        }
+
+        public static void RegisterClientCertInOs(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, X509Certificate2 clientCert)
+        {
+            using (var userPersonalStore = new X509Store(StoreName.My, StoreLocation.CurrentUser, OpenFlags.ReadWrite))
+            {
+                try
+                {
+                    userPersonalStore.Add(clientCert);
+                    progress.AddInfo($"Successfully registered the admin client certificate in the OS Personal CurrentUser Store '{userPersonalStore.Name}'.");
+                    onProgress(progress);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to register client certificate in the current user personal store '{userPersonalStore.Name}'.", e);
+                }
             }
         }
 
@@ -917,7 +974,7 @@ namespace Raven.Server.Commercial
         }
 
         // Duplicate of AdminCertificatesHandler.ValidateCaExistsInOsStores but this one adds the CA if it doesn't exist.
-        public static void ValidateCaExistsInOsStores(string base64Cert, string name, ServerStore serverStore)
+        public static void EnsureCaExistsInOsStores(string base64Cert, string name, ServerStore serverStore)
         {
             var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(base64Cert));
 
@@ -972,13 +1029,16 @@ namespace Raven.Server.Commercial
                         }
                         catch (Exception e)
                         {
-                            throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS. " +
-                                                                "Tried to register the CA in the trusted root store, but failed (permissions?). You need to do this manually and restart the setup.", e);
+                            throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS.\r\n " +
+                                                                "Tried to register the CA in the trusted root store, but failed (permissions?).\r\n" +
+                                                                "You need to do this manually and restart the setup.\r\n" +
+                                                                "Please read the Linux setup section in the documentation.\r\n", e);
                         }
                     }
 
-                    throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS. " +
-                                                        "You need to do this manually and restart the setup. Please read the Linux setup section in the documentation.");
+                    throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS.\r\n" +
+                                                        "You need to do this manually and restart the setup.\r\n" +
+                                                        "Please read the Linux setup section in the documentation.\r\n");
                 }
             }
         }
