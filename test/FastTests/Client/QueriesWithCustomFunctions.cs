@@ -2617,6 +2617,49 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
             }
         }
 
+        [Fact]
+        public void Custom_Function_With_ToString()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Jerry",
+                        Birthday = new DateTime(1942, 8, 1)
+                    });
+                    session.Store(new User
+                    {
+                        Name = "Oren",
+                        Birthday = new DateTime(1234, 5, 6, 7, 8, 9),
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                                       .Where(x => x.Birthday.ToString().StartsWith("1234"))
+                                       .Select(u => new
+                                       {
+                                           u.Name,
+                                           Birthday = u.Birthday.ToString()
+                                       });
+
+                    Assert.Equal("FROM Users as u WHERE startsWith(u.Birthday, $p0) " +
+                                 "SELECT { Name : u.Name, Birthday : new Date(Date.parse(u.Birthday)).toString() }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Oren", queryResult[0].Name);
+                    Assert.Equal("Sat May 06 1234 07:08:09 GMT+00:00", queryResult[0].Birthday);
+
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document

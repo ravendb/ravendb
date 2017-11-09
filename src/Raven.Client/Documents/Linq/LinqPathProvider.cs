@@ -79,6 +79,17 @@ namespace Raven.Client.Documents.Linq
                     };
                 }
 
+                if (callExpression.Method.Name == "ToString" && callExpression.Method.ReturnType == typeof(string))
+                {
+                    var target = GetPath(callExpression.Object);
+                    return new Result
+                    {
+                        MemberType = typeof(string),
+                        IsNestedPath = false,
+                        Path = target.Path
+                    };
+                }
+
                 throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
             }
 
