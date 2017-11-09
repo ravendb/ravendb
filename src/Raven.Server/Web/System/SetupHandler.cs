@@ -179,15 +179,13 @@ namespace Raven.Server.Web.System
                         writer.WriteComma();
                         writer.WritePropertyName("AlternativeNames");
                         writer.WriteStartArray();
-                        var first = true;
+                        writer.WriteString("0.0.0.0");
                         foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
                         {
                             var parts = line.Split('=');
                             var value = parts.Length > 0 ? parts[1] : null;
-
-                            if (first == false)
-                                writer.WriteComma();
-                            first = false;
+                            
+                            writer.WriteComma();
                             writer.WriteString(value);
                         }
                         writer.WriteEndArray();
