@@ -369,9 +369,13 @@ namespace Raven.Server.Commercial
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
 
-                        if (i == 120)
-                            progress.AddInfo("This is taking too long, you might want to abort and restart.");
-                        if (i == 30)
+                        if (i % 120 == 0)
+                            progress.AddInfo("This is taking too long, you might want to abort and restart if this goes on like this...");
+                        else if (i % 45 == 0)
+                            progress.AddInfo("If everything goes all right, we should be nearly there...");
+                        else if (i % 30 == 0)
+                            progress.AddInfo("The DNS update is still pending, carry on just a little bit longer...");
+                        else if (i % 15 == 0)
                             progress.AddInfo("Please be patient, updating DNS records takes time...");
                         else if (i % 5 == 0)
                             progress.AddInfo("Waiting...");
