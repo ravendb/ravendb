@@ -2660,6 +2660,88 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
             }
         }
 
+        [Fact]
+        public void Custom_Functions_Linq_Methods_Support()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var user = new User
+                {
+                    Name = "Jerry",
+                    Roles = new[] {"1", "1", "2", "2", "2", "3", "4"},
+                    Details = new List<Detail>
+                    {
+                        new Detail { Number = 19},
+                        new Detail { Number = -25},
+                        new Detail { Number = 27},
+                        new Detail { Number = 6},
+                    }
+                };
+
+                var roles = new[] { "a", "b", "c" };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Select(u => new
+                        {
+                            LasLastOrDefault = u.Roles.LastOrDefault(),
+                            LastOrDefaultWithPredicate = u.Roles.LastOrDefault(x => x != "4"),
+                            Take = u.Roles.Take(2),
+                            Skip = u.Roles.Skip(2),
+                            Max = u.Roles.Max(),
+                            MaxWithSelector = u.Details.Max(d => d.Number),
+                            Min = u.Roles.Min(),
+                            MinWithSelector = u.Details.Min(d => d.Number),
+                            Reverse = u.Roles.Reverse(),
+                            IndexOf = u.Roles.ToList().IndexOf("3"),
+                            Concat = u.Roles.Concat(roles),
+                            Distinct = u.Roles.Distinct(),
+                            ElementAt = u.Details.Select(x=>x.Number).ElementAt(2)
+
+                        });
+
+                    Assert.Equal("FROM Users as u SELECT { " +
+                                 "LasLastOrDefault : u.Roles[u.Roles.length-1], " +
+                                 "LastOrDefaultWithPredicate : u.Roles.slice().reverse().find(function(x){return x!==\"4\";}), " +
+                                 "Take : u.Roles.slice(0, 2), " +
+                                 "Skip : u.Roles.slice(2, u.Roles.length), " +
+                                 "Max : u.Roles.reduce(function(a, b) { return Math.max(a, b);}), " +
+                                 "MaxWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Math.max(a, b);}), " +
+                                 "Min : u.Roles.reduce(function(a, b) { return Math.min(a, b);}), " +
+                                 "MinWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Math.min(a, b);}), " +
+                                 "Reverse : u.Roles.slice().reverse(), " +
+                                 "IndexOf : u.Roles.indexOf(\"3\"), " +
+                                 "Concat : u.Roles.concat([\"a\", \"b\", \"c\"]), " +
+                                 "Distinct : u.Roles.filter((value, index) => u.Roles.indexOf(value) == index), " +
+                                 "ElementAt : u.Details.map(function(x){return x.Number;})[2] }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(user.Roles.LastOrDefault(), queryResult[0].LasLastOrDefault);
+                    Assert.Equal(user.Roles.LastOrDefault(x => x != "4"), queryResult[0].LastOrDefaultWithPredicate);
+                    Assert.Equal(user.Roles.Take(2), queryResult[0].Take);
+                    Assert.Equal(user.Roles.Skip(2), queryResult[0].Skip);
+                    Assert.Equal(user.Roles.Max(), queryResult[0].Max);
+                    Assert.Equal(user.Details.Max(d => d.Number), queryResult[0].MaxWithSelector);
+                    Assert.Equal(user.Roles.Min(), queryResult[0].Min);
+                    Assert.Equal(user.Details.Min(d => d.Number), queryResult[0].MinWithSelector);
+                    Assert.Equal(user.Roles.ToList().IndexOf("3"), queryResult[0].IndexOf);
+                    Assert.Equal(user.Roles.Concat(roles), queryResult[0].Concat);
+                    Assert.Equal(user.Roles.Distinct(), queryResult[0].Distinct);
+                    Assert.Equal(user.Details.Select(x => x.Number).ElementAt(2), queryResult[0].ElementAt);
+
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -2901,6 +2983,7 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
             public string DetailId { get; set; }
             public string FriendId { get; set; }
             public IEnumerable<string> DetailIds { get; set; }
+            public List<Detail> Details { get; set; }
         }
         private class Detail
         {
