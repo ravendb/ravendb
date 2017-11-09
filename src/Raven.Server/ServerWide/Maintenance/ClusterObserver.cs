@@ -143,7 +143,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             if (_logger.IsInfoEnabled)
                             {
-                                _logger.Info($"We give more time for the {database} stats to become stable, so we skip analyzing it for now.");
+                                _logger.Info($"We give more time for the '{database}' stats to become stable, so we skip analyzing it for now.");
                             }
                             continue;
                         }
@@ -215,7 +215,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private void RaiseNoLivingNodesAlert(string alertMsg, string dbName)
         {
             var alert = AlertRaised.Create(
-                $"Could not reach any node of {dbName} database",
+                $"Could not reach any node of '{dbName}' database",
                 $"{alertMsg}. {ThingsToCheck}",
                 AlertType.DatabaseTopologyWarning,
                 NotificationSeverity.Warning
@@ -285,11 +285,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     topology.Rehabs.Remove(node);
                     topology.Members.Add(node);
 
-                    RaiseNoLivingNodesAlert($"None of {dbName} database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
-                    return $"None of {dbName} nodes are responding, promoting {node} from rehab";
+                    RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable.", dbName);
+                    return $"None of '{dbName}' nodes are responding, promoting {node} from rehab";
                 }
 
-                RaiseNoLivingNodesAlert($"None of {dbName} database nodes are responding to the supervisor, the database is unreachable.", dbName);
+                RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, the database is unreachable.", dbName);
             }
 
             var shouldUpdateTopologyStatus = false;
@@ -565,8 +565,9 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (lastSentEtag < mentorsEtag)
                 {
-                    var msg = $"The database {dbName} on {promotable} not ready to be promoted, because the mentor hasn't sent all his documents.\n" +
-                              $"Last sent Etag: {lastSentEtag}, Mentor's Etag: {mentorsEtag}";
+                    var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
+                              $"Last sent Etag: {lastSentEtag}" + Environment.NewLine +  
+                              $"Mentor's Etag: {mentorsEtag}";
                     if (_logger.IsInfoEnabled)
                     {
                         _logger.Info(msg);
@@ -587,7 +588,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Operations($"We try to promoted the database {dbName} on {promotable} to be a full member");
+                    _logger.Operations($"We try to promoted the database '{dbName}' on {promotable} to be a full member");
                 }
                 topology.PromotablesStatus.Remove(promotable);
                 topology.DemotionReasons.Remove(promotable);
@@ -596,7 +597,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             if (_logger.IsInfoEnabled)
             {
-                _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
+                _logger.Info($"The database '{dbName}' on {promotable} is not ready to be promoted, because the indexes are not up-to-date." + Environment.NewLine);
             }
 
             if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
@@ -743,13 +744,13 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Operations($"The database {db} on {badNode} has not responded for a long time, but there is no free node to reassign it.");
+                    _logger.Operations($"The database '{db}' on {badNode} has not responded for a long time, but there is no free node to reassign it.");
                 }
                 return false;
             }
             if (_logger.IsOperationsEnabled)
             {
-                _logger.Operations($"The database {db} on {badNode} has not responded for a long time, so we reassign it to {bestNode}.");
+                _logger.Operations($"The database '{db}' on {badNode} has not responded for a long time, so we reassign it to {bestNode}.");
             }
 
             return true;
