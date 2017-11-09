@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -166,7 +168,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to extract CN and SAN from certificate {certificate?.FriendlyName}. Maybe password is wrong?", e);
+                    throw new BadRequestException($"Failed to extract CN and SAN from certificate {certificate?.FriendlyName}. Maybe password is wrong?", e);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

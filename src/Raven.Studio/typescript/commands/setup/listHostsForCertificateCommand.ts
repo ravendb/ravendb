@@ -25,7 +25,12 @@ class listHostsForCertificateCommand extends commandBase {
                 }
                 task.resolve(cns);
             })
-            .fail((response: JQueryXHR) => this.reportError("Failed to fetch CNs from certificate", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => {
+                if (response.status !== 400) {
+                    this.reportError("Failed to fetch CNs from certificate", response.responseText, response.statusText);    
+                }
+                task.reject(response);
+            });
         
         return task;
     }

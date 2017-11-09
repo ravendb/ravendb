@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <div class="form-group" data-bind="validationElement: certificatePassword">
+            <div class="form-group" data-bind="validationElement: certificatePassword, visible: $root.passwordInputVisible">
                 <label for="certificatePassword" class="control-label">Certificate passphrase</label>
                 <div class="flex-grow">
                     <input type="password" autocomplete="off" class="form-control" id="certificatePassword"
@@ -30,9 +30,12 @@
             <div class="form-group">
                 <label class="control-label">CN names:</label>
                 <div class="flex-grow form-control-static">
-                    <ul data-bind="foreach: certificateCNs">
-                        <li data-bind="text: $data"></li>
-                    </ul>
+                    <div data-bind="visible: certificateCNs().length === 0">
+                        Please select certificate to use.
+                    </div>
+                    <div data-bind="foreach: certificateCNs">
+                        <div data-bind="text: $data"></div>
+                    </div>
 
                     <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: certificateCNs">
                         <div class="help-block" data-bind="validationMessage: certificateCNs"></div>
