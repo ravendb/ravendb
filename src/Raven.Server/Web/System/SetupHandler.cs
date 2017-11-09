@@ -131,7 +131,6 @@ namespace Raven.Server.Web.System
                     writer.WriteString(netInterface.Description);
                     writer.WriteComma();
                     var ips = netInterface.GetIPProperties().UnicastAddresses.Select(addr => addr.Address.ToString()).ToList();
-                    ips.Add("0.0.0.0");
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
