@@ -112,6 +112,18 @@
             </div>
         </div>
 
+        <div class="panel padding padding-lg" data-bind="if: showAgreement, visible: showAgreement">
+            <div>
+                <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                    <input id="agree" type="checkbox" data-bind="checked: confirmation">
+                    <label for="agree">I accept <a target="_blank" data-bind="attr: { href: agreementUrl }">Let's Encrypt Subscriber Agreement.</a></label>
+                </div>
+                <div data-bind="validationElement: confirmation">
+                    <div class="help-block" data-bind="validationMessage: confirmation"></div>
+                </div>
+            </div>
+        </div>
+
         
         <div class="navigation padding padding-lg flex-horizontal">
             <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">

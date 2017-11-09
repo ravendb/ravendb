@@ -59,7 +59,7 @@ class finish extends setupStep {
                 this.currentStep = 3;
                 break;
             case "LetsEncrypt":
-                this.currentStep = 6;
+                this.currentStep = 5;
                 break;
             case "Secured":
                 this.currentStep = 4;
