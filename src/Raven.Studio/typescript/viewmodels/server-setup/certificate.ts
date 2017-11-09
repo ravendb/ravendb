@@ -5,6 +5,7 @@ import listHostsForCertificateCommand = require("commands/setup/listHostsForCert
 class certificate extends setupStep {
 
     certificateFileName = ko.observable<string>();
+    passwordInputVisible = ko.observable<boolean>(false);
     
     constructor() {
         super();
@@ -25,10 +26,19 @@ class certificate extends setupStep {
     compositionComplete() {
         super.compositionComplete();
 
-        const fetchCNsThrottled = _.debounce(() => this.fetchCNs(), 700);
-
         const certificate = this.model.certificate();
-        this.registerDisposable(certificate.certificate.subscribe(fetchCNsThrottled));
+        const fetchCNsThrottled = _.debounce(() => {
+            if (certificate.certificatePassword()) {
+                this.fetchCNs();    
+            }
+        }, 300);
+
+        
+        this.registerDisposable(certificate.certificate.subscribe(() => {
+            // don't throttle when new cert was supplied
+            certificate.certificatePassword("");
+            this.fetchCNs();
+        }));
         this.registerDisposable(certificate.certificatePassword.subscribe(fetchCNsThrottled));
     }
     
@@ -69,11 +79,21 @@ class certificate extends setupStep {
     private fetchCNs() {
         const cert = this.model.certificate();
         cert.certificateCNs([]);
+        const password = cert.certificatePassword();
         
-        new listHostsForCertificateCommand(cert.certificate(), cert.certificatePassword())
+        new listHostsForCertificateCommand(cert.certificate(), password)
             .execute()
             .done((hosts: Array<string>) => {
                 cert.certificateCNs(_.uniq(hosts));
+                
+                if (!password) {
+                    this.passwordInputVisible(false);
+                }
+            })
+            .fail((response: JQueryXHR) => {
+                if (response.status === 400) {
+                    this.passwordInputVisible(true);
+                }
             });
     }
 }
