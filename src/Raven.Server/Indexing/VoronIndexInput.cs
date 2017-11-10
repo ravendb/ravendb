@@ -37,7 +37,7 @@ namespace Raven.Server.Indexing
         {
             var fileTree = transaction.ReadTree(_tree);
             if (fileTree == null)
-                throw new FileNotFoundException("Could not find index input", _name);
+                throw new FileNotFoundException($"Could not find '{_tree}' tree for index input", _name);
 
             using (Slice.From(transaction.Allocator, _name, out Slice fileName))
             {
