@@ -89,21 +89,17 @@ namespace Raven.Server.Documents.Expiration
 
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    Stopwatch duration;
-                    Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> expired;
-
                     using (context.OpenReadTransaction())
                     {
-                        expired = _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, CancellationToken, out duration);
-                        if (expired == null)
+                        var expired = _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, CancellationToken, out var duration);
+                        if (expired == null || expired.Count == 0)
                             return;
+
+                        var command = new DeleteExpiredDocumentsCommand(expired, _database);
+                        await _database.TxMerger.Enqueue(command);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
-
-                    var command = new DeleteExpiredDocumentsCommand(expired, _database);
-                    await _database.TxMerger.Enqueue(command);
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Successfully deleted {command.DeletionCount:#,#;;0} documents in {duration.ElapsedMilliseconds:#,#;;0} ms.");
                 }
             }
             catch (Exception e)
