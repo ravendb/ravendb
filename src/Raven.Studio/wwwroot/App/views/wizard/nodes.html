@@ -1,4 +1,4 @@
-<h2 class="margin-bottom margin-top"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node addressess</h2>
+<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node addressess</h2>
 <div>
     
     <form class="flex-form" data-bind="submit: save">
@@ -27,7 +27,7 @@
                     <div class="panel padding padding-sm flex-horizontal" 
                          data-bind="css: { 'active': $data === $root.editedNode() }">
                         <div class="flex-grow">
-                            <div>
+                            <div class="padding-xs">
                                 <i class="icon-cluster-node"></i>
                                 <span>Node <strong><span data-bind="text: nodeTag"></span></strong></span>    
                             </div>
@@ -47,7 +47,7 @@
                 </div>
             </div>
             <div class="col-md-6" data-bind="with: editedNode">
-                <div class="panel padding">
+                <div class="panel padding padding-lg">
                     <div class="margin-bottom">
                         Node <strong data-bind="text: $root.model.createFullNodeNameObservable($data)"></strong>    
                     </div>
@@ -80,7 +80,7 @@
                             <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
                                 <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
                             </label>
-                            <div class="flex-grow input-group" data-bind="validationOptions: { insertMessages: false }, css: { 'dropdown': $parent.isLocal }">
+                            <div class="flex-grow input-group ip-dropdown" data-bind="validationOptions: { insertMessages: false }, css: { 'dropdown': $parent.isLocal }">
                                 <input type="text" autocomplete="off" class="form-control"
                                        placeholder="Enter server IP address"
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
@@ -123,9 +123,9 @@
             </div>
         </div>
 
-        <div class="panel padding padding-lg" data-bind="if: showAgreement, visible: showAgreement">
+        <div class="panel padding" data-bind="if: showAgreement, visible: showAgreement">
             <div>
-                <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
                     <input id="agree" type="checkbox" data-bind="checked: confirmation">
                     <label for="agree">I accept <a target="_blank" data-bind="attr: { href: agreementUrl }">Let's Encrypt Subscriber Agreement.</a></label>
                 </div>
