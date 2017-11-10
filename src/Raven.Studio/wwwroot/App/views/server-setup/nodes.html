@@ -23,14 +23,13 @@
         
         <div class="row">
             <div class="col-md-6">
-                
-
                 <div data-bind="foreach: model.nodes">
                     <div class="panel padding padding-sm flex-horizontal" 
                          data-bind="css: { 'active': $data === $root.editedNode() }">
                         <div class="flex-grow">
                             <div>
-                                Node <strong><span data-bind="text: nodeTag"></span></strong>    
+                                <i class="icon-cluster-node"></i>
+                                <span>Node <strong><span data-bind="text: nodeTag"></span></strong></span>    
                             </div>
                         </div>
                         <button data-bind="click: $root.editNode" class="btn btn-default" title="Edit this node">

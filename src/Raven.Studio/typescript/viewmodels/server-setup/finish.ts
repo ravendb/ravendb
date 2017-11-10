@@ -6,6 +6,7 @@ import endpoints = require("endpoints");
 import router = require("plugins/router");
 import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
+import checkIfServerIsOnlineCommand = require("commands/setup/checkIfServerIsOnlineCommand");
 
 class finish extends setupStep {
 
@@ -165,8 +166,18 @@ class finish extends setupStep {
         new finishSetupCommand()
             .execute()
             .done(() => {
-                setTimeout(() => this.redirectToStudio(), 3000);
+                this.check();
             });
+    }
+    
+    private check() {
+        setInterval(() => {
+            new checkIfServerIsOnlineCommand(this.model.getStudioUrl())
+                .execute()
+                .done(() => {
+                    this.redirectToStudio();
+                });
+        }, 500);
     }
 
     back() {
