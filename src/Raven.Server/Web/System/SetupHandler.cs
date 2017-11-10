@@ -24,6 +24,21 @@ namespace Raven.Server.Web.System
 {
     public class SetupHandler : RequestHandler
     {
+        [RavenAction("/setup/alive", "OPTIONS", AuthorizationStatus.UnauthenticatedClients)]
+        public Task AllowPreflightRequest()
+        {
+            SetupCORSHeaders();
+            HttpContext.Response.Headers.Remove("Content-Type");
+            return Task.CompletedTask;
+        }
+        
+        [RavenAction("/setup/alive", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task ServerAlive()
+        {
+            SetupCORSHeaders();
+            return NoContent();
+        }
+        
         [RavenAction("/setup/dns-n-cert", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public async Task DnsCertBridge() 
         {

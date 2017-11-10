@@ -16,7 +16,7 @@
     <label for="logExpander">Show configuration log</label>
 </div>
 
-<div data-bind="collapse: expandSetupLog">
+<div class="configuration-log" data-bind="collapse: expandSetupLog">
 <pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: $data"></span>
 <!-- /ko --></pre>
 </div>
