@@ -1,9 +1,9 @@
-import setupStep = require("viewmodels/server-setup/setupStep");
+import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
-import nodeInfo = require("models/setup/nodeInfo");
-import loadAgreementCommand = require("commands/setup/loadAgreementCommand");
+import nodeInfo = require("models/wizard/nodeInfo");
+import loadAgreementCommand = require("commands/wizard/loadAgreementCommand");
 
-import serverSetup = require("models/setup/serverSetup");
+import serverSetup = require("models/wizard/serverSetup");
 
 class nodes extends setupStep {
 

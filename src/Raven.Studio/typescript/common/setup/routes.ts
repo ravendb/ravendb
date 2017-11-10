@@ -7,37 +7,37 @@ class routes {
             {
                 route: ["", "welcome"],
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/welcome",
+                moduleId: "viewmodels/wizard/welcome",
                 nav: false
             },{
                 route: "unsecured",
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/unsecured",
+                moduleId: "viewmodels/wizard/unsecured",
                 nav: false
             },{
                 route: "finish",
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/finish",
+                moduleId: "viewmodels/wizard/finish",
                 nav: false
             },{
                 route: "license",
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/license",
+                moduleId: "viewmodels/wizard/license",
                 nav: false
             },{
                 route: "domain",
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/domain",
+                moduleId: "viewmodels/wizard/domain",
                 nav: false
             },{
                 route: "nodes",
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/nodes",
+                moduleId: "viewmodels/wizard/nodes",
                 nav: false
             },{
                 route: "certificate",
                 title: "RavenDB setup wizard",
-                moduleId: "viewmodels/server-setup/certificate",
+                moduleId: "viewmodels/wizard/certificate",
                 nav: false
             }
         ] as Array<DurandalRouteConfiguration>;

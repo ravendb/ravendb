@@ -1,6 +1,6 @@
-import setupStep = require("viewmodels/server-setup/setupStep");
+import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
-import listHostsForCertificateCommand = require("commands/setup/listHostsForCertificateCommand");
+import listHostsForCertificateCommand = require("commands/wizard/listHostsForCertificateCommand");
 
 class certificate extends setupStep {
 

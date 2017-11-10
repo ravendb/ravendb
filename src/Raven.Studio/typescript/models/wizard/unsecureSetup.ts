@@ -1,6 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import ipEntry = require("models/setup/ipEntry");
+import ipEntry = require("models/wizard/ipEntry");
 
 class unsecureSetup {
     static readonly localNetworks = [ "127.0.0.1", "localhost", "::1"];

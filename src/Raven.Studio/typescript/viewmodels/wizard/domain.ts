@@ -1,8 +1,8 @@
-import setupStep = require("viewmodels/server-setup/setupStep");
+import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
-import claimDomainCommand = require("commands/setup/claimDomainCommand");
-import nodeInfo = require("models/setup/nodeInfo");
-import ipEntry = require("models/setup/ipEntry");
+import claimDomainCommand = require("commands/wizard/claimDomainCommand");
+import nodeInfo = require("models/wizard/nodeInfo");
+import ipEntry = require("models/wizard/ipEntry");
 
 class domain extends setupStep {
 
