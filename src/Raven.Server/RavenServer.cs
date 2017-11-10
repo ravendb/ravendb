@@ -129,7 +129,7 @@ namespace Raven.Server
 
             try
             {
-                ServerListenAddress = GetServerAddressesAndPort();
+                ListenEndpoints = GetServerAddressesAndPort();
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
@@ -167,9 +167,9 @@ namespace Raven.Server
                         var loggerFactory = options.ApplicationServices.GetRequiredService<ILoggerFactory>();
                         var adapter = new AuthenticatingAdapter(this, new HttpsConnectionAdapter(adapterOptions, loggerFactory));
 
-                        foreach (var address in ServerListenAddress.Addresses)
+                        foreach (var address in ListenEndpoints.Addresses)
                         {
-                            options.Listen(address, ServerListenAddress.Port, listenOptions => { listenOptions.ConnectionAdapters.Add(adapter); });
+                            options.Listen(address, ListenEndpoints.Port, listenOptions => { listenOptions.ConnectionAdapters.Add(adapter); });
                         }
                     }
                 }
@@ -820,7 +820,7 @@ namespace Raven.Server
         private SnmpWatcher _snmpWatcher;
         private static readonly Oid ProxyDelegation = new Oid("1.3.6.1.4.1.45751.42", "RavenDB Proxy Delegation");
         private X509Certificate2 _sslProxyCertificate;
-        public (IPAddress[] Addresses, int Port) ServerListenAddress { get; private set; }
+        public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
