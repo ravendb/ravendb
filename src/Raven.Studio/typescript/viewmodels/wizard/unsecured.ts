@@ -1,4 +1,4 @@
-import setupStep = require("viewmodels/server-setup/setupStep");
+import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import popoverUtils = require("common/popoverUtils");
 

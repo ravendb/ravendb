@@ -1,10 +1,10 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
-import unsecureSetup = require("models/setup/unsecureSetup");
-import licenseInfo = require("models/setup/licenseInfo");
-import domainInfo = require("models/setup/domainInfo");
-import nodeInfo = require("models/setup/nodeInfo");
-import certificateInfo = require("models/setup/certificateInfo");
+import unsecureSetup = require("models/wizard/unsecureSetup");
+import licenseInfo = require("models/wizard/licenseInfo");
+import domainInfo = require("models/wizard/domainInfo");
+import nodeInfo = require("models/wizard/nodeInfo");
+import certificateInfo = require("models/wizard/certificateInfo");
 
 class serverSetup {
     static default = new serverSetup();

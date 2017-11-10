@@ -1,12 +1,12 @@
-import setupStep = require("viewmodels/server-setup/setupStep");
-import finishSetupCommand = require("commands/setup/finishSetupCommand");
+import setupStep = require("viewmodels/wizard/setupStep");
+import finishSetupCommand = require("commands/wizard/finishSetupCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import messagePublisher = require("common/messagePublisher");
 import endpoints = require("endpoints");
 import router = require("plugins/router");
-import saveUnsecuredSetupCommand = require("commands/setup/saveUnsecuredSetupCommand");
+import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
-import checkIfServerIsOnlineCommand = require("commands/setup/checkIfServerIsOnlineCommand");
+import checkIfServerIsOnlineCommand = require("commands/wizard/checkIfServerIsOnlineCommand");
 
 class finish extends setupStep {
 

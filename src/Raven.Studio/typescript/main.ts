@@ -53,7 +53,7 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
             if (window.location.pathname.startsWith("/studio")) {
                 app.setRoot("viewmodels/shell");
             } else {
-                app.setRoot("viewmodels/server-setup/setupShell")
+                app.setRoot("viewmodels/wizard/setupShell")
             }
             
             composition.defaultTransitionName = "fadeIn";

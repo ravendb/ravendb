@@ -1,7 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
 import generalUtils = require("common/generalUtils");
-import checkDomainAvailabilityCommand = require("commands/setup/checkDomainAvailabilityCommand");
+import checkDomainAvailabilityCommand = require("commands/wizard/checkDomainAvailabilityCommand");
 
 class domainInfo {
     private licenseProvider: () => Raven.Server.Commercial.License;
