@@ -79,6 +79,7 @@ namespace Raven.Server
             }
 
             var rerun = false;
+            RavenConfiguration configBeforeRestart = configuration;
             do
             {
                 if (rerun)
@@ -87,9 +88,14 @@ namespace Raven.Server
                     rerun = false;
 
                     configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
-                    
+
                     if (configurationArgs != null)
-                        configuration.AddCommandLine(configurationArgs);
+                    {
+                        var argsAfterRestart = UpdateServerUrlCommandLineArgAfterSetupIfNecessary(
+                            configurationArgs, configBeforeRestart.Core.ServerUrl, configuration.GetSetting("ServerUrl"));
+                        configuration.AddCommandLine(argsAfterRestart);
+                        configBeforeRestart = configuration;
+                    }
 
                     configuration.Initialize();
                 }
@@ -183,6 +189,30 @@ namespace Raven.Server
 
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
+
+        private static string[] UpdateServerUrlCommandLineArgAfterSetupIfNecessary(
+            string[] originalCommandLineArgs, string oldServerUrl, string newServerUrl)
+        {
+            if (string.IsNullOrEmpty(newServerUrl))
+                return originalCommandLineArgs;
+
+            var idx = Array.FindIndex(originalCommandLineArgs, opt => opt.StartsWith("--ServerUrl=") || opt.StartsWith("/ServerUrl="));
+            if (idx == -1)
+                return originalCommandLineArgs;
+
+            var resultArgs = originalCommandLineArgs.ToArray();
+            Uri.TryCreate(oldServerUrl, UriKind.Absolute, out var uriBeforeSetup);
+            Uri.TryCreate(newServerUrl, UriKind.Absolute, out var uriAfterSetup);
+
+            if (string.Equals(uriAfterSetup.Scheme, uriBeforeSetup.Scheme, StringComparison.InvariantCultureIgnoreCase))
+                return originalCommandLineArgs;
+
+            var uriBuilder = new UriBuilder(
+                uriAfterSetup.Scheme, uriBeforeSetup.Host, uriBeforeSetup.Port);
+            resultArgs[idx] = $"--ServerUrl={uriBuilder.ToString().TrimEnd('/')}";
+
+            return resultArgs;
+        }
 
         public static bool IsRunningNonInteractive;
 
