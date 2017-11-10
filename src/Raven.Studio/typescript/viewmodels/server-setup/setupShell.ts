@@ -98,6 +98,7 @@ class setupShell extends viewModelBase {
         $("body")
             .removeClass('loading-active')
             .addClass("setup-shell");
+        $(".loading-overlay").remove();
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;

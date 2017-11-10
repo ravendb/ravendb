@@ -187,6 +187,7 @@ class shell extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         $("body").removeClass('loading-active');
+        $(".loading-overlay").remove();
 
         this.studioLoadingFakeRequest.markCompleted();
         this.studioLoadingFakeRequest = null;
