@@ -57,7 +57,7 @@
         list-style: none;
         padding: 0;
         font-size: 13px;
-        min-height: 115px; 
+        min-height: 115px;
 
         .icon-plus {
             color: @brand-success;
@@ -78,7 +78,7 @@
             padding: @grid-gutter-width/8 @grid-gutter-width/2;
         }
     }
-    
+
     #terms {
         border: none;
         overflow: hidden;
@@ -87,6 +87,16 @@
     .configuration-log {
         pre {
             white-space: pre-wrap;
+        }
+    }
+
+    .ip-dropdown {
+        .has-error {
+            width: 100%;
+        }
+
+        .form-control + .caret {
+            top: 17px;
         }
     }
 }
