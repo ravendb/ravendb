@@ -129,6 +129,8 @@ namespace Raven.Server
 
             try
             {
+                ServerListenAddress = GetServerAddressesAndPort();
+
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
@@ -161,16 +163,13 @@ namespace Raven.Server
                                     errors == SslPolicyErrors.RemoteCertificateChainErrors || errors == SslPolicyErrors.None
                         };
 
-                        var uri = new Uri(Configuration.Core.ServerUrl);
-                        var host = uri.DnsSafeHost;
-                        var ipAddresses = GetListenIpAddresses(host);
 
                         var loggerFactory = options.ApplicationServices.GetRequiredService<ILoggerFactory>();
                         var adapter = new AuthenticatingAdapter(this, new HttpsConnectionAdapter(adapterOptions, loggerFactory));
 
-                        foreach (var address in ipAddresses)
+                        foreach (var address in ServerListenAddress.Addresses)
                         {
-                            options.Listen(address, uri.Port, listenOptions => { listenOptions.ConnectionAdapters.Add(adapter); });
+                            options.Listen(address, ServerListenAddress.Port, listenOptions => { listenOptions.ConnectionAdapters.Add(adapter); });
                         }
                     }
                 }
@@ -249,6 +248,14 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
+
+        private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
+        {
+            var uri = new Uri(Configuration.Core.ServerUrl);
+            var host = uri.DnsSafeHost;
+            var ipAddresses = GetListenIpAddresses(host);
+            return (ipAddresses, uri.Port);
         }
 
         public CertificateHolder InitializeClusterCertificate()
@@ -813,6 +820,7 @@ namespace Raven.Server
         private SnmpWatcher _snmpWatcher;
         private static readonly Oid ProxyDelegation = new Oid("1.3.6.1.4.1.45751.42", "RavenDB Proxy Delegation");
         private X509Certificate2 _sslProxyCertificate;
+        public (IPAddress[] Addresses, int Port) ServerListenAddress { get; private set; }
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {

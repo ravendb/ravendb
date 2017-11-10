@@ -447,6 +447,17 @@ namespace Raven.Server.Commercial
 
             try
             {
+                if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
+                {
+                    var currentIps = serverStore.Server.ListenEndpoints.Addresses;
+                    if (ips.Length == 0 && currentIps.Length == 1 &&
+                        (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
+                        return; // listen to any ip in this 
+
+                    if (ips.All(ip => currentIps.Contains(ip.Address)))
+                        return; // we already listen to all these IPs, no need to check
+                }
+
                 await SimulateRunningServer(serverCert, localServerUrl, ips, token, setupInfo);
             }
             catch (Exception e)
