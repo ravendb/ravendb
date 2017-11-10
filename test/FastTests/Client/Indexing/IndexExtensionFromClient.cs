@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NodaTime;
 using Raven.Client.Documents.Indexes;
@@ -13,12 +14,14 @@ namespace FastTests.Client.Indexing
         [Fact]
         public void CanCompileIndexWithExtensions()
         {
+            CopyNodaTimeIfNeeded();
+
             using (var store = GetDocumentStore())
             {
                 store.ExecuteIndex(new PeopleByEmail());
                 using (var session = store.OpenSession())
                 {
-                    var p = new Person() {Name = "Methuselah", Age = 969};
+                    var p = new Person() { Name = "Methuselah", Age = 969 };
                     session.Store(p);
                     session.SaveChanges();
                     WaitForIndexing(store);
@@ -26,6 +29,17 @@ namespace FastTests.Client.Indexing
                         .Where(x => x.Email == PeopleUtil.CalculatePersonEmail(p.Name, p.Age)).OfType<Person>().Single();
                 }
             }
+        }
+
+        private static void CopyNodaTimeIfNeeded()
+        {
+            var nodaLocation = new FileInfo(typeof(Instant).Assembly.Location);
+            var currentLocation = new FileInfo(typeof(IndexExtensionFromClient).Assembly.Location);
+            var newLocation = new FileInfo(Path.Combine(currentLocation.DirectoryName, nodaLocation.Name));
+            if (newLocation.Exists)
+                return;
+
+            File.Copy(nodaLocation.FullName, newLocation.FullName, overwrite: true);
         }
 
         public class Person
@@ -43,10 +57,11 @@ namespace FastTests.Client.Indexing
 
             public PeopleByEmail()
             {
-                Map = people => from person in people select new
-                {
-                    _ =  CreateField("Email", CalculatePersonEmail(person.Name, person.Age), true, true),
-                };
+                Map = people => from person in people
+                                select new
+                                {
+                                    _ = CreateField("Email", CalculatePersonEmail(person.Name, person.Age), true, true),
+                                };
                 AdditionalSources = new Dictionary<string, string>
                 {
                     {
