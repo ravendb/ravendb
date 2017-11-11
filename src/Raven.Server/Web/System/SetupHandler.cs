@@ -102,7 +102,7 @@ namespace Raven.Server.Web.System
                                 list.Add(new SubDomainAndIps
                                 {
                                     SubDomain = subDomain,
-                                    Ips = Dns.GetHostAddresses($"{subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}").Select(ip => ip.ToString()).ToList(),
+                                    Ips = Dns.GetHostAddresses(SetupManager.BuildHostName(subDomain, domain.Key)).Select(ip => ip.ToString()).ToList(),
                                 });
                             }
                             catch (Exception e)

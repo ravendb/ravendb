@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -12,6 +13,7 @@ namespace Raven.Server.Commercial
 {
     public class SetupInfo
     {
+        public bool RegisterClientCert { get; set; }
         public License License { get; set; }
         public string Email { get; set; }
         public string Domain { get; set; }
@@ -20,7 +22,7 @@ namespace Raven.Server.Commercial
         public string Password { get; set; }
 
         public Dictionary<string, NodeInfo> NodeSetupInfos { get; set; }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -51,6 +53,21 @@ namespace Raven.Server.Commercial
                 };
             }
         }
+
+        public X509Certificate2 GetX509Certificate()
+        {
+            try
+            {
+                var localCertBytes = Convert.FromBase64String(Certificate);
+                return string.IsNullOrEmpty(Password)
+                      ? new X509Certificate2(localCertBytes)
+                      : new X509Certificate2(localCertBytes, Password);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not load the provided certificate.", e);
+            }
+        }
     }
 
     public class UnsecuredSetupInfo
@@ -69,7 +86,7 @@ namespace Raven.Server.Commercial
             };
         }
     }
-    
+
     public class ListDomainsInfo
     {
         public License License { get; set; }
@@ -82,7 +99,7 @@ namespace Raven.Server.Commercial
             };
         }
     }
-    
+
     public class ClaimDomainInfo
     {
         public License License { get; set; }
@@ -218,7 +235,7 @@ namespace Raven.Server.Commercial
         public byte[] SettingsZipFile; // not sent as part of the result
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        
+
         public SetupProgressAndResult()
         {
             Messages = new ConcurrentQueue<string>();

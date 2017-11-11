@@ -10,11 +10,6 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("The .pfx certificate in Base64 format. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.Certificate.Base64", ConfigurationEntryScope.ServerWideOnly)]
-        public string CertificateBase64 { get; set; }
-
         [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
@@ -71,8 +66,9 @@ namespace Raven.Server.Config.Categories
 
         internal string UnsecureAccessWarningMessage { get; private set; }
 
-        public bool IsCertificateConfigured => string.IsNullOrWhiteSpace(CertificatePath) == false 
-            || string.IsNullOrWhiteSpace(CertificateExec) == false || string.IsNullOrWhiteSpace(CertificateBase64) == false;
+        public bool IsCertificateConfigured => 
+            string.IsNullOrWhiteSpace(CertificatePath) == false || 
+            string.IsNullOrWhiteSpace(CertificateExec) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 

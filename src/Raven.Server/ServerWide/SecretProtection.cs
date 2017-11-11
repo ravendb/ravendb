@@ -471,6 +471,7 @@ namespace Raven.Server.ServerWide
         {
             try
             {
+                path = Path.Combine(AppContext.BaseDirectory, path);
                 var rawData = File.ReadAllBytes(path);
 
                 var loadedCertificate = password == null

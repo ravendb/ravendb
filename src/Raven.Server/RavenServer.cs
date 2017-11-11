@@ -245,7 +245,6 @@ namespace Raven.Server
         public CertificateHolder InitializeClusterCertificate()
         {
             var clusterCert = LoadCertificate(
-                Configuration.Security.CertificateBase64,
                 Configuration.Security.CertificateExec,
                 Configuration.Security.CertificateExecArguments,
                 Configuration.Security.CertificatePath,
@@ -255,7 +254,6 @@ namespace Raven.Server
                 _sslProxyCertificate = ServerStore.Secrets.LoadProxyCertificateFromPath(
                     Configuration.Security.SslProxyCertificatePath,
                     Configuration.Security.SslProxyCertificatePassword);
-
 
             ClusterCertificateHolder = clusterCert ?? new CertificateHolder();
             return clusterCert;
@@ -275,12 +273,10 @@ namespace Raven.Server
             return Configuration.Core.ServerUrl;
         }
 
-        private CertificateHolder LoadCertificate(string base64, string exec, string execArgs, string path, string password)
+        private CertificateHolder LoadCertificate(string exec, string execArgs, string path, string password)
         {
             try
             {
-                if (string.IsNullOrEmpty(base64) == false)
-                    return ServerStore.Secrets.LoadCertificateFromBase64(base64, password);
                 if (string.IsNullOrEmpty(path) == false)
                     return ServerStore.Secrets.LoadCertificateFromPath(path, password);
                 if (string.IsNullOrEmpty(exec) == false)
