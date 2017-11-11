@@ -3,18 +3,14 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.System;
-using Microsoft.Extensions.Logging;
 using Sparrow.Logging;
 
 namespace Raven.Server.Https
@@ -90,7 +86,7 @@ namespace Raven.Server.Https
                 await sslStream.AuthenticateAsServerAsync(
                     _serverCertificate, 
                     clientCertificateRequired: false,
-                    enabledSslProtocols: SslProtocols.Tls12, 
+                    enabledSslProtocols: SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls, 
                     checkCertificateRevocation: true);
             }
             catch (OperationCanceledException)
@@ -172,7 +168,7 @@ namespace Raven.Server.Https
             return new X509Certificate2(certificate);
         }
 
-        private class HttpsAdaptedConnection : IAdaptedConnection
+        public class HttpsAdaptedConnection : IAdaptedConnection
         {
             private readonly SslStream _sslStream;
 
@@ -180,6 +176,9 @@ namespace Raven.Server.Https
             {
                 _sslStream = sslStream;
             }
+
+            public SslProtocols SslProtocol => _sslStream.SslProtocol;
+
 
             public Stream ConnectionStream => _sslStream;
 
