@@ -22,6 +22,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
+using Raven.Server.Https;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
@@ -878,14 +879,16 @@ namespace Raven.Server.Commercial
                             if (addresses.Length == 0)
                             {
                                 var defaultIp = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port == 0 ? 443 : port);
-                                options.Listen(defaultIp, listenOptions => listenOptions.UseHttps(serverCertificate));
+                                options.Listen(defaultIp, 
+                                    listenOptions => listenOptions.ConnectionAdapters.Add(new HttpsConnectionAdapter(serverCertificate)));
                                 if (Logger.IsInfoEnabled)
                                     Logger.Info($"List of ip addresses for node '{LocalNodeTag}' is empty. Webhost listening to {defaultIp}");
                             }
 
                             foreach (var addr in addresses)
                             {
-                                options.Listen(addr, listenOptions => listenOptions.UseHttps(serverCertificate));
+                                options.Listen(addr,
+                                    listenOptions => listenOptions.ConnectionAdapters.Add(new HttpsConnectionAdapter(serverCertificate)));
                             }
                         })
                         .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")

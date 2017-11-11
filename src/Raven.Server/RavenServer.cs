@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.IO.Pipes;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -37,22 +38,19 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
-using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
-using Raven.Client.Util;
-using Raven.Server.Commercial;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Https;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.ResponseCompression;
-using Raven.Server.Web.System;
 using Sparrow;
 
 namespace Raven.Server
@@ -149,23 +147,9 @@ namespace Raven.Server
 
                     if (clusterCert != null)
                     {
-                        var adapterOptions = new HttpsConnectionAdapterOptions
-                        {
-                            ServerCertificate = clusterCert.Certificate,
-                            CheckCertificateRevocation = true,
-                            ClientCertificateMode = ClientCertificateMode.AllowCertificate,
-                            SslProtocols = SslProtocols.Tls12,
-                            ClientCertificateValidation = (cert, chain, errors) =>
-                                    // Here we are explicitly ignoring trust chain issues for client certificates
-                                    // this is because we don't actually require trust, we just use the certificate
-                                    // as a way to authenticate. The admin is going to tell us which specific certs
-                                    // we can trust anyway, so we can ignore such errors.
-                                    errors == SslPolicyErrors.RemoteCertificateChainErrors || errors == SslPolicyErrors.None
-                        };
-
-
-                        var loggerFactory = options.ApplicationServices.GetRequiredService<ILoggerFactory>();
-                        var adapter = new AuthenticatingAdapter(this, new HttpsConnectionAdapter(adapterOptions, loggerFactory));
+                        var httpsConnectionAdapter = new HttpsConnectionAdapter();
+                        httpsConnectionAdapter.SetCertificate(clusterCert.Certificate);
+                        var adapter = new AuthenticatingAdapter(this, httpsConnectionAdapter);
 
                         foreach (var address in ListenEndpoints.Addresses)
                         {
@@ -360,7 +344,25 @@ namespace Raven.Server
 
             IAuthenticationHandler IHttpAuthenticationFeature.Handler { get; set; }
 
-            public AuthenticationStatus Status;
+            public string WrongProtocolMessage;
+
+            private AuthenticationStatus _status;
+
+            public AuthenticationStatus Status
+            {
+                get
+                {
+                    if (WrongProtocolMessage != null)
+                        ThrowBadRequest();
+                    return _status;
+                }
+                set => _status = value;
+            }
+
+            private void ThrowBadRequest()
+            {
+                throw new BadRequestException(WrongProtocolMessage);
+            }
         }
 
 
@@ -368,6 +370,23 @@ namespace Raven.Server
         {
             private readonly RavenServer _server;
             private readonly HttpsConnectionAdapter _httpsConnectionAdapter;
+            private static Func<RawStream, IPipeReader> GetInput;
+
+            static AuthenticatingAdapter()
+            {
+                var field = typeof(RawStream).GetField("_input",BindingFlags.Instance | BindingFlags.NonPublic);
+                var getter = new DynamicMethod("GetInput", typeof(IPipeReader), new[]
+                {
+                    typeof(RawStream),
+                });
+                var ilGenerator = getter.GetILGenerator();
+
+                ilGenerator.Emit(OpCodes.Ldarg_0);
+                ilGenerator.Emit(OpCodes.Ldfld, field);
+                ilGenerator.Emit(OpCodes.Ret);
+                GetInput = (Func<RawStream, IPipeReader>)getter.CreateDelegate(
+                    typeof(Func<RawStream, IPipeReader>));
+            }
 
             public AuthenticatingAdapter(RavenServer server, HttpsConnectionAdapter httpsConnectionAdapter)
             {
@@ -375,8 +394,57 @@ namespace Raven.Server
                 _httpsConnectionAdapter = httpsConnectionAdapter;
             }
 
+            private class SameConnectionStream : IAdaptedConnection
+            {
+                public SameConnectionStream(Stream connectionStream)
+                {
+                    ConnectionStream = connectionStream;
+                }
+
+                public void Dispose()
+                {
+                }
+
+                public Stream ConnectionStream { get;   }
+            }
+
             public async Task<IAdaptedConnection> OnConnectionAsync(ConnectionAdapterContext context)
             {
+                if (context.ConnectionStream is RawStream rs)
+                {
+                    // here we do protocol sniffing to see if user is trying to access us via
+                    // http while we are expecting HTTPS.
+
+                    var input = GetInput(rs); // uses a delegate to get the private RawStream._input out
+                    // here we take advantage of the fact that Kestrel allow to get the data from the buffer
+                    // without actually consuming it
+                    var result = await input.ReadAsync();
+                    try
+                    {
+                        if (result.Buffer.First.TryGetArray(out var bytes) && bytes.Count > 0)
+                        {
+                            var b = bytes.Array[bytes.Offset];
+                            if (b >= 'A' && b <= 'Z')
+                            {
+                                // this is a good indication that we have been connected using HTTP, instead of HTTPS
+                                // because the first characeter is a valid ASCII value. However, in SSL2, the first bit
+                                // is always on, and in SSL 3 / TLS 1.0 - 1.2 the first byte is 22.
+                                // https://stackoverflow.com/questions/3897883/how-to-detect-an-incoming-ssl-https-handshake-ssl-wire-format
+                                context.Features.Set<IHttpAuthenticationFeature>(new AuthenticateConnection
+                                {
+                                    WrongProtocolMessage = "Attempted to access an HTTPS server using HTTP, did you forget to change 'http://' to 'https://' ?"
+                                });
+
+                                return new SameConnectionStream(rs);
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        input.Advance(result.Buffer.Start, result.Buffer.Start);
+                    }
+                }
+
                 var connection = await _httpsConnectionAdapter.OnConnectionAsync(context);
                 var tls = context.Features.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;

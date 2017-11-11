@@ -119,14 +119,16 @@ namespace Raven.Server.Routing
         private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            
+
+            var authenticationStatus = feature?.Status;
+
             switch (route.AuthorizationStatus)
             {
                 case AuthorizationStatus.UnauthenticatedClients:
                     var userWantsToAccessStudioMainPage = context.Request.Path == "/studio/index.html";
                     if (userWantsToAccessStudioMainPage)
                     {
-                        switch (feature?.Status)
+                        switch (authenticationStatus)
                         {
                             case null:
                             case RavenServer.AuthenticationStatus.NoCertificateProvided:
@@ -145,7 +147,7 @@ namespace Raven.Server.Routing
                 case AuthorizationStatus.ValidUser:
                 case AuthorizationStatus.DatabaseAdmin:
 
-                    switch (feature?.Status)
+                    switch (authenticationStatus)
                     {
                         case null:
                         case RavenServer.AuthenticationStatus.NoCertificateProvided:
