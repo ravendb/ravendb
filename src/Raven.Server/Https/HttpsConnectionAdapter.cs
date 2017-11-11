@@ -85,7 +85,7 @@ namespace Raven.Server.Https
             {
                 await sslStream.AuthenticateAsServerAsync(
                     _serverCertificate, 
-                    clientCertificateRequired: false,
+                    clientCertificateRequired: true,
                     enabledSslProtocols: SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls, 
                     checkCertificateRevocation: true);
             }
