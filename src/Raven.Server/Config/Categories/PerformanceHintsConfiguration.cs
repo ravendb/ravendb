@@ -29,9 +29,9 @@ namespace Raven.Server.Config.Categories
         public int MaxNumberOfResults { get; set; }
 
         [Description("Request latency threshold before the server would issue a performance hint")]
-        [ConfigurationEntry("TooLongRequestThresholdInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("PerformanceHints.TooLongRequestThresholdInSec", ConfigurationEntryScope.ServerWideOnly)]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
-        public TimeSetting TooLongRequestThresholdInSec { get; set; }
+        public TimeSetting TooLongRequestThreshold { get; set; }
     }
 }

@@ -261,7 +261,7 @@ namespace Raven.Server
         public CertificateHolder InitializeClusterCertificate()
         {
             var clusterCert = LoadCertificate(
-                Configuration.Security.Base64,
+                Configuration.Security.CertificateBase64,
                 Configuration.Security.CertificateExec,
                 Configuration.Security.CertificateExecArguments,
                 Configuration.Security.CertificatePath,
