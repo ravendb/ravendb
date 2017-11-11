@@ -29,7 +29,7 @@ namespace Raven.Server.Config.Categories
         public int MaxNumberOfResults { get; set; }
 
         [Description("Request latency threshold before the server would issue a performance hint")]
-        [ConfigurationEntry("PerformanceHints.TooLongRequestThresholdInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("PerformanceHints.TooLongRequestThresholdInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         public TimeSetting TooLongRequestThreshold { get; set; }

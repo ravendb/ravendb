@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -16,17 +15,12 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
-using Raven.Server.Extensions;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Server.Web
 {
@@ -37,7 +31,6 @@ namespace Raven.Server.Web
         public const string PageSizeParameter = "pageSize";
 
         private RequestHandlerContext _context;
-        private readonly Logger _logger = LoggingSource.Instance.GetLogger<RequestHandler>(nameof(RequestHandler));
 
         protected HttpContext HttpContext
         {
@@ -63,7 +56,7 @@ namespace Raven.Server.Web
 
         public virtual void Init(RequestHandlerContext context)
         {
-            _context = context;            
+            _context = context;
         }
 
         protected Stream TryGetRequestFromStream(string itemName)
@@ -109,7 +102,7 @@ namespace Raven.Server.Web
                     new GZipStream(stream, mode, true);
             return gZipStream;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected bool ClientAcceptsGzipResponse()
         {
@@ -359,46 +352,6 @@ namespace Raven.Server.Web
             throw new ArgumentException($"Query string value '{name}' must appear exactly once");
         }
 
-        protected DisposableAction TrackRequestTime(string source, bool doPerformanceHintIfTooLong = true)
-        {
-            var sw = Stopwatch.StartNew();
-            _context.HttpContext.Response.OnStarting(state => 
-            {
-                sw.Stop();
-                var httpContext = (HttpContext)state;
-                httpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString());
-                return Task.FromResult(0);
-            }, _context.HttpContext);
-
-            return new DisposableAction(() =>
-            {
-                try
-                {
-                    if (doPerformanceHintIfTooLong)
-                    {
-                        var threshold = _context.RavenServer.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan;
-                        if (threshold.TotalMilliseconds >= sw.ElapsedMilliseconds)
-                        {                           
-                            _context.RavenServer
-                                    .ServerStore
-                                    .NotificationCenter
-                                    .RequestLatency
-                                    .AddHint(_context.HttpContext.Request.Path,sw.ElapsedMilliseconds,source);
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    //precaution - should never arrive here
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {_context.HttpContext.Request.Path}",e);
-                    }
-                    throw;
-                }
-            });
-        }
-
         protected Task NoContent()
         {
             NoContentStatus();
@@ -431,7 +384,7 @@ namespace Raven.Server.Web
 
                     Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature);
                     return false;
-                
+
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                     return true;
                 default:
@@ -466,7 +419,7 @@ namespace Raven.Server.Web
                     return false;
             }
         }
-        
+
         protected bool TryGetAllowedDbs(string dbName, out Dictionary<string, DatabaseAccess> dbs, bool requireAdmin)
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
