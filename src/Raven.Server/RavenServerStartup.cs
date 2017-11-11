@@ -54,7 +54,7 @@ namespace Raven.Server
                 // are not studio's statics. The studio takes care of its own
                 // compression.
                 app.UseWhen(
-                    context => context.Request.Path.StartsWithSegments("/studio") == false,
+                    context => context.Request.Path.StartsWithSegments("/studio") == false && context.Request.Path.StartsWithSegments("/wizard") == false,
                     appBuilder => appBuilder.UseResponseCompression());
             }
 
