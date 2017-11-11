@@ -376,7 +376,7 @@ namespace Raven.Server.Web
                 {
                     if (doPerformanceHintIfTooLong)
                     {
-                        var threshold = _context.RavenServer.Configuration.PerformanceHints.TooLongRequestThresholdInSec.AsTimeSpan;
+                        var threshold = _context.RavenServer.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan;
                         if (threshold.TotalMilliseconds >= sw.ElapsedMilliseconds)
                         {                           
                             _context.RavenServer
