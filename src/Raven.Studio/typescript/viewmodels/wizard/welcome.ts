@@ -6,10 +6,10 @@ class welcome extends setupStep {
 
     activate(args: any) {
         super.activate(args, true);
-        return this.fetchLocalNodeIpsV4();
+        return this.fetchLocalNodeIps();
     }
 
-    private fetchLocalNodeIpsV4() {
+    private fetchLocalNodeIps() {
         new getSetupLocalNodeIpsCommand()
             .execute()
             .done((result: Array<string>) => {

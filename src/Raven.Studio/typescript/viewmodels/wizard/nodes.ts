@@ -161,17 +161,10 @@ class nodes extends setupStep {
            idx++;
         });
     }
-
-    createLocalIpsAutocompleter(ipText: KnockoutObservable<string>) {
+    
+    availableLocalIps() {
         return ko.pureComputed(() => {
-            const key = ipText();
-            const availableIps = this.model.localIps();
-
-            if (key) {
-                return availableIps.filter(x => x.toLowerCase().includes(key.toLowerCase()));
-            } else {
-                return availableIps;
-            }
+            return this.model.localIps();
         });
     }
 }
