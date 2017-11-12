@@ -764,6 +764,8 @@ namespace Raven.Server.Commercial
                         onProgress(progress);
                         byte[] serverCertBytes;
                         X509Certificate2 serverCert;
+                        string domainFromCert;
+
                         try
                         {
                             var base64 = setupInfo.Certificate;
@@ -774,23 +776,23 @@ namespace Raven.Server.Commercial
 
 
                             var publicServerUrl =
-                                GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out var domain);
-
-                            setupInfo.Domain = domain;
-                            serverStore.EnsureNotPassive(publicServerUrl);
-
+                                GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out domainFromCert);
+                            
                             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                            using (ctx.OpenWriteTransaction())
+                            using (var tx = ctx.OpenWriteTransaction())
                             {
                                 try
                                 {
                                     serverStore.Engine.DeleteTopology(ctx);
+                                    tx.Commit();
                                 }
                                 catch (Exception e)
                                 {
                                     throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                                 }
                             }
+
+                            serverStore.EnsureNotPassive(publicServerUrl);
 
                             serverStore.Server.ClusterCertificateHolder = //TODO: also in webhost validation
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.Password);
@@ -830,14 +832,18 @@ namespace Raven.Server.Commercial
                         onProgress(progress);
                         X509Certificate2 clientCert;
 
+                        var name = (setupMode == SetupMode.Secured)
+                            ? domainFromCert.ToLower() 
+                            : setupInfo.Domain.ToLower();
+
                         try
                         {
                             // requires server certificate to be loaded
-                            clientCert = await GenerateCertificateTask($"{setupInfo.Domain.ToLower()}.client.certificate", serverStore);
+                            clientCert = await GenerateCertificateTask($"{name}.client.certificate", serverStore);
                         }
                         catch (Exception e)
                         {
-                            throw new InvalidOperationException($"Could not generate a client certificate for '{setupInfo.Domain.ToLower()}'.", e);
+                            throw new InvalidOperationException($"Could not generate a client certificate for '{name}'.", e);
                         }
                         if(setupInfo.RegisterClientCert)
                             RegisterClientCertInOs(onProgress, progress, clientCert);
@@ -846,14 +852,14 @@ namespace Raven.Server.Commercial
                         onProgress(progress);
                         try
                         {
-                            var entry = archive.CreateEntry($"admin.client.certificate.{setupInfo.Domain.ToLower()}.pfx");
+                            var entry = archive.CreateEntry($"admin.client.certificate.{name}.pfx");
                             using (var entryStream = entry.Open())
                             {
                                 var export = clientCert.Export(X509ContentType.Pfx);
                                 entryStream.Write(export, 0, export.Length);
                             }
 
-                            entry = archive.CreateEntry($"admin.client.certificate.{setupInfo.Domain.ToLower()}.pem");
+                            entry = archive.CreateEntry($"admin.client.certificate.{name}.pem");
                             using (var entryStream = entry.Open())
                             {
                                 AdminCertificatesHandler.WriteCertificateAsPem(clientCert, null, entryStream);
@@ -865,7 +871,7 @@ namespace Raven.Server.Commercial
                         }
 
                         jsonObj["Setup.Mode"] = setupMode.ToString();
-                        var certificateFileName = $"cluster.server.certificate.{setupInfo.Domain.ToLower()}.pfx";
+                        var certificateFileName = $"cluster.server.certificate.{name}.pfx";
 
                         if (setupInfo.ModifyLocalServer)
                         {
