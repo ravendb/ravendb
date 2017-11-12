@@ -105,11 +105,9 @@ namespace Raven.Server.Web.System
                                     Ips = Dns.GetHostAddresses(SetupManager.BuildHostName(subDomain, domain.Key)).Select(ip => ip.ToString()).ToList(),
                                 });
                             }
-                            catch (Exception e)
+                            catch (Exception)
                             {
                                 continue;
-                                // need to log this?
-                                throw new InvalidOperationException($"Failed to query the ips for host {subDomain}.{domain.Key}.{SetupManager.RavenDbDomain}", e);
                             }
                         }
                         fullResult.Domains.Add(domain.Key, list);

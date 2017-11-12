@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Certes;
 using Certes.Acme;
 using Certes.Pkcs;
+using Esprima.Ast;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -38,6 +39,7 @@ namespace Raven.Server.Commercial
         public static string SettingsPath = Path.Combine(AppContext.BaseDirectory, "settings.json");
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
+        public const string GoogleDnsApi = "https://dns.google.com";
         public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncrypt;
         
         public static string BuildHostName(string subdomain, string domain)
@@ -705,7 +707,7 @@ namespace Raven.Server.Commercial
 
             foreach (var value in GetCertificateAlternativeNames(cert))
             {
-                if (value.StartsWith(nodeTag, StringComparison.OrdinalIgnoreCase) == false)
+                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) || value.StartsWith(nodeTag + "-", StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 domain = value;
@@ -1111,6 +1113,13 @@ namespace Raven.Server.Commercial
                         }
                         catch (Exception e)
                         {
+                            var problemIsLocal = await CanGoogleResolveDns(serverUrl, token);
+                            if (problemIsLocal)
+                                throw new InvalidOperationException(
+                                    $"Cannot resolve '{serverUrl}' locally but succesded resolving the address using google's api ({GoogleDnsApi})." 
+                                    + Environment.NewLine + "Try to clear your local/network DNS cache and restart validation.");
+
+
                             throw new InvalidOperationException($"Client failed to contact webhost listening to '{serverUrl}'.{Environment.NewLine}" +
                                                                 $"Settings file:{SettingsPath}.{Environment.NewLine}" +
                                                                 $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
@@ -1123,6 +1132,23 @@ namespace Raven.Server.Commercial
             {
                 if (webHost != null)
                     await webHost.StopAsync(TimeSpan.Zero);
+            }
+        }
+
+        private static async Task<bool> CanGoogleResolveDns(string serverUrl, CancellationToken token)
+        {
+            using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationTokenSource.Token))
+            using (var client = new HttpClient{BaseAddress = new Uri(GoogleDnsApi)})
+            {
+                var response = await client.GetAsync($"/resolve?name={serverUrl}", cts.Token);
+
+                if (response.IsSuccessStatusCode == false)
+                    return false;
+
+                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                dynamic dnsResult = JsonConvert.DeserializeObject(responseString);
+                return dnsResult.Status == 0; // 0 means no error
             }
         }
 
