@@ -215,7 +215,7 @@ namespace Raven.Server.Commercial
                         var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
                         setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
-                        TrySaveLetEncryptCachedDetails(setupInfo, challengeResult);
+                        TrySaveLetEncryptCachedDetails(setupInfo, challengeResult.Key);
                     }
                     catch (Exception e)
                     {
@@ -267,13 +267,13 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        private static void TrySaveLetEncryptCachedDetails(SetupInfo setupInfo, (Dictionary<string, string> Challanges, byte[] Key) challengeResult)
+        private static void TrySaveLetEncryptCachedDetails(SetupInfo setupInfo, byte[] key)
         {
             var cache = new LetsEncryptCache
             {
                 Certificate = setupInfo.Certificate,
                 Domain = setupInfo.Domain,
-                Key = Convert.ToBase64String(challengeResult.Key)
+                Key = Convert.ToBase64String(key)
             };
             var cachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".ravendb", "le.cache");
 
@@ -362,7 +362,7 @@ namespace Raven.Server.Commercial
             {
                 try
                 {
-                    var key = Convert.FromBase64String(cache?.Key);
+                    var key = Convert.FromBase64String(cache.Key);
                     acmeClient.Use(new KeyInfo
                     {
                         PrivateKeyInfo = key
@@ -379,6 +379,7 @@ namespace Raven.Server.Commercial
             account.Data.Agreement = account.GetTermsOfServiceUri();
             await acmeClient.UpdateRegistration(account);
 
+            TrySaveLetEncryptCachedDetails(setupInfo, account.Key.PrivateKeyInfo);
             return account.Key.PrivateKeyInfo;
         }
 
