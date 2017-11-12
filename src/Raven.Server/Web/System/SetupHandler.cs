@@ -252,9 +252,22 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "setup-unsecured"))
             {
+                // Making sure we don't have leftovers from previous setup
+                try
+                {
+                    using (context.OpenWriteTransaction())
+                    {
+                        ServerStore.Engine.DeleteTopology(context);
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
                 var settingsJson = File.ReadAllText(SetupManager.SettingsPath);

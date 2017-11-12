@@ -25,6 +25,7 @@ using Raven.Server.Config;
 using Raven.Server.Https;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Authentication;
 using Sparrow.Logging;
@@ -774,7 +775,22 @@ namespace Raven.Server.Commercial
 
                             var publicServerUrl =
                                 GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out var domain);
+
+                            setupInfo.Domain = domain;
                             serverStore.EnsureNotPassive(publicServerUrl);
+
+                            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenWriteTransaction())
+                            {
+                                try
+                                {
+                                    serverStore.Engine.DeleteTopology(ctx);
+                                }
+                                catch (Exception e)
+                                {
+                                    throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+                                }
+                            }
 
                             serverStore.Server.ClusterCertificateHolder = //TODO: also in webhost validation
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder(base64, "Setup", serverCert, serverCertBytes, setupInfo.Password);
