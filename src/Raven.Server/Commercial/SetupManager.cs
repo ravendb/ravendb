@@ -1113,11 +1113,12 @@ namespace Raven.Server.Commercial
                         }
                         catch (Exception e)
                         {
-                            var problemIsLocal = await CanGoogleResolveDns(serverUrl, token);
+                            var problemIsLocal = await DetectIfDnsUpdateDidNotReachLocally(serverUrl, token);
+
                             if (problemIsLocal)
                                 throw new InvalidOperationException(
                                     $"Cannot resolve '{serverUrl}' locally but succesded resolving the address using google's api ({GoogleDnsApi})." 
-                                    + Environment.NewLine + "Try to clear your local/network DNS cache and restart validation.");
+                                    + Environment.NewLine + "Try to clear your local/network DNS cache and restart validation.", e);
 
 
                             throw new InvalidOperationException($"Client failed to contact webhost listening to '{serverUrl}'.{Environment.NewLine}" +
@@ -1132,6 +1133,38 @@ namespace Raven.Server.Commercial
             {
                 if (webHost != null)
                     await webHost.StopAsync(TimeSpan.Zero);
+            }
+        }
+
+        private static async Task<bool> DetectIfDnsUpdateDidNotReachLocally(string serverUrl, CancellationToken token)
+        {
+            try
+            {
+                var canGoogleResolveDnsTask = CanGoogleResolveDns(serverUrl, token);
+                var canResolveLocallyTask = CanResolveHostNameLocally(serverUrl);
+                var timeout = Task.Delay(TimeSpan.FromSeconds(3), token);
+
+                var done = await Task.WhenAny(Task.WhenAll(canGoogleResolveDnsTask, canResolveLocallyTask), timeout);
+                if (done == timeout)
+                    return false;
+                return await canGoogleResolveDnsTask && !(await canResolveLocallyTask);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        private static async Task<bool> CanResolveHostNameLocally(string serverUrl)
+        {
+            try
+            {
+                var ipAddresses = await Dns.GetHostAddressesAsync(serverUrl);
+                return ipAddresses.Length != 0;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 
