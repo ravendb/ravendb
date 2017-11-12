@@ -30,7 +30,13 @@ namespace Raven.Database.Raft.Util
         public static NodeConnectionInfo GetLeaderNode(this RaftEngine engine, int waitTimeoutInSeconds = 0)
         {
             if (waitTimeoutInSeconds > 0)
-                engine.WaitForLeader(waitTimeoutInSeconds * 1000);
+            {
+                if (engine.WaitForLeader(waitTimeoutInSeconds * 1000) == false)
+                {
+                    if (waitTimeoutInSeconds > 0)
+                        throw new InvalidOperationException($"No leader. Waited {waitTimeoutInSeconds} seconds. Current leader: {engine.CurrentLeader??"None"}");
+                }
+            }
 
             var leader = engine.CurrentLeader;
             if (leader == null)

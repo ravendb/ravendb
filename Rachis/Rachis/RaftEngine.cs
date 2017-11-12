@@ -514,7 +514,10 @@ namespace Rachis
 
         public bool WaitForLeader(int timeout = 10*1000)
         {
-            return _leaderSelectedEvent.Wait(timeout, CancellationToken);
+            var leaderFound = _leaderSelectedEvent.Wait(timeout, CancellationToken);
+            if (leaderFound == false)
+                CurrentLeader = null;
+            return leaderFound;
         }
 
         public bool WaitForLeaderConfirmed(int timeout = 10 * 1000)
