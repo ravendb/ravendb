@@ -1205,6 +1205,11 @@ namespace Raven.Server.ServerWide
                 }
             }
 
+            EnsureServerCertificateIsInClusterState();
+        }
+
+        public void EnsureServerCertificateIsInClusterState()
+        {
             if (Server.ClusterCertificateHolder?.Certificate != null)
             {
                 // Also need to register my own certificate in the cluster, for other nodes to trust me

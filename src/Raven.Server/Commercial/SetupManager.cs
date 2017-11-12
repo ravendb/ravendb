@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Raven.Client;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
@@ -39,11 +38,11 @@ namespace Raven.Server.Commercial
         public static string SettingsPath = Path.Combine(AppContext.BaseDirectory, "settings.json");
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
-        public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncryptStaging;
+        public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncrypt;
         
         public static string BuildHostName(string subdomain, string domain)
         {
-            return $"{subdomain.ToLower()}.{domain.ToLower()}.{RavenDbDomain}";
+            return $"{subdomain.ToLower()}-{domain.ToLower()}.{RavenDbDomain}";
         }
 
         public static async Task<Uri> LetsEncryptAgreement(string email)
@@ -154,7 +153,7 @@ namespace Raven.Server.Commercial
 
                     progress.Processed++;
                     progress.AddInfo("Successfully received challenge(s) information from Let's Encrypt.");
-                    progress.AddInfo($"updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}{RavenDbDomain}.");
+                    progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}.");
                     onProgress(progress);
 
                     try
@@ -252,6 +251,8 @@ namespace Raven.Server.Commercial
                     {
                         throw new InvalidOperationException("Failed to create the configuration settings.", e);
                     }
+
+                    serverStore.EnsureServerCertificateIsInClusterState();
 
                     progress.Processed++;
                     progress.AddInfo("Configuration settings created.");
@@ -409,7 +410,7 @@ namespace Raven.Server.Commercial
                 {                    
                     var regNodeInfo = new RegistrationNodeInfo
                     {
-                        SubDomain = node.Key,
+                        SubDomain = (node.Key + "-" + setupInfo.Domain).ToLower(),
                         Ips = node.Value.Addresses
                     };
 
@@ -475,7 +476,7 @@ namespace Raven.Server.Commercial
                 }
 
 
-                if (map == null && registrationInfo.SubDomains.Exists(x=>x.SubDomain == "A") == false)
+                if (map == null && registrationInfo.SubDomains.Exists(x=> x.SubDomain.StartsWith("A-") || x.SubDomain.StartsWith("A.")) == false)
                 {
                     progress.AddInfo("DNS update started successfully, since current node (A) DNS record didn't change, not waiting for full DNS propogation.");
                     return;
@@ -805,26 +806,15 @@ namespace Raven.Server.Commercial
                         {
                             var entry = archive.CreateEntry($"admin.client.certificate.{setupInfo.Domain.ToLower()}.pfx");
                             using (var entryStream = entry.Open())
-                            using (var writer = new BinaryWriter(entryStream))
                             {
-                                writer.Write(clientCert.Export(X509ContentType.Pfx));
-                                writer.Flush();
-                                await entryStream.FlushAsync(token);
+                                var export = clientCert.Export(X509ContentType.Pfx);
+                                entryStream.Write(export, 0, export.Length);
                             }
 
                             entry = archive.CreateEntry($"admin.client.certificate.{setupInfo.Domain.ToLower()}.pem");
                             using (var entryStream = entry.Open())
-                            using (var writer = new StreamWriter(entryStream))
                             {
-                                var builder = new StringBuilder();
-                                builder.AppendLine("-----BEGIN CERTIFICATE-----");
-                                builder.AppendLine(Convert.ToBase64String(clientCert.Export(X509ContentType.Cert),
-                                    Base64FormattingOptions.InsertLineBreaks)); //Todo test this. does it includes the private key
-                                builder.AppendLine("-----END CERTIFICATE-----");
-
-                                writer.Write(builder.ToString());
-                                writer.Flush();
-                                await entryStream.FlushAsync(token);
+                                AdminCertificatesHandler.WriteCertificateAsPem(clientCert, null, entryStream);
                             }
                         }
                         catch (Exception e)
@@ -834,12 +824,17 @@ namespace Raven.Server.Commercial
 
                         jsonObj["Setup.Mode"] = setupMode.ToString();
                         var certificateFileName = $"cluster.server.certificate.{setupInfo.Domain.ToLower()}.pfx";
-                        var certPath = Path.Combine(AppContext.BaseDirectory,certificateFileName);
-                        using (var certfile = new FileStream(certPath, FileMode.Create))
+
+                        if (setupInfo.ModifyLocalServer)
                         {
-                            certfile.Write(serverCertBytes, 0, serverCertBytes.Length);
-                            certfile.Flush(true);
-                        }// we'll be flushing the directory when we'll write the settings.json
+                            var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
+                            using (var certfile = new FileStream(certPath, FileMode.Create))
+                            {
+                                certfile.Write(serverCertBytes, 0, serverCertBytes.Length);
+                                certfile.Flush(true);
+                            }// we'll be flushing the directory when we'll write the settings.json
+                        }
+
                         jsonObj["Security.Certificate.Path"] = certificateFileName;
                         if (string.IsNullOrEmpty(setupInfo.Password) == false)
                             jsonObj["Security.Certificate.Password"] = setupInfo.Password;

@@ -31,6 +31,7 @@ namespace Raven.Server.Commercial
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
+                [nameof(RegisterClientCert)] = RegisterClientCert,
                 [nameof(Certificate)] = Certificate,
                 [nameof(Password)] = Password,
                 [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos)

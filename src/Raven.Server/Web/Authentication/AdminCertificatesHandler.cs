@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Org.BouncyCastle.Asn1.Nist;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
@@ -45,7 +49,7 @@ namespace Raven.Server.Web.Authentication
 
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                byte[] pfx = null;
+                byte[] certs = null;
                 await
                     ServerStore.Operations.AddOperation(
                         null,
@@ -53,18 +57,18 @@ namespace Raven.Server.Web.Authentication
                         Documents.Operations.Operations.OperationType.CertificateGeneration,
                         async onProgress =>
                         {
-                            pfx = await GenerateCertificateInternal(ctx, certificate);
+                            certs = await GenerateCertificateInternal(ctx, certificate);
 
                             return ClientCertificateGenerationResult.Instance;
                         },
                         operationId.Value);
 
-                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".pfx";
+                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
+                HttpContext.Response.Body.Write(certs, 0, certs.Length);
             }
         }
 
@@ -113,7 +117,51 @@ namespace Raven.Server.Web.Authentication
             var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
-            return selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
+            var ms = new MemoryStream();
+            using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            {
+                var certBytes = selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
+
+                var entry = archive.CreateEntry(certificate.Name + ".pfx");
+                using (var s = entry.Open())
+                    s.Write(certBytes,0, certBytes.Length);
+
+                entry = archive.CreateEntry(certificate.Name + ".pem");
+                using (var s = entry.Open())
+                {
+                    WriteCertificateAsPem(selfSignedCertificate, certificate.Password, s);
+                }
+            }
+
+            return ms.ToArray();
+        }
+
+
+        public static void WriteCertificateAsPem(X509Certificate2 cert, string password, Stream s)
+        {
+            var a = new Pkcs12Store();
+            a.Load(new MemoryStream(cert.Export(X509ContentType.Pkcs12, (string)null)), Array.Empty<char>());
+            var entry = a.GetCertificate(a.Aliases.Cast<string>().First());
+            var key = a.Aliases.Cast<string>().Select(a.GetKey).First(x => x != null);
+            
+            using (var writer = new StreamWriter(s, Encoding.UTF8, 1024, leaveOpen: true))
+            {
+                var pw = new PemWriter(writer);
+                if (password != null)
+                {
+                    var generator = new Pkcs8Generator(key.Key, NistObjectIdentifiers.IdAes256Cbc.Id)
+                    {
+                        Password = password.ToCharArray()
+                    };
+                    pw.WriteObject(generator.Generate());
+                }
+                else
+                {
+                    pw.WriteObject(key.Key);
+                }
+                pw.WriteObject(entry.Certificate);
+                writer.Flush();
+            }
         }
 
         public static void ValidateCaExistsInOsStores(string base64Cert, string name, ServerStore serverStore)

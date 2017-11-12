@@ -80,6 +80,7 @@ class serverSetup {
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),
             ModifyLocalServer: true,
+            RegisterClientCert: true, 
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
             Password: this.certificate().certificatePassword()
