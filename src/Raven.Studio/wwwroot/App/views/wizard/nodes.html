@@ -80,7 +80,7 @@
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.createLocalIpsAutocompleter(ip)">
+                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.availableLocalIps()">
                                     <li role="presentation" data-bind="click: $parent.ip.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>
