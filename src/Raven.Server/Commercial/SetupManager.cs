@@ -152,13 +152,17 @@ namespace Raven.Server.Commercial
                     var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);
 
                     progress.Processed++;
-                    progress.AddInfo("Successfully received challenge(s) information from Let's Encrypt.");
+                    progress.AddInfo(challengeResult.Challanges != null
+                        ? "Successfully received challenge(s) information from Let's Encrypt."
+                        : "Using cached Let's Encrypt certificate.");
+
                     progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}.");
+
                     onProgress(progress);
 
                     try
                     {
-                        await UpdateDnsRecordsTask(onProgress, progress, token, challengeResult.Challanges, setupInfo, cache);
+                        await UpdateDnsRecordsTask(onProgress, progress, token, challengeResult.Challanges, setupInfo);
 
                         // Cache the current DNS topology so we can check it again
                     }
@@ -172,55 +176,14 @@ namespace Raven.Server.Commercial
                     progress.AddInfo("Completing Let's Encrypt challenge(s)...");
                     onProgress(progress);
 
-                    var csr = new CertificationRequestBuilder();
-                    try
-                    {
-                        var tasks = new List<Task>();
-                        foreach (var kvp in dictionary)
-                        {
-                            tasks.Add(CompleteAuthorizationFor(acmeClient, kvp.Value.Result, token));
-                        }
-                        await Task.WhenAll(tasks);
-
-                        csr.AddName($"CN={BuildHostName("a", setupInfo.Domain)}");
-
-                        foreach (var node in setupInfo.NodeSetupInfos)
-                        {
-                            csr.SubjectAlternativeNames.Add(BuildHostName(node.Key, setupInfo.Domain));
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
-                    }
-
-                    progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
-                    progress.AddInfo("Acquiring certificate.");
-                    onProgress(progress);
-
-                    AcmeCertificate cert;
-                    try
-                    {
-
-                        cert = await acmeClient.NewCertificate(csr);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to aquire certificate from Let's Encrypt.", e);
-                    }
-
-                    try
-                    {
-                        var pfxBuilder = cert.ToPfx();
-                        var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
-                        setupInfo.Certificate = Convert.ToBase64String(certBytes);
-
-                        TrySaveLetEncryptCachedDetails(setupInfo, challengeResult.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
-                    }
+                    await CompleteAuthorizationAndGetCertificate(onProgress, 
+                        token, 
+                        setupInfo, 
+                        dictionary, 
+                        acmeClient, 
+                        progress, 
+                        challengeResult, 
+                        cache);
 
                     progress.Processed++;
                     progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
@@ -265,6 +228,67 @@ namespace Raven.Server.Commercial
                 LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in Let's Encrypt security mode failed.", e);
             }
             return progress;
+        }
+
+        private static async Task CompleteAuthorizationAndGetCertificate(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo, Dictionary<string, Task<Challenge>> dictionary, AcmeClient acmeClient,
+            SetupProgressAndResult progress, (Dictionary<string, string> Challanges, byte[] Key) challengeResult, LetsEncryptCache cache)
+        {
+            if (challengeResult.Challanges == null && cache.Certificate != null)
+            {
+                setupInfo.Certificate = cache.Certificate;
+                TrySaveLetEncryptCachedDetails(setupInfo, challengeResult.Key);
+                return;
+            }
+
+            var csr = new CertificationRequestBuilder();
+            try
+            {
+                var tasks = new List<Task>();
+                foreach (var kvp in dictionary)
+                {
+                    tasks.Add(CompleteAuthorizationFor(acmeClient, kvp.Value.Result, token));
+                }
+                await Task.WhenAll(tasks);
+
+                csr.AddName($"CN={BuildHostName("a", setupInfo.Domain)}");
+
+                foreach (var node in setupInfo.NodeSetupInfos)
+                {
+                    csr.SubjectAlternativeNames.Add(BuildHostName(node.Key, setupInfo.Domain));
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to Complete Let's Encrypt challenge(s).", e);
+            }
+
+            progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
+            progress.AddInfo("Acquiring certificate.");
+            onProgress(progress);
+
+            (Dictionary<string, string> Challanges, byte[] Key) challengeResult1 = challengeResult;
+            AcmeCertificate cert;
+            try
+            {
+                cert = await acmeClient.NewCertificate(csr);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to aquire certificate from Let's Encrypt.", e);
+            }
+
+            try
+            {
+                var pfxBuilder = cert.ToPfx();
+                var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
+                setupInfo.Certificate = Convert.ToBase64String(certBytes);
+
+                TrySaveLetEncryptCachedDetails(setupInfo, challengeResult1.Key);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to build certificate from Let's Encrypt.", e);
+            }
         }
 
         private static void TrySaveLetEncryptCachedDetails(SetupInfo setupInfo, byte[] key)
@@ -395,8 +419,7 @@ namespace Raven.Server.Commercial
             SetupProgressAndResult progress, 
             CancellationToken token, 
             Dictionary<string, string> map, 
-            SetupInfo setupInfo,
-            LetsEncryptCache cache)
+            SetupInfo setupInfo)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {
