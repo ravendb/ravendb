@@ -3,10 +3,6 @@ import endpoints = require("endpoints");
 
 class finishSetupCommand extends commandBase {
 
-    constructor() {
-        super();
-    }
-
     execute(): JQueryPromise<void> {
         const url = endpoints.global.setup.setupFinish;
 
