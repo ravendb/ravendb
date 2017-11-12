@@ -53,7 +53,7 @@ namespace Raven.Powershell
 
                 var databaseDocuments = store.DatabaseCommands.ForSystemDatabase().Get(databaseId).DataAsJson.Deserialize(typeof(DatabaseDocument), store.Conventions) as DatabaseDocument;
                 
-                var operation = store.DatabaseCommands.GlobalAdmin.StartBackup(BackupLocation, databaseDocuments, incremental, DatabaseName);
+                var operation = store.DatabaseCommands.GlobalAdmin.StartBackup(BackupLocation, null, incremental, DatabaseName);
                 operation.OnProgressChanged += progress =>
                 {
                     WriteProgress(new ProgressRecord(0,"Database Backup", "Backing up the database.")
