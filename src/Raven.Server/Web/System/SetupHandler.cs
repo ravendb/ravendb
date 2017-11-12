@@ -247,9 +247,10 @@ namespace Raven.Server.Web.System
                 // Making sure we don't have leftovers from previous setup
                 try
                 {
-                    using (context.OpenWriteTransaction())
+                    using (var tx = context.OpenWriteTransaction())
                     {
                         ServerStore.Engine.DeleteTopology(context);
+                        tx.Commit();
                     }
                 }
                 catch (Exception)
