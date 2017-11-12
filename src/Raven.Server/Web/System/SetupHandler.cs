@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -138,6 +139,19 @@ namespace Raven.Server.Web.System
                 var first = true;
                 foreach (var netInterface in NetworkInterface.GetAllNetworkInterfaces())
                 {
+                    var ips = netInterface.GetIPProperties().UnicastAddresses
+                        .Where(x =>
+                        {
+                            // filter 169.254.xxx.xxx out, they are not meaningful for binding
+                            if (x.Address.AddressFamily != AddressFamily.InterNetwork)
+                                return false;
+                            var addressBytes = x.Address.GetAddressBytes();
+                            return addressBytes[0] != 169 || addressBytes[1] != 254;
+                        })
+                        .Select(addr => addr.Address.ToString())
+                        .ToList();
+
+                    
                     if (first == false)
                         writer.WriteComma();
                     first = false;
@@ -149,7 +163,6 @@ namespace Raven.Server.Web.System
                     writer.WritePropertyName("Description");
                     writer.WriteString(netInterface.Description);
                     writer.WriteComma();
-                    var ips = netInterface.GetIPProperties().UnicastAddresses.Select(addr => addr.Address.ToString()).ToList();
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
