@@ -1,8 +1,25 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
+import getSetupLocalNodeIpsCommand = require("commands/wizard/getSetupLocalNodeIpsCommand");
 
 class welcome extends setupStep {
 
+    activate(args: any) {
+        super.activate(args, true);
+        return this.fetchLocalNodeIpsV4();
+    }
+
+    private fetchLocalNodeIpsV4() {
+        new getSetupLocalNodeIpsCommand()
+            .execute()
+            .done((result: Array<string>) => {
+                // todo: make the server endpoint return well defined classes    
+                const ipV4 = _.filter(result, (ip) => { return _.split(ip,  '.').length === 4; });
+                const ipV6 = _.difference(result,  ipV4);
+                this.model.localIps(_.concat(ipV4, ipV6));               
+            });
+    }
+    
     chooseUnsecured() {
         this.model.mode("Unsecured");
         this.forwardToNextStep();

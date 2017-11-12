@@ -1,9 +1,7 @@
 /// <reference path="../../../typings/tsd.d.ts" />
-
 import router = require("plugins/router");
 import sys = require("durandal/system");
 import setupRoutes = require("common/setup/routes");
-import appUrl = require("common/appUrl");
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import messagePublisher = require("common/messagePublisher");
@@ -50,7 +48,7 @@ class setupShell extends viewModelBase {
             })
     }
 
-    fetchServerBuildVersion() {
+    private fetchServerBuildVersion() {
         new getServerBuildVersionCommand()
             .execute()
             .done((serverBuildResult: serverBuildVersionDto) => {
@@ -63,7 +61,7 @@ class setupShell extends viewModelBase {
             });
     }
 
-    fetchClientBuildVersion() {
+    private fetchClientBuildVersion() {
         new getClientBuildVersionCommand()
             .execute()
             .done((result: clientBuildVersionDto) => {
