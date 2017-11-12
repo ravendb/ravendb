@@ -1,5 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
 import unsecureSetup = require("models/wizard/unsecureSetup");
 import licenseInfo = require("models/wizard/licenseInfo");
 import domainInfo = require("models/wizard/domainInfo");
@@ -18,6 +17,7 @@ class serverSetup {
     unsecureSetup = ko.observable<unsecureSetup>(new unsecureSetup());
     nodes = ko.observableArray<nodeInfo>();
     certificate = ko.observable<certificateInfo>(new certificateInfo());
+    registerClientCertificate = ko.observable<boolean>(true);
     
     localIps = ko.observableArray<string>([]);
 
@@ -80,7 +80,7 @@ class serverSetup {
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),
             ModifyLocalServer: true,
-            RegisterClientCert: true, 
+            RegisterClientCert: this.registerClientCertificate(), 
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
             Password: this.certificate().certificatePassword()

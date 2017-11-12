@@ -41,7 +41,6 @@ class finish extends setupStep {
         });
     }
     
-    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
