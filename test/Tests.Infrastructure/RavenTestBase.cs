@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
@@ -520,7 +521,16 @@ namespace FastTests
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);
-                    clientCertificate = new X509Certificate2(command.Result.RawData);
+                    using (var archive = new ZipArchive(new MemoryStream(command.Result.RawData)))
+                    {
+                        var entry = archive.Entries.First(e => string.Equals(Path.GetExtension(e.Name), ".pfx", StringComparison.OrdinalIgnoreCase));
+                        using (var stream = entry.Open())
+                        {
+                            var destination = new MemoryStream();
+                            stream.CopyTo(destination);
+                            clientCertificate = new X509Certificate2(destination.ToArray());
+                        }
+                    }
                 }
             }
             return clientCertificate;
