@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.Asn1.Nist;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
@@ -149,11 +150,10 @@ namespace Raven.Server.Web.Authentication
                 var pw = new PemWriter(writer);
                 if (password != null)
                 {
-                    var generator = new Pkcs8Generator(key.Key, NistObjectIdentifiers.IdAes256Cbc.Id)
-                    {
-                        Password = password.ToCharArray()
-                    };
-                    pw.WriteObject(generator.Generate());
+                    pw.WriteObject(key.Key,
+                        "AES-128-CBC",
+                        password.ToCharArray(), 
+                        CertificateUtils.GetSeededSecureRandom());
                 }
                 else
                 {

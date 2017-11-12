@@ -172,7 +172,7 @@ namespace Raven.Server.Utils
             name = certificate.SubjectDN;
         }
 
-        private static SecureRandom GetSeededSecureRandom()
+        public static SecureRandom GetSeededSecureRandom()
         {
             var buffer = new byte[32];
             using (var cryptoRandom = RandomNumberGenerator.Create())
