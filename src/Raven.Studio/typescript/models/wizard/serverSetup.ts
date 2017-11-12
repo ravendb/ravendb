@@ -19,7 +19,7 @@ class serverSetup {
     nodes = ko.observableArray<nodeInfo>();
     certificate = ko.observable<certificateInfo>(new certificateInfo());
     
-    localIps = ko.observableArray<string>(["1", "2", "3"]);
+    localIps = ko.observableArray<string>([]);
 
     useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
     hostnameIsNotRequired = ko.pureComputed(() => {

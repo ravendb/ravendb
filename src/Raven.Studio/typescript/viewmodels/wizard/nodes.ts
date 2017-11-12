@@ -80,8 +80,6 @@ class nodes extends setupStep {
                     this.agreementUrl(url);
                 });
         }
-        
-        //TODO: load IPS /setup/ips
     }
     
     compositionComplete() {
@@ -164,6 +162,18 @@ class nodes extends setupStep {
         });
     }
 
+    createLocalIpsAutocompleter(ipText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = ipText();
+            const availableIps = this.model.localIps();
+
+            if (key) {
+                return availableIps.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return availableIps;
+            }
+        });
+    }
 }
 
 export = nodes;
