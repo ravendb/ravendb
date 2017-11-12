@@ -1484,7 +1484,6 @@ pre {
     display: flex;
     align-items: center;
     justify-content: center;
-    white-space: nowrap;
 
     i:before {
         top: 0;
@@ -1516,6 +1515,9 @@ pre {
 
     &.state-danger {
         background-color: @brand-danger-dark;
+    }
+    &.nowrap {
+        white-space: nowrap;
     }
 
     &:before {
