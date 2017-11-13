@@ -53,13 +53,13 @@
             </div>
         </div>
 
-        <div class="padding margin-bottom bg-warning" data-bind="visible: shouldDisplayUnsafeModeWarning">
-            RavenDB server will be running in a potentially unsafe mode.<br />
-            <br />
-
-            <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+        <div class="padding bg-warning" data-bind="visible: shouldDisplayUnsafeModeWarning">
+            <div class="checkbox flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
                 <input id="unsafeNetworkWarning" type="checkbox" data-bind="checked: unsafeNetworkConfirm">
-                <label for="unsafeNetworkWarning">I understand the risk. </label>
+                <label for="unsafeNetworkWarning">
+                    I understand the risk behind running RavenDB server in a potentially unsafe mode.
+                    Authentication is off. Anyone who can access the server using configured IP address will be granted <strong>administrative privileges</strong>.
+                </label>
             </div>
             <div data-bind="validationElement: unsafeNetworkConfirm">
                 <div class="help-block" data-bind="validationMessage: unsafeNetworkConfirm"></div>
