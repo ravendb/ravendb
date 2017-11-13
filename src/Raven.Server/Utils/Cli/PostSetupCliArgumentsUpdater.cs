@@ -43,6 +43,9 @@ namespace Raven.Server.Utils.Cli
         private static string[] FilterOutSetupModeArg(string[] args)
         {
             var idx = FindIndexOfCliOptFor(args, RavenConfiguration.GetKey(x => x.Core.SetupMode));
+            if (idx == -1)
+                return args;
+
             var result = args.ToList();
             result.RemoveAt(idx);
             return result.ToArray();
