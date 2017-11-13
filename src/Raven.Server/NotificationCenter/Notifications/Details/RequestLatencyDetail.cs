@@ -7,8 +7,13 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class RequestLatencyDetail : INotificationDetails
     {
-        public readonly Dictionary<string, Queue<RequestLatencyInfo>> RequestLatencies = new Dictionary<string, Queue<RequestLatencyInfo>>();
+        public Dictionary<string, Queue<RequestLatencyInfo>> RequestLatencies { get; set; }
 
+        public RequestLatencyDetail()
+        {
+            RequestLatencies = new Dictionary<string, Queue<RequestLatencyInfo>>();
+        }
+        
         public void Update(string queryString, long duration, string action)
         {
             if (RequestLatencies.TryGetValue(action, out var hintQueue) == false)

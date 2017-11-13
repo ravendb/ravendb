@@ -32,6 +32,7 @@ import genericAlertDetails = require("viewmodels/common/notificationCenter/detai
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
 import notificationCenterSettings = require("common/notifications/notificationCenterSettings");
 import licenseLimitDetails = require("viewmodels/common/notificationCenter/detailViewer/licenseLimitDetails");
+import requestLatencyDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/requestLatencyDetails");
 
 
 interface detailsProvider {
@@ -112,7 +113,8 @@ class notificationCenter {
             // performance hints:
             indexingDetails,
             pagingDetails,
-
+            requestLatencyDetails,
+            
             // alerts:
             newVersionAvailableDetails,
 
