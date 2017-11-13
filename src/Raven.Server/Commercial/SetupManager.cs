@@ -946,7 +946,8 @@ namespace Raven.Server.Commercial
                             }
 
                             serverStore.EnsureNotPassive(publicServerUrl);
-                            await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false);
+                            if (setupMode == SetupMode.LetsEncrypt)
+                                await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false);
 
                             serverStore.Server.Certificate = 
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert);
