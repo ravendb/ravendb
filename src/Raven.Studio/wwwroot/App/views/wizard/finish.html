@@ -17,7 +17,7 @@
 </div>
 
 <div class="configuration-log" data-bind="collapse: expandSetupLog">
-<pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: $data"></span>
+<pre data-bind="visible: messages().length"><!-- ko foreach: messages --><span data-bind="text: message, attr: { class: extraClass }"></span>
 <!-- /ko --></pre>
 </div>
 
@@ -30,6 +30,10 @@
         <i class="icon-arrow-left"></i><span>Back</span>
     </button>
     <div class="flex-separator"></div>
+    <button class="btn btn-primary btn-lg" data-bind="click: startConfiguration, visible: !spinners.finishing() && !completedWithSuccess()">
+        <i class="icon-refresh"></i>
+        <span>Try again</span>
+    </button>
     <button class="btn btn-primary btn-lg" data-bind="click: restart, css: { 'btn-spinner': spinners.restart }, disable: spinners.restart, visible: canRestart">
         <i class="icon-refresh"></i>
         <span>Restart server</span>
