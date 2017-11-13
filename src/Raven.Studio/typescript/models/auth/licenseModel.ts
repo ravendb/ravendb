@@ -43,11 +43,11 @@ class licenseModel {
     static licenseShortDescription = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
         if (!status || status.Type === "None") {
-            return 'no-license';
+            return null;
         }
        
         const maxMemory = status.MaxMemory === 0 ? "Unlimited" : `${status.MaxMemory} GB RAM` ;
-        return `${status.MaxCores} Cores, ${maxMemory}, Cluster size: ${status.MaxClusterSize}`;
+        return `${status.MaxCores} Cores, ${maxMemory}, Max cluster size: ${status.MaxClusterSize}`;
     });
 
 
