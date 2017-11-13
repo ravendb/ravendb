@@ -53,7 +53,7 @@ class serverSetup {
             validation: [
                 {
                     validator: () => this.nodes().length > 0,
-                    message: "All least node is required"
+                    message: "At least one node is required"
                 }
             ]
         });
@@ -138,7 +138,7 @@ class serverSetup {
                     if (wildcard) {
                         return this.getDomainForWildcard(tag);
                     } else {
-                        return tag;
+                        return node.hostname() || "<select hostname below>";
                     }
                 default:
                     return null;
