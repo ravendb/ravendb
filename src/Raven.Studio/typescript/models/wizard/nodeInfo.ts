@@ -63,6 +63,10 @@ class nodeInfo {
     }
     
     getServerUrl() {
+        if (!this.hostname()) {
+            return null;
+        }
+        
         let serverUrl = "https://" + this.hostname();
         if (this.port() && this.port() !== "443") {
             serverUrl += ":" + this.port();
