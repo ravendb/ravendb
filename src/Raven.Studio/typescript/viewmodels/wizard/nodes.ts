@@ -63,7 +63,7 @@ class nodes extends setupStep {
     
     activate(args: any) {
         super.activate(args);
-
+        
         switch (this.model.mode()) {
             case "LetsEncrypt":
                 this.currentStep = 4;
@@ -100,16 +100,28 @@ class nodes extends setupStep {
             }
         }
         
+        let focusedOnInvalidNode = false;
+        
         nodes.forEach(node => {
+            let validNodeConfig = true;
+            
             if (!this.isValid(node.validationGroup)) {
-                isValid = false;
+                validNodeConfig = false;
             }
             
             node.ips().forEach(entry => {
                 if (!this.isValid(entry.validationGroup)) {
-                    isValid = false;
+                    validNodeConfig = false;
                 }
             });
+            
+            if (!validNodeConfig) {
+                isValid = false;
+                if (!focusedOnInvalidNode) {
+                    this.editedNode(node);
+                    focusedOnInvalidNode = true;
+                }
+            }
         });
         
         if (!this.isValid(this.model.nodesValidationGroup)) {
