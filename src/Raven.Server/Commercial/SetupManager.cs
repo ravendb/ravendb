@@ -1047,15 +1047,7 @@ namespace Raven.Server.Commercial
                             onProgress(progress);
 
                             if (node.Value.Addresses.Count != 0)
-                            {
-                                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = IpAddressToUrl(node.Value.Addresses[0], node.Value.Port);
-                            }
-                            if (node.Value.Addresses.Count > 1)
-                            {
-                                jsonObj["ServerUrls"] = node.Value.Addresses // TODO we need to support that
-                                    .Select(address => IpAddressToUrl(address, node.Value.Port))
-                                    .ToArray();
-                            }
+                                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port)));
 
                             jsonObj[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = string.IsNullOrEmpty(node.Value.PublicServerUrl)
                                 ? GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out var _)

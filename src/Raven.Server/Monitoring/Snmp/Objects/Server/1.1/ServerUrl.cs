@@ -10,7 +10,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         public ServerUrl(RavenConfiguration configuration)
             : base(SnmpOids.Server.Url)
         {
-            _url = new OctetString(configuration.Core.ServerUrl);
+            _url = new OctetString(string.Join(";", configuration.Core.ServerUrls));
         }
 
         protected override OctetString GetData()

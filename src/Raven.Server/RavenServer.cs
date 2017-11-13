@@ -8,8 +8,6 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -33,26 +31,19 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
-using Esprima;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
-using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
 using Newtonsoft.Json;
-using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
-using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Https;
 using Raven.Server.Monitoring.Snmp;
@@ -172,7 +163,7 @@ namespace Raven.Server
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
-                    .UseUrls(Configuration.Core.ServerUrl)
+                    .UseUrls(Configuration.Core.ServerUrls)
                     .UseStartup<RavenServerStartup>()
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
@@ -246,20 +237,20 @@ namespace Raven.Server
         }
 
         private Task _currentRefreshTask = Task.CompletedTask;
-        
+
         private void RefreshClusterCertificate(object state)
         {
             // If the setup mode is anything but SetupMode.LetsEncrypt, we'll
             // check if the certificate changed and if so we'll update it immediately
             // on the local node (only). Admin is responsible for registering the new
             // certificate in the cluster and updating all the nodes
-            
+
             // If the setup mode is SetupMode.LetsEncrypt, we'll check if we need to
             // update it, and if so, we'll re-generate the certificate then we'll
             // distribute it via the cluster. We'll update the cert only when all nodes
             // confirm they got it (or if there are less than 3 days to spare).
-            
-            
+
+
             var currentCertificate = Certificate;
             if (currentCertificate == null)
             {
@@ -267,7 +258,7 @@ namespace Raven.Server
             }
             var currentRefreshTask = _currentRefreshTask;
             if (currentRefreshTask.IsCompleted == false)
-            { 
+            {
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
                 return;
             }
@@ -303,14 +294,14 @@ namespace Raven.Server
 
                     if (ServerStore.IsLeader() == false)
                         return; // the leader will do this and let us know
-                    
+
                     // we need to see if there is already an ongoing process
                     using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using(context.OpenReadTransaction())
+                    using (context.OpenReadTransaction())
                     {
                         var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
-                        if (certUpdate != null 
-                            && certUpdate.TryGet("Thumbprint", out string thumbprint) 
+                        if (certUpdate != null
+                            && certUpdate.TryGet("Thumbprint", out string thumbprint)
                             && thumbprint != currentCertificate.Certificate.Thumbprint)
                         {
                             // we are already in the process of updating the certificate, so we need
@@ -329,8 +320,8 @@ namespace Raven.Server
                     // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
                     // but if we have less than 20 days, we'll try anyway
                     if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
-                        return; 
-                    
+                        return;
+
                     try
                     {
                         newCertificate = await RefreshLetsEncryptCertificate(currentCertificate);
@@ -377,19 +368,19 @@ namespace Raven.Server
             var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
 
             var substring = hosts[0].Substring(0, hosts[0].Length - SetupManager.RavenDbDomain.Length - 1);
-            var domainEnd = substring.LastIndexOfAny(new[]{'.', '-'});
+            var domainEnd = substring.LastIndexOfAny(new[] { '.', '-' });
 
             var license = ServerStore.LoadLicense();
-            
+
             HttpResponseMessage response;
             try
             {
                 var licensePayload = JsonConvert.SerializeObject(new
                 {
                     License = license
-                });    
-                var content = new StringContent(licensePayload , Encoding.UTF8, "application/json");
-              
+                });
+                var content = new StringContent(licensePayload, Encoding.UTF8, "application/json");
+
                 response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
@@ -423,10 +414,10 @@ namespace Raven.Server
 
             foreach (var host in hosts) // we just need the keys here
             {
-                var key = host.Substring(0, host.Length - fullDomainPortion.Length-1);
+                var key = host.Substring(0, host.Length - fullDomainPortion.Length - 1);
                 setupInfo.NodeSetupInfos[key] = new SetupInfo.NodeInfo();
             }
-            
+
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
 
             return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert);
@@ -434,15 +425,24 @@ namespace Raven.Server
 
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
         {
-            var uri = new Uri(Configuration.Core.ServerUrl);
-            var host = uri.DnsSafeHost;
-            var ipAddresses = GetListenIpAddresses(host);
-            return (ipAddresses, uri.Port);
+            int? port = null;
+            var addresses = new HashSet<IPAddress>();
+            foreach (var serverUrl in Configuration.Core.ServerUrls)
+            {
+                var uri = new Uri(serverUrl);
+                port = uri.Port;
+
+                var host = uri.DnsSafeHost;
+                foreach (var ipAddress in GetListenIpAddresses(host))
+                    addresses.Add(ipAddress);
+            }
+
+            return (addresses.ToArray(), port.Value);
         }
 
         private string GetWebUrl(string kestrelUrl)
         {
-            var serverUri = new Uri(Configuration.Core.ServerUrl);
+            var serverUri = new Uri(Configuration.Core.ServerUrls[0]);
             if (serverUri.IsDefaultPort == false && serverUri.Port == 0)
             {
                 var kestrelUri = new Uri(kestrelUrl);
@@ -451,7 +451,7 @@ namespace Raven.Server
                     Port = kestrelUri.Port
                 }.Uri.ToString();
             }
-            return Configuration.Core.ServerUrl;
+            return Configuration.Core.ServerUrls[0];
         }
 
         private CertificateHolder LoadCertificate()
@@ -462,7 +462,7 @@ namespace Raven.Server
                     return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
                     return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments);
-                
+
                 return null;
             }
             catch (Exception e)
@@ -633,34 +633,56 @@ namespace Raven.Server
 
         public TcpListenerStatus StartTcpListener()
         {
-            string host = "<unknown>";
             var port = 0;
             var status = new TcpListenerStatus();
+
+            var tcpServerUrl = Configuration.Core.TcpServerUrls;
+            if (tcpServerUrl == null)
+            {
+                foreach (var serverUrl in Configuration.Core.ServerUrls)
+                {
+                    var host = new Uri(serverUrl).DnsSafeHost;
+
+                    StartListeners(host, port, status);
+                }
+            }
+            else if (tcpServerUrl.Length == 0 && ushort.TryParse(tcpServerUrl[0], out ushort shortPort))
+            {
+                foreach (var serverUrl in Configuration.Core.ServerUrls)
+                {
+                    var host = new Uri(serverUrl).DnsSafeHost;
+
+                    StartListeners(host, shortPort, status);
+                }
+            }
+            else
+            {
+                foreach (var tcpUrl in tcpServerUrl)
+                {
+                    var uri = new Uri(tcpUrl);
+                    var host = uri.DnsSafeHost;
+                    if (uri.IsDefaultPort == false)
+                        port = uri.Port;
+
+                    StartListeners(host, port, status);
+                }
+            }
+
+            return status;
+        }
+
+        private void StartListeners(string host, int port, TcpListenerStatus status)
+        {
             try
             {
-                host = new Uri(Configuration.Core.ServerUrl).DnsSafeHost;
-                if (string.IsNullOrWhiteSpace(Configuration.Core.TcpServerUrl) == false)
-                {
-                    if (ushort.TryParse(Configuration.Core.TcpServerUrl, out ushort shortPort))
-                    {
-                        port = shortPort;
-                    }
-                    else
-                    {
-                        var uri = new Uri(Configuration.Core.TcpServerUrl);
-                        host = uri.DnsSafeHost;
-                        if (uri.IsDefaultPort == false)
-                            port = uri.Port;
-                    }
-                }
                 bool successfullyBoundToAtLeastOne = false;
                 var errors = new List<Exception>();
                 foreach (var ipAddress in GetListenIpAddresses(host))
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
+                        Logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrls} and bind to {ipAddress} at {port}");
 
-                    var listener = new TcpListener(ipAddress, port);
+                    var listener = new TcpListener(ipAddress, status.Port != 0 ? status.Port : port);
                     status.Listeners.Add(listener);
                     listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                     try
@@ -693,7 +715,6 @@ namespace Raven.Server
                         throw errors[0];
                     throw new AggregateException(errors);
                 }
-                return status;
             }
             catch (Exception e)
             {
@@ -756,8 +777,8 @@ namespace Raven.Server
                 }
                 catch (ObjectDisposedException)
                 {
-                    // shutting down
-                    return;
+                        // shutting down
+                        return;
                 }
                 catch (Exception e)
                 {
@@ -936,7 +957,7 @@ namespace Raven.Server
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
                 _httpsConnectionAdapter.SetCertificate(certificate);
         }
-        
+
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
             tcp.Operation = header.Operation;

@@ -43,7 +43,7 @@ namespace Raven.Server.Web
                     _unsafePageRenderedHtml = RenderPlaceholders(html, new Dictionary<string, string>()
                     {
                         {"UNSECURED_ACCESS_ALLOWED_KEY", RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)},
-                        {"SERVER_URL_KEY", RavenConfiguration.GetKey(x => x.Core.ServerUrl)},
+                        {"SERVER_URL_KEY", RavenConfiguration.GetKey(x => x.Core.ServerUrls)},
                         {"UNSECURED_ACCESS_ALLOWED_FLAGS", unsecuredAccessFlagsHtml},
                         {"CERTIFICATE_EXEC_KEY", RavenConfiguration.GetKey(x => x.Security.CertificateExec)},
                         {"CERTIFICATE_PATH_KEY", RavenConfiguration.GetKey(x => x.Security.CertificatePath)},

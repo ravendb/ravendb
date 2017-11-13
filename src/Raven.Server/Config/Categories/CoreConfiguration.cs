@@ -7,7 +7,6 @@ using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Commercial;
 using Raven.Server.ServerWide;
-using Raven.Server.Web.System;
 
 namespace Raven.Server.Config.Categories
 {
@@ -16,12 +15,12 @@ namespace Raven.Server.Config.Categories
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
         [DefaultValue("http://localhost:8080")]
         [ConfigurationEntry("ServerUrl", ConfigurationEntryScope.ServerWideOnly)]
-        public string ServerUrl { get; set; }
+        public string[] ServerUrls { get; set; }
 
         [Description("If not specified, will use the server url host and random port. If it just a number specify, will use that port. Otherwise, will bind to the host & port specified")]
         [DefaultValue(null)]
         [ConfigurationEntry("ServerUrl.Tcp", ConfigurationEntryScope.ServerWideOnly)]
-        public string TcpServerUrl { get; set; }
+        public string[] TcpServerUrls { get; set; }
 
         [Description("The URL under which server is publicly available, used for inter-node communication and access from behind a firewall, proxy etc.")]
         [DefaultValue(null)]
@@ -56,7 +55,7 @@ namespace Raven.Server.Config.Categories
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool ThrowIfAnyIndexCannotBeOpened { get; set; }     
+        public bool ThrowIfAnyIndexCannotBeOpened { get; set; }
 
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
@@ -80,7 +79,7 @@ namespace Raven.Server.Config.Categories
 
             var httpUriBuilder = new UriBuilder(
                 serverWebUri.Scheme,
-                GetNodeHost(serverWebUri, ServerUrl),
+                GetNodeHost(serverWebUri, ServerUrls[0]),
                 serverWebUri.Port);
 
             return UrlUtil.TrimTrailingSlash(httpUriBuilder.Uri.ToString());
@@ -94,14 +93,14 @@ namespace Raven.Server.Config.Categories
             if (Uri.TryCreate(serverWebUrl, UriKind.Absolute, out var serverWebUri) == false)
                 throw new InvalidOperationException($"Could not parse server web url: {serverWebUrl}");
 
-            var tcpUriBuilder = new UriBuilder("tcp", GetNodeHost(serverWebUri, ServerUrl), actualPort);
+            var tcpUriBuilder = new UriBuilder("tcp", GetNodeHost(serverWebUri, ServerUrls[0]), actualPort);
 
             return UrlUtil.TrimTrailingSlash(tcpUriBuilder.Uri.ToString());
         }
 
         private string GetNodeHost(Uri serverWebUri, string serverUrlSettingValue)
         {
-            if (serverWebUri != null 
+            if (serverWebUri != null
                 && UrlUtil.IsZeros(serverWebUri.Host) == false)
                 return serverWebUri.Host;
 
@@ -118,31 +117,54 @@ namespace Raven.Server.Config.Categories
 
         internal void ValidateServerUrls()
         {
-            if (ServerUrl != null)
-                ValidateServerUrl(ServerUrl, new[] { "http", "https" }, RavenConfiguration.GetKey(x => x.Core.ServerUrl));
+            if (ServerUrls != null)
+                ValidateServerUrl(ServerUrls, new[] { "http", "https" }, RavenConfiguration.GetKey(x => x.Core.ServerUrls));
 
-            if (TcpServerUrl != null
-                && ushort.TryParse(TcpServerUrl, out var _) == false)
-                ValidateServerUrl(TcpServerUrl, new[] { "tcp" }, RavenConfiguration.GetKey(x => x.Core.TcpServerUrl));
+            if (TcpServerUrls != null)
+            {
+                if (TcpServerUrls.Length == 1 && ushort.TryParse(TcpServerUrls[0], out var _))
+                    return;
 
+                ValidateServerUrl(TcpServerUrls, new[] { "tcp" }, RavenConfiguration.GetKey(x => x.Core.TcpServerUrls));
+            }
         }
 
         internal void ValidatePublicUrls()
         {
             if (PublicServerUrl.HasValue)
                 ValidatePublicUrl(PublicServerUrl.Value.UriValue, RavenConfiguration.GetKey(x => x.Core.PublicServerUrl));
+            else if (ServerUrls.Length > 1)
+                throw new ArgumentException($"Configuration key '{RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)}' must be specified when there is more than one '{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}'.");
 
             if (PublicTcpServerUrl.HasValue)
                 ValidatePublicUrl(PublicTcpServerUrl.Value.UriValue, RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl));
+            else if (TcpServerUrls != null && TcpServerUrls.Length > 1)
+                throw new ArgumentException($"Configuration key '{RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)}' must be specified when there is more than one '{RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)}'.");
         }
 
-        private void ValidateServerUrl(string url, string[] expectedSchemes, string confKey)
+        private static void ValidateServerUrl(string[] urls, string[] expectedSchemes, string configurationKey)
         {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) == false)
-                throw new ArgumentException($"'{url}' is an invalid URI.");
+            Uri firstUri = null;
+            foreach (var url in urls)
+            {
+                if (Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) == false)
+                    throw new ArgumentException($"'{url}' is an invalid URI.");
 
-            if (expectedSchemes.Any(x => x == parsedUri.Scheme) == false)
-                throw new ArgumentException($"URI scheme '{ parsedUri.Scheme }' is invalid for '{confKey}' configuration setting, it must be one of the following: { string.Join(", ", expectedSchemes) }.");
+                if (expectedSchemes.Any(x => x == parsedUri.Scheme) == false)
+                    throw new ArgumentException($"URI scheme '{ parsedUri.Scheme }' is invalid for '{configurationKey}' configuration setting, it must be one of the following: { string.Join(", ", expectedSchemes) }.");
+
+                if (firstUri == null)
+                {
+                    firstUri = parsedUri;
+                    continue;
+                }
+
+                if (string.Equals(firstUri.Scheme, parsedUri.Scheme, StringComparison.OrdinalIgnoreCase) == false)
+                    throw new ArgumentException($"URI '{url}' scheme does not match. Expected '{firstUri.Scheme}'. Was '{parsedUri.Scheme}'.");
+
+                if (firstUri.Port != parsedUri.Port)
+                    throw new ArgumentException($"URI '{url}' port does not match. Expected '{firstUri.Port}'. Was '{parsedUri.Port}'.");
+            }
         }
 
         private void ValidateSchemePublicVsBoundUrl()
@@ -150,14 +172,14 @@ namespace Raven.Server.Config.Categories
             if (PublicServerUrl.HasValue == false)
                 return;
 
-            if (Uri.TryCreate(ServerUrl, UriKind.Absolute, out var serverUri) == false)
-                throw new ArgumentException($"ServerUrl could not be parsed: {ServerUrl}.");
+            if (Uri.TryCreate(ServerUrls[0], UriKind.Absolute, out var serverUri) == false)
+                throw new ArgumentException($"ServerUrl could not be parsed: {ServerUrls}.");
 
             if (Uri.TryCreate(PublicServerUrl.Value.UriValue, UriKind.Absolute, out var publicServerUri) == false)
                 throw new ArgumentException($"PublicServerUrl could not be parsed: {PublicServerUrl}.");
 
             if (serverUri.Scheme != publicServerUri.Scheme)
-                throw new ArgumentException($"ServerUrl and PublicServerUrl schemes do not match: {ServerUrl} and {PublicServerUrl.Value.UriValue}.");
+                throw new ArgumentException($"ServerUrl and PublicServerUrl schemes do not match: {ServerUrls} and {PublicServerUrl.Value.UriValue}.");
         }
 
         private void ValidatePublicUrl(string uriString, string optName)

@@ -409,7 +409,7 @@ namespace Raven.Server.ServerWide
             }
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
-            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
+            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrls[0];
             _engine.Initialize(_env, Configuration, myUrl);
 
             LicenseManager.Initialize(_env, ContextPool);

@@ -85,13 +85,13 @@ namespace SlowTests.Core.AdminConsole
 
                 Assert.Equal(allowScriptsToAdjustNumberOfSteps, result2.ToObject<TimeSetting>());
 
-                var serverUrl = database.Configuration.Core.ServerUrl;
+                var serverUrl = database.Configuration.Core.ServerUrls;
 
                 var result3 = ExecuteScript(database, @"
-                                return database.Configuration.Core.ServerUrl
+                                return database.Configuration.Core.ServerUrls
                              ");
 
-                Assert.Equal(serverUrl, result3.Value<string>());
+                Assert.Equal(serverUrl, result3.Values<string>());
             }
         }
 

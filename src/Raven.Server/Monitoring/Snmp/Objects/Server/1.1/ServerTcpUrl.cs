@@ -10,8 +10,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         public ServerTcpUrl(RavenConfiguration configuration)
             : base(SnmpOids.Server.TcpUrl)
         {
-            if (configuration.Core.TcpServerUrl != null)
-                _url = new OctetString(configuration.Core.TcpServerUrl);
+            if (configuration.Core.TcpServerUrls != null && configuration.Core.TcpServerUrls.Length > 0)
+                _url = new OctetString(string.Join(";", configuration.Core.TcpServerUrls));
         }
 
         protected override OctetString GetData()

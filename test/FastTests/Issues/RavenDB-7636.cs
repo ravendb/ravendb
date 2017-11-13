@@ -21,7 +21,7 @@ namespace FastTests.Issues
             }
             catch (InvalidOperationException exception)
             {
-                Assert.Equal($"Configured { RavenConfiguration.GetKey(x => x.Core.ServerUrl) } \"http://192.168.1.24\" is not within unsecured access address range. Use a server url within unsecure access address range ({ RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) }) or fill in certificate information.", exception.Message);
+                Assert.Equal($"Configured { RavenConfiguration.GetKey(x => x.Core.ServerUrls) } \"http://192.168.1.24\" is not within unsecured access address range. Use a server url within unsecure access address range ({ RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) }) or fill in certificate information.", exception.Message);
             }
         }
 
@@ -33,7 +33,7 @@ namespace FastTests.Issues
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server);
             configuration.SetSetting(
-                RavenConfiguration.GetKey(x => x.Core.ServerUrl), serverUrl);
+                RavenConfiguration.GetKey(x => x.Core.ServerUrls), serverUrl);
             configuration.SetSetting(
                 RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), publicServerUrl);
             configuration.SetSetting(

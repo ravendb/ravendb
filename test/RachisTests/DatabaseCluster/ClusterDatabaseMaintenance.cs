@@ -155,7 +155,7 @@ namespace RachisTests.DatabaseCluster
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
                 WaitForUserToContinueTheTest(urls[0]);
-                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3, 30_000);
                 Assert.Equal(3, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0, 30_000);
@@ -212,7 +212,7 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(clusterSize - 1, val);
                 }
                 // bring the node back to live and ensure that he moves to passive state
-                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 await Servers[1].ServerStore.WaitForState(RachisState.Passive).WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.Equal(RachisState.Passive, Servers[1].ServerStore.CurrentRachisState);
                 // rejoin the node to the cluster
@@ -406,7 +406,7 @@ namespace RachisTests.DatabaseCluster
             DisposeServerAndWaitForFinishOfDisposal(Servers[0]);
             var customSettings = new Dictionary<string, string>();
             var certPath = SetupServerAuthentication(customSettings);
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://" + Environment.MachineName + ":8999";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":8999";
             leader = Servers[0] = GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: dataDir);
 
             var adminCert = AskServerForClientCertificate(certPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
@@ -449,7 +449,7 @@ namespace RachisTests.DatabaseCluster
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
                 var customSettings = new Dictionary<string, string>
                 {
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "http://" + Environment.MachineName + ":8080",
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "http://" + Environment.MachineName + ":8080",
                     [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = UnsecuredAccessAddressRange.PrivateNetwork.ToString()
                 };
                 Servers[1] = GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: dataDir);

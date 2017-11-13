@@ -81,7 +81,7 @@ namespace Raven.Server.Config.Categories
                 TimeUnitAttribute timeUnit = null;
                 SizeUnitAttribute sizeUnit = null;
 
-                if (property.PropertyType == typeof(TimeSetting) || 
+                if (property.PropertyType == typeof(TimeSetting) ||
                     property.PropertyType == typeof(TimeSetting?))
                 {
                     timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
@@ -175,7 +175,7 @@ namespace Raven.Server.Config.Categories
                         }
                         else
                         {
-                            if (property.PropertyType == typeof(int) || 
+                            if (property.PropertyType == typeof(int) ||
                                 property.PropertyType == typeof(int?))
                             {
                                 property.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
@@ -228,6 +228,11 @@ namespace Raven.Server.Config.Categories
                     if (property.PropertyType == typeof(PathSetting) && defaultValue != null)
                     {
                         property.SetValue(this, new PathSetting(Convert.ToString(defaultValue), type, resourceName));
+                    }
+                    else if (property.PropertyType == typeof(string[]) && defaultValue is string defaultValueAsString)
+                    {
+                        var values = defaultValueAsString.Split(';');
+                        property.SetValue(this, values);
                     }
                     else
                         property.SetValue(this, defaultValue);

@@ -777,7 +777,7 @@ namespace RachisTests
                         GetNewServer(new Dictionary<string, string>
                             {
                                 {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), leaderUrl},
-                                {RavenConfiguration.GetKey(x => x.Core.ServerUrl), leaderUrl}
+                                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), leaderUrl}
                             },
                             runInMemory: false,
                             deletePrevious: false,

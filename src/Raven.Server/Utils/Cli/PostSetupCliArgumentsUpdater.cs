@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Raven.Server.Config;
 
 namespace Raven.Server.Utils.Cli
@@ -11,31 +10,40 @@ namespace Raven.Server.Utils.Cli
         public static string[] Process(string[] configurationArgs, RavenConfiguration configBeforeRestart, RavenConfiguration currentConfiguration)
         {
             var result = configurationArgs;
-            result = UpdateServerUrlCommandLineArgAfterSetupIfNecessary(result, configBeforeRestart.Core.ServerUrl, currentConfiguration.GetSetting("ServerUrl"));
+            result = UpdateServerUrlCommandLineArgAfterSetupIfNecessary(result, configBeforeRestart.Core.ServerUrls, currentConfiguration.GetSetting(RavenConfiguration.GetKey(x => x.Core.ServerUrls)));
             result = FilterOutSetupModeArg(result);
             return result;
         }
 
         private static string[] UpdateServerUrlCommandLineArgAfterSetupIfNecessary(
-            string[] originalCommandLineArgs, string oldServerUrl, string newServerUrl)
+            string[] originalCommandLineArgs, string[] oldServerUrl, string newServerUrl)
         {
             if (string.IsNullOrEmpty(newServerUrl))
                 return originalCommandLineArgs;
 
-            var idx = FindIndexOfCliOptFor(originalCommandLineArgs, RavenConfiguration.GetKey(x => x.Core.ServerUrl));
+            var idx = FindIndexOfCliOptFor(originalCommandLineArgs, RavenConfiguration.GetKey(x => x.Core.ServerUrls));
             if (idx == -1)
                 return originalCommandLineArgs;
 
             var resultArgs = originalCommandLineArgs.ToArray();
-            Uri.TryCreate(oldServerUrl, UriKind.Absolute, out var uriBeforeSetup);
-            Uri.TryCreate(newServerUrl, UriKind.Absolute, out var uriAfterSetup);
+            Uri.TryCreate(oldServerUrl[0], UriKind.Absolute, out var uriBeforeSetup);
+            
+            var newServerUrls = newServerUrl.Split(";");
+            var uriBuilders = new List<UriBuilder>();
+            foreach (var nServerUrl in newServerUrls)
+            {
+                Uri.TryCreate(nServerUrl, UriKind.Absolute, out var uriAfterSetup);
 
-            if (string.Equals(uriAfterSetup.Scheme, uriBeforeSetup.Scheme, StringComparison.InvariantCultureIgnoreCase))
-                return originalCommandLineArgs;
+                if (string.Equals(uriAfterSetup.Scheme, uriBeforeSetup.Scheme, StringComparison.OrdinalIgnoreCase))
+                {
+                    uriBuilders.Add(new UriBuilder(uriAfterSetup));
+                    continue;
+                }
 
-            var uriBuilder = new UriBuilder(
-                uriAfterSetup.Scheme, uriBeforeSetup.Host, uriBeforeSetup.Port);
-            resultArgs[idx] = $"--{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}={uriBuilder.ToString().TrimEnd('/')}";
+                uriBuilders.Add(new UriBuilder(uriAfterSetup.Scheme, uriBeforeSetup.Host, uriBeforeSetup.Port));
+            }
+            
+            resultArgs[idx] = $"--{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}={string.Join(";", uriBuilders.Select(builder => builder.ToString().TrimEnd('/')))}";
 
             return resultArgs;
         }
