@@ -97,6 +97,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             foreach (var directory in directories)
             {
+                if (directory == string.Empty)
+                    continue;
+
                 url += $"/{directory}";
                 var request = CreateFtpWebRequest(url, WebRequestMethods.Ftp.MakeDirectory, keepAlive: false);
 
@@ -126,7 +129,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var uri = new Uri(_url);
 
             dirs = uri.AbsolutePath.TrimStart('/').TrimEnd('/').Split("/").ToList();
-            var port = uri.Port > 0 ? uri.Port : (_port ?? DefaultFtpPort);
+            var port = _port ?? (uri.Port > 0 ? uri.Port : DefaultFtpPort);
             if (port < 1 || port > 65535)
                 throw new ArgumentException("Port number range: 1-65535");
 
