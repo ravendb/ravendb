@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task StreamQueryGet()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (TrackRequestTime("GET /databases/*/streams/queries", doPerformanceHintIfTooLong: false))
+            using (TrackRequestTime("StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task StreamQueryPost()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (TrackRequestTime("POST /databases/*/streams/queries", doPerformanceHintIfTooLong: false))
+            using (TrackRequestTime("StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {

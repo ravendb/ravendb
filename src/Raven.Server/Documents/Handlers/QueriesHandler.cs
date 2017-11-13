@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser)]
         public async Task Post()
         {
-            using (TrackRequestTime("POST /databases/*/queries"))
+            using (TrackRequestTime("Query"))
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
-            using (TrackRequestTime("GET /databases/*/queries"))
+            using (TrackRequestTime("Query"))
             using (var token = CreateTimeLimitedOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
-            using (TrackRequestTime("DELETE /databases/*/queries"))
+            using (TrackRequestTime("DeleteByQuery"))
             {
                 var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
