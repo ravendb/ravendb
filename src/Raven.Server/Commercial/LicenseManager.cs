@@ -222,22 +222,20 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var licenseLimits = _serverStore.LoadLicenseLimits() ?? new LicenseLimits();
-                var detailsPerNode = licenseLimits.NodeLicenseDetails ??
-                                     (licenseLimits.NodeLicenseDetails = new Dictionary<string, DetailsPerNode>());
+                var licenseLimits = GetOrCreateLicenseLimits();
 
                 var oldAssignedCores = 0;
                 var numberOfCores = -1;
                 double installedMemoryInGb = -1;
                 double usableMemoryInGb = -1;
-                if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails))
+                if (licenseLimits.NodeLicenseDetails.TryGetValue(nodeTag, out var nodeDetails))
                 {
                     installedMemoryInGb = nodeDetails.InstalledMemoryInGb;
                     usableMemoryInGb = nodeDetails.UsableMemoryInGb;
                     oldAssignedCores = nodeDetails.UtilizedCores;
                 }
 
-                var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores) - oldAssignedCores + newAssignedCores;
+                var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores) - oldAssignedCores + newAssignedCores;
                 var maxCores = _licenseStatus.MaxCores;
                 if (utilizedCores > maxCores)
                 {
@@ -259,19 +257,35 @@ namespace Raven.Server.Commercial
                     if (allNodes.TryGetValue(nodeTag, out var nodeUrl) == false)
                         throw new ArgumentException($"Node tag: {nodeTag} isn't part of the cluster");
 
-                    var nodeInfo = await GetNodeInfo(nodeUrl, context);
-                    if (nodeInfo != null)
+                    if (nodeTag == _serverStore.NodeTag)
                     {
-                        numberOfCores = nodeInfo.NumberOfCores;
-                        installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
-                        usableMemoryInGb = nodeInfo.UsableMemoryInGb;
+                        numberOfCores = ProcessorInfo.ProcessorCount;
+                        var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
+                        installedMemoryInGb = memoryInfo.InstalledMemory;
+                        usableMemoryInGb = memoryInfo.UsableMemory;
+                    }
+                    else
+                    {
+                        var nodeInfo = await GetNodeInfo(nodeUrl, context);
+                        if (nodeInfo == null && numberOfCores == -1)
+                        {
+                            throw new InvalidOperationException($"Node tag: {nodeTag} with node url: {nodeUrl} cannot be reached");
+                        }
+                        else if (nodeInfo != null)
+                        {
+                            numberOfCores = nodeInfo.NumberOfCores;
+                            installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
+                            usableMemoryInGb = nodeInfo.UsableMemoryInGb;
+                        }
                     }
 
-                    if (numberOfCores != -1 && numberOfCores < newAssignedCores)
+                    Debug.Assert(numberOfCores > 0);
+
+                    if (numberOfCores < newAssignedCores)
                         throw new ArgumentException($"The new assigned cores count: {newAssignedCores} " +
                                                     $"is larger than the number of cores in the node: {numberOfCores}");
 
-                    detailsPerNode[nodeTag] = new DetailsPerNode
+                    licenseLimits.NodeLicenseDetails[nodeTag] = new DetailsPerNode
                     {
                         UtilizedCores = newAssignedCores,
                         NumberOfCores = numberOfCores,
@@ -289,10 +303,19 @@ namespace Raven.Server.Commercial
             }
         }
 
+        private LicenseLimits GetOrCreateLicenseLimits()
+        {
+            var licenseLimits = _serverStore.LoadLicenseLimits() ?? new LicenseLimits();
+            if (licenseLimits.NodeLicenseDetails == null)
+            {
+                licenseLimits.NodeLicenseDetails = new Dictionary<string, DetailsPerNode>();
+            }
+
+            return licenseLimits;
+        }
+
         public void CalculateLicenseLimits(
-            string assignedNodeTag = null,
-            int? assignedCores = null,
-            NodeInfo nodeInfo = null,
+            NodeDetails newNodeDetails = null,
             bool forceFetchingNodeInfo = false)
         {
             if (_serverStore.IsLeader() == false)
@@ -306,96 +329,11 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var licenseLimits = _serverStore.LoadLicenseLimits() ?? new LicenseLimits();
-                var detailsPerNode = licenseLimits.NodeLicenseDetails ??
-                    (licenseLimits.NodeLicenseDetails = new Dictionary<string, DetailsPerNode>());
+                var licenseLimits = AsyncHelpers.RunSync(() => 
+                    UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails));
 
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var hasChanges = false;
-                    if (assignedNodeTag != null && assignedCores != null && nodeInfo != null)
-                    {
-                        hasChanges = true;
-                        detailsPerNode[assignedNodeTag] = new DetailsPerNode
-                        {
-                            UtilizedCores = assignedCores.Value,
-                            NumberOfCores = nodeInfo.NumberOfCores,
-                            InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
-                            UsableMemoryInGb = nodeInfo.UsableMemoryInGb
-                        };
-                    }
-
-                    var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
-                    var allNodeTags = allNodes.Keys;
-                    if (allNodeTags.Count == detailsPerNode.Count &&
-                        allNodeTags.All(detailsPerNode.Keys.Contains) &&
-                        hasChanges == false)
-                    {
-                        return;
-                    }
-
-                    var nodesToRemove = detailsPerNode.Keys.Except(allNodeTags).ToList();
-                    foreach (var nodeToRemove in nodesToRemove)
-                    {
-                        detailsPerNode.Remove(nodeToRemove);
-                    }
-
-                    var missingNodesAssignment = new List<string>();
-                    foreach (var nodeTag in allNodeTags)
-                    {
-                        if (detailsPerNode.TryGetValue(nodeTag, out var _) == false)
-                            missingNodesAssignment.Add(nodeTag);
-                    }
-
-                    if (missingNodesAssignment.Count > 0)
-                    {
-                        var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-                        var availableCores = _licenseStatus.MaxCores - utilizedCores;
-                        var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
-
-                        foreach (var nodeTag in missingNodesAssignment)
-                        {
-                            int numberOfCores;
-                            double installedMemory;
-                            double usableMemoryInGb;
-                            if (nodeTag == _serverStore.NodeTag)
-                            {
-                                numberOfCores = ProcessorInfo.ProcessorCount;
-                                var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
-                                installedMemory = memoryInfo.InstalledMemory;
-                                usableMemoryInGb = memoryInfo.UsableMemory;
-                            }
-                            else
-                            {
-                                if (nodeTag != assignedNodeTag)
-                                    nodeInfo = null;
-
-                                if (nodeInfo == null && forceFetchingNodeInfo)
-                                {
-                                    nodeInfo = AsyncHelpers.RunSync(() => GetNodeInfo(allNodes[nodeTag], context));
-                                }
-
-                                numberOfCores = nodeInfo?.NumberOfCores ?? -1;
-                                installedMemory = nodeInfo?.InstalledMemoryInGb ?? -1;
-                                usableMemoryInGb = nodeInfo?.UsableMemoryInGb ?? -1;
-                            }
-
-                            if (numberOfCores != -1)
-                                coresPerNode = Math.Min(coresPerNode, numberOfCores);
-
-                            detailsPerNode[nodeTag] = new DetailsPerNode
-                            {
-                                UtilizedCores = coresPerNode,
-                                NumberOfCores = numberOfCores,
-                                InstalledMemoryInGb = installedMemory,
-                                UsableMemoryInGb = usableMemoryInGb
-                            };
-                        }
-                    }
-
-                    CheckLicenseStatus(detailsPerNode);
-                }
+                if (licenseLimits == null)
+                    return;
 
                 _serverStore.PutLicenseLimits(licenseLimits);
             }
@@ -767,12 +705,123 @@ namespace Raven.Server.Commercial
             }
         }
 
+        private async Task<LicenseLimits> UpdateNodesInfoInternal( 
+            bool forceFetchingNodeInfo,
+            NodeDetails newNodeDetails)
+        {
+            var licenseLimits = GetOrCreateLicenseLimits();
+            var hasChanges = false;
+
+            var detailsPerNode = licenseLimits.NodeLicenseDetails;
+            if (newNodeDetails != null)
+            {
+                hasChanges = true;
+                detailsPerNode[newNodeDetails.NodeTag] = new DetailsPerNode
+                {
+                    UtilizedCores = newNodeDetails.AssignedCores,
+                    NumberOfCores = newNodeDetails.NumberOfCores,
+                    InstalledMemoryInGb = newNodeDetails.InstalledMemoryInGb,
+                    UsableMemoryInGb = newNodeDetails.UsableMemoryInGb
+                };
+            }
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
+                var missingNodesAssignment = new List<string>();
+                
+                foreach (var node in allNodes)
+                {
+                    int numberOfCores;
+                    double installedMemoryInGb;
+                    double usableMemoryInGb;
+                    var nodeTag = node.Key;
+                    if (nodeTag == _serverStore.NodeTag)
+                    {
+                        numberOfCores = ProcessorInfo.ProcessorCount;
+                        var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
+                        installedMemoryInGb = memoryInfo.InstalledMemory;
+                        usableMemoryInGb = memoryInfo.UsableMemory;
+                    }
+                    else
+                    {
+                        if (forceFetchingNodeInfo == false)
+                            continue;
+
+                        var nodeInfo = await GetNodeInfo(node.Value, context);
+                        if (nodeInfo == null)
+                            continue;
+
+                        numberOfCores = nodeInfo.NumberOfCores;
+                        installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
+                        usableMemoryInGb = nodeInfo.UsableMemoryInGb;
+                    }
+
+                    var nodeDetailsExist = detailsPerNode.TryGetValue(nodeTag, out var nodeDetails);
+
+                    if (nodeDetailsExist &&
+                        nodeDetails.NumberOfCores == numberOfCores &&
+                        nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
+                        nodeDetails.InstalledMemoryInGb.Equals(installedMemoryInGb))
+                    {
+                        // nodes hardware didn't change
+                        continue;
+                    }
+
+                    hasChanges = true;
+                    detailsPerNode[nodeTag] = new DetailsPerNode
+                    {
+                        NumberOfCores = numberOfCores,
+                        InstalledMemoryInGb = installedMemoryInGb,
+                        UsableMemoryInGb = usableMemoryInGb
+                    };
+
+                    if (nodeDetailsExist == false)
+                    {
+                        // we'll assign the utilized cores later
+                        missingNodesAssignment.Add(nodeTag);
+                        continue;
+                    }
+
+                    nodeDetails.UtilizedCores = Math.Min(numberOfCores, nodeDetails.UtilizedCores);
+                }
+
+                var nodesToRemove = detailsPerNode.Keys.Except(allNodes.Keys).ToList();
+                foreach (var nodeToRemove in nodesToRemove)
+                {
+                    detailsPerNode.Remove(nodeToRemove);
+                }
+
+                if (missingNodesAssignment.Count > 0)
+                {
+                    var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
+                    var availableCores = _licenseStatus.MaxCores - utilizedCores;
+                    var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
+
+                    foreach (var nodeTag in missingNodesAssignment)
+                    {
+                        if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails) == false)
+                            continue;
+
+                        coresPerNode = Math.Min(coresPerNode, nodeDetails.NumberOfCores);
+
+                        nodeDetails.UtilizedCores = coresPerNode;
+                    }
+                }
+
+                CheckLicenseStatus(detailsPerNode);
+            }
+
+            return hasChanges ? licenseLimits : null;
+        }
+
         private async Task UpdateNodesInfo()
         {
             if (_serverStore.IsLeader() == false)
                 return;
 
-            if (_licenseLimitsSemaphore.Wait(0) == false)
+            if (_licenseLimitsSemaphore.Wait(10 * 1000) == false)
                 return;
 
             try
@@ -780,52 +829,12 @@ namespace Raven.Server.Commercial
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var licenseLimits = _serverStore.LoadLicenseLimits();
-                    if (licenseLimits?.NodeLicenseDetails == null)
+                    var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo: true, newNodeDetails: null);
+
+                    if (licenseLimits == null)
                         return;
 
-                    var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
-                    var hasChanges = false;
-                    foreach (var nodeDetails in licenseLimits.NodeLicenseDetails)
-                    {
-                        var nodeTag = nodeDetails.Key;
-                        if (allNodes.TryGetValue(nodeDetails.Key, out var url) == false)
-                            continue;
-
-                        int numberOfCores;
-                        double installedMemory;
-                        double usableMemoryInGb;
-                        if (nodeTag == _serverStore.NodeTag)
-                        {
-                            numberOfCores = ProcessorInfo.ProcessorCount;
-                            var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
-                            installedMemory = memoryInfo.InstalledMemory;
-                            usableMemoryInGb = memoryInfo.UsableMemory;
-                        }
-                        else
-                        {
-                            var nodeInfo = await GetNodeInfo(url, context);
-                            if (nodeInfo == null)
-                                continue;
-
-                            numberOfCores = nodeInfo.NumberOfCores;
-                            installedMemory = nodeInfo.InstalledMemoryInGb;
-                            usableMemoryInGb = nodeInfo.UsableMemoryInGb;
-                        }
-
-                        if (nodeDetails.Value.NumberOfCores == numberOfCores &&
-                            nodeDetails.Value.UsableMemoryInGb.Equals(usableMemoryInGb) &&
-                            nodeDetails.Value.InstalledMemoryInGb.Equals(installedMemory))
-                            continue;
-
-                        hasChanges = true;
-                        nodeDetails.Value.NumberOfCores = numberOfCores;
-                        nodeDetails.Value.InstalledMemoryInGb = installedMemory;
-                        nodeDetails.Value.UsableMemoryInGb = usableMemoryInGb;
-                    }
-
-                    if (hasChanges)
-                        await _serverStore.PutLicenseLimitsAsync(licenseLimits);
+                    await _serverStore.PutLicenseLimitsAsync(licenseLimits);
                 }
             }
             catch (Exception e)
