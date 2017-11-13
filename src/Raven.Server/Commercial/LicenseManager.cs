@@ -470,29 +470,7 @@ namespace Raven.Server.Commercial
 
         public async Task<LicenseLimit> Activate(License license, bool skipLeaseLicense, bool ensureNotPassive = true)
         {
-            Dictionary<string, object> licenseAttributes;
-
-            try
-            {
-                licenseAttributes = LicenseValidator.Validate(license, RSAParameters);
-            }
-            catch (Exception e)
-            {
-                var message = $"Could not validate the following license:{Environment.NewLine}" +
-                              $"Id: {license.Id}{Environment.NewLine}" +
-                              $"Name: {license.Name}{Environment.NewLine}" +
-                              $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info(message, e);
-
-                throw new InvalidDataException("Could not validate license!", e);
-            }
-
-            var newLicenseStatus = new LicenseStatus
-            {
-                Attributes = licenseAttributes
-            };
+            var newLicenseStatus = GetLicenseStatus(license);
 
             var licenseExpiration = newLicenseStatus.Expiration;
             if (licenseExpiration.HasValue == false)
@@ -526,7 +504,7 @@ namespace Raven.Server.Commercial
 
                     await _serverStore.PutLicenseAsync(license);
 
-                    _licenseStatus.Attributes = licenseAttributes;
+                    _licenseStatus.Attributes = newLicenseStatus.Attributes;
                     _licenseStatus.Error = false;
                     _licenseStatus.Message = null;
                     _licenseStatus.Id = license.Id;
@@ -547,6 +525,34 @@ namespace Raven.Server.Commercial
 
             CalculateLicenseLimits(forceFetchingNodeInfo: true);
             return null;
+        }
+
+        public LicenseStatus GetLicenseStatus(License license)
+        {
+            Dictionary<string, object> licenseAttributes;
+
+            try
+            {
+                licenseAttributes = LicenseValidator.Validate(license, RSAParameters);
+            }
+            catch (Exception e)
+            {
+                var message = $"Could not validate the following license:{Environment.NewLine}" +
+                              $"Id: {license.Id}{Environment.NewLine}" +
+                              $"Name: {license.Name}{Environment.NewLine}" +
+                              $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message, e);
+
+                throw new InvalidDataException("Could not validate license!", e);
+            }
+
+            var newLicenseStatus = new LicenseStatus
+            {
+                Attributes = licenseAttributes
+            };
+            return newLicenseStatus;
         }
 
         private IDisposable DisableCalculatingCoresCount()
