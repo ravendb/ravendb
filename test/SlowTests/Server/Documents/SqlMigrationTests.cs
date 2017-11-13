@@ -261,7 +261,6 @@ namespace SlowTests.Server.Documents
                 var result = store.Operations.Send(operation);
 
                 Assert.False(result.Success);
-                Assert.Equal(result.Errors.Length, 13);
                 Assert.True(result.Errors[0].Message.Contains("Couldn't find table 'dbo.NotExists' in the SQL database (Table name must include schema name)"));
                 Assert.True(result.Errors[1].Message.Contains("A table is missing a name"));
                 Assert.True(result.Errors[2].Message.Contains("Duplicate parent table 'dbo.Product'"));
@@ -270,10 +269,7 @@ namespace SlowTests.Server.Documents
                 Assert.True(result.Errors[6].Message.Contains("Table 'dbo.Product' cannot embed into 'dbo.Order'"));
                 Assert.True(result.Errors[7].Message.Contains("Query cannot contain an 'ORDER BY' clause (dbo.Details)"));
                 Assert.True(result.Errors[8].Message.Contains("Query for table 'dbo.Photo' must select all primary keys"));
-                Assert.True(result.Errors[9].Message.Contains("Table 'dbo.NoPkTable' must have at list 1 primary key"));
-                Assert.True(result.Errors[10].Message.Contains($"Cannot read column 'Node' in table 'dbo.UnsupportedTable'. (Unsupported type: {SqlDatabaseName}.sys.hierarchyid)"));
-                Assert.True(result.Errors[11].Message.Contains("Cannot patch table 'dbo.OrderItem' using the given script."));
-                Assert.True(result.Errors[12].Message.Contains("Failed to read table 'dbo.OrderItem' using the given query"));
+
             }
         }
 
