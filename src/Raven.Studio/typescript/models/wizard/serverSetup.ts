@@ -91,7 +91,8 @@ class serverSetup {
         if (this.certificate().certificateCNs().length === 0) {
             return "";
         }
-        return this.certificate().certificateCNs()[0].replace("*", "a");
+        
+        return this.certificate().certificateCNs()[0].replace("*.", "");
     }
 
     getStudioUrl() {

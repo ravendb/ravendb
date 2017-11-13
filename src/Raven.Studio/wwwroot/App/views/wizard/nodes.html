@@ -43,7 +43,7 @@
                     <div class="margin-bottom">                        
                         <h3 class="flex-grow">
                             Node 
-                            <strong data-bind="text: nodeTag().toLocaleUpperCase()"></strong>
+                            <strong data-bind="text: nodeTag() ? nodeTag().toLocaleUpperCase() : ''"></strong>
                             at 
                             <strong data-bind="text: $root.model.createFullNodeNameObservable($data)"></strong>
                         </h3>
