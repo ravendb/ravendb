@@ -52,11 +52,7 @@ namespace Raven.Server.Commercial
             if (IsValidEmail(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
 
-            var acmeUrl = serverStore.Configuration.Core.AcmeStagingUrl == null
-                ? WellKnownServers.LetsEncrypt
-                : new Uri(serverStore.Configuration.Core.AcmeStagingUrl);
-
-            using (var acmeClient = new AcmeClient(acmeUrl))
+            using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
             {
                 var account = await acmeClient.NewRegistraton("mailto:" + email);
                 return account.GetTermsOfServiceUri();
@@ -140,11 +136,7 @@ namespace Raven.Server.Commercial
             if(Logger.IsOperationsEnabled)
                 Logger.Operations($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            var acmeUrl = serverStore.Configuration.Core.AcmeUrl == null
-                ? WellKnownServers.LetsEncrypt
-                : new Uri(serverStore.Configuration.Core.AcmeUrl);
-
-            using (var acmeClient = new AcmeClient(acmeUrl))
+            using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
             {
                 var dictionary = new Dictionary<string, Task<Challenge>>();
                 var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);
@@ -213,11 +205,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
                 onProgress(progress);
 
-                var acmeUrl = serverStore.Configuration.Core.AcmeUrl == null
-                    ? WellKnownServers.LetsEncrypt
-                    : new Uri(serverStore.Configuration.Core.AcmeUrl);
-
-                using (var acmeClient = new AcmeClient(acmeUrl))
+                using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
                 {
                     var dictionary = new Dictionary<string, Task<Challenge>>();
                     var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);
