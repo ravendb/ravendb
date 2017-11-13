@@ -47,6 +47,7 @@ using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -530,15 +531,15 @@ namespace Raven.Server
                 get
                 {
                     if (WrongProtocolMessage != null)
-                        ThrowBadRequest();
+                        ThrowException();
                     return _status;
                 }
                 set => _status = value;
             }
 
-            private void ThrowBadRequest()
+            private void ThrowException()
             {
-                throw new BadRequestException(WrongProtocolMessage);
+                throw new InsufficientTransportLayerProtectionException(WrongProtocolMessage);
             }
         }
 

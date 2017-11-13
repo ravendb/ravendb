@@ -15,6 +15,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Client.Exceptions.Security;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
@@ -178,11 +179,8 @@ namespace Raven.Server
                 //TODO: operation canceled (timeout)
                 //TODO: Invalid data exception 422
 
-
                 //TODO: Proper json output, not like this
-                var response = context.Response;
-
-                MaybeSetExceptionStatusCode(response, e);
+                MaybeSetExceptionStatusCode(context, e);
 
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {
@@ -203,6 +201,9 @@ namespace Raven.Server
 
                     MaybeAddAdditionalExceptionData(djv, e);
 
+                    
+                    var response = context.Response;
+                    
                     using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
                     {
                         var json = ctx.ReadObject(djv, "exception");
@@ -257,11 +258,20 @@ namespace Raven.Server
             }
         }
 
-        private static void MaybeSetExceptionStatusCode(HttpResponse response, Exception exception)
+        private static void MaybeSetExceptionStatusCode(HttpContext httpContext, Exception exception)
         {
+            var response = httpContext.Response;
+            
             if (response.HasStarted)
                 return;
 
+            if (exception is InsufficientTransportLayerProtectionException)
+            {
+                Web.RequestHandler.SetupCORSHeaders(httpContext);
+                response.StatusCode = (int) HttpStatusCode.BadRequest;
+                return;
+            }
+            
             if (exception is LowMemoryException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;

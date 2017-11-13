@@ -105,7 +105,7 @@ class serverSetup {
                 const portPart = this.unsecureSetup().port() || '8080';
                 return "http://" + this.unsecureSetup().ips()[0].ip() + ':' + portPart; 
             case "LetsEncrypt":
-                return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
+                return "https://a-" + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
             case "Secured":
                 const wildcard = this.certificate().wildcardCertificate();
                 if (wildcard) {
