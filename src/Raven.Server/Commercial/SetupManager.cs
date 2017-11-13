@@ -140,9 +140,9 @@ namespace Raven.Server.Commercial
             if(Logger.IsOperationsEnabled)
                 Logger.Operations($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            var acmeUrl = serverStore.Configuration.Core.AcmeStagingUrl == null
+            var acmeUrl = serverStore.Configuration.Core.AcmeUrl == null
                 ? WellKnownServers.LetsEncrypt
-                : new Uri(serverStore.Configuration.Core.AcmeStagingUrl);
+                : new Uri(serverStore.Configuration.Core.AcmeUrl);
 
             using (var acmeClient = new AcmeClient(acmeUrl))
             {
@@ -213,9 +213,9 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
                 onProgress(progress);
 
-                var acmeUrl = serverStore.Configuration.Core.AcmeStagingUrl == null
+                var acmeUrl = serverStore.Configuration.Core.AcmeUrl == null
                     ? WellKnownServers.LetsEncrypt
-                    : new Uri(serverStore.Configuration.Core.AcmeStagingUrl);
+                    : new Uri(serverStore.Configuration.Core.AcmeUrl);
 
                 using (var acmeClient = new AcmeClient(acmeUrl))
                 {

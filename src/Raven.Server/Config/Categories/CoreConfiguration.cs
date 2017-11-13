@@ -48,10 +48,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Setup.Mode", ConfigurationEntryScope.ServerWideOnly)]
         public SetupMode SetupMode { get; set; }
 
-        [Description("The URLs which the server should contact when requesting certificates from Let's Encrypt. If not defined, the Let's Encrypt production server will be used.")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("AcmeStagingUrl", ConfigurationEntryScope.ServerWideOnly)]
-        public string AcmeStagingUrl { get; set; }
+        [Description("The URLs which the server should contact when requesting certificates from using the ACME protocol.")]
+        [DefaultValue("https://acme-staging.api.letsencrypt.org/directory")]
+        [ConfigurationEntry("AcmeUrl", ConfigurationEntryScope.ServerWideOnly)]
+        public string AcmeUrl { get; set; }
 
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
