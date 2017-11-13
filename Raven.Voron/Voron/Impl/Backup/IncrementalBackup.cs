@@ -142,10 +142,10 @@ namespace Voron.Impl.Backup
                                 header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
                             });
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
                             backupSuccess = false;
-                            throw;
+                            throw e;
                         }
                         finally
                         {
