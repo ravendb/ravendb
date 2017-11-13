@@ -427,7 +427,7 @@ namespace Raven.Server
                 setupInfo.NodeSetupInfos[key] = new SetupInfo.NodeInfo();
             }
             
-            var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore.ServerShutdown);
+            var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
 
             return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert);
         }

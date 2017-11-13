@@ -41,19 +41,22 @@ namespace Raven.Server.Commercial
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
         public const string GoogleDnsApi = "https://dns.google.com";
-        public static readonly Uri LetsEncryptServer = WellKnownServers.LetsEncrypt;
         
         public static string BuildHostName(string subdomain, string domain)
         {
             return $"{subdomain.ToLower()}-{domain.ToLower()}.{RavenDbDomain}";
         }
 
-        public static async Task<Uri> LetsEncryptAgreement(string email)
+        public static async Task<Uri> LetsEncryptAgreement(string email, ServerStore serverStore)
         {
             if (IsValidEmail(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
 
-            using (var acmeClient = new AcmeClient(LetsEncryptServer))
+            var acmeUrl = serverStore.Configuration.Core.AcmeStagingUrl == null
+                ? WellKnownServers.LetsEncrypt
+                : new Uri(serverStore.Configuration.Core.AcmeStagingUrl);
+
+            using (var acmeClient = new AcmeClient(acmeUrl))
             {
                 var account = await acmeClient.NewRegistraton("mailto:" + email);
                 return account.GetTermsOfServiceUri();
@@ -122,7 +125,7 @@ namespace Raven.Server.Commercial
             public X509Certificate2 CertificateInstance { get; set; }
         }
         
-        public static async Task<X509Certificate2> RefreshLetsEncryptTask(SetupInfo setupInfo, CancellationToken token)
+        public static async Task<X509Certificate2> RefreshLetsEncryptTask(SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var cache = TryGetLetsEncryptCachedDetails();
 
@@ -137,7 +140,11 @@ namespace Raven.Server.Commercial
             if(Logger.IsOperationsEnabled)
                 Logger.Operations($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
 
-            using (var acmeClient = new AcmeClient(LetsEncryptServer))
+            var acmeUrl = serverStore.Configuration.Core.AcmeStagingUrl == null
+                ? WellKnownServers.LetsEncrypt
+                : new Uri(serverStore.Configuration.Core.AcmeStagingUrl);
+
+            using (var acmeClient = new AcmeClient(acmeUrl))
             {
                 var dictionary = new Dictionary<string, Task<Challenge>>();
                 var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);
@@ -206,7 +213,11 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
                 onProgress(progress);
 
-                using (var acmeClient = new AcmeClient(LetsEncryptServer))
+                var acmeUrl = serverStore.Configuration.Core.AcmeStagingUrl == null
+                    ? WellKnownServers.LetsEncrypt
+                    : new Uri(serverStore.Configuration.Core.AcmeStagingUrl);
+
+                using (var acmeClient = new AcmeClient(acmeUrl))
                 {
                     var dictionary = new Dictionary<string, Task<Challenge>>();
                     var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);

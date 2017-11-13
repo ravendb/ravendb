@@ -319,7 +319,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var baseUri = new Uri("https://letsencrypt.org/");
-                var uri = new Uri(baseUri, await SetupManager.LetsEncryptAgreement(email));
+                var uri = new Uri(baseUri, await SetupManager.LetsEncryptAgreement(email, ServerStore));
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
