@@ -19,7 +19,9 @@ class certificate extends setupStep {
 
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
-
+        
+        this.model.domain().reusingConfiguration(false);
+        
         if (mode && mode === "Secured") {
             return $.when({ can: true });
         }
