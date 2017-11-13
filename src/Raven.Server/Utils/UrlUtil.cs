@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Utils
 {
-    public class UrlUtil
+    public static class UrlUtil
     {
         public static string EnsureValidExternalUrl(string url)
         {
@@ -24,7 +24,7 @@ namespace Raven.Server.Utils
             return url.TrimEnd('/');
         }
 
-       public static bool IsZeros(string hostName)
+        public static bool IsZeros(string hostName)
         {
             switch (hostName)
             {

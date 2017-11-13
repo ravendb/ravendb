@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
@@ -74,6 +75,9 @@ namespace Raven.Server.Config
 
         internal string ConfigPath => _customConfigPath
                        ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
+
+        internal CommandLineConfigurationSource CommandLineSettings =>
+            _configBuilder.Sources.OfType<CommandLineConfigurationSource>().FirstOrDefault();
 
         public RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
         {

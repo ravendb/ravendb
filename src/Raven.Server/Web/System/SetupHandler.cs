@@ -123,6 +123,32 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/setup/parameters", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetSetupParameters()
+        {
+            AssertOnlyInSetupMode();
+            var setupParameters =  SetupParameters.Get(ServerStore);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(SetupParameters.FixedServerPortNumber));
+                
+                if (setupParameters.FixedServerPortNumber.HasValue)
+                {
+                    writer.WriteInteger(setupParameters.FixedServerPortNumber.Value);
+                }
+                else
+                {
+                    writer.WriteNull();   
+                }
+
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/setup/ips", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetIps()
         {

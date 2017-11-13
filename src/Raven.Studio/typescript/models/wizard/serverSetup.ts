@@ -19,8 +19,11 @@ class serverSetup {
     certificate = ko.observable<certificateInfo>(new certificateInfo());
     registerClientCertificate = ko.observable<boolean>(true);
     
+    fixedLocalPort = ko.observable<number>();
+    fixPortNumberOnLocalNode = ko.pureComputed(() => this.fixedLocalPort() != null);
+    
     localIps = ko.observableArray<string>([]);
-
+    
     useOwnCertificates = ko.pureComputed(() => this.mode() && this.mode() === "Secured");
     hostnameIsNotRequired = ko.pureComputed(() => {
         if (this.mode() !== "Secured") {
@@ -61,6 +64,16 @@ class serverSetup {
         this.nodesValidationGroup = ko.validatedObservable({
             nodes: this.nodes,
         });
+    }
+    
+    init(params: Raven.Server.Commercial.SetupParameters) {
+        if (params.FixedServerPortNumber != null) {
+            this.fixedLocalPort(params.FixedServerPortNumber);
+            
+            this.unsecureSetup().port(this.fixedLocalPort().toString());
+        } else {
+            this.fixedLocalPort(null);
+        }
     }
 
     private getPortPart() {
