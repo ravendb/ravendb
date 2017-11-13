@@ -8,6 +8,8 @@ import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 
 class databaseInfo {
 
+    private static dayAsSeconds = 60 * 60 * 24;
+
     name: string;
 
     uptime = ko.observable<string>();
@@ -22,7 +24,6 @@ class databaseInfo {
     isEncrypted = ko.observable<boolean>();
     isAdmin = ko.observable<boolean>();
     disabled = ko.observable<boolean>();
-    backupEnabled = ko.observable<boolean>();
 
     licensed = ko.observable<boolean>(true); //TODO: bind this value  
     filteredOut = ko.observable<boolean>(false);
@@ -82,12 +83,16 @@ class databaseInfo {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
 
-    private computeBackupStatus(dto: Raven.Client.ServerWide.Operations.BackupInfo) {
-        if (!dto.LastBackup) {
+    private computeBackupStatus(backupInfo: Raven.Client.ServerWide.Operations.BackupInfo) {
+        if (!backupInfo || !backupInfo.LastBackup) {
             return "text-danger";
         }
 
-        return dto.IntervalUntilNextBackupInSec === 0 ? "text-warning" : "text-success";
+        const dateInUtc = moment.utc(backupInfo.LastBackup);
+        const diff = moment().utc().diff(dateInUtc);
+        const durationInSeconds = moment.duration(diff).asSeconds();
+
+        return durationInSeconds > databaseInfo.dayAsSeconds ? "text-warning" : "text-success";
     }
     
     isLocal(currentNodeTag: string) {
@@ -174,11 +179,12 @@ class databaseInfo {
         this.loadError(dto.LoadError);
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.dynamicNodesDistribution(dto.DynamicNodesDistribution);
-        this.backupEnabled(!!dto.BackupInfo);
-        if (this.backupEnabled()) {
+
+        if (dto.BackupInfo && dto.BackupInfo.LastBackup) {
             this.lastFullOrIncrementalBackup(moment.utc(dto.BackupInfo.LastBackup).local().fromNow());
-            this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
         }
+            
+        this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
 
         this.rejectClients(dto.RejectClients);
         this.indexingStatus(dto.IndexingStatus);

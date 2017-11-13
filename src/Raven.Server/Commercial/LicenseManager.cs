@@ -826,16 +826,12 @@ namespace Raven.Server.Commercial
 
             try
             {
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo: true, newNodeDetails: null);
+                var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo: true, newNodeDetails: null);
 
-                    if (licenseLimits == null)
-                        return;
+                if (licenseLimits == null)
+                    return;
 
-                    await _serverStore.PutLicenseLimitsAsync(licenseLimits);
-                }
+                await _serverStore.PutLicenseLimitsAsync(licenseLimits);
             }
             catch (Exception e)
             {
