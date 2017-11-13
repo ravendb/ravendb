@@ -461,14 +461,19 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
-        protected void SetupCORSHeaders()
+        public static void SetupCORSHeaders(HttpContext httpContext)
         {
             // TODO: handle this properly when using https
             // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
-            HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+            httpContext.Response.Headers.Add("Access-Control-Allow-Origin", httpContext.Request.Headers["Origin"]);
+            httpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
+            httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);
+            httpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+        }
+        
+        protected void SetupCORSHeaders()
+        {
+            SetupCORSHeaders(HttpContext);
         }
 
         protected void SetLicenseLimitResponse(LicenseLimit licenseLimit)

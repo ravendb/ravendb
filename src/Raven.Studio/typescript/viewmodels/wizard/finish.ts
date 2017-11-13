@@ -182,12 +182,23 @@ class finish extends setupStep {
     }
     
     private check() {
+        const serverUrl = this.model.getStudioUrl();
+        
+        // poll using http 
+        const httpServerUrl = serverUrl.replace("https://", "http://");
         setInterval(() => {
-            new checkIfServerIsOnlineCommand(this.model.getStudioUrl())
+            new checkIfServerIsOnlineCommand(httpServerUrl)
                 .execute()
                 .done(() => {
                     this.redirectToStudio();
-                });
+                })
+                .fail((result: JQueryXHR) => {
+                    // bad request - we connected to https using http, but server respond
+                    // it means it is online
+                    if (result.status === 400) {
+                        this.redirectToStudio();
+                    }
+                })
         }, 500);
     }
 
