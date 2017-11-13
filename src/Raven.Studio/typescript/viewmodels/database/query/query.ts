@@ -238,7 +238,7 @@ class query extends viewModelBase {
 
             const indexes = this.indexes() || [];
             const currentIndex = indexes.find(i => i.Name === indexName);
-            return !!currentIndex && currentIndex.Type === "MapReduce";
+            return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce");
         });
 
         this.isDynamicIndex = ko.pureComputed(() => {
