@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.GreaterThanEqual:
                         {
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
-                            var (value, valueType) = GetValue(query, metadata, parameters, where.Right);
+                            var (value, valueType) = GetValue(query, metadata, parameters, where.Right, true);
 
                             var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
@@ -170,6 +170,8 @@ namespace Raven.Server.Documents.Queries
 
                                     if (exact && metadata.IsDynamic)
                                         luceneFieldName = AutoIndexField.GetExactAutoIndexFieldName(luceneFieldName);
+
+                                    exact |= valueType == ValueTokenType.Parameter;
 
                                     switch (where.Operator)
                                     {
@@ -896,6 +898,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.False:
                     return (fieldName, LuceneFieldType.String, LuceneTermType.String);
                 case ValueTokenType.Null:
+                case ValueTokenType.Parameter:
                     return (fieldName, LuceneFieldType.String, LuceneTermType.String);
                 default:
                     ThrowUnhandledValueTokenType(valueType);
