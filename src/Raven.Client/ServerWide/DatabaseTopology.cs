@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
@@ -180,8 +181,10 @@ namespace Raven.Client.ServerWide
             return (addDestinations, removeDestinations);
         }
 
+        [JsonIgnore]
         public int Count => Members.Count + Promotables.Count + Rehabs.Count;
 
+        [JsonIgnore]
         public IEnumerable<string> AllNodes
         {
             get

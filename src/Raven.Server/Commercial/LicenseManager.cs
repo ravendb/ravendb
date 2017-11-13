@@ -1090,8 +1090,8 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;
 
-                    if (databaseRecord.ExternalReplication != null &&
-                        databaseRecord.ExternalReplication.Count > 0)
+                    if (databaseRecord.ExternalReplications != null &&
+                        databaseRecord.ExternalReplications.Count > 0)
                         externalReplicationCount++;
 
                     if (HasRavenEtl(databaseRecord.RavenEtls,

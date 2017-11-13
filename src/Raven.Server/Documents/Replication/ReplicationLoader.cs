@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleExternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
         {
-            var changes = FindExternalReplicationChanges(_externalDestinations, newRecord.ExternalReplication);
+            var changes = FindExternalReplicationChanges(_externalDestinations, newRecord.ExternalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
             var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, _server.Engine.CurrentState) == _server.NodeTag).ToList();

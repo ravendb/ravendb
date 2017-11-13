@@ -29,10 +29,10 @@ namespace Raven.Server.ServerWide.Commands
             switch (TaskType)
             {
                 case OngoingTaskType.Replication:
-                    var replicationTask = record.ExternalReplication?.Find(x => x.TaskId == TaskId);
+                    var replicationTask = record.ExternalReplications?.Find(x => x.TaskId == TaskId);
                     if (replicationTask != null)
                     {
-                        record.ExternalReplication.Remove(replicationTask);
+                        record.ExternalReplications.Remove(replicationTask);
                     }              
                     break;
 

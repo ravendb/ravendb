@@ -32,7 +32,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 case OngoingTaskType.Replication:
 
-                    var watcher = record?.ExternalReplication.Find(x => x.TaskId == TaskId);
+                    var watcher = record?.ExternalReplications.Find(x => x.TaskId == TaskId);
                     if (watcher != null)
                     {
                         watcher.Disabled = Disable;
