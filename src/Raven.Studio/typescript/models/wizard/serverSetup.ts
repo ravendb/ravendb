@@ -129,7 +129,7 @@ class serverSetup {
             const mode = this.mode();
             switch (mode) {
                 case "LetsEncrypt":
-                    return `${tag.toLocaleUpperCase()} ${this.domain().fullDomain()}`;
+                    return this.domain().fullDomain().toLocaleLowerCase();
                     
                 case "Secured":
                     const wildcard = this.certificate().wildcardCertificate();
@@ -142,12 +142,6 @@ class serverSetup {
                 default:
                     return null;
             }
-        });
-    }
-
-    availableLocalIps() {
-        return ko.pureComputed(() => {
-            return this.localIps();
         });
     }
 }
