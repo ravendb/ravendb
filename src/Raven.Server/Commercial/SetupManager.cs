@@ -848,7 +848,7 @@ namespace Raven.Server.Commercial
                         {
                             throw new InvalidOperationException($"Could not generate a client certificate for '{name}'.", e);
                         }
-                        if(setupInfo.RegisterClientCert)
+                        if (setupInfo.RegisterClientCert)
                             RegisterClientCertInOs(onProgress, progress, clientCert);
 
                         progress.AddInfo("Writing certificates to zip archive.");
@@ -952,7 +952,9 @@ namespace Raven.Server.Commercial
 
                         progress.AddInfo("Adding readme file to zip archive.");
                         onProgress(progress);
-                        string readmeString = CreateReadmeText(setupInfo,publicServerUrl, clientCertificateName);
+                        var currentHostName = setupMode == SetupMode.LetsEncrypt ? BuildHostName("A", setupInfo.Domain) : new Uri(publicServerUrl).Host;
+                        string readmeString = CreateReadmeText(setupInfo, publicServerUrl, clientCertificateName, currentHostName);
+                        progress.Readme = readmeString;
                         try
                         {
                             var entry = archive.CreateEntry("readme.txt");
@@ -1006,7 +1008,7 @@ namespace Raven.Server.Commercial
         }
 
        
-        private static string CreateReadmeText(SetupInfo setupInfo, string publicServerUrl, string clientCertificateName)
+        private static string CreateReadmeText(SetupInfo setupInfo, string publicServerUrl, string clientCertificateName, string currentHostName)
         {
             var str =
                 string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
@@ -1018,7 +1020,7 @@ namespace Raven.Server.Commercial
             
             if (setupInfo.ModifyLocalServer)
             {
-                str += ($"The current node (A - {BuildHostName("A", setupInfo.Domain)}) has already been configured and require not further action on your part" +
+                str += ($"The current node (A - {currentHostName}) has already been configured and require not further action on your part" +
                         Environment.NewLine);
             }
             str += Environment.NewLine;
