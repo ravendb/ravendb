@@ -18,7 +18,7 @@ abstract class backupSettings {
 
     constructor(dto: Raven.Client.ServerWide.PeriodicBackup.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
         this.enabled(!dto.Disabled);
-        
+        this.connectionType = connectionType;
         this.initObservables();
     }
 
