@@ -172,13 +172,7 @@ class nodes extends setupStep {
            node.nodeTag(serverSetup.nodesTags[idx]);
            idx++;
         });
-    }
-    
-    availableLocalIps() {
-        return ko.pureComputed(() => {
-            return this.model.localIps();
-        });
-    }
+    }    
 }
 
 export = nodes;

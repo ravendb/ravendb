@@ -1,13 +1,13 @@
 <h2 class="margin-bottom margin-top"><strong class="margin-right">2.</strong>Unsecured mode setup</h2>
 <form class="flex-form" data-bind="with: model.unsecureSetup, submit: save">
     <div class="panel padding padding-lg">
-
         <div class="margin-bottom">
             <div class="form-group" data-bind="validationElement: publicServerUrl">
                 <label for="publicServerUrl" class="control-label">Public server url</label>
                 <div class="flex-grow">
                     <input type="text" autocomplete="off" class="form-control" id="publicServerUrl"
-                           placeholder="The URL under which server is publicly available, used for inter-node communication and access from behind a firewall, proxy etc."
+                           placeholder="Enter the Server Public URL"
+                           title="The URL under which the server is publicly available. Used for inter-node communication and access from behind a firewall, proxy etc."
                            data-bind="textInput: publicServerUrl">
                 </div>
             </div>
@@ -24,15 +24,27 @@
                     <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
                         <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
                     </label>
-                    <div class="flex-grow input-group">
+                    <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }"> 
                         <input type="text" autocomplete="off" class="form-control"
                                placeholder="Enter server IP address"
                                data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
+                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                        <ul class="dropdown-menu" role="menu" style="display: none;"
+                            data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.model.availableLocalIps()">
+                            <li role="presentation" data-bind="click: $parent.ip.bind($parent, $data)">
+                                <a role="menuitem" tabindex="-1" href="#">
+                                    <span data-bind="text: $data"></span>
+                                </a>
+                            </li>
+                        </ul>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
+                            <div class="help-block" data-bind="validationMessage: ip"></div>
+                        </div>
                     </div>
+                    
                     <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
                 </div>
             </div>
-
             <div class="form-group">
                 <label class="control-label"></label>
                 <div class="flex-grow">
@@ -41,7 +53,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="form-group">
                 <label class="control-label"></label>
                 <div class="flex-grow">
@@ -52,7 +63,6 @@
                 </div>
             </div>
         </div>
-
         <div class="padding bg-warning" data-bind="visible: shouldDisplayUnsafeModeWarning">
             <div class="checkbox flex-horizontal" data-bind="validationOptions: { insertMessages: false }">
                 <input id="unsafeNetworkWarning" type="checkbox" data-bind="checked: unsafeNetworkConfirm">
@@ -65,7 +75,6 @@
                 <div class="help-block" data-bind="validationMessage: unsafeNetworkConfirm"></div>
             </div>
         </div>
-
     </div>
     <div class="navigation padding padding-lg flex-horizontal">
         <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
@@ -76,5 +85,4 @@
             <span>Next</span> <i class="icon-arrow-right"></i>
         </button>
     </div>
-
 </form>
