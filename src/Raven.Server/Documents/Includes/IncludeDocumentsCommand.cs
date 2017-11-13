@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Includes
 
             foreach (var includedDocId in _includedIds)
             {
-                if (includedDocId == null) //precaution, should not happen
+                if (string.IsNullOrEmpty(includedDocId)) 
                     continue;
 
                 Document includedDoc;
