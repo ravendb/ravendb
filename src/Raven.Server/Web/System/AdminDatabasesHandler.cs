@@ -223,7 +223,7 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replication-factor", required: false) ?? 0;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
-                if ((databaseRecord.Topology?.DynamicNodesDistribution ?? true) &&
+                if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
                 {
                     SetLicenseLimitResponse(licenseLimit);
