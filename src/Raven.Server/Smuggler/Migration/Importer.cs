@@ -41,7 +41,7 @@ namespace Raven.Server.Smuggler.Migration
         {
             _migrationStateKey = migrationStateKey;
 
-            _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(ServerUrl, DatabaseName, Database.ServerStore.Server.ClusterCertificateHolder.Certificate, DocumentConventions.Default);
+            _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(ServerUrl, DatabaseName, Database.ServerStore.Server.Certificate.Certificate, DocumentConventions.Default);
 
             _client = _requestExecutor.HttpClient;
         }

@@ -207,6 +207,15 @@ namespace Raven.Server.ServerWide
                     case nameof(CompareExchangeCommand):
                         CompareExchange(context, type, cmd, index);
                         break;
+                     case nameof(InstallUpdatedServerCertificateCommand):
+                         InstallUpdatedServerCertificate(context, cmd, index);
+                         break;
+                     case nameof(RecheckStatusOfServerCertificateCommand):
+                         NotifyValueChanged(context,type, index);// just need to notify listeners
+                         break;
+                     case nameof(ConfirmReceiptServerCertificateCommand):
+                         ConfirmReceiptServerCertificate(context, cmd, index);
+                         break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index, leader);
                         break;
@@ -247,6 +256,68 @@ namespace Raven.Server.ServerWide
                     LeaderShipDuration = leader?.LeaderShipDuration,
                 });
             }
+        }
+
+        private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, "server/cert", out var key))
+            {
+                if (cmd.TryGet(nameof(ConfirmReceiptServerCertificateCommand.Thumbprint), out string thumbprint) == false)
+                {
+                    throw new ArgumentException("Thumbprint property didn't exist in ConfirmReceiptServerCertificateCommand");
+                }
+                var certInstallation = GetItem(context, "server/cert");
+                if (certInstallation == null)
+                    return; // already applied? 
+                
+                if(certInstallation.TryGet("Thumbprint", out string storedThumbprint) == false)
+                    throw new ArgumentException("Thumbprint property didn't exist in 'server/cert' value");
+
+                if (storedThumbprint != thumbprint)
+                    return; // confirmation for a different cert, ignoring
+
+                certInstallation.TryGet("Confirmations", out int confirmations);
+
+                certInstallation.Modifications = new DynamicJsonValue(certInstallation)
+                {
+                    ["Confirmations"] = confirmations +1
+                };
+
+                certInstallation = context.ReadObject(certInstallation, "server.cert.update");
+
+                UpdateValue(index, items, key, key, certInstallation);
+                
+                // this will trigger the handling of the certificate update 
+                NotifyValueChanged(context, nameof(ConfirmReceiptServerCertificateCommand), index);
+            }
+        }
+
+        private void InstallUpdatedServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
+        {
+            if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) || string.IsNullOrEmpty(cert))
+            {
+                throw new ArgumentException("Certificate property didn't exist in InstallUpdatedServerCertificateCommand");
+            }
+
+            var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert));
+            // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not alllowed
+            using (Slice.From(context.Allocator, "server/cert", out var key))
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["Certificate"] = cert,
+                    ["Thumbprint"] = x509Certificate.Thumbprint,
+                    ["Confirmations"] = 0
+                };
+
+                var json = context.ReadObject(djv, "server.cert.update.info");
+
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                UpdateValue(index, items,key, key, json);
+            }
+            // this will trigger the notification to the leader
+            NotifyValueChanged(context, nameof(InstallUpdatedServerCertificateCommand), index);
         }
 
         private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -831,6 +902,19 @@ namespace Raven.Server.ServerWide
 
                     yield return GetCurrentItem(context, result.Value);
                 }
+            }
+        }
+        
+        
+        public BlittableJsonReaderObject GetItem(TransactionOperationContext context, string key)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            using (Slice.From(context.Allocator, key, out var k))
+            {
+                var tvh = new Table.TableValueHolder();
+                items.ReadByKey(k, out tvh.Reader);
+                return GetCurrentItem(context, tvh).Item2;
             }
         }
 

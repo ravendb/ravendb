@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Reflection;
@@ -33,22 +34,29 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
+using Esprima;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Internal.System.IO.Pipelines;
+using Newtonsoft.Json;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Commercial;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Https;
 using Raven.Server.Monitoring.Snmp;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.ResponseCompression;
 using Sparrow;
@@ -106,7 +114,8 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            var clusterCert = InitializeClusterCertificate();
+            Certificate = LoadCertificate() ??
+                                       new CertificateHolder();
             try
             {
                 ServerStore.Initialize();
@@ -145,11 +154,13 @@ namespace Raven.Server
                     if (Configuration.Http.MaxRequestBufferSize.HasValue)
                         options.Limits.MaxRequestBufferSize = Configuration.Http.MaxRequestBufferSize.Value.GetValue(SizeUnit.Bytes);
 
-                    if (clusterCert != null)
+                    if (Certificate.Certificate != null)
                     {
-                        var httpsConnectionAdapter = new HttpsConnectionAdapter();
-                        httpsConnectionAdapter.SetCertificate(clusterCert.Certificate);
-                        var adapter = new AuthenticatingAdapter(this, httpsConnectionAdapter);
+                        _httpsConnectionAdapter = new HttpsConnectionAdapter();
+                        _httpsConnectionAdapter.SetCertificate(Certificate.Certificate);
+                        // TODO: Currently we aren't supporting refresh
+                        //_refreshClusterCertificate = new Timer(RefreshClusterCertificate);
+                        var adapter = new AuthenticatingAdapter(this, _httpsConnectionAdapter);
 
                         foreach (var address in ListenEndpoints.Addresses)
                         {
@@ -197,8 +208,6 @@ namespace Raven.Server
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
-
-                ClusterCertificateHolder = ClusterCertificateHolder ?? new CertificateHolder();
             }
             catch (Exception e)
             {
@@ -225,6 +234,8 @@ namespace Raven.Server
                 _tcpListenerStatus = StartTcpListener();
 
                 StartSnmp();
+
+                _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
             }
             catch (Exception e)
             {
@@ -234,29 +245,199 @@ namespace Raven.Server
             }
         }
 
+        private Task _currentRefreshTask = Task.CompletedTask;
+        
+        private void RefreshClusterCertificate(object state)
+        {
+            // If the setup mode is anything but SetupMode.LetsEncrypt, we'll
+            // check if the certificate changed and if so we'll update it immediately
+            // on the local node (only). Admin is responsible for registering the new
+            // certificate in the cluster and updating all the nodes
+            
+            // If the setup mode is SetupMode.LetsEncrypt, we'll check if we need to
+            // update it, and if so, we'll re-generate the certificate then we'll
+            // distribute it via the cluster. We'll update the cert only when all nodes
+            // confirm they got it (or if there are less than 3 days to spare).
+            
+            
+            var currentCertificate = Certificate;
+            if (currentCertificate == null)
+            {
+                return; // shouldn't happen, but just in case
+            }
+            var currentRefreshTask = _currentRefreshTask;
+            if (currentRefreshTask.IsCompleted == false)
+            { 
+                _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
+                return;
+            }
+            var refreshCertificate = new Task(async () =>
+            {
+                try
+                {
+                    CertificateHolder newCertificate = null;
+                    try
+                    {
+                        newCertificate = LoadCertificate();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Tried to load certificate as part of refresh check, but got an error!", e);
+                    }
+                    if (newCertificate == null)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Tried to load certificate as part of refresh check, but got a null back, but got a valid certificate on startup!");
+                        return;
+                    }
+
+                    if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
+                    {
+                        if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
+                            _httpsConnectionAdapter.SetCertificate(newCertificate.Certificate);
+                        return;
+                    }
+                    if (Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
+                        return;
+
+                    if (ServerStore.IsLeader() == false)
+                        return; // the leader will do this and let us know
+                    
+                    // we need to see if there is already an ongoing process
+                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using(context.OpenReadTransaction())
+                    {
+                        var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
+                        if (certUpdate != null 
+                            && certUpdate.TryGet("Thumbprint", out string thumbprint) 
+                            && thumbprint != currentCertificate.Certificate.Thumbprint)
+                        {
+                            // we are already in the process of updating the certificate, so we need
+                            // to nudge all the nodes in the cluster in case we have a node that didn't
+                            // confirm to us but the time to replace has already passed.
+                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
+                            return;
+                        }
+                    }
+
+                    // same certificate, but now we need to see if we are need to auto update it
+                    var remainingDays = (currentCertificate.Certificate.NotAfter - DateTime.Now).TotalDays;
+                    if (remainingDays > 30)
+                        return; // nothing to do, the certs are the same and we have enough time
+
+                    // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
+                    // but if we have less than 20 days, we'll try anyway
+                    if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
+                        return; 
+                    
+                    try
+                    {
+                        newCertificate = await RefreshLetsEncryptCertificate(currentCertificate);
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("Failed to update certificate from Lets Encrypt", e);
+                        return;
+                    }
+                    await StartCertificateReplicationAsync(newCertificate);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Failure when trying to refresh certificate", e);
+                }
+            });
+            if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
+                return;
+            refreshCertificate.Start();
+        }
+
+        private async Task StartCertificateReplicationAsync(CertificateHolder newCertificate)
+        {
+            // the process of updating a new certificate is the same as deleting database
+            // we first send the certificate to all the nodes, then we get aknowledgments
+            // about that from them, and we replace only when they are are confirmed
+            // to have been successful.
+            // However, if we have less than 3 days for renewing the cert, we'll replace
+            // immediately.
+
+            // we first register it as a valid cluster node certificate in the cluster
+            await ServerStore.RegisterServerCertificateInCluster(newCertificate.Certificate, "Cluster-wide Certificate");
+            var base64Cert = Convert.ToBase64String(newCertificate.Certificate.Export(X509ContentType.Pkcs12, (string)null));
+            await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
+            {
+                Certificate = base64Cert
+            });
+        }
+
+        private async Task<CertificateHolder> RefreshLetsEncryptCertificate(CertificateHolder existing)
+        {
+            var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
+
+            var substring = hosts[0].Substring(0, hosts[0].Length - SetupManager.RavenDbDomain.Length - 1);
+            var domainEnd = substring.LastIndexOfAny(new[]{'.', '-'});
+
+            var license = ServerStore.LoadLicense();
+            
+            HttpResponseMessage response;
+            try
+            {
+                var licensePayload = JsonConvert.SerializeObject(new
+                {
+                    License = license
+                });    
+                var content = new StringContent(licensePayload , Encoding.UTF8, "application/json");
+              
+                response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+
+                response.EnsureSuccessStatusCode();
+
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to validate user's license as part of Let's Encrypt certificate refresh", e);
+            }
+
+            var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringAsync());
+
+            var domain = substring.Substring(domainEnd + 1);
+
+            if (userDomainsResult.Domains.ContainsKey(domain) == false)
+                throw new InvalidOperationException("The license provided does not have access to the domain: " + domain);
+
+            var setupInfo = new SetupInfo
+            {
+                Domain = domain,
+                ModifyLocalServer = false, // N/A here
+                RegisterClientCert = false, // N/A here
+                Password = null,
+                Certificate = null,
+                License = license,
+                Email = userDomainsResult.Email,
+                NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
+            };
+
+            var fullDomainPortion = domain + "." + SetupManager.RavenDbDomain;
+
+            foreach (var host in hosts) // we just need the keys here
+            {
+                var key = host.Substring(0, host.Length - fullDomainPortion.Length-1);
+                setupInfo.NodeSetupInfos[key] = new SetupInfo.NodeInfo();
+            }
+            
+            var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore.ServerShutdown);
+
+            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert);
+        }
+
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
         {
             var uri = new Uri(Configuration.Core.ServerUrl);
             var host = uri.DnsSafeHost;
             var ipAddresses = GetListenIpAddresses(host);
             return (ipAddresses, uri.Port);
-        }
-
-        public CertificateHolder InitializeClusterCertificate()
-        {
-            var clusterCert = LoadCertificate(
-                Configuration.Security.CertificateExec,
-                Configuration.Security.CertificateExecArguments,
-                Configuration.Security.CertificatePath,
-                Configuration.Security.CertificatePassword);
-
-            if (string.IsNullOrEmpty(Configuration.Security.SslProxyCertificatePath) == false)
-                _sslProxyCertificate = ServerStore.Secrets.LoadProxyCertificateFromPath(
-                    Configuration.Security.SslProxyCertificatePath,
-                    Configuration.Security.SslProxyCertificatePassword);
-
-            ClusterCertificateHolder = clusterCert ?? new CertificateHolder();
-            return clusterCert;
         }
 
         private string GetWebUrl(string kestrelUrl)
@@ -273,14 +454,14 @@ namespace Raven.Server
             return Configuration.Core.ServerUrl;
         }
 
-        private CertificateHolder LoadCertificate(string exec, string execArgs, string path, string password)
+        private CertificateHolder LoadCertificate()
         {
             try
             {
-                if (string.IsNullOrEmpty(path) == false)
-                    return ServerStore.Secrets.LoadCertificateFromPath(path, password);
-                if (string.IsNullOrEmpty(exec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
+                if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
+                    return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments);
                 
                 return null;
             }
@@ -376,7 +557,7 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
-            else if (certificate.Equals(ClusterCertificateHolder.Certificate))
+            else if (certificate.Equals(Certificate.Certificate))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
@@ -390,19 +571,6 @@ namespace Raven.Server
                     {
                         cert = ServerStore.Cluster.Read(ctx, certKey) ??
                                ServerStore.Cluster.GetLocalState(ctx, certKey);
-
-                        if (cert == null && _sslProxyCertificate != null)
-                        {
-                            var proxyThumbprint = GetCertificateThumbprintFromProxy(certificate);
-                            if (proxyThumbprint != null)
-                            {
-                                certKey = Constants.Certificates.Prefix + proxyThumbprint;
-                                cert = ServerStore.Cluster.Read(ctx, certKey) ??
-                                       ServerStore.Cluster.GetLocalState(ctx, certKey);
-
-                            }
-                        }
-
                     }
                     if (cert == null)
                     {
@@ -438,39 +606,11 @@ namespace Raven.Server
             return authenticationStatus;
         }
 
-        private string GetCertificateThumbprintFromProxy(X509Certificate2 certificate)
-        {
-            var chain = new X509Chain
-            {
-                ChainPolicy =
-                {
-                    RevocationMode = X509RevocationMode.NoCheck,
-                    RevocationFlag = X509RevocationFlag.ExcludeRoot,
-                    VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority,
-                    VerificationTime = DateTime.UtcNow,
-                    UrlRetrievalTimeout = new TimeSpan(0, 0, 0),
-                    ExtraStore = { _sslProxyCertificate }
-                },
-            };
-
-            if (chain.Build(certificate) == false)
-                return null;
-
-            foreach (var extension in certificate.Extensions)
-            {
-                if (extension.Oid.Value == ProxyDelegation.Value)
-                {
-                    return Asn1Object.FromByteArray(extension.RawData).ToString();
-                }
-            }
-            return null;
-        }
-
         public string WebUrl { get; private set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
-        internal CertificateHolder ClusterCertificateHolder;
+        internal CertificateHolder Certificate;
 
         public class CertificateHolder
         {
@@ -785,10 +925,18 @@ namespace Raven.Server
 
         private TcpListenerStatus _tcpListenerStatus;
         private SnmpWatcher _snmpWatcher;
-        private static readonly Oid ProxyDelegation = new Oid("1.3.6.1.4.1.45751.42", "RavenDB Proxy Delegation");
-        private X509Certificate2 _sslProxyCertificate;
+        private Timer _refreshClusterCertificate;
+        private HttpsConnectionAdapter _httpsConnectionAdapter;
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
+        internal void SetCertificate(X509Certificate2 certificate)
+        {
+            var certificateHolder = Certificate;
+            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate);
+            if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
+                _httpsConnectionAdapter.SetCertificate(certificate);
+        }
+        
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
             tcp.Operation = header.Operation;
@@ -889,7 +1037,7 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (ClusterCertificateHolder.Certificate != null)
+            if (Certificate.Certificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
                         // it is fine that the client doesn't have a cert, we just care that they
@@ -902,7 +1050,7 @@ namespace Raven.Server
                         true);
                 stream = sslStream;
 
-                await sslStream.AuthenticateAsServerAsync(ClusterCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(Certificate.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;
@@ -991,6 +1139,7 @@ namespace Raven.Server
                 Disposed = true;
                 var ea = new ExceptionAggregator("Failed to properly close RavenServer");
 
+                ea.Execute(() => _refreshClusterCertificate?.Dispose());
                 ea.Execute(() => AdminConsolePipe?.Dispose());
                 ea.Execute(() => LogStreamPipe?.Dispose());
                 ea.Execute(() => Metrics?.Dispose());
@@ -1001,6 +1150,19 @@ namespace Raven.Server
                 }
 
                 ea.Execute(() => ServerStore?.Dispose());
+                ea.Execute(() =>
+                {
+                    try
+                    {
+                        _currentRefreshTask?.Wait();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    catch (AggregateException ae) when (ae.InnerException is OperationCanceledException)
+                    {
+                    }
+                });
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
                 ea.Execute(() => AfterDisposal?.Invoke());
 

@@ -84,7 +84,7 @@ namespace Raven.Server.Web.Authentication
                 throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
             }
             
-            if (Server.ClusterCertificateHolder?.Certificate == null)
+            if (Server.Certificate?.Certificate == null)
             {
                 var keys = new[]
                 {
@@ -98,7 +98,7 @@ namespace Raven.Server.Web.Authentication
             }
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.Certificate);
 
             var newCertDef = new CertificateDefinition
             {
@@ -353,7 +353,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Cannot delete {clientCertDef?.Name} becuase it's the current client certificate being used");
                 }
 
-                if (clientCert != null && Server.ClusterCertificateHolder.Certificate.Thumbprint.Equals(thumbprint))
+                if (clientCert != null && Server.Certificate.Certificate.Thumbprint.Equals(thumbprint))
                 {
                     var serverCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + thumbprint);
                     throw new InvalidOperationException($"Cannot delete {serverCertDef?.Name} becuase it's the current server certificate being used");

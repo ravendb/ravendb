@@ -565,6 +565,81 @@ namespace Raven.Server.ServerWide
         {
             switch (t.Type)
             {
+                case nameof(RecheckStatusOfServerCertificateCommand):
+                case nameof(ConfirmReceiptServerCertificateCommand):
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var cert = Cluster.GetItem(context, "server/cert");
+                        if (cert == null)
+                            return; // was already processed?
+                        if (cert.TryGet("Confirmations", out int confirmations))
+                            throw new InvalidOperationException("Expected to get confirmations count");
+
+                        if (GetClusterTopology(context).AllNodes.Count > confirmations)
+                        {
+                            if (Server.Certificate?.Certificate != null &&
+                                (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
+                                return; // we still have time for all the nodes to update themselves 
+                            
+                        }
+                        
+                        if (cert.TryGet("Certificate", out string certBase64) == false || 
+                            cert.TryGet("Thumbprint", out string certThumbprint))
+                            throw new InvalidOperationException("Invalid server cert value, expected to get Certificate and Thumbprint properties");
+
+                        if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
+                            return;// already replaced it, nothing to do
+                        
+                        // and now we have to replace the cert...
+                        if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
+                        {
+                            NotificationCenter.Add(AlertRaised.Create(
+                                "Unable to refresh server certificate", 
+                                "Cluster wanted to install updated server certificate, but no path has been configured", 
+                                AlertType.ClusterTopologyWarning, 
+                                NotificationSeverity.Error,
+                                "Cluster.Certificate.Install.Error"));
+                            return;
+                        }
+                    
+
+                        var bytesToSave = Convert.FromBase64String(certBase64);
+                        var newClusterCertificate = new X509Certificate2(bytesToSave,(string)null, X509KeyStorageFlags.Exportable);
+                        
+                        if(Logger.IsOperationsEnabled)
+                            Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.FriendlyName} - {newClusterCertificate.Thumbprint}");
+                        
+                        
+                        if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
+                        {
+                            bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
+                        }
+
+                        using (var certStream = File.Create(Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath)))
+                        {
+                            certStream.Write(bytesToSave, 0, bytesToSave.Length);
+                            certStream.Flush(true);
+                        }
+                        
+                        Server.SetCertificate(newClusterCertificate);
+                        
+                    }
+                    break;
+                case nameof(InstallUpdatedServerCertificateCommand):
+                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var cert = Cluster.GetItem(context, "server/cert");
+                        if (cert == null)
+                            return; // was already processed?
+                        if (cert.TryGet("Thumbprint", out string certThumbprint))
+                            throw new InvalidOperationException("Invalid server cert value, expected to get Thumbprint property");
+
+                        // we got it, now let us let the leader know about it
+                        SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
+                    }
+                    break;
                 case nameof(PutClientConfigurationCommand):
                     LastClientConfigurationIndex = t.Index;
                     break;
@@ -1210,19 +1285,24 @@ namespace Raven.Server.ServerWide
 
         public void EnsureServerCertificateIsInClusterState()
         {
-            if (Server.ClusterCertificateHolder?.Certificate != null)
-            {
-                // Also need to register my own certificate in the cluster, for other nodes to trust me
-                var myCertificate = new CertificateDefinition
-                {
-                    Certificate = Convert.ToBase64String(Server.ClusterCertificateHolder.Certificate.Export(X509ContentType.Cert)),
-                    Thumbprint = Server.ClusterCertificateHolder.Certificate.Thumbprint,
-                    Name = $"Server Certificate for Node {_engine.Tag}",
-                    SecurityClearance = SecurityClearance.ClusterNode
-                };
+            if (Server.Certificate?.Certificate == null) 
+                return;
+            
+            // Also need to register my own certificate in the cluster, for other nodes to trust me
+            RegisterServerCertificateInCluster(Server.Certificate.Certificate, $"Server Certificate for Node {_engine.Tag}");
+        }
 
-                PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + myCertificate.Thumbprint, myCertificate));
-            }
+        public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
+        {
+            var myCertificate = new CertificateDefinition
+            {
+                Certificate = Convert.ToBase64String(certificateCertificate.Export(X509ContentType.Cert)),
+                Thumbprint = certificateCertificate.Thumbprint,
+                Name = name,
+                SecurityClearance = SecurityClearance.ClusterNode
+            };
+
+            return PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + myCertificate.Thumbprint, myCertificate));
         }
 
         public bool IsLeader()
@@ -1473,7 +1553,7 @@ namespace Raven.Server.ServerWide
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     _clusterRequestExecutor?.Dispose();
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.ClusterCertificateHolder.Certificate);
+                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, Server.Certificate.Certificate);
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
@@ -1598,7 +1678,7 @@ namespace Raven.Server.ServerWide
             return new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                [nameof(TcpConnectionInfo.Certificate)] = _server.ClusterCertificateHolder.CertificateForClients
+                [nameof(TcpConnectionInfo.Certificate)] = _server.Certificate.CertificateForClients
             };
         }
 

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
@@ -42,7 +43,7 @@ namespace Raven.Server.Https
         {
             EnsureCertificateIsAllowedForServerAuth(serverCertificate);
 
-            _serverCertificate = serverCertificate;
+            Interlocked.Exchange(ref _serverCertificate, serverCertificate);
         }
 
         public bool IsHttps => true;

@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
             try
             {
                 var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
-                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.ClusterCertificateHolder.Certificate);
+                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.Certificate.Certificate);
                 if (await Task.WhenAny(timeout, connectionInfo) == timeout)
                 {
                     throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
         private async Task<(TcpClient TcpClient, Stream Connection)> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log)
         {
             var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
-            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ClusterCertificateHolder.Certificate);
+            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.Certificate.Certificate);
             return (tcpClient, connection);
         }
 

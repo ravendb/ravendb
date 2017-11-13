@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
-                    json[nameof(NodeInfo.Certificate)] = ServerStore.Server.ClusterCertificateHolder.CertificateForClients;
+                    json[nameof(NodeInfo.Certificate)] = ServerStore.Server.Certificate.CertificateForClients;
                     json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
                     json[nameof(NodeInfo.NumberOfCores)] = ProcessorInfo.ProcessorCount;
 
@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ClusterCertificateHolder.Certificate))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.Certificate.Certificate))
             {
                 requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
 

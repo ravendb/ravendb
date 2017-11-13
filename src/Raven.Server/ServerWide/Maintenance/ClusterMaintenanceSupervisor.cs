@@ -149,7 +149,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 try
                 {
                     tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
-                        _parent._server.Server.ClusterCertificateHolder?.Certificate);
+                        _parent._server.Server.Certificate?.Certificate);
                 }
                 catch (Exception e)
                 {
@@ -167,7 +167,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             await TimeoutManager.WaitFor(onErrorDelayTime, _token);
 
                             tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
-                                _parent._server.Server.ClusterCertificateHolder.Certificate);
+                                _parent._server.Server.Certificate.Certificate);
                         }
 
                         if (tcpConnection == null)
@@ -258,7 +258,7 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<(TcpClient TcpClient, Stream Connection)> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.ClusterCertificateHolder.Certificate);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {

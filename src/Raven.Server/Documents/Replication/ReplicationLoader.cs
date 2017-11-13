@@ -590,7 +590,7 @@ namespace Raven.Server.Documents.Replication
                 if (node is ExternalReplication exNode)
                 {
                     using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.Database,
-                        _server.Server.ClusterCertificateHolder.Certificate,
+                        _server.Server.Certificate.Certificate,
                         DocumentConventions.Default))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
@@ -603,7 +603,7 @@ namespace Raven.Server.Documents.Replication
                 }
                 if (node is InternalReplication internalNode)
                 {
-                    return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.ClusterCertificateHolder.Certificate);
+                    return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.Certificate.Certificate);
                 }
                 throw new InvalidOperationException(
                     $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");

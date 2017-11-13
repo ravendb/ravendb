@@ -182,7 +182,6 @@ namespace Raven.Server.Web.System
             {
                 var certDef = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                X509Extension sanNames;
                 X509Certificate2 certificate = null;
                 string cn;
 
@@ -193,7 +192,6 @@ namespace Raven.Server.Web.System
                         : new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
 
                     cn = certificate.GetNameInfo(X509NameType.DnsName, false);
-                    sanNames = certificate.Extensions["2.5.29.17"]; // Alternative names
                 }
                 catch (Exception e)
                 {
@@ -205,41 +203,20 @@ namespace Raven.Server.Web.System
                     writer.WriteStartObject();
                     writer.WritePropertyName("CN");
                     writer.WriteString(cn);
+                    writer.WriteComma();
+                    writer.WritePropertyName("AlternativeNames");
+                    writer.WriteStartArray();
 
-                    if (sanNames != null)
+                    var first = true;
+                    foreach (var value in SetupManager.GetCertificateAlternativeNames(certificate))
                     {
-                        writer.WriteComma();
-                        writer.WritePropertyName("AlternativeNames");
-                        writer.WriteStartArray();
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
 
-                        var first = true;
-                        foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
-                        {
-                            string[] parts;
-
-                            if (line.Contains('='))
-                            {
-                                parts = line.Split('=');
-                            } 
-                            else if (line.Contains(':'))
-                            {
-                                parts = line.Split(':');
-                            }
-                            else
-                            {
-                                throw new InvalidOperationException($"Could not parse SAN names: {line}");
-                            }
-
-                            var value = parts.Length > 0 ? parts[1] : null;
-
-                            if (first == false)
-                                writer.WriteComma();
-                            first = false;
-
-                            writer.WriteString(value);
-                        }
-                        writer.WriteEndArray();
+                        writer.WriteString(value);
                     }
+                    writer.WriteEndArray();
 
                     writer.WriteEndObject();
                 }

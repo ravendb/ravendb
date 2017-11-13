@@ -72,16 +72,6 @@ namespace Raven.Server.Config.Categories
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 
-        [Description("When using SSL Proxy, what is the certificate that the proxy will use to talk to RavenDB")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.SslProxy.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
-        public string SslProxyCertificatePath { get; set; }
-
-        [Description("The password for the SSL Proxy certificate")]
-        [DefaultValue(null)]
-        [ConfigurationEntry("Security.SslProxy.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
-        public string SslProxyCertificatePassword { get; set; }
-
         internal static void Validate(RavenConfiguration configuration)
         {
             var serverUrl = configuration.Core.ServerUrl.ToLowerInvariant();

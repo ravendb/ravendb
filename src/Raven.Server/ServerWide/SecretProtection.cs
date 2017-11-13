@@ -313,7 +313,8 @@ namespace Raven.Server.ServerWide
             AsymmetricKeyEntry privateKey;
             try
             {
-                loadedCertificate = new X509Certificate2(rawData);
+                // may need to send this over the cluster, so use exportable here
+                loadedCertificate = new X509Certificate2(rawData, (string)null,X509KeyStorageFlags.Exportable);
                 ValidateExpiration(executable, loadedCertificate);
                 ValidatePrivateKey(executable, null, rawData, out  privateKey);
                 ValidateKeyUsages(executable, loadedCertificate);
@@ -415,54 +416,18 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
-        public X509Certificate2 LoadProxyCertificateFromPath(string path, string password)
-        {
-            var rawData = File.ReadAllBytes(path);
-
-            var loadedCertificate = password == null
-                ? new X509Certificate2(rawData)
-                : new X509Certificate2(rawData, password);
-
-            return loadedCertificate;
-        }
-
-        public RavenServer.CertificateHolder LoadCertificateFromBase64(string certificate, string password)
-        {
-            var source = "settings.json";
-            try
-            {
-                byte[] certBytes;
-                try
-                {
-                    certBytes = Convert.FromBase64String(certificate);
-                }
-                catch (Exception e)
-                {
-                    throw new ArgumentException($"Unable to parse the {certificate} property, expected a Base64 value", e);
-                }
-
-                var loadedCertificate = new X509Certificate2(certBytes, password);
-
-                return ValidateCertificateAndCreateCertificateHolder(certificate, source, loadedCertificate, certBytes, password);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Could not load certificate from {source}", e);
-            }
-        }
-
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string certificate, string source, X509Certificate2 loadedCertificate, byte[] certBytes, string password)
+        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate)
         {
             ValidateExpiration(source, loadedCertificate);
 
-            ValidatePrivateKey(source, password, certBytes, out var privateKey);
+            ValidatePrivateKey(source, null, loadedCertificate.Export(X509ContentType.Pkcs12, (string)null), out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
 
             return new RavenServer.CertificateHolder
             {
                 Certificate = loadedCertificate,
-                CertificateForClients = certificate,
+                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
                 PrivateKey = privateKey
             };
         }
@@ -474,9 +439,8 @@ namespace Raven.Server.ServerWide
                 path = Path.Combine(AppContext.BaseDirectory, path);
                 var rawData = File.ReadAllBytes(path);
 
-                var loadedCertificate = password == null
-                    ? new X509Certificate2(rawData)
-                    : new X509Certificate2(rawData, password);
+                // we need to load it as exportable because we might need to send it over the cluster
+                var loadedCertificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable);
 
                 ValidateExpiration(path, loadedCertificate);
 

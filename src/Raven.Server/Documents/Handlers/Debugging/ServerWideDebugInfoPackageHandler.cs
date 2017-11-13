@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         archive,
                                         tag: tagWithUrl.Key,
                                         url: tagWithUrl.Value,
-                                        certificate: Server.ClusterCertificateHolder.Certificate,
+                                        certificate: Server.Certificate.Certificate,
                                         databaseNames: null);
                                 }
                                 catch (Exception e)
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                         tag: urlToDatabaseNamesMap.Value.Item2,
                                         url: urlToDatabaseNamesMap.Key,
                                         databaseNames: urlToDatabaseNamesMap.Value.Item1,
-                                        certificate: Server.ClusterCertificateHolder.Certificate);
+                                        certificate: Server.Certificate.Certificate);
                                 }
                                 catch (Exception e)
                                 {
