@@ -125,10 +125,11 @@ class serverSetup {
             if (!tag) {
                 return "";
             }
+            
             const mode = this.mode();
             switch (mode) {
                 case "LetsEncrypt":
-                    return tag.toLocaleLowerCase() + "." + this.domain().fullDomain();
+                    return this.domain().fullDomain().toLocaleLowerCase();
                     
                 case "Secured":
                     const wildcard = this.certificate().wildcardCertificate();

@@ -16,11 +16,14 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils.Cli;
 
 namespace Raven.Server.Config
 {
     public class RavenConfiguration
     {
+        private readonly string _customConfigPath;
+
         private readonly IConfigurationBuilder _configBuilder;
 
         public bool Initialized { get; private set; }
@@ -69,16 +72,17 @@ namespace Raven.Server.Config
 
         protected IConfigurationRoot Settings { get; set; }
 
+        internal string ConfigPath => _customConfigPath
+                       ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
+
         public RavenConfiguration(string resourceName, ResourceType resourceType, string customConfigPath = null)
         {
             ResourceName = resourceName;
             ResourceType = resourceType;
-
+            _customConfigPath = customConfigPath;
             _configBuilder = new ConfigurationBuilder();
             AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
-
-            var path = _configBuilder.Sources.OfType<JsonConfigurationSource>().Last().Path;
 
             Settings = _configBuilder.Build();
 

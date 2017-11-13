@@ -1,4 +1,5 @@
 {
     "ServerUrl": "http://127.0.0.1:0",
+    "DataDir": "APPDRIVE:/Raven",
     "Setup.Mode": "Initial"
 }
