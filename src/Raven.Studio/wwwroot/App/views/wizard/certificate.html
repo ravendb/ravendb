@@ -1,4 +1,4 @@
-<h2 class="margin-bottom margin-top"><strong class="margin-right">2.</strong>Server Certificate information</h2>
+<h2 class="margin-bottom margin-top"><strong class="margin-right">2.</strong>Server Certificate Information</h2>
 <form class="flex-form" data-bind="submit: save">
     <div class="panel padding padding-lg">
         <div class="margin-bottom" data-bind="with: model.certificate">
@@ -22,7 +22,7 @@
                 <label for="certificatePassword" class="control-label">Passphrase</label>
                 <div class="flex-grow">
                     <input type="password" autocomplete="off" class="form-control" id="certificatePassword"
-                           data-bind="textInput: certificatePassword">
+                           data-bind="textInput: certificatePassword" placeholder="Enter certificate password">
                 </div>
             </div>
             <div class="form-group" data-bind="visible: $root.certificateFileName() && certificateCNs().length !== 0">
