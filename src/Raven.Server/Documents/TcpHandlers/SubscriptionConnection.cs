@@ -451,7 +451,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 _lastChangeVector ?? 
                                     nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                                 subscriptionChangeVectorBeforeCurrentBatch);
-                            subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector;
+                            subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
                             if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
                                 await SendHeartBeat();
