@@ -139,6 +139,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(DatabaseStatsChanged));
             scripter.AddType(typeof(PerformanceHint));
             scripter.AddType(typeof(PagingPerformanceDetails));
+            scripter.AddType(typeof(RequestLatencyDetail));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionConnectionStats));
