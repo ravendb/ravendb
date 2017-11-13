@@ -248,7 +248,7 @@ namespace Raven.Server.Web.System
 
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
-                var settingsJson = File.ReadAllText(SetupManager.SettingsPath);
+                var settingsJson = File.ReadAllText(ServerStore.Configuration.ConfigPath);
 
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
                 jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
@@ -262,7 +262,7 @@ namespace Raven.Server.Web.System
                 jsonObj["Security.Certificate.Base64"] = null;
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
-                SetupManager.WriteSettingsJsonLocally(SetupManager.SettingsPath, json);
+                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, json);
             }
 
             return NoContent();
