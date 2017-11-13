@@ -30,12 +30,12 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
             return [
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Action, "Action", "20%"),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Date, "Date", "15%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Duration, "Duration", "15%"),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Duration, "Duration (ms)", "15%"),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.QueryString, "Query string", "30%")
             ];
         });
 
-        this.columnPreview.install(".pagingDetails", ".paging-details-tooltip", (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, onValue: (context: any) => void) => {
+        this.columnPreview.install(".requestLatencyDetails", ".request-latency-details-tooltip", (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, onValue: (context: any) => void) => {
             const value = column.getCellValue(details);
             if (!_.isUndefined(value)) {
                 const json = JSON.stringify(value, null, 4);
