@@ -16,7 +16,7 @@ namespace Raven.Client.ServerWide.Operations
     {
         public DateTime? LastBackup { get; set; }
 
-        public int IntervalUntilNextBackupInSec { get; set; }
+        public double IntervalUntilNextBackupInSec { get; set; }
 
         public DynamicJsonValue ToJson()
         {

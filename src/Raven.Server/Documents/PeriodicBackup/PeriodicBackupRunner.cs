@@ -1146,7 +1146,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return null;
 
             var allBackupTicks = new List<long>();
-            var allNextBackupTimeSpanSeconds = new List<int>();
+            var allNextBackupTimeSpanSeconds = new List<double>();
             foreach (var periodicBackup in _periodicBackups)
             {
                 var configuration = periodicBackup.Value.Configuration;
@@ -1163,7 +1163,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var nextBackup = GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
                 if (nextBackup != null)
                 {
-                    allNextBackupTimeSpanSeconds.Add(nextBackup.TimeSpan.Seconds);
+                    allNextBackupTimeSpanSeconds.Add(nextBackup.TimeSpan.TotalSeconds);
                 }
             }
 
