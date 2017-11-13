@@ -403,7 +403,7 @@ namespace Tests.Infrastructure
                 else
                 {
                     serverUrl = UseFiddlerUrl($"http://127.0.0.1:{GetPort()}");
-                    customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
+                    customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
                 }
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
@@ -505,7 +505,7 @@ namespace Tests.Infrastructure
             else
             {
                 serverUrl = UseFiddlerUrl($"http://127.0.0.1:{port}");
-                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
+                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl;
             }
             return customSettings;
         }

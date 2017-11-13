@@ -255,7 +255,7 @@ namespace Raven.Server.Web.System
 
                 jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured);
                 jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork); // TODO handle server side.
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = string.Join(";", setupInfo.Addresses.Select(ip => "http://" + ip + ":" + setupInfo.Port));
+                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
                 jsonObj.Remove(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl));
                 if (string.IsNullOrWhiteSpace(setupInfo.PublicServerUrl) == false)
@@ -424,6 +424,14 @@ namespace Raven.Server.Web.System
                 return;
 
             throw new UnauthorizedAccessException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
+        }
+
+        private static string IpAddressToUrl(string address, int port)
+        {
+            var url = "http://" + address;
+            if (port != 80)
+                url += ":" + port;
+            return url;
         }
     }
 }

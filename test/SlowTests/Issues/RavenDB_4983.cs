@@ -233,8 +233,8 @@ namespace SlowTests.Issues
 
             var shards = new List<IDocumentStore>
             {
-                new DocumentStore {Identifier = "ShardA", Url = server1.Configuration.ServerUrl},
-                new DocumentStore {Identifier = "ShardB", Url = server2.Configuration.ServerUrl}
+                new DocumentStore {Identifier = "ShardA", Url = server1.Configuration.ServerUrls},
+                new DocumentStore {Identifier = "ShardB", Url = server2.Configuration.ServerUrls}
             }.ToDictionary(x => x.Identifier, x => x);
 
             using (var documentStore = new ShardedDocumentStore(new ShardStrategy(shards)

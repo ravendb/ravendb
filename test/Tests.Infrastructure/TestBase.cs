@@ -246,9 +246,9 @@ namespace FastTests
 
                 configuration.Initialize();
                 configuration.Logs.Mode = LogMode.None;
-                if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrl)) == false)
+                if (customSettings == null || customSettings.ContainsKey(RavenConfiguration.GetKey(x => x.Core.ServerUrls)) == false)
                 {
-                    configuration.Core.ServerUrl = "http://127.0.0.1:0";
+                    configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
                 }
                 configuration.Server.Name = ServerName;
                 configuration.Core.RunInMemory = runInMemory;
@@ -342,7 +342,7 @@ namespace FastTests
             exceptionAggregator.ThrowIfNeeded();
         }
 
-       public Task InitializeAsync()
+        public Task InitializeAsync()
         {
             return ConcurrentTestsSemaphore.WaitAsync()
                 .ContinueWith(x => _concurrentTestsSemaphoreTaken.Raise());

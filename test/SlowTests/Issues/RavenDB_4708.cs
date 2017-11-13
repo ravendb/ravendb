@@ -407,8 +407,8 @@ namespace SlowTests.Issues
         //    var server2 = GetNewServer(8078);
         //    var shards = new Dictionary<string, IDocumentStore>
         //    {
-        //        {"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrl}},
-        //        {"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrl}},
+        //        {"Shard1", new DocumentStore {Url = server1.Configuration.ServerUrls}},
+        //        {"Shard2", new DocumentStore {Url = server2.Configuration.ServerUrls}},
         //    };
 
         //    var shardStrategy = new ShardStrategy(shards);

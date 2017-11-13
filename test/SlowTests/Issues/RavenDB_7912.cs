@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     Servers[1] = GetNewServer(new Dictionary<string, string>
                         {
                             {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), url},
-                            {RavenConfiguration.GetKey(x => x.Core.ServerUrl), url}
+                            {RavenConfiguration.GetKey(x => x.Core.ServerUrls), url}
                         },
                         runInMemory: false,
                         deletePrevious: false,

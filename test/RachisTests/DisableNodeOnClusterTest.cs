@@ -58,7 +58,7 @@ namespace RachisTests
             Assert.NotEqual(re.Url, firstNodeUrl);
             var customSettings = new Dictionary<string, string>
             {
-                { RavenConfiguration.GetKey(x => x.Core.ServerUrl), firstNodeUrl },
+                { RavenConfiguration.GetKey(x => x.Core.ServerUrls), firstNodeUrl },
                 { RavenConfiguration.GetKey(x => x.Core.DataDirectory), nodePath.FullPath }
             };
             GetNewServer(customSettings, runInMemory: false);

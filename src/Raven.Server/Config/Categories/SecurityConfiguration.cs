@@ -66,46 +66,50 @@ namespace Raven.Server.Config.Categories
 
         internal string UnsecureAccessWarningMessage { get; private set; }
 
-        public bool IsCertificateConfigured => 
-            string.IsNullOrWhiteSpace(CertificatePath) == false || 
+        public bool IsCertificateConfigured =>
+            string.IsNullOrWhiteSpace(CertificatePath) == false ||
             string.IsNullOrWhiteSpace(CertificateExec) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 
         internal static void Validate(RavenConfiguration configuration)
         {
-            var serverUrl = configuration.Core.ServerUrl.ToLowerInvariant();
-            if (Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) == false)
-                throw new UriFormatException("Unable to parse URL - " + serverUrl);
-
-            var isServerUrlHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-
-            var serverAddresses = DetermineServerIp(uri);
-            var unsecuredAccessAddressRange = configuration.Security.UnsecuredAccessAllowed;
-            var serverIsWithinUnsecuredAccessRange = serverAddresses.Any(x => SecurityUtils.IsUnsecuredAccessAllowedForAddress(unsecuredAccessAddressRange, x));
-
-            if (configuration.Security.AuthenticationEnabled)
+            foreach (var sUrl in configuration.Core.ServerUrls)
             {
-                if (isServerUrlHttps == false)
-                    throw new InvalidOperationException(
-                        $"When the server certificate in either `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` or `{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}`  is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " +
-                        serverUrl);
-            }
-            else
-            {
-                if (isServerUrlHttps)
-                    throw new InvalidOperationException($"Configured server address { configuration.Core.ServerUrl } requires HTTPS. Please set up certification information under { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } configuration key.");
+                var serverUrl = sUrl.ToLowerInvariant();
 
-                if (serverIsWithinUnsecuredAccessRange == false)
+                if (Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri) == false)
+                    throw new UriFormatException("Unable to parse URL - " + serverUrl);
+
+                var isServerUrlHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+
+                var serverAddresses = DetermineServerIp(uri);
+                var unsecuredAccessAddressRange = configuration.Security.UnsecuredAccessAllowed;
+                var serverIsWithinUnsecuredAccessRange = serverAddresses.Any(x => SecurityUtils.IsUnsecuredAccessAllowedForAddress(unsecuredAccessAddressRange, x));
+
+                if (configuration.Security.AuthenticationEnabled)
                 {
-                    configuration.Security.UnsecureAccessWarningMessage =
-                        $"Configured {RavenConfiguration.GetKey(x => x.Core.ServerUrl)} \"{configuration.Core.ServerUrl}\" is not set within allowed unsecured access address range - { configuration.Security.UnsecuredAccessAllowed }. Use a server url within unsecure access address range ({RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)} option) or fill in server certificate information.";
-                    configuration.Security.IsUnsecureAccessSetupValid = false;
+                    if (isServerUrlHttps == false)
+                        throw new InvalidOperationException(
+                            $"When the server certificate in either `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` or `{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}`  is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}` must be using https, but was " +
+                            serverUrl);
                 }
-            }
+                else
+                {
+                    if (isServerUrlHttps)
+                        throw new InvalidOperationException($"Configured server address { configuration.Core.ServerUrls } requires HTTPS. Please set up certification information under { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } configuration key.");
 
-            if (configuration.Security.IsUnsecureAccessSetupValid.HasValue == false)
-                configuration.Security.IsUnsecureAccessSetupValid = true;
+                    if (serverIsWithinUnsecuredAccessRange == false)
+                    {
+                        configuration.Security.UnsecureAccessWarningMessage =
+                            $"Configured {RavenConfiguration.GetKey(x => x.Core.ServerUrls)} \"{configuration.Core.ServerUrls}\" is not set within allowed unsecured access address range - { configuration.Security.UnsecuredAccessAllowed }. Use a server url within unsecure access address range ({RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)} option) or fill in server certificate information.";
+                        configuration.Security.IsUnsecureAccessSetupValid = false;
+                    }
+                }
+
+                if (configuration.Security.IsUnsecureAccessSetupValid.HasValue == false)
+                    configuration.Security.IsUnsecureAccessSetupValid = true;
+            }
         }
 
         private static IPAddress[] DetermineServerIp(Uri serverUri)
