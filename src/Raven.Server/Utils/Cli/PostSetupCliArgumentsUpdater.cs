@@ -21,7 +21,8 @@ namespace Raven.Server.Utils.Cli
             if (string.IsNullOrEmpty(newServerUrl))
                 return originalCommandLineArgs;
 
-            var idx = FindIndexOfCliOptFor(originalCommandLineArgs, RavenConfiguration.GetKey(x => x.Core.ServerUrls));
+            var idx = CommandLineConfigurationArgumentsHelper.FindIndexOfCliOptFor(
+                originalCommandLineArgs, RavenConfiguration.GetKey(x => x.Core.ServerUrls));
             if (idx == -1)
                 return originalCommandLineArgs;
 
@@ -50,7 +51,7 @@ namespace Raven.Server.Utils.Cli
 
         private static string[] FilterOutSetupModeArg(string[] args)
         {
-            var idx = FindIndexOfCliOptFor(args, RavenConfiguration.GetKey(x => x.Core.SetupMode));
+            var idx = CommandLineConfigurationArgumentsHelper.FindIndexOfCliOptFor(args, RavenConfiguration.GetKey(x => x.Core.SetupMode));
             if (idx == -1)
                 return args;
 
@@ -58,23 +59,5 @@ namespace Raven.Server.Utils.Cli
             result.RemoveAt(idx);
             return result.ToArray();
         }
-
-        private static int FindIndexOfCliOptFor(string[] args, string key)
-        {
-            var possibleSetupModePrefixes = FormatCliArgPrefixes(key);
-            var idx = Array.FindIndex(args, 
-                opt => possibleSetupModePrefixes.Any(opt.StartsWith));
-            return idx;
-        }
-
-        private static string[] FormatCliArgPrefixes(string key)
-        {
-            return new []
-            {
-                $"--{key}=",
-                $"/{key}="
-            };
-        }
-
     }
 }

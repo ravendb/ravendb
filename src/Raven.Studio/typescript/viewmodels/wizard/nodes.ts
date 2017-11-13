@@ -170,6 +170,11 @@ class nodes extends setupStep {
         let idx = 0;
         this.model.nodes().forEach(node => {
            node.nodeTag(serverSetup.nodesTags[idx]);
+           
+           if (idx === 0 && this.model.fixPortNumberOnLocalNode()) {
+               node.port(this.model.fixedLocalPort().toString());
+           }
+           
            idx++;
         });
     }    

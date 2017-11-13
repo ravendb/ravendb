@@ -66,7 +66,7 @@
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="port"
                                    placeholder="Default: 443"
-                                   data-bind="textInput: port">
+                                   data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && isLocal(), attr: { title: $root.model.fixPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
                         </div>
                     </div>
                     <div data-bind="foreach: ips">
