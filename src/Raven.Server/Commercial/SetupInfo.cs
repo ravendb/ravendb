@@ -241,7 +241,6 @@ namespace Raven.Server.Commercial
         {
             Messages = new ConcurrentQueue<string>();
             Certificate = null;
-            Readme = "JUST TESTING" + Environment.NewLine + "multi line text"; //TODO:Iftah
         }
 
         public string Message { get; private set; }
