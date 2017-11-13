@@ -14,12 +14,13 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Server.Commercial;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 
 namespace Raven.Server.Web.System
 {
@@ -32,16 +33,16 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers.Remove("Content-Type");
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/setup/alive", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task ServerAlive()
         {
             SetupCORSHeaders();
             return NoContent();
         }
-        
+
         [RavenAction("/setup/dns-n-cert", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public async Task DnsCertBridge() 
+        public async Task DnsCertBridge()
         {
             AssertOnlyInSetupMode();
             var action = GetQueryStringValueAndAssertIfSingleAndNotEmpty("action"); // Action can be: claim | user-domains | check-availability
@@ -64,7 +65,7 @@ namespace Raven.Server.Web.System
         public async Task UserDomains()
         {
             AssertOnlyInSetupMode();
-            
+
             using (var reader = new StreamReader(RequestBodyStream()))
             {
                 var payload = await reader.ReadToEndAsync();
@@ -72,7 +73,7 @@ namespace Raven.Server.Web.System
                 var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
-                
+
                 if (response.IsSuccessStatusCode == false)
                 {
                     using (var responseStream = await response.Content.ReadAsStreamAsync())
@@ -151,7 +152,7 @@ namespace Raven.Server.Web.System
                         .Select(addr => addr.Address.ToString())
                         .ToList();
 
-                    
+
                     if (first == false)
                         writer.WriteComma();
                     first = false;
@@ -251,15 +252,15 @@ namespace Raven.Server.Web.System
                 var settingsJson = File.ReadAllText(ServerStore.Configuration.ConfigPath);
 
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
-                jsonObj["Setup.Mode"] = SetupMode.Unsecured.ToString();
-                jsonObj["Security.UnsecuredAccessAllowed"] = "PublicNetwork"; // TODO handle server side.
-                jsonObj["ServerUrl"] = string.Join(";", setupInfo.Addresses.Select(ip => "http://" + ip + ":" + setupInfo.Port));
-                jsonObj.Remove("PublicServerUrl");
-                if (string.IsNullOrEmpty(setupInfo.PublicServerUrl) == false)
-                {
-                    jsonObj["PublicServerUrl"] = setupInfo.PublicServerUrl;                    
-                }
-                jsonObj["Security.Certificate.Base64"] = null;
+
+                jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured);
+                jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork); // TODO handle server side.
+                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = string.Join(";", setupInfo.Addresses.Select(ip => "http://" + ip + ":" + setupInfo.Port));
+
+                jsonObj.Remove(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl));
+                if (string.IsNullOrWhiteSpace(setupInfo.PublicServerUrl) == false)
+                    jsonObj[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = setupInfo.PublicServerUrl;
+
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
                 SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, json);
@@ -291,13 +292,13 @@ namespace Raven.Server.Web.System
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
                     operationId.Value, operationCancelToken);
-                
+
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
-                
+
                 var nodeCert = setupInfo.Password == null
                     ? new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate))
                     : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
-                
+
                 var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
 
                 var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
@@ -370,7 +371,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.Body.Write(zip, 0, zip.Length);
             }
         }
-        
+
         [RavenAction("/setup/finish", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task SetupFinish()
         {
