@@ -1,10 +1,10 @@
-<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node addressess</h2>
+<h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node addresses</h2>
 <div>
     <form class="flex-form" data-bind="submit: save">
         <div class="margin-bottom">
-            Enter the server nodes address information - port and one or more IP addressess. 
+            Enter the server nodes address information - port and one or more IP addresses. 
             <div data-bind="visible: showDnsInfo">
-                This information will be used to populate DNS records of the <strong data-bind="text: model.domain().fullDomain"></strong> subdomain.
+                This information will populate the DNS records of <strong data-bind="text: model.domain().fullDomain"></strong> subdomain.
             </div>
         </div>
         <div class="margin-bottom bg-warning padding" data-bind="visible: $root.model.domain().reusingConfiguration">
@@ -41,7 +41,7 @@
             <div class="col-md-6" data-bind="with: editedNode">
                 <div class="panel padding padding-lg">
                     <div class="margin-bottom">
-                        Node <strong data-bind="text: $root.model.createFullNodeNameObservable($data)"></strong>    
+                        <h3 class="flex-grow"><strong data-bind="text: $root.model.createFullNodeNameObservable($data)"></strong></h3>
                     </div>
                     <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">
                         <label class="control-label">Host name<i class="required"></i></label>
@@ -69,6 +69,7 @@
                             <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
                                 <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
                             </label>
+                            
                             <div class="flex-grow input-group" data-bind="validationOptions: { insertMessages: false }, visible: !$parent.isLocal()">
                                 <input type="text" autocomplete="off" class="form-control" placeholder="Enter server IP address" data-bind="textInput: ip ">                               
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
@@ -80,7 +81,7 @@
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.availableLocalIps()">
+                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.model.availableLocalIps()">
                                     <li role="presentation" data-bind="click: $parent.ip.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>
@@ -91,6 +92,7 @@
                                     <div class="help-block" data-bind="validationMessage: ip"></div>
                                 </div>
                             </div>
+                            
                             <button class="btn btn-danger" data-bind="click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
                         </div>
                     </div>
