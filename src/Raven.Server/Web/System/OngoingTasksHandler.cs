@@ -66,7 +66,7 @@ namespace Raven.Server.Web.System
 
                 foreach (var tasks in new[]
                 {
-                    CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
+                    CollectExternalReplicationTasks(databaseRecord.ExternalReplications, dbTopology,clusterTopology,databaseRecord.RavenConnectionStrings),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology),
                     CollectBackupTasks(databaseRecord, dbTopology, clusterTopology)
                 })
@@ -366,7 +366,7 @@ namespace Raven.Server.Web.System
                     {
                         case OngoingTaskType.Replication:
 
-                            var watcher = record?.ExternalReplication.Find(x => x.TaskId == key);
+                            var watcher = record?.ExternalReplications.Find(x => x.TaskId == key);
                             if (watcher == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

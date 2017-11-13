@@ -56,7 +56,7 @@ namespace Raven.Client.ServerWide
 
         public List<PeriodicBackupConfiguration> PeriodicBackups;
 
-        public List<ExternalReplication> ExternalReplication = new List<ExternalReplication>(); // Watcher only receives (slave)
+        public List<ExternalReplication> ExternalReplications = new List<ExternalReplication>(); // Watcher only receives (slave)
 
         public Dictionary<string, RavenConnectionString> RavenConnectionStrings = new Dictionary<string, RavenConnectionString>();
 
@@ -72,8 +72,7 @@ namespace Raven.Client.ServerWide
         {
             var lockMode = IndexLockMode.Unlock;
 
-            IndexDefinition existingDefinition;
-            if (Indexes.TryGetValue(definition.Name, out existingDefinition))
+            if (Indexes.TryGetValue(definition.Name, out var existingDefinition))
             {
                 if (existingDefinition.LockMode != null)
                     lockMode = existingDefinition.LockMode.Value;

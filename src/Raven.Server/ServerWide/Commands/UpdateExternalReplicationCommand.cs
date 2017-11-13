@@ -29,10 +29,10 @@ namespace Raven.Server.ServerWide.Commands
             else
             {
                 //modified watcher, remove the old one
-                ExternalReplication.RemoveWatcher(record.ExternalReplication, Watcher.TaskId);
+                ExternalReplication.RemoveWatcher(record.ExternalReplications, Watcher.TaskId);
             }
 
-            record.ExternalReplication.Add(Watcher);
+            record.ExternalReplications.Add(Watcher);
             return null;
         }
 

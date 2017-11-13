@@ -970,7 +970,7 @@ namespace Raven.Server.ServerWide
                         }    
                     }
                     
-                    foreach (var replicationTask in databaseRecord.ExternalReplication)
+                    foreach (var replicationTask in databaseRecord.ExternalReplications)
                     {
                         if (replicationTask.ConnectionStringName == connectionStringName)
                         {
