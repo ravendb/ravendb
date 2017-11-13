@@ -1056,7 +1056,7 @@ namespace Raven.Server.Commercial
 
                         foreach (var node in setupInfo.NodeSetupInfos)
                         {
-                            progress.AddInfo($"Creating settings file 'settings.josn' for node {node.Key}.");
+                            progress.AddInfo($"Creating settings file 'settings.json' for node {node.Key}.");
                             onProgress(progress);
 
                             if (node.Value.Addresses.Count != 0)
@@ -1085,7 +1085,7 @@ namespace Raven.Server.Commercial
                                 }
                                 catch (Exception e)
                                 {
-                                    throw new InvalidOperationException("Failed to write settings file 'settings.josn' for the local sever.", e);
+                                    throw new InvalidOperationException("Failed to write settings file 'settings.json' for the local sever.", e);
                                 }
                             }
 
@@ -1184,7 +1184,7 @@ namespace Raven.Server.Commercial
             
             if (setupInfo.ModifyLocalServer)
             {
-                str += ($"The current node (A - {currentHostName}) has already been configured and require not further action on your part" +
+                str += ($"The current node (A - {currentHostName}) has already been configured and requires no further action on your part" +
                         Environment.NewLine);
             }
             str += Environment.NewLine;
@@ -1200,7 +1200,7 @@ namespace Raven.Server.Commercial
             }
 
             str +=
-                "If you are using FireFox, the certificate must be imported directly to the browser, you can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." + 
+                "If you are using Firefox, the certificate must be imported directly to the browser, you can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." + 
                 Environment.NewLine;
 
             str +=
