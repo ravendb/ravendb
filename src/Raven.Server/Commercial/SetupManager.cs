@@ -38,7 +38,6 @@ namespace Raven.Server.Commercial
     public static class SetupManager
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
-        public static string SettingsPath = Path.Combine(AppContext.BaseDirectory, "settings.json");
         public const string LocalNodeTag = "A";
         public const string RavenDbDomain = "dbs.local.ravendb.net";
         public const string GoogleDnsApi = "https://dns.google.com";
@@ -770,7 +769,7 @@ namespace Raven.Server.Commercial
                         return; // we already listen to all these IPs, no need to check
                 }
 
-                await SimulateRunningServer(serverCert, localServerUrl, ips, token, setupInfo);
+                await SimulateRunningServer(serverCert, localServerUrl, ips, token, setupInfo, serverStore.Configuration.ConfigPath);
             }
             catch (Exception e)
             {
@@ -908,11 +907,12 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                var settingsPath = serverStore.Configuration.ConfigPath;
                 using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
-                        var originalSettings = File.ReadAllText(SettingsPath);
+                        var originalSettings = File.ReadAllText(settingsPath);
                         dynamic jsonObj = JsonConvert.DeserializeObject(originalSettings);
 
                         progress.AddInfo("Loading and validating server certificate.");
@@ -1070,7 +1070,7 @@ namespace Raven.Server.Commercial
                             {
                                 try
                                 {
-                                    WriteSettingsJsonLocally(SettingsPath, jsonString);
+                                    WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, jsonString);
                                 }
                                 catch (Exception e)
                                 {
@@ -1240,9 +1240,9 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, CancellationToken token, SetupInfo setupInfo)
+        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, CancellationToken token, SetupInfo setupInfo, string settingsPath)
         {
-            var configuration = new RavenConfiguration(null, ResourceType.Server, SettingsPath);
+            var configuration = new RavenConfiguration(null, ResourceType.Server, settingsPath);
             configuration.Initialize();
             var guid = Guid.NewGuid().ToString();
 
@@ -1286,7 +1286,7 @@ namespace Raven.Server.Commercial
                 catch (Exception e)
                 {
                     throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'.{Environment.NewLine}" +
-                                                        $"Settings file:{SettingsPath}.{Environment.NewLine} " +
+                                                        $"Settings file:{settingsPath}.{Environment.NewLine} " +
                                                         $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
                 }
 
@@ -1338,7 +1338,7 @@ namespace Raven.Server.Commercial
 
 
                             throw new InvalidOperationException($"Client failed to contact webhost listening to '{serverUrl}'.{Environment.NewLine}" +
-                                                                $"Settings file:{SettingsPath}.{Environment.NewLine}" +
+                                                                $"Settings file:{settingsPath}.{Environment.NewLine}" +
                                                                 $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
                                                                 $"Response: {response?.StatusCode}.{Environment.NewLine}{result}", e);
                         }
