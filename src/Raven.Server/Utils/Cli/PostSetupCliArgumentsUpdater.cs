@@ -43,7 +43,7 @@ namespace Raven.Server.Utils.Cli
                 uriBuilders.Add(new UriBuilder(uriAfterSetup.Scheme, uriBeforeSetup.Host, uriBeforeSetup.Port));
             }
             
-            resultArgs[idx] = $"--{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}={string.Join(";", uriBuilders.Select(builder => builder.ToString().TrimEnd('/')))}";
+            resultArgs[idx] = $"--{RavenConfiguration.GetKey(x => x.Core.ServerUrls)}={string.Join(";", uriBuilders.Select(builder => UrlUtil.TrimTrailingSlash(builder.ToString())))}";
 
             return resultArgs;
         }
@@ -63,7 +63,7 @@ namespace Raven.Server.Utils.Cli
         {
             var possibleSetupModePrefixes = FormatCliArgPrefixes(key);
             var idx = Array.FindIndex(args, 
-                opt => possibleSetupModePrefixes.Any(prefix => opt.StartsWith(prefix)));
+                opt => possibleSetupModePrefixes.Any(opt.StartsWith));
             return idx;
         }
 
