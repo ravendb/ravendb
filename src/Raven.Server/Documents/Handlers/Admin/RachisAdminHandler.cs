@@ -433,7 +433,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
-                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeTag, assignedCores, nodeInfo, forceFetchingNodeInfo: true);
+                        var nodeDetails = new NodeDetails
+                        {
+                            NodeTag = nodeTag,
+                            AssignedCores = assignedCores.Value,
+                            NumberOfCores = nodeInfo.NumberOfCores,
+                            InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
+                            UsableMemoryInGb = nodeInfo.UsableMemoryInGb
+                        };
+                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true);
                     }
 
                     NoContentStatus();
@@ -442,7 +450,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
             RedirectToLeader();
         }
-        
 
         [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteNode()

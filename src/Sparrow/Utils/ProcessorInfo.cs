@@ -4,7 +4,7 @@ namespace Sparrow.Utils
 {
     public class ProcessorInfo
     {
-        public readonly static int ProcessorCount = GetProcessorCount();
+        public static readonly int ProcessorCount = GetProcessorCount();
 
         public static int GetProcessorCount()
         {
