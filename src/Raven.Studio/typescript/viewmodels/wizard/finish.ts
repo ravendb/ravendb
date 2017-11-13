@@ -8,9 +8,14 @@ import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCo
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import checkIfServerIsOnlineCommand = require("commands/wizard/checkIfServerIsOnlineCommand");
 
+type messageItem = {
+    message: string;
+    extraClass: string;
+}
+
 class finish extends setupStep {
 
-    configurationTask = $.Deferred<void>();
+    configurationTask: JQueryDeferred<void>;
     completedWithSuccess = ko.observable<boolean>();
     
     spinners = {
@@ -25,7 +30,7 @@ class finish extends setupStep {
     
     private websocket: serverNotificationCenterClient;
     
-    messages = ko.observableArray<string>([]);
+    messages = ko.observableArray<messageItem>([]);
     canRestart = ko.observable<boolean>(false);
     readme = ko.observable<string>();
     configurationState = ko.observable<Raven.Client.Documents.Operations.OperationStatus>();
@@ -72,6 +77,13 @@ class finish extends setupStep {
     compositionComplete() {
         super.compositionComplete();
 
+        this.startConfiguration();
+    }
+    
+    startConfiguration() {
+        this.spinners.finishing(true);
+        
+        this.configurationTask = $.Deferred<void>();
         switch (this.model.mode()) {
             case "Unsecured":
                 this.saveUnsecuredConfiguration();
@@ -84,7 +96,7 @@ class finish extends setupStep {
                 this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
         }
-        
+
         this.configurationTask
             .done(() => {
                 this.canRestart(true);
@@ -146,15 +158,15 @@ class finish extends setupStep {
                     break;
                 case "Faulted":
                     const failure = operation.State.Result as Raven.Client.Documents.Operations.OperationExceptionResult;
-                    this.messages.push(failure.Message);
-                    this.messages.push(failure.Error);
+                    this.messages.push({ message: failure.Message, extraClass: "text-danger" });
+                    this.messages.push({ message: failure.Error, extraClass: "text-danger" });
                     this.configurationTask.reject();
             }
             
             if (dto) {
                 switch (operation.TaskType) {
                     case "Setup":
-                        this.messages(dto.Messages);
+                        this.messages(dto.Messages.map(x => ({ message: x, extraClass: "" })));
                         break;
                 }
             }
