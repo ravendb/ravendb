@@ -186,7 +186,7 @@ namespace Raven.Server.Web.System
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
             {
                 HttpContext.Response.Headers["Location"] = "/wizard/index.html";
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             }
 
             return GetStudioFileInternal("index.html");
