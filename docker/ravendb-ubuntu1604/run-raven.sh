@@ -2,10 +2,31 @@
 
 COMMAND="./Raven.Server"
 
+CONFIG_FILE="settings.json"
+if [ -f "$CUSTOM_CONFIG_FILE" ]; then
+    CONFIG_FILE="$CUSTOM_CONFIG_FILE"
+fi
+
+FIRST_RUN=0
+if [ ! -f "firstrun" ]; then
+    FIRST_RUN=1
+    touch firstrun
+fi
+
+SERVER_URL_SCHEME="http"
+
 if [ ! -z "$CERTIFICATE_PATH" ]; then
     SERVER_URL_SCHEME="https"
 else
-    SERVER_URL_SCHEME="http"
+    if [ "$FIRST_RUN" -eq "0" ]; then
+        # not first run
+
+        SETUP_MODE_SECURED=$(jq '.Setup.Mode, ."Setup.Mode"' "$CONFIG_FILE" | grep -E 'Secured|LetsEncrypt')
+        
+        if [ ! -z "$SETUP_MODE_SECURED" ]; then
+            SERVER_URL_SCHEME="https"
+        fi
+    fi
 fi
 
 COMMAND="$COMMAND --ServerUrl=$SERVER_URL_SCHEME://0.0.0.0:8080"

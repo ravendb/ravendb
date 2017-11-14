@@ -3,7 +3,7 @@ FROM ubuntu:16.04
 
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends curl bzip2 libunwind8 libicu55 libcurl3 ca-certificates -y
+    && apt-get install --no-install-recommends curl bzip2 libunwind8 libicu55 libcurl3 ca-certificates jq -y
 
 ENV DATA_DIR=APPDRIVE:/databases CUSTOM_CONFIG_FILE='' PUBLIC_SERVER_URL='' PUBLIC_TCP_SERVER_URL='' CERTIFICATE_PATH='' CERTIFICATE_PASSWORD='' CERTIFICATE_PASSWORD_FILE='' UNSECURED_ACCESS_ALLOWED='' LOGS_MODE='' RAVEN_AUTO_INSTALL_CA='true'
 
