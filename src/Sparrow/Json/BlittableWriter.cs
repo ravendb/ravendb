@@ -748,6 +748,10 @@ namespace Sparrow.Json
                 _context.ReturnMemory(_compressionBuffer);
 
             _compressionBuffer = null;
+
+            if (_innerBuffer != null)
+                _context.ReturnMemory(_innerBuffer);
+            _innerBuffer = null;
         }
     }
 }
