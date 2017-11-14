@@ -91,8 +91,13 @@ class serverSetup {
         if (this.certificate().certificateCNs().length === 0) {
             return "";
         }
+
+        const cn = this.certificate().certificateCNs()[0];
         
-        return this.certificate().certificateCNs()[0].replace("*.", "");
+        if (!tag) {
+            return cn.replace("*.", "");
+        }
+        return cn.replace("*", tag);
     }
 
     getStudioUrl() {
@@ -136,7 +141,7 @@ class serverSetup {
                     const wildcard = this.certificate().wildcardCertificate();
                     
                     if (wildcard) {
-                        return this.getDomainForWildcard(tag);
+                        return this.getDomainForWildcard(null);
                     } else {
                         return tag;
                     }
