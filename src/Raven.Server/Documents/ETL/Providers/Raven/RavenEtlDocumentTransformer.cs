@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
             else
             {
-                id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
+                id = GetPrefixedId(Current.DocumentId, collectionName);
             }
 
             var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
@@ -57,11 +57,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
         }
 
-        private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName, OperationType type)
+        private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName)
         {
-            var prefixEnding = type == OperationType.Put ? "|" : (type == OperationType.Delete ? "/" : ThrowUnknownOperationType(type));
-
-            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}{prefixEnding}";
+            return $"{documentId}/{_script.IdPrefixForCollection[loadCollectionName]}/";
         }
 
         public override IEnumerable<ICommandData> GetTransformedResults()
@@ -111,13 +109,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         _commands.Add(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
-                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection, OperationType.Delete)));
+                    _commands.Add(new DeletePrefixedCommandData(GetPrefixedId(item.DocumentId, collection)));
             }
-        }
-
-        private static string ThrowUnknownOperationType(OperationType type)
-        {
-            throw new ArgumentException($"Unknown opearation: {type}");
         }
 
         public class ScriptInput
