@@ -22,7 +22,7 @@ class unsecureSetup {
         this.shouldDisplayUnsafeModeWarning = ko.pureComputed(() => {
             const ips = this.ips().map(x => x.ip());
             
-            return _.some(ips, x => !_.includes(unsecureSetup.localNetworks, x));
+            return _.some(ips, x => x && !_.includes(unsecureSetup.localNetworks, x));
         });
     }
     
