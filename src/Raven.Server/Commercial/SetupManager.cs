@@ -1469,8 +1469,8 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException($"The certificate chain for {name} is broken. Reason: partial chain, cannot extract CA from chain. Admin assistance required.");
 
 
-            using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadWrite))
-            using (var machineCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine, OpenFlags.ReadWrite))
+            using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
+            using (var machineCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
             using (var userRootStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
             using (var userCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
             {
@@ -1485,8 +1485,10 @@ namespace Raven.Server.Commercial
                     {
                         try
                         {
-                            machineRootStore.Add(rootCert);
-                            userRootStore.Add(rootCert);
+                            using (var machineRootStoreWithWritePermission = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadWrite))
+                            {
+                                machineRootStoreWithWritePermission.Add(rootCert);
+                            }
                         }
                         catch (Exception e)
                         {
@@ -1498,7 +1500,7 @@ namespace Raven.Server.Commercial
                     }
 
                     throw new InvalidOperationException("The CA of the self signed certificate you're trying to use is not trusted by the OS.\r\n" +
-                                                        "You need to do this manually and restart the setup.\r\n" +
+                                                        "You need to do register the CA in the trusted root store and restart the setup.\r\n" +
                                                         "Please read the Linux setup section in the documentation.\r\n");
                 }
             }
