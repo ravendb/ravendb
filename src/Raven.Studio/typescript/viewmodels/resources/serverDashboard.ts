@@ -128,7 +128,7 @@ class indexingSpeedSection {
                 new textColumn<indexingSpeed>(grid, x => x.mappedPerSecond() != null ? x.mappedPerSecond() : "n/a", "Mapped / sec", "15%", {
                     extraClass: item => item.mappedPerSecond() != null ? "" : "na"
                 }),
-                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond() != null ? x.reducedPerSecond() : "n/a", "Reduced / sec", "15%", {
+                new textColumn<indexingSpeed>(grid, x => x.reducedPerSecond() != null ? x.reducedPerSecond() : "n/a", "Entries reduced / sec", "15%", {
                     extraClass: item => item.reducedPerSecond() != null ? "" : "na"
                 })
             ];
@@ -156,7 +156,7 @@ class indexingSpeedSection {
             return `<div>
                 Time: <strong>${date}</strong><br />
                 # Documents mapped/s: <strong>${map.toLocaleString()}</strong><br />
-                # Documents reduced/s: <strong>${reduce.toLocaleString()}</strong>
+                # Mapped entries reduced/s: <strong>${reduce.toLocaleString()}</strong>
                 </div>`;
         }
         return null;
