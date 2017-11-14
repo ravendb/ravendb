@@ -2742,6 +2742,54 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
             }
         }
 
+        [Fact]
+        public void Can_Load_With_Argument_That_Has_Computation()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Jerry",
+                        LastName = "Garcia",
+                        DetailShortId = "1-A"
+                    }, "users/1");
+                    session.Store(new Detail
+                    {
+                        Number = 15
+                    }, "details/1-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                where u.LastName == "Garcia"
+                                let detail = session.Load<Detail>("details/" + u.DetailShortId)
+                                select new
+                                {
+                                    Name = u.Name,
+                                    Detail = detail
+                                };
+
+                    Assert.Equal(
+@"DECLARE function output(u) {
+	var detail = load((""details/""+u.DetailShortId));
+	return { Name : u.Name, Detail : detail };
+}
+FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(15, queryResult[0].Detail.Number);
+
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -2984,6 +3032,7 @@ FROM Orders as o LOAD o.Employee as employee SELECT output(o, employee)" , query
             public string FriendId { get; set; }
             public IEnumerable<string> DetailIds { get; set; }
             public List<Detail> Details { get; set; }
+            public string DetailShortId { get; set; }
         }
         private class Detail
         {
