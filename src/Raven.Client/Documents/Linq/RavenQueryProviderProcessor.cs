@@ -1943,9 +1943,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {                    
                     arg = _documentQuery.LoadParameter(constantExpression.Value);
                 }
-                else
+                else if (loadSupport.Arg is MemberExpression)
                 {
                     arg = ToJs(loadSupport.Arg);
+                }
+                else
+                {
+                    //the argument is not a static string value nor a path, 
+                    //so we use js load() method (inside output function) instead of using a LoadToken
+                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    return;
                 }
 
                 var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
@@ -1994,6 +2001,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 js = doc + js;
             }
 
+            AppendLineToOutputFunction(name, js);
+        }
+
+        private void AppendLineToOutputFunction(string name, string js)
+        {
             if (_declareBuilder == null)
             {
                 _declareBuilder = new StringBuilder();
