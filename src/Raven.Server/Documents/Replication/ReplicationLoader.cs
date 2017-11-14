@@ -589,7 +589,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (node is ExternalReplication exNode)
                 {
-                    using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.Database,
+                    using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database,
                         _server.Server.Certificate.Certificate,
                         DocumentConventions.Default))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
