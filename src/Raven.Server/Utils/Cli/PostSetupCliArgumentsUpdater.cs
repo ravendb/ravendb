@@ -35,12 +35,6 @@ namespace Raven.Server.Utils.Cli
             {
                 Uri.TryCreate(nServerUrl, UriKind.Absolute, out var uriAfterSetup);
 
-                if (string.Equals(uriAfterSetup.Scheme, uriBeforeSetup.Scheme, StringComparison.OrdinalIgnoreCase))
-                {
-                    uriBuilders.Add(new UriBuilder(uriAfterSetup));
-                    continue;
-                }
-
                 uriBuilders.Add(new UriBuilder(uriAfterSetup.Scheme, uriBeforeSetup.Host, uriBeforeSetup.Port));
             }
             
