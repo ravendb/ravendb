@@ -68,9 +68,15 @@ function CopyTools ( $outDirs ) {
 function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {
     write-host "Create package server directory layout..."
 
-    $settingsFilePath = [io.path]::combine($projectDir, "scripts", "assets", "settings", "Raven.Server.settings.json")
     $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.json")
 
+    if ($spec.IsUnix) { 
+        $settingsFileName = "settings.posix.json" 
+     } else { 
+        $settingsFileName = "settings.windows.json" 
+     }
+ 
+     $settingsFilePath = [io.path]::combine($projectDir, "src", "Raven.Server", "Properties", "Settings", $settingsFileName)
     write-host "Copy $settingsFilePath -> $settingsTargetPath"
     Copy-Item -Force "$settingsFilePath" $settingsTargetPath
     
