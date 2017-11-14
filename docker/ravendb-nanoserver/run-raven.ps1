@@ -19,7 +19,30 @@ $ErrorActionPreference = 'Stop'
 $command = './Raven.Server.exe'
 $commandArgs = @( '--non-interactive', '--log-to-console' )
 
-$serverUrlScheme = if ([string]::IsNullOrEmpty($env:CERTIFICATE_PATH)) { "http" } else { "https" }
+$firstRun = $False
+if ($(Test-Path -Path "firstrun.lock") -eq $False) {
+    $firstRun = $True
+    New-Item -Path "firstrun.lock" -ItemType File -Value "firstrun"
+}
+
+$configFile = "settings.json"
+if ([string]::IsNullOrEmpty($env:CUSTOM_CONFIG_FILE) -eq $False) {
+    $configFile = $env:CUSTOM_CONFIG_FILE
+}
+
+$serverUrlScheme = "http"
+
+if ([string]::IsNullOrEmpty($env:CERTIFICATE_PATH) -eq $False) {
+    $serverUrlScheme = "https"
+} else {
+    if ($firstRun -eq $False) {
+        $settings = ConvertFrom-Json -InputObject $(Get-Content -Raw "$configFile")
+        $setupMode = if ($settings."Setup.Mode" -eq $null) { $settings.Setup.Mode } else { $settings."Setup.Mode" }
+        if (($setupMode -eq "Secured") -or ($setupMode -eq "LetsEncrypt")) {
+            $serverUrlScheme = "https"
+        }
+    }
+}
 
 if ([string]::IsNullOrEmpty($env:CUSTOM_CONFIG_FILE) -eq $False) {
     $commandArgs += "--config-path"
