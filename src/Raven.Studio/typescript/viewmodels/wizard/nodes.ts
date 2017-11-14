@@ -64,6 +64,8 @@ class nodes extends setupStep {
     activate(args: any) {
         super.activate(args);
         
+        this.updateNodeTags();
+        
         switch (this.model.mode()) {
             case "LetsEncrypt":
                 this.currentStep = 4;
