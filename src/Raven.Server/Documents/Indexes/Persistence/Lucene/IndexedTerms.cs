@@ -82,7 +82,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new InvalidOperationException("Refusing to extract all index entries from an index with " + reader.MaxDoc +
                                                     " entries, because of the probable time / memory costs associated with that." +
                                                     Environment.NewLine +
-                                                    "Viewing Index Entries are a debug tool, and should not be used on indexes of this size. You might want to try Luke, instead.");
+                                                    "Viewing index entries are a debug tool, and should not be used on indexes of this size.");
             }
 
             var results = new Dictionary<string, object>[reader.MaxDoc];
@@ -113,15 +113,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                         if (result.TryGetValue(propertyName, out var oldValue))
                         {
-                            var oldValueAsArray = oldValue as DynamicJsonArray;
-                            if (oldValueAsArray != null)
+                            if (oldValue is DynamicJsonArray oldValueAsArray)
                             {
                                 oldValueAsArray.Add(text);
                                 continue;
                             }
 
-                            var oldValueAsString = oldValue as string;
-                            if (oldValueAsString != null)
+                            if (oldValue is string oldValueAsString)
                             {
                                 result[propertyName] = oldValueAsArray = new DynamicJsonArray();
                                 oldValueAsArray.Add(oldValueAsString);
@@ -142,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var doc = new DynamicJsonValue();
                 var dictionary = results[i];
-                if(dictionary == null)
+                if (dictionary == null)
                     continue;
                 foreach (var kvp in dictionary)
                 {
