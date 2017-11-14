@@ -32,6 +32,9 @@ class unsecureSetup {
         });
 
         this.publicServerUrl.extend({
+            required: {
+                onlyIf: () => this.ips().length > 1
+            },
             validUrl: true
         });
         
