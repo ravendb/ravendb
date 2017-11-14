@@ -430,7 +430,7 @@ namespace Sparrow.Platform.Posix
         HW_MAXID = 26           /* number of valid hw ids */
     }
 
-    public struct Statvfs
+    public unsafe struct Statvfs
     {
         public ulong f_bsize;    /* file system block size */
         public ulong f_frsize;   /* fragment size */
@@ -443,5 +443,7 @@ namespace Sparrow.Platform.Posix
         public ulong f_fsid;     /* file system ID */
         public ulong f_flag;     /* mount flags */
         public ulong f_namemax;  /* maximum filename length */
+        public fixed int f_spare[6];
+        
     }
 }
