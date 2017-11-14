@@ -1274,7 +1274,7 @@ namespace Raven.Server.ServerWide
                         using (var localCertificate = Cluster.GetLocalState(ctx, localCertKey))
                         {
                             var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                            PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
+                            PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition)).Wait(ServerShutdown);
                         }
                     }
                 }
@@ -1289,7 +1289,7 @@ namespace Raven.Server.ServerWide
                 return;
             
             // Also need to register my own certificate in the cluster, for other nodes to trust me
-            RegisterServerCertificateInCluster(Server.Certificate.Certificate, $"Server Certificate for Node {_engine.Tag}");
+            RegisterServerCertificateInCluster(Server.Certificate.Certificate, $"Server Certificate for Node {_engine.Tag}").Wait(ServerShutdown);
         }
 
         public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
