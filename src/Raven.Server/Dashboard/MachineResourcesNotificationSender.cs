@@ -75,8 +75,8 @@ namespace Raven.Server.Dashboard
                 TotalMemory = installedMemory,
                 MachineMemoryUsage = installedMemory - availableMemory,
                 ProcessMemoryUsage = workingSet,
-                MachineCpuUsage = cpuInfo.MachineCpuUsage,
-                ProcessCpuUsage = cpuInfo.ProcessCpuUsage
+                MachineCpuUsage = (int)cpuInfo.MachineCpuUsage,
+                ProcessCpuUsage = (int)cpuInfo.ProcessCpuUsage
             };
 
             return machineResources;

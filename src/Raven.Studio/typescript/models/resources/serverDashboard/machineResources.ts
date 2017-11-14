@@ -1,11 +1,11 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 class machineResources {
-    machineCpuUsage = ko.observable<number>();
-    processCpuUsage = ko.observable<number>();
-    machineMemoryUsage = ko.observable<number>();
-    processMemoryUsage = ko.observable<number>();
-    totalMemory = ko.observable<number>();
+    machineCpuUsage = ko.observable<number>(0);
+    processCpuUsage = ko.observable<number>(0);
+    machineMemoryUsage = ko.observable<number>(0);
+    processMemoryUsage = ko.observable<number>(0);
+    totalMemory = ko.observable<number>(0);
     
     machineCpuUsageClass: KnockoutComputed<string>;
     processCpuUsageClass: KnockoutComputed<string>;
