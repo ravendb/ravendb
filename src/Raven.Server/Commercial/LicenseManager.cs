@@ -354,7 +354,7 @@ namespace Raven.Server.Commercial
             if (utilizedCores <= _licenseStatus.MaxCores)
                 return;
 
-            var details = $"The number of utilized cores is: {utilizedCores}," +
+            var details = $"The number of utilized cores is: {utilizedCores}, " +
                           $"while the license limit is: {_licenseStatus.MaxCores} cores";
             GenerateLicenseLimit(LimitType.Cores, details, addNotification: true);
 
