@@ -41,9 +41,10 @@ namespace Raven.Server.Documents.Patch
             (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
             DocumentDatabase database,
             bool isTest,
-            bool debugMode)
+            bool debugMode,
+            bool collectResultsNeeded)
         {
-            _externalContext = context;
+            _externalContext = collectResultsNeeded ? context : null;
             _patchIfMissingArgs = patchIfMissing.args;
             _patchArgs = patch.args;
             _returnRun = database.Scripts.GetScriptRunner(patch.run, false, out _run);
@@ -138,7 +139,7 @@ namespace Raven.Server.Documents.Patch
             // that clone later
             using (var scriptResult = _run.Run(context, "execute", new[] { documentInstance, args }))
             {
-                var modifiedDocument = scriptResult.TranslateToObject(_externalContext, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var modifiedDocument = scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                 var result = new PatchResult
                 {

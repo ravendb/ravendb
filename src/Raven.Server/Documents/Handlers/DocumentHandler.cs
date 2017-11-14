@@ -442,7 +442,8 @@ namespace Raven.Server.Documents.Handlers
                     (patchIfMissing, patchIfMissingArgs),
                     Database,
                     isTest,
-                    debugMode
+                    debugMode,
+                    true
                 ))
                 {
                     if (isTest == false)

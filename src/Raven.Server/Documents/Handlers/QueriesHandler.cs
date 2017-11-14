@@ -252,7 +252,8 @@ namespace Raven.Server.Documents.Handlers
                     patchIfMissing: (null, null),
                     database: context.DocumentDatabase,
                     debugMode: true,
-                    isTest: true);
+                    isTest: true,
+                    collectResultsNeeded: true);
 
                 using (context.OpenWriteTransaction())
                 {

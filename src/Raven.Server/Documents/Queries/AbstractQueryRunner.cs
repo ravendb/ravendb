@@ -73,7 +73,8 @@ namespace Raven.Server.Documents.Queries
                     patchIfMissing: (null, null),
                     database: Database,
                     debugMode: false,
-                    isTest: false);
+                    isTest: false,
+                    collectResultsNeeded: true);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
                 {
