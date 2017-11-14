@@ -68,6 +68,8 @@ namespace Raven.Server.Commercial
 
             try
             {
+                AssertNoClusterDefined(serverStore);
+
                 progress.AddInfo("Setting up RavenDB in 'Secured Mode'.");
                 progress.AddInfo("Starting validation.");
                 onProgress(progress);
@@ -91,7 +93,7 @@ namespace Raven.Server.Commercial
                 try
                 {
                     progress.SettingsZipFile =
-                        await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, progress, token, SetupMode.Secured, setupInfo, serverStore);
+                        await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, token, SetupMode.Secured, setupInfo, serverStore);
                 }
                 catch (Exception e)
                 {
@@ -187,6 +189,8 @@ namespace Raven.Server.Commercial
 
             try
             {
+                AssertNoClusterDefined(serverStore);
+                
                 progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
                 onProgress(progress);
                 try
@@ -272,7 +276,7 @@ namespace Raven.Server.Commercial
                     try
                     {
                         progress.SettingsZipFile =
-                            await CreateSettingsZipAndOptionallyWriteToLocalServer(onProgress, progress, token, SetupMode.LetsEncrypt, setupInfo, serverStore);
+                            await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, token, SetupMode.LetsEncrypt, setupInfo, serverStore);
                     }
                     catch (Exception e)
                     {
@@ -292,6 +296,20 @@ namespace Raven.Server.Commercial
                 LogErrorAndThrow(onProgress, progress, "Setting up RavenDB in Let's Encrypt security mode failed.", e);
             }
             return progress;
+        }
+
+        private static void AssertNoClusterDefined(ServerStore serverStore)
+        {
+            var allNodes = serverStore.GetClusterTopology().AllNodes;
+            if (allNodes.Count > 1)
+            {
+                throw new InvalidOperationException("This node is part of an already configured cluster and cannot be setup automatically any longer." +
+                                                    Environment.NewLine +
+                                                    "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." + 
+                                                    Environment.NewLine + 
+                                                    "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
+                                                    );
+            }
         }
 
         private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, CancellationToken token, SetupInfo setupInfo, Dictionary<string, Task<Challenge>> dictionary, AcmeClient acmeClient,
@@ -901,7 +919,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<byte[]> CreateSettingsZipAndOptionallyWriteToLocalServer(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
+        private static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
             try
             {
