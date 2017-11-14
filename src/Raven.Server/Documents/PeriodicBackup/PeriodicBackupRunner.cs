@@ -115,8 +115,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             bool skipErrorLog = false)
         {
             var now = SystemTime.UtcNow;
-            var lastFullBackup = backupStatus.LastFullBackup ?? now;
-            var lastIncrementalBackup = backupStatus.LastIncrementalBackup ?? backupStatus.LastFullBackup ?? now;
+            var lastFullBackup = backupStatus.LastFullBackupInternal ?? now;
+            var lastIncrementalBackup = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
             var nextFullBackup = GetNextBackupOccurrence(configuration.FullBackupFrequency,
                 lastFullBackup, configuration, skipErrorLog: skipErrorLog);
             var nextIncrementalBackup = GetNextBackupOccurrence(configuration.IncrementalBackupFrequency,
@@ -192,6 +192,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 LastEtag = previousBackupStatus.LastEtag,
                 LastFullBackup = previousBackupStatus.LastFullBackup,
                 LastIncrementalBackup = previousBackupStatus.LastIncrementalBackup,
+                LastFullBackupInternal = previousBackupStatus.LastFullBackupInternal,
+                LastIncrementalBackupInternal = previousBackupStatus.LastIncrementalBackupInternal,
                 IsFull = isFullBackup
             };
 
@@ -276,6 +278,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     runningBackupStatus.LastEtag = lastEtag;
                     runningBackupStatus.FolderName = folderName;
+                    if (isFullBackup)
+                        runningBackupStatus.LastFullBackup = periodicBackup.StartTime;
+                    else
+                        runningBackupStatus.LastIncrementalBackup = periodicBackup.StartTime;
                 }
 
                 totalSw.Stop();
@@ -324,9 +330,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // we need to update the last backup time to avoid
                     // starting a new backup right after this one
                     if (isFullBackup)
-                        runningBackupStatus.LastFullBackup = periodicBackup.StartTime;
+                        runningBackupStatus.LastFullBackupInternal = periodicBackup.StartTime;
                     else
-                        runningBackupStatus.LastIncrementalBackup = periodicBackup.StartTime;
+                        runningBackupStatus.LastIncrementalBackupInternal = periodicBackup.StartTime;
 
                     runningBackupStatus.NodeTag = _serverStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;

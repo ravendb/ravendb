@@ -298,7 +298,7 @@
         </div>
     </div>
 
-    <div class="properties-item">
+    <div class="properties-item" data-bind="visible: $root.createIsLocalDatabaseObservable(name)()">
         <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
             <div class="set-size" title="Last backup time"
                  data-bind="css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
