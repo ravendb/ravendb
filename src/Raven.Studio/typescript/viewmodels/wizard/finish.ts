@@ -181,11 +181,24 @@ class finish extends setupStep {
             });
     }
     
-    private check() {
+    private getUrlForPolling() {
         const serverUrl = this.model.getStudioUrl();
-        
+
         // poll using http 
         const httpServerUrl = serverUrl.replace("https://", "http://");
+        
+        // if url has default port use 443 instead since we changed scheme from https -> http
+        const url = new URL(httpServerUrl);
+        if (!url.port) {
+            url.port = "443";
+            return url.origin;
+        }
+        
+        return httpServerUrl;
+    }
+    
+    private check() {
+        const httpServerUrl = this.getUrlForPolling();
         setInterval(() => {
             new checkIfServerIsOnlineCommand(httpServerUrl)
                 .execute()
