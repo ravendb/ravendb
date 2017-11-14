@@ -1,5 +1,5 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
+//-----------------------------------------------------------------------
+// <copyright file="InMemoryDocumentSessionOperations.Patch.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -15,11 +15,10 @@ using Raven.Client.Util;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    /// Implements Unit of Work for accessing the RavenDB server
+    /// Abstract implementation for in memory session operations
     /// </summary>
-    public partial class DocumentSession
+    public abstract partial class InMemoryDocumentSessionOperations
     {
-
         private int _valsCount;
         private int _customCount;
 
@@ -37,14 +36,14 @@ namespace Raven.Client.Documents.Session
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{pathScript} += args.val_{_valsCount};",
-                Values = {[$"val_{_valsCount}"] = valToAdd} 
+                Values = { [$"val_{_valsCount}"] = valToAdd }
             };
 
             _valsCount++;
 
             if (TryMergePatches(id, patchRequest) == false)
             {
-                Advanced.Defer(new PatchCommandData(id, null, patchRequest, null));
+                Defer(new PatchCommandData(id, null, patchRequest, null));
             }
         }
 
@@ -62,14 +61,14 @@ namespace Raven.Client.Documents.Session
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{pathScript} = args.val_{_valsCount};",
-                Values = {[$"val_{_valsCount}"] = value}
+                Values = { [$"val_{_valsCount}"] = value }
             };
 
             _valsCount++;
 
             if (TryMergePatches(id, patchRequest) == false)
             {
-                Advanced.Defer(new PatchCommandData(id, null, patchRequest, null));
+                Defer(new PatchCommandData(id, null, patchRequest, null));
             }
         }
 
@@ -102,7 +101,7 @@ namespace Raven.Client.Documents.Session
 
             if (TryMergePatches(id, patchRequest) == false)
             {
-                Advanced.Defer(new PatchCommandData(id, null, patchRequest, null));
+                Defer(new PatchCommandData(id, null, patchRequest, null));
             }
         }
 
@@ -124,7 +123,7 @@ namespace Raven.Client.Documents.Session
                 newVals[kvp.Key] = kvp.Value;
             }
 
-            Advanced.Defer(new PatchCommandData(id, null, new PatchRequest
+            Defer(new PatchCommandData(id, null, new PatchRequest
             {
                 Script = newScript,
                 Values = newVals
