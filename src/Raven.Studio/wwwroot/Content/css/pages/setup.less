@@ -31,9 +31,13 @@
     }
 
     .btn-icon {
-        min-height: 210px;
+        min-height: 170px;
         display: block;
         width: 100%;
+
+        .icon-xl {
+            margin-top: 0;
+        }
     }
 
     .icon-xl {
@@ -47,9 +51,13 @@
     }
 
     .icon-xl + .lead {
-        margin-bottom: @grid-gutter-width/2;
         white-space: initial;
         font-size: 18px;
+    }
+
+    div.small {
+        font-size: 13px;
+        line-height: 16px;
     }
 
     .list {
@@ -57,7 +65,16 @@
         list-style: none;
         padding: 0;
         font-size: 13px;
-        min-height: 115px;
+        min-height: 137px;
+
+        li {
+            display: flex;
+            line-height: 17px;
+            margin-bottom: 8px;
+
+            span {
+            }
+        }
 
         .icon-plus {
             color: @brand-success;
@@ -83,7 +100,7 @@
         border: none;
         overflow: hidden;
     }
-    
+
     .configuration-log, .readme {
         pre {
             white-space: pre-wrap;
