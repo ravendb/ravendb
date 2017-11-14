@@ -105,8 +105,8 @@ namespace Raven.Server.Documents.Patch
                         .AddObjectConverter(new JintEnumConverter())
                         .AddObjectConverter(new JintDateTimeConverter())
                         .AddObjectConverter(new JintTimeSpanConverter())
-                        .LocalTimeZone( TimeZoneInfo.Utc);
-                    
+                        .LocalTimeZone(TimeZoneInfo.Utc);
+
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 
@@ -181,8 +181,7 @@ namespace Raven.Server.Documents.Patch
                 return string.Join(Environment.NewLine, _runner.ScriptsSource);
             }
 
-
-            private JsValue GetLastModified(JsValue self, JsValue[] args)
+            private static JsValue GetLastModified(JsValue self, JsValue[] args)
             {
                 if (args.Length != 1)
                     throw new InvalidOperationException("id(doc) must be called with a single argument");
@@ -284,14 +283,28 @@ namespace Raven.Server.Documents.Patch
                         throw new InvalidOperationException(
                             $"The change vector must be a string or null. Document ID: '{id}'.");
 
-                using (var reader = JsBlittableBridge.Translate(_context, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                BlittableJsonReaderObject reader = null;
+                try
                 {
+                    reader = JsBlittableBridge.Translate(_context, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
 
                     if (DebugMode)
-                        DebugActions.PutDocument.Add(put.Id);
+                    {
+                        DebugActions.PutDocument.Add(new DynamicJsonValue
+                        {
+                            ["Id"] = put.Id,
+                            ["Data"] = reader
+                        });
+                    }
 
                     return put.Id;
+                }
+                finally
+                {
+                    if (DebugMode == false)
+                        reader?.Dispose();
                 }
             }
 
@@ -398,22 +411,22 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetMetadata(JsValue self, JsValue[] args)
             {
-                if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))               
+                if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
                     throw new InvalidOperationException("getMetadata(doc) must be called with a single entity argument");
 
                 if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                     return JsValue.Null;
 
-                metadata.Modifications = new DynamicJsonValue                
-                {                   
-                        [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
-                        [Constants.Documents.Metadata.Id] = boi.DocumentId,
-                        [Constants.Documents.Metadata.LastModified] = boi.LastModified,
+                metadata.Modifications = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
+                    [Constants.Documents.Metadata.Id] = boi.DocumentId,
+                    [Constants.Documents.Metadata.LastModified] = boi.LastModified,
                 };
 
                 metadata = _context.ReadObject(metadata, boi.DocumentId);
 
-                return TranslateToJs(ScriptEngine, _context, metadata);              
+                return TranslateToJs(ScriptEngine, _context, metadata);
             }
 
             private JsValue CmpXchangeValue(JsValue self, JsValue[] args)
@@ -426,25 +439,25 @@ namespace Raven.Server.Documents.Patch
                 return CmpXchangeValueInternal(args[0].AsString());
             }
 
-//            private JsValue CmpXchangeMatch(JsValue self, JsValue[] args)
-//            {
-//                AssertValidDatabaseContext();
-//
-//                if (args.Length != 2)
-//                    throw new InvalidOperationException("cmpxchg.match(key, value) must be called");
-//
-//                var storedValue =  CmpXchangeValueInternal(args[0].AsString());
-//                var inputValue = args[1];
-//                
-//                if (storedValue == null && inputValue == null)
-//                    return true;
-//
-//                if (storedValue == null)
-//                    return false;
-//                
-//                return storedValue.Equals(args[1]);
-//            }
-            
+            //            private JsValue CmpXchangeMatch(JsValue self, JsValue[] args)
+            //            {
+            //                AssertValidDatabaseContext();
+            //
+            //                if (args.Length != 2)
+            //                    throw new InvalidOperationException("cmpxchg.match(key, value) must be called");
+            //
+            //                var storedValue =  CmpXchangeValueInternal(args[0].AsString());
+            //                var inputValue = args[1];
+            //                
+            //                if (storedValue == null && inputValue == null)
+            //                    return true;
+            //
+            //                if (storedValue == null)
+            //                    return false;
+            //                
+            //                return storedValue.Equals(args[1]);
+            //            }
+
             private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
@@ -476,7 +489,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
-                
+
                 return new JsValue(args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
             }
 
@@ -494,7 +507,7 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("regex(text, regex) must be called with two string paremters");
 
                 var regex = _regexCache.Get(args[1].AsString());
-                
+
                 return new JsValue(regex.IsMatch(args[0].AsString()));
             }
 
@@ -509,17 +522,17 @@ namespace Raven.Server.Documents.Patch
                 {
                     value = _database.ServerStore.Cluster.GetCmpXchg(ctx, prefix + key).Value;
                 }
-                
+
                 if (value == null)
                     return null;
-                
+
                 var jsValue = TranslateToJs(ScriptEngine, _context, value);
                 return jsValue.AsObject().Get("Object");
             }
 
             private JsValue LoadDocumentInternal(string id)
             {
-                if(string.IsNullOrEmpty(id))
+                if (string.IsNullOrEmpty(id))
                     return JsValue.Undefined;
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
