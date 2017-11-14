@@ -127,7 +127,7 @@ namespace Sparrow.Platform.Posix
 
         public static long ReadNumberFromFile(string filename)
         {
-            // return long number read from file, on error return -1
+            // return long number read from file, on error return long.MaxValue
             try
             {
                 var txt = File.ReadAllText(filename);
