@@ -245,7 +245,7 @@ class databaseCreationModel {
 
             validation: [
                 {
-                    validator: () => databaseDoesntExist,
+                    validator: (name: string) => databaseDoesntExist(name),
                     message: "Database already exists"
                 }
             ]
