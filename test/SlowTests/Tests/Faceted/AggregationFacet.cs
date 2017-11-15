@@ -197,6 +197,22 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
+        [Fact]
+        public void CanGetAggregationQueryString_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateAggregationSampleData(store);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var query = session.Query<Car>("Cars")
+                        .AggregateBy(f => f.ByField(x => x.Make).SumOn(x => x.Price)).ToString();
+                    Assert.Equal("FROM INDEX 'Cars' SELECT facet(Make, sum(Price))", query);
+                }
+            }
+        }
+
         private static void CreateAggregationSampleData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
