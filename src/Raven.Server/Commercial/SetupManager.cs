@@ -43,7 +43,7 @@ namespace Raven.Server.Commercial
 
         public static string BuildHostName(string subdomain, string domain)
         {
-            return $"{subdomain.ToLower()}-{domain.ToLower()}.{RavenDbDomain}";
+            return $"{subdomain.ToLower()}.{domain.ToLower()}.{RavenDbDomain}";
         }
 
         public static async Task<Uri> LetsEncryptAgreement(string email, ServerStore serverStore)
@@ -516,7 +516,7 @@ namespace Raven.Server.Commercial
                 {
                     var regNodeInfo = new RegistrationNodeInfo
                     {
-                        SubDomain = (node.Key + "-" + setupInfo.Domain).ToLower(),
+                        SubDomain = (node.Key + "." + setupInfo.Domain).ToLower(),
                         Challenge = map[node.Key]
                     };
 
@@ -607,7 +607,7 @@ namespace Raven.Server.Commercial
                 {
                     var regNodeInfo = new RegistrationNodeInfo
                     {
-                        SubDomain = (node.Key + "-" + setupInfo.Domain).ToLower(),
+                        SubDomain = (node.Key + "." + setupInfo.Domain).ToLower(),
                         Ips = node.Value.Addresses
                     };
 
