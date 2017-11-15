@@ -15,6 +15,8 @@ class nodes extends setupStep {
     
     editedNode = ko.observable<nodeInfo>();
     
+    canAddNode = ko.pureComputed(() => this.model.nodes().length < serverSetup.nodesTags.length);
+    
     defineServerUrl: KnockoutComputed<boolean>;
     showDnsInfo: KnockoutComputed<boolean>;
     provideCertificates: KnockoutComputed<boolean>;
