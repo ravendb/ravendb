@@ -286,7 +286,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DisposableAction(() => { });
         }
 
-        public long SkipType(DatabaseItemType type)
+        public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             return 0;
         }

@@ -139,8 +139,6 @@ namespace Raven.Server.Smuggler.Documents
             result.AddInfo($"Skipping '{type}' processing.");
             _onProgress.Invoke(result.Progress);
 
-            var numberOfItemsSkipped = _source.SkipType(type);
-
             SmugglerProgressBase.Counts counts;
             switch (type)
             {
@@ -166,13 +164,24 @@ namespace Raven.Server.Smuggler.Documents
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
 
+            void OnSkipped(long skipped)
+            {
+                if (skipped % 10000 != 0)
+                    return;
+
+                result.AddInfo($"Skipped {skipped:#,#;;0} {type.ToString().ToLowerInvariant()}");
+                _onProgress.Invoke(result.Progress);
+            }
+
+            var numberOfItemsSkipped = _source.SkipType(type, onSkipped: OnSkipped);
+
             counts.Skipped = true;
             counts.Processed = true;
 
             if (numberOfItemsSkipped > 0)
             {
                 counts.ReadCount = numberOfItemsSkipped;
-                result.AddInfo($"Skipped '{type}' processing. Skipped {numberOfItemsSkipped} items.");
+                result.AddInfo($"Skipped '{type}' processing. Skipped {numberOfItemsSkipped:#,#;;0} items.");
             }
             else
                 result.AddInfo($"Skipped '{type}' processing.");

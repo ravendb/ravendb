@@ -17,7 +17,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities);
-        long SkipType(DatabaseItemType type);
+        long SkipType(DatabaseItemType type, Action<long> onSkipped);
     }
 
     public class IndexDefinitionAndType

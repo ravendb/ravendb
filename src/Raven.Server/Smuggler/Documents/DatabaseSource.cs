@@ -181,7 +181,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public long SkipType(DatabaseItemType type)
+        public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             return 0; // no-op
         }
