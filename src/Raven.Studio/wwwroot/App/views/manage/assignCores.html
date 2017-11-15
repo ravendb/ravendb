@@ -17,20 +17,17 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="row">
                         <div class="col-xs-12" data-bind="if: numberOfCores() && numberOfCores() != -1">
                             <label class="control-label col-xs-4">Total cores on node:</label>
                             <strong class="control-label col-xs-1"><span data-bind="text: numberOfCores"></span></strong>
                         </div>
                     </div>
-                    
                     <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: warningText">
                         <div><i class="icon-info"></i></div>
                         <div data-bind="text: warningText"></div>
                     </div>
                 </div>
-
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-bind="click: $root.close">Close</button>

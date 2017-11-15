@@ -78,13 +78,31 @@ class adminLogs extends viewModelBase {
     
     tailEnabled = ko.observable<boolean>(true);
     private duringManualScrollEvent = false;
+
+    validationGroup: KnockoutValidationGroup;
+    enableApply: KnockoutComputed<boolean>;
     
     constructor() {
         super();
         
         this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "includeSource", "excludeSource", "removeConfigurationEntry");
-        
-        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));
+        this.filter.throttle(500).subscribe(() => this.filterLogEntries(true));        
+        this.initValidation();       
+    }
+    
+    private initValidation() {
+        this.editedConfiguration().maxEntries.extend({
+            required: true,
+            min: 0
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            maxEntries: this.editedConfiguration().maxEntries
+        });
+
+        this.enableApply = ko.pureComputed(() => {
+            return this.isValid(this.validationGroup);
+        });
     }
     
     activate(args: any) {
@@ -117,12 +135,15 @@ class adminLogs extends viewModelBase {
     }
 
     applyConfiguration() {
-        this.editedConfiguration().copyTo(this.configuration());
-        
-        // restart websocket
-        this.isBufferFull(false);
-        this.pauseLogs();
-        this.resumeLogs();
+        if (this.isValid(this.validationGroup)) {
+            
+            this.editedConfiguration().copyTo(this.configuration());
+
+            // restart websocket
+            this.isBufferFull(false);
+            this.pauseLogs();
+            this.resumeLogs();
+        }
     }
     
     itemHeightProvider(item: string, row: virtualListRow<string>) {
@@ -271,6 +292,10 @@ class adminLogs extends viewModelBase {
 
     removeConfigurationEntry(entry: adminLogsConfigEntry) {
         this.editedConfiguration().entries.remove(entry);
+    }
+
+    onOpenOptions() {
+        this.editedConfiguration().maxEntries(this.configuration().maxEntries());
     }
 }
 

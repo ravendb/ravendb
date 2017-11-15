@@ -23,7 +23,7 @@ class revisions extends viewModelBase {
 
     spinners = {
         save: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -139,7 +139,6 @@ class revisions extends viewModelBase {
             this.perCollectionConfigurations.remove(entry);
         }
     }
-
 
     applyChanges() {
         const itemToSave = this.currentlyEditedItem();

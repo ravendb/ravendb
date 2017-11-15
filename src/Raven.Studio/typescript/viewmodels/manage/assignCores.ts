@@ -7,7 +7,10 @@ class assignCores extends dialogViewModelBase {
     numberOfCores = ko.observable<number>();
 
     warningText = ko.pureComputed(() => {
-        return this.assignedCores() ? this.assignedCores() + " cores will be leased from license limits." : "";
+        const coresCount = this.assignedCores;
+        
+        return coresCount() && (coresCount.isValid()) ?
+            `${coresCount()} ${coresCount() === 1 ? 'core' : 'cores'} will be leased from license limits` : "";          
     });
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
@@ -44,7 +47,6 @@ class assignCores extends dialogViewModelBase {
     }
 
     save() {
-
         if (!this.isValid(this.validationGroup)) 
             return;
 
