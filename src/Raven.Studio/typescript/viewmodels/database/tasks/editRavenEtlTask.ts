@@ -148,6 +148,13 @@ class editRavenEtlTask extends viewModelBase {
         this.spinners.save(true);        
         let editedEtl = this.editedRavenEtl();
 
+        // 0. Save discovery URL if user forgot to hit 'add url' button
+        if (this.createNewConnectionString() && 
+            this.newConnectionString().inputUrl().discoveryUrlName() &&
+            this.isValid(this.newConnectionString().inputUrl().validationGroup)) {
+                this.newConnectionString().addDiscoveryUrlWithBlink();
+        }
+        
         // 1. Validate *edited transformation script*
         if (editedEtl.showEditTransformationArea()) {
             if (!this.isValid(editedEtl.editedTransformationScriptSandbox().validationGroup)) {
