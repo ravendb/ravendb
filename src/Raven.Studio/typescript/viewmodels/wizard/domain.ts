@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import claimDomainCommand = require("commands/wizard/claimDomainCommand");
 import nodeInfo = require("models/wizard/nodeInfo");
 import ipEntry = require("models/wizard/ipEntry");
+import loadAgreementCommand = require("commands/wizard/loadAgreementCommand");
 
 class domain extends setupStep {
 
@@ -40,14 +41,19 @@ class domain extends setupStep {
     }
     
     save() {
+        this.spinners.save(true);
+        
         const domainModel = this.model.domain();
         this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
             if (this.isValid(domainModel.validationGroup)) {
-                this.claimDomainIfNeeded()
+                $.when<any>(this.claimDomainIfNeeded(), this.loadAgreementIfNeeded())
                     .done(() => {
                         this.tryPopulateNodesInfo();
                         router.navigate("#nodes");
-                    });
+                    })
+                    .always(() => this.spinners.save(false));
+            } else {
+                this.spinners.save(false);
             }
         });
     }
@@ -74,6 +80,18 @@ class domain extends setupStep {
         }
     }
     
+    private loadAgreementIfNeeded(): JQueryPromise<void | string> {
+        if (this.model.agreementUrl()) {
+            return $.when<void>();
+        }
+        
+        return new loadAgreementCommand(this.model.domain().userEmail())
+            .execute()
+            .done(url => {
+                this.model.agreementUrl(url);
+            });
+    }
+    
     private claimDomainIfNeeded(): JQueryPromise<void> {
         const domainModel = this.model.domain();
         
@@ -82,16 +100,13 @@ class domain extends setupStep {
             return $.when<void>();
         }
 
-        this.spinners.save(true);
-        
-        const task = $.Deferred<void>();
-        new claimDomainCommand(domainModel.domain(), this.model.license().toDto())
+        const domainToClaim = domainModel.domain();
+        return new claimDomainCommand(domainToClaim, this.model.license().toDto())
             .execute()
-            .done(() => task.resolve())
-            .fail(() => task.reject())
-            .always(() => this.spinners.save(false));
-        
-        return task;
+            .done(() => {
+                this.model.userDomains().Domains[domainToClaim] = [];
+                domainModel.availableDomains.push(domainToClaim);
+            });
     }
 
     createDomainNameAutocompleter(domainText: KnockoutObservable<string>) {

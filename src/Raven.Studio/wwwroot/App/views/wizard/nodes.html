@@ -130,7 +130,7 @@
             <div>
                 <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
                     <input id="agree" type="checkbox" data-bind="checked: confirmation">
-                    <label for="agree">I accept <a target="_blank" data-bind="attr: { href: agreementUrl }">Let's Encrypt Subscriber Agreement.</a></label>
+                    <label for="agree">I accept <a target="_blank" data-bind="attr: { href: model.agreementUrl }">Let's Encrypt Subscriber Agreement.</a></label>
                 </div>
                 <div data-bind="validationElement: confirmation">
                     <div class="help-block" data-bind="validationMessage: confirmation"></div>

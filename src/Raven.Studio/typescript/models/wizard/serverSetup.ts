@@ -18,6 +18,7 @@ class serverSetup {
     nodes = ko.observableArray<nodeInfo>();
     certificate = ko.observable<certificateInfo>(new certificateInfo());
     registerClientCertificate = ko.observable<boolean>(true);
+    agreementUrl = ko.observable<string>();
     
     fixedLocalPort = ko.observable<number>();
     fixPortNumberOnLocalNode = ko.pureComputed(() => this.fixedLocalPort() != null);

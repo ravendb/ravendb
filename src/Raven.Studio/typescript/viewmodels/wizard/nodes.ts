@@ -1,7 +1,6 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import nodeInfo = require("models/wizard/nodeInfo");
-import loadAgreementCommand = require("commands/wizard/loadAgreementCommand");
 
 import serverSetup = require("models/wizard/serverSetup");
 
@@ -9,7 +8,6 @@ class nodes extends setupStep {
 
     currentStep: number;
 
-    agreementUrl = ko.observable<string>();
     confirmation = ko.observable<boolean>(false);
     confirmationValidationGroup = ko.validatedObservable({
         confirmation: this.confirmation
@@ -73,14 +71,6 @@ class nodes extends setupStep {
             case "Secured":
                 this.currentStep = 3;
                 break;
-        }
-        
-        if (this.showAgreement()) {
-            return new loadAgreementCommand(this.model.domain().userEmail())
-                .execute()
-                .done(url => {
-                    this.agreementUrl(url);
-                });
         }
     }
     
