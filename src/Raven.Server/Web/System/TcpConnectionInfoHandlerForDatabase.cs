@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Web.System
 {
-    public class TcpConnectionInfoHandlerForDatabase: DatabaseRequestHandler
+    public class TcpConnectionInfoHandlerForDatabase : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/info/tcp", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
@@ -20,5 +20,5 @@ namespace Raven.Server.Web.System
 
             return Task.CompletedTask;
         }
-        }
+    }
 }
