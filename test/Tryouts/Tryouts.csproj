@@ -2,6 +2,7 @@
   <PropertyGroup>
     <Version>4.0.0-custom-40</Version>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeFrameworkVersion>2.0.3</RuntimeFrameworkVersion>
     <WarningsAsErrors>true</WarningsAsErrors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Tryouts</AssemblyName>
