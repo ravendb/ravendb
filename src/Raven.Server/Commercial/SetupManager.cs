@@ -50,7 +50,7 @@ namespace Raven.Server.Commercial
         {
             if (IsValidEmail(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
-
+            
             using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
             {
                 var account = await acmeClient.NewRegistraton("mailto:" + email);
