@@ -117,7 +117,7 @@
                         </strong>
                         <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
                         &nbsp;was used to get the results in
-                        <strong data-bind="text: queryStats().DurationInMs"></strong>
+                        <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
                     </small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">

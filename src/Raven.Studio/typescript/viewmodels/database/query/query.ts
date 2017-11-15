@@ -537,7 +537,7 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResultWithIncludes<document>) => {                                        
                         const endQueryTime = new Date().getTime();
-                        queryResults.additionalResultInfo.DurationInMs = generalUtils.formatMillis(Math.min(endQueryTime-startQueryTime, queryResults.additionalResultInfo.DurationInMs));
+                        queryResults.additionalResultInfo.DurationInMs = Math.min(endQueryTime-startQueryTime, queryResults.additionalResultInfo.DurationInMs);
                         
                         const emptyFieldsResult = queryForAllFields 
                             && queryResults.totalResultCount > 0 
