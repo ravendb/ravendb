@@ -1,5 +1,5 @@
 <h2 class="margin-bottom margin-top margin-lg"><strong class="margin-right" data-bind="text: currentStep + '.'"></strong>Node Addresses</h2>
-<div>
+<div class="setup-nodes">
     <form class="flex-form" data-bind="submit: save">
         <div class="margin-bottom">
             Enter the server nodes address information - port and one or more IP addresses. 
@@ -10,14 +10,14 @@
         <div class="margin-bottom bg-warning padding" data-bind="visible: $root.model.domain().reusingConfiguration">
             <i class="icon-warning"></i> Configuration will overwrite existing DNS records for domain <strong data-bind="text: model.domain().fullDomain"></strong>. 
         </div>
-        <div class=" margin-bottom">
-            <button type="button" class="btn btn-primary" data-bind="click: $root.addNode">
+        <div class="margin-bottom">
+            <button type="button" class="btn btn-primary" data-bind="click: $root.addNode, enable: $root.canAddNode">
                 <i class="icon-plus"></i> <span>Add node</span>
             </button>
         </div>
         <div class="row">
             <div class="col-md-6">
-                <div data-bind="foreach: model.nodes">
+                <div class="nodes-list margin-bottom" data-bind="foreach: model.nodes">
                     <div class="panel padding padding-sm flex-horizontal" 
                          data-bind="css: { 'active': $data === $root.editedNode() }">
                         <div class="flex-grow">
