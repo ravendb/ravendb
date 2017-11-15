@@ -289,6 +289,12 @@ namespace Raven.Server.Smuggler.Documents
                                 continue;
                             }
 
+                            if (indexDefinition.Name.StartsWith("Auto/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // legacy auto index
+                                indexDefinition.Name = $"Legacy/{indexDefinition.Name}";
+                            }
+
                             try
                             {
                                 if (_options.RemoveAnalyzers)
