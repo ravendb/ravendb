@@ -860,5 +860,11 @@ namespace Raven.Server.Documents
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             return conflictsTable.GetTree(ConflictsSchema.Indexes[ConflictsIdSlice]).State.NumberOfEntries;
         }
+
+        public long GetNumberOfConflicts(DocumentsOperationContext context)
+        {
+            var table = new Table(ConflictsSchema, context.Transaction.InnerTransaction);
+            return table.GetNumberOfEntriesFor(ConflictsSchema.FixedSizeIndexes[AllConflictedDocsEtagsSlice]);
+        }
     }
 }

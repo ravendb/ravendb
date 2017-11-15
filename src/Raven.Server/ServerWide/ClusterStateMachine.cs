@@ -20,6 +20,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
@@ -532,7 +533,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     UpdateValue(index, items, valueNameLowered, valueName, databaseRecordAsJson);
-                    SetDatabaseValues(addDatabaseCommand.DatabaseValues, context, index, items);
+                    SetDatabaseValues(addDatabaseCommand.DatabaseValues, addDatabaseCommand.Name, context, index, items);
                 }
             }
             finally
@@ -543,6 +544,7 @@ namespace Raven.Server.ServerWide
 
         private static void SetDatabaseValues(
             Dictionary<string, ExpandoObject> databaseValues,
+            string databaseName,
             TransactionOperationContext context,
             long index,
             Table items)
@@ -552,11 +554,18 @@ namespace Raven.Server.ServerWide
 
             foreach (var keyValue in databaseValues)
             {
-                using (Slice.From(context.Allocator, keyValue.Key, out Slice databaseValueName))
-                using (Slice.From(context.Allocator, keyValue.Key.ToLowerInvariant(), out Slice databaseValueNameLowered))
+                if (keyValue.Key.StartsWith(PeriodicBackupStatus.Prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    // don't use the old backup status
+                    continue;
+                }
+
+                var key = $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}{keyValue.Key}";
+                using (Slice.From(context.Allocator, key, out Slice databaseValueName))
+                using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice databaseValueNameLowered))
                 using (var value = EntityToBlittable.ConvertEntityToBlittable(keyValue.Value, DocumentConventions.Default, context))
                 {
-                    UpdateValue(index, items, databaseValueNameLowered, databaseValueName, value);
+                    UpdateValue(++index, items, databaseValueNameLowered, databaseValueName, value);
                 }
             }
         }

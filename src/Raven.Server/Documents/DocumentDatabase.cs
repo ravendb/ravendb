@@ -497,7 +497,8 @@ namespace Raven.Server.Documents
                 {
                     DocumentsCount = DocumentsStorage.GetNumberOfDocuments(),
                     AttachmentsCount = DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(documentsContext).AttachmentCount,
-                    RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext)
+                    RevisionsCount = DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(documentsContext),
+                    ConflictsCount = DocumentsStorage.ConflictsStorage.GetNumberOfConflicts(documentsContext)
                 };
             }
         }
@@ -598,15 +599,16 @@ namespace Raven.Server.Documents
                     writer.WriteStartObject();
 
                     var first = true;
-                    foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
-                        Helpers.ClusterStateMachineValuesPrefix(Name)))
+                    var prefix = Helpers.ClusterStateMachineValuesPrefix(Name);
+                    foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, prefix))
                     {
                         if (first == false)
                             writer.WriteComma();
 
                         first = false;
 
-                        writer.WritePropertyName(keyValue.Key.ToString());
+                        var key = keyValue.Key.ToString().Substring(prefix.Length);
+                        writer.WritePropertyName(key);
                         context.Write(writer, keyValue.Value);
                     }
 

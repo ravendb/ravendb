@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.PeriodicBackup
@@ -70,9 +69,11 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             json[nameof(Error)] = Error?.ToJson();
         }
 
+        public static string Prefix => "periodic-backups/";
+
         public static string GenerateItemName(string databaseName, long taskId)
         {
-            return $"values/{databaseName}/periodic-backups/{taskId}";
+            return $"values/{databaseName}/{Prefix}{taskId}";
         }
     }
 
