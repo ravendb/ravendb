@@ -121,5 +121,11 @@ namespace Raven.Client.Documents.Queries.Facets
 
             return new QueryCommand(_session.Conventions, iq);
         }
+
+        public override string ToString()
+        {
+            var iq = GetIndexQuery(isAsync: false);
+            return iq.ToString();
+        }
     }
 }

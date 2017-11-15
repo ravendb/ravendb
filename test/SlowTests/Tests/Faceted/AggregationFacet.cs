@@ -151,7 +151,6 @@ namespace SlowTests.Tests.Faceted
                                          .AggregateBy(f => f.ByField(x => x.Make).AverageOn(x => x.Price))
                                          .Execute();
 
-
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(2400.6 / 2, results["Make"].Values.First(x => x.Range == "toyota").Average.Value);
                     Assert.Equal(5800.6 / 2, results["Make"].Values.First(x => x.Range == "ford").Average.Value);
@@ -178,6 +177,22 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(2400.6 / 2, results.Result["Make"].Values.First(x => x.Range == "toyota").Average.Value);
                     Assert.Equal(5800.6 / 2, results.Result["Make"].Values.First(x => x.Range == "ford").Average.Value);
                     Assert.Equal(1000.3, results.Result["Make"].Values.First(x => x.Range == "hunday").Average.Value);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGetAggregationQueryString()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateAggregationSampleData(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Car>("Cars")
+                        .AggregateBy(f => f.ByField(x => x.Make).SumOn(x => x.Price)).ToString();
+                    Assert.Equal("FROM INDEX 'Cars' SELECT facet(Make, sum(Price))", query);
                 }
             }
         }
