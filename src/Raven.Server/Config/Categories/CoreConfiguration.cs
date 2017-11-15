@@ -90,12 +90,24 @@ namespace Raven.Server.Config.Categories
             if (PublicTcpServerUrl.HasValue)
                 return UrlUtil.TrimTrailingSlash(PublicTcpServerUrl.Value.UriValue);
 
-            if (Uri.TryCreate(serverWebUrl, UriKind.Absolute, out var serverWebUri) == false)
-                throw new InvalidOperationException($"Could not parse server web url: {serverWebUrl}");
+            if (PublicServerUrl.HasValue)
+            {
+                if (Uri.TryCreate(PublicServerUrl.Value.UriValue, UriKind.Absolute, out var publicServerUri) == false)
+                    throw new ArgumentException($"PublicServerUrl could not be parsed: {PublicServerUrl}.");
 
-            var tcpUriBuilder = new UriBuilder("tcp", GetNodeHost(serverWebUri, ServerUrls[0]), actualPort);
+                var tcpUriBuilder = new UriBuilder("tcp", publicServerUri.Host, actualPort);
 
-            return UrlUtil.TrimTrailingSlash(tcpUriBuilder.Uri.ToString());
+                return UrlUtil.TrimTrailingSlash(tcpUriBuilder.Uri.ToString());
+            }
+            else
+            {
+                if (Uri.TryCreate(serverWebUrl, UriKind.Absolute, out var serverWebUri) == false)
+                    throw new InvalidOperationException($"Could not parse server web url: {serverWebUrl}");
+
+                var tcpUriBuilder = new UriBuilder("tcp", GetNodeHost(serverWebUri, ServerUrls[0]), actualPort);
+
+                return UrlUtil.TrimTrailingSlash(tcpUriBuilder.Uri.ToString());
+            }
         }
 
         private string GetNodeHost(Uri serverWebUri, string serverUrlSettingValue)
