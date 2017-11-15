@@ -100,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents
             return GetType(type);
         }
 
-        public long SkipType(DatabaseItemType type)
+        public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             switch (type)
             {
@@ -112,7 +112,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Conflicts:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
-                    return SkipArray();
+                    return SkipArray(onSkipped);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -242,12 +242,16 @@ namespace Raven.Server.Smuggler.Documents
             return _state.Long;
         }
 
-        private long SkipArray()
+        private long SkipArray(Action<long> onSkipped = null)
         {
             var count = 0L;
             foreach (var _ in ReadArray())
             {
-                count++; //skipping
+                using (_)
+                {
+                    count++; //skipping
+                    onSkipped?.Invoke(count);
+                }
             }
 
             return count;
