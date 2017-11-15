@@ -3,7 +3,6 @@ using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Exceptions;
-using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
@@ -34,14 +33,15 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         }
                     } while (it.MoveNext());
                 }
+
                 return true;
             }
             catch (Exception e)
             {
-                VoronUnrecoverableErrorException.Raise(step.DocumentsStorage.Environment, 
-                    "Failed to update documents from version 13 to 14, due to an internal error. " +
-                    "Use the Voron.Recovery tool to export this database and import it into a new database.", e);
+                VoronUnrecoverableErrorException.Raise("Failed to update documents from version 13 to 14, due to an internal error. " +
+                                                       "Use the Voron.Recovery tool to export this database and import it into a new database.", e);
             }
+
             return false;
         }
     }

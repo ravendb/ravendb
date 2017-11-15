@@ -50,6 +50,11 @@ namespace Voron.Exceptions
             }
         }
 
+        public static void Raise(string message, Exception inner)
+        {
+            throw new VoronUnrecoverableErrorException(message, inner);
+        }
+
         protected VoronUnrecoverableErrorException(string message)
             : base(message)
         {
