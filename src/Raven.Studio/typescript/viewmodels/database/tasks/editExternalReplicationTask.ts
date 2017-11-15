@@ -123,9 +123,11 @@ class editExternalReplicationTask extends viewModelBase {
     saveExternalReplication() {
         let hasAnyErrors = false;
         
-        // Save discovery URL if user forgot to hit 'add url' button
-        if (this.createNewConnectionString() && this.isValid(this.newConnectionString().inputUrl().validationGroup)) {
-            this.newConnectionString().addDiscoveryUrlWithBlink();
+        // 0. Save discovery URL if user forgot to hit 'add url' button
+        if (this.createNewConnectionString() &&
+            this.newConnectionString().inputUrl().discoveryUrlName() &&
+            this.isValid(this.newConnectionString().inputUrl().validationGroup)) {
+                this.newConnectionString().addDiscoveryUrlWithBlink();
         }
         
         // 1. Validate *new connection string* (if relevant..) 
