@@ -112,7 +112,14 @@ namespace Raven.Server.Utils
                 var idleTimeDiff = linuxInfo.TotalIdleTime - _previousLinuxInfo.TotalIdleTime;
 
                 var totalUsed = userTimeDiff + userLowTimeDiff + systemTimeDiff;
-                machineCpuUsage = (totalUsed * 100.0) / (totalUsed + idleTimeDiff);
+                if (totalUsed + idleTimeDiff > 0)
+                {
+                    machineCpuUsage = (totalUsed * 100.0) / (totalUsed + idleTimeDiff);
+                }
+                else
+                {
+                    machineCpuUsage = 0;
+                }
             }
             else if (_lastCpuInfo != null)
             {
