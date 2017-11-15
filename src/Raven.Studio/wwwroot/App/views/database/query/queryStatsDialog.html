@@ -24,7 +24,7 @@
                 <div class="form-group">
                     <label class="col-md-3 control-label">Duration:</label>
                     <div class="col-md-9">
-                        <p class="form-control-static" data-bind="text: ((typeof (DurationInMs) !== 'undefined') ? DurationInMs : '? ') + 'ms'"></p>
+                        <p class="form-control-static" data-bind="text: ((typeof (DurationInMs) !== 'undefined') ? DurationInMs.toLocaleString() : '? ') + ' ms'"></p>
                     </div>
                 </div>
                 
