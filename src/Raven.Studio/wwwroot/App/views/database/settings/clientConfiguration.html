@@ -1,13 +1,11 @@
 <div class="content-container">
     <form data-bind="submit: saveConfiguration">
-
         <div class="content-margin">
             <div class="toolbar">
                 <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
                     <i class="icon-save"></i> <span>Save</span>
                 </button>
             </div>
-    
             <div class="toggle" data-bind="visible: hasGlobalConfiguration">
                 <input id="toggleOverride" class="styled" type="checkbox" data-bind="checked: overrideServer">
                 <label for="toggleOverride">
@@ -17,7 +15,6 @@
             <div>
                 <div class="row flex-row row-sm margin-bottom" data-bind="visible: hasGlobalConfiguration">
                     <div class="col-sm-5">
-    
                     </div>
                     <div class="col-sm-2">
                     </div>
@@ -68,7 +65,6 @@
                                 </label>
                             </div>
                         </div>
-    
                         <div class="col-sm-2" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
                             <input class="form-control" type="number"
                                    data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
@@ -83,5 +79,4 @@
             </div>
         </div>
     </form>
-
 </div>

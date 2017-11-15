@@ -3,7 +3,6 @@ import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getExpirationConfigurationCommand = require("commands/database/documents/getExpirationConfigurationCommand");
 import saveExpirationConfigurationCommand = require("commands/database/documents/saveExpirationConfigurationCommand");
 
@@ -47,7 +46,6 @@ class expiration extends viewModelBase {
         });
         
         this.expirationSampleFormatted = Prism.highlight(JSON.stringify(expiration.expirationSample, null, 4), (Prism.languages as any).javascript);
-        
     }
     
     canActivate(args: any) {
@@ -62,7 +60,6 @@ class expiration extends viewModelBase {
         return deferred;
     }
 
-
     activate(args: any) {
         super.activate(args);
 
@@ -76,12 +73,12 @@ class expiration extends viewModelBase {
         });
     }
 
-
     private initValidation() {
         this.deleteFrequencyInSec.extend({
             required: {
                 onlyIf: () => this.specifyDeleteFrequency()
-            }
+            },
+            min: 0      
         });
 
         this.validationGroup = ko.validatedObservable({
@@ -96,7 +93,6 @@ class expiration extends viewModelBase {
                 this.onConfigurationLoaded(config);
             });
     }
-
 
     onConfigurationLoaded(data: Raven.Client.ServerWide.Expiration.ExpirationConfiguration) {
         if (data) {
@@ -138,7 +134,6 @@ class expiration extends viewModelBase {
                 });
         }
     }
-    
 }
 
 export = expiration;

@@ -17,33 +17,29 @@
     </div>
     <div class="flex-horizontal flex-noshrink">
         <div class="flex-separator"></div>
-
         <div class="btn-group dropdown-right">
-            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+            <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" data-bind="click: onOpenOptions">
                 <i class="icon-settings"></i><span>Options</span>
                 <span class="caret"></span>
             </button>
             <div class="dropdown-menu colselect-dropdown slidein-style" data-bind="dropdownPanel: true">
                 <div class="columns-list-container flex-vertical" data-bind="with: editedConfiguration">
-                    <div class="form flex-horizontal margin-bottom margin-bottom-sm">
-                        <div>
-                            Max log entries
-                        </div>
-                        <div class="flex-grow">
-                            <input class="form-control input-sm" type="number" data-bind="numericInput: maxEntries" />
-                        </div>
-                    </div>
+                    <div data-bind="validationOptions: { insertMessages: false }, validationElement: maxEntries"> 
+                        <div class="form-group">
+                            <h4 class="control-label pull-left">Max Log Entries</h4>
+                            <div class="flex-grow">
+                                <input class="form-control input-sm" type="number" data-bind="numericInput: maxEntries" />
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: maxEntries"></span>
+                        </div>                                                
+                    </div>                                   
                     <h4>Log source filters</h4>
                     <div class="flex-horizontal margin-bottom margin-bottom-sm">
                         <div class="btn-group flex-grow">
                             <input type="text" placeholder="Source name" class="form-control input-sm" data-toggle="dropdown" data-bind="textInput: $root.editedSourceName">
                             <span class="caret"></span>
                             <ul class="dropdown-menu">
-                                <li>
-                                    <a href="#">
-                                        Raven/Server
-                                    </a>
-                                </li>
+                                <li><a href="#">Raven/Server</a></li>
                             </ul>
                         </div>
                         <div>
@@ -69,22 +65,18 @@
                     </div>
                     <div class="flex-horizontal margin-top margin-top-sm">
                         <div class="flex-separator"></div>
-                        <button class="btn btn-success btn-sm close-panel" data-bind="click: $root.applyConfiguration"><i class="icon-save"></i> <span>Apply</span></button>
+                        <button class="btn btn-success btn-sm close-panel" data-bind="click: $root.applyConfiguration, enable: $root.enableApply"><i class="icon-save"></i> <span>Apply</span></button>
                     </div>
-                </div>
+                 </div>
             </div>
         </div>
-
         <button class="btn btn-sm btn-info btn-checkable" data-bind="click: toggleTail, css: { active: tailEnabled }">
             <i class="icon-logs"></i> <span>Monitoring (tail -f)</span>
         </button>
-
         <button class="btn btn-sm btn-danger" data-bind="click: clear">
             <i class="icon-cancel"></i><span>Clear</span>
         </button>
-
     </div>
-
     <div class="log-list flex-grow scroll">
         <list-view params="controller: listController, emptyTemplate: 'empty-admin-logs-template', itemHeightProvider: itemHeightProvider, itemHtmlProvider: itemHtmlProvider"></list-view>
         <div class="has-error results-error" data-bind="visible: isBufferFull">
@@ -93,8 +85,8 @@
             </div>
         </div>
     </div>
-
 </div>
+
 <script type="text/html" id="empty-admin-logs-template">
     No log entries for now.
 </script> 

@@ -25,8 +25,7 @@ class clientConfiguration extends viewModelBase {
         super();
         
         this.effectiveReadBalanceBehavior = ko.pureComputed(() => {
-            const hasGlobal = this.hasGlobalConfiguration();
-            if (!hasGlobal) {
+            if (!this.hasGlobalConfiguration()) {
                 return "";
             }
             
@@ -36,13 +35,14 @@ class clientConfiguration extends viewModelBase {
         });
         
         this.effectiveMaxNumberOfRequestsPerSession = ko.pureComputed(() => {
-            const hasGlobal = this.hasGlobalConfiguration();
-            if (!hasGlobal) {
+            if (!this.hasGlobalConfiguration()) {
                 return "";
             }
+            
             const configToUse = this.overrideServer() ? this.model : this.globalModel;
             const maxRequests = configToUse.maxNumberOfRequestsPerSession();
-            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") ? maxRequests.toLocaleString() : '<use client default>';
+            
+            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() :  '<use client default>';            
         });
         
         this.canEditSettings = ko.pureComputed(() => {

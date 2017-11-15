@@ -1,13 +1,11 @@
 <div class="content-container">
     <form data-bind="submit: saveConfiguration">
-        
         <div class="content-margin">
             <div class="toolbar">
                 <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
                     <i class="icon-save"></i> <span>Save</span>
                 </button>
             </div>
-    
             <div>
                 <div class="panel padding padding-sm">
                     <div class="row flex-row row-sm">
@@ -42,7 +40,6 @@
                                 </label>
                             </div>
                         </div>
-    
                         <div class="col-sm-2" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
                             <input class="form-control" type="number"
                                    data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
@@ -52,5 +49,4 @@
             </div>
         </div>
     </form>
-
 </div>

@@ -1,14 +1,11 @@
 <div class="content-container">
     <form data-bind="submit: saveChanges">
-
         <div class="content-margin">
             <div class="toolbar">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
                     <i class="icon-save"></i> <span>Save</span>
                 </button>
             </div>
-
-            
             <div class="row">
                 <div class="col-sm-7">
                     <div class="panel padding margin-bottom">
@@ -18,7 +15,6 @@
                                 Enable document expiration
                             </label>
                         </div>
-
                         <div class="flex-horizontal">
                             <div class="flex-start" >
                                 <div class="checkbox">
@@ -31,7 +27,7 @@
                             </div>
                             <div class="flex-grow" data-bind="validationElement: deleteFrequencyInSec">
                                 <div class="input-group">
-                                    <input class="form-control" type="text" placeholder="Default (60)" data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency" />
+                                    <input class="form-control" type="number" placeholder="Default (60)" data-bind="numericInput: deleteFrequencyInSec, enable: specifyDeleteFrequency" />
                                     <div class="input-group-addon">
                                         seconds
                                     </div>
@@ -47,18 +43,15 @@
                             <div>
                                 <div> Enabling document expiration will delete documents whose time has passed. </div>
                                 <div>
-                                    To set the deletion time, enter the appropriate date in the <code>@expires</code> property in the document metadata.
+                                    To set the expiration time, enter the appropriate date in the <code>@expires</code> property in the document metadata.
                                     The document will automatically be deleted at that time.
                                 </div>
                             </div>
                         </div>
                         <pre data-bind="html: expirationSampleFormatted"></pre>
                     </div>
-                    
-                </div>
-                
+                </div>                
             </div>
         </div>
     </form>
-
 </div>

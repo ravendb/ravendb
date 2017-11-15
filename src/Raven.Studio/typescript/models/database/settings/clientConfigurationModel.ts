@@ -19,11 +19,7 @@ class clientConfigurationModel {
     });
     
     isDefined = ko.observableArray<keyof this>([]);
-    
-    validationGroup = ko.validatedObservable({
-        readBalanceBehavior: this.readBalanceBehavior,
-        maxNumberOfRequestsPerSession: this.maxNumberOfRequestsPerSession
-    });
+    validationGroup: KnockoutValidationGroup;
     
     constructor(dto: Raven.Client.ServerWide.ClientConfiguration) {
         if (dto && dto.ReadBalanceBehavior != null) {
@@ -35,7 +31,20 @@ class clientConfigurationModel {
             this.isDefined.push("maxNumberOfRequestsPerSession");
             this.maxNumberOfRequestsPerSession(dto.MaxNumberOfRequestsPerSession);
         }
-        this.disabled(!dto || dto.Disabled);
+        
+        this.disabled(!dto || dto.Disabled);        
+        this.initValidation();
+    }
+    
+    private initValidation() {
+        this.maxNumberOfRequestsPerSession.extend({
+            min: 0
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            readBalanceBehavior: this.readBalanceBehavior,
+            maxNumberOfRequestsPerSession: this.maxNumberOfRequestsPerSession
+        });
     }
     
     static empty() {
@@ -50,7 +59,6 @@ class clientConfigurationModel {
             Disabled: this.disabled()
         } as Raven.Client.ServerWide.ClientConfiguration;
     }
-    
 }
 
 export = clientConfigurationModel;
