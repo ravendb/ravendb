@@ -22,7 +22,6 @@ namespace Voron.Data.Tables
         private readonly Tree _tableTree;
 
         private ActiveRawDataSmallSection _activeDataSmallSection;
-        private FixedSizeTree _fstKey;
         private FixedSizeTree _inactiveSections;
         private FixedSizeTree _activeCandidateSection;
 
@@ -37,8 +36,6 @@ namespace Voron.Data.Tables
         private long _overflowPageCount;
         private readonly NewPageAllocator _tablePageAllocator;
         private readonly NewPageAllocator _globalPageAllocator;
-
-        public FixedSizeTree FixedSizeKey => _fstKey ?? (_fstKey = GetFixedSizeTree(_tableTree, _schema.Key.Name, sizeof(long)));
 
         public FixedSizeTree InactiveSections => _inactiveSections ?? (_inactiveSections = GetFixedSizeTree(_tableTree, TableSchema.InactiveSectionSlice, 0));
 
@@ -1514,7 +1511,6 @@ namespace Voron.Data.Tables
 
             foreach (var fsi in _schema.FixedSizeIndexes)
             {
-                _fstKey.ValidateTree_Forced();
                 var indexNumberOfEntries = GetFixedSizeTree(fsi.Value).NumberOfEntries;
                 if (fsi.Value.IsGlobal == false)
                 {
@@ -1567,7 +1563,6 @@ namespace Voron.Data.Tables
 
             _activeCandidateSection?.Dispose();
             _activeDataSmallSection?.Dispose();
-            _fstKey?.Dispose();
             _inactiveSections?.Dispose();
             _tableTree?.Dispose();
         }
