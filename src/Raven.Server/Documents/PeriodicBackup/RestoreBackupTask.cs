@@ -56,6 +56,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
         {
+            var databaseName = _restoreConfiguration.DatabaseName;
+
             try
             {
                 if (onProgress == null)
@@ -94,7 +96,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     onProgress.Invoke(result.Progress);
                 }
 
-                var databaseName = _restoreConfiguration.DatabaseName;
                 if (restoreSettings == null)
                 {
                     restoreSettings = new RestoreSettings
@@ -149,6 +150,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         result.Documents.ReadCount += summary.DocumentsCount;
                         result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
                         result.RevisionDocuments.ReadCount += summary.RevisionsCount;
+                        result.Conflicts.ReadCount += summary.ConflictsCount;
                         result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
                         result.Identities.ReadCount += restoreSettings.Identities.Count;
                         result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
@@ -161,6 +163,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 result.Documents.Processed = true;
                 result.RevisionDocuments.Processed = true;
+                result.Conflicts.Processed = true;
                 result.Indexes.Processed = true;
                 result.Identities.Processed = true;
                 onProgress.Invoke(result.Progress);
@@ -175,11 +178,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 return result;
             }
-            catch (OperationCanceledException)
-            {
-                // database shutdown
-                throw;
-            }
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
@@ -193,8 +191,20 @@ namespace Raven.Server.Documents.PeriodicBackup
                     details: new ExceptionDetails(e));
                 _serverStore.NotificationCenter.Add(alert);
 
-                // delete any files that we already created during the restore
-                IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
+                if (_serverStore.LoadDatabaseRecord(_restoreConfiguration.DatabaseName, out var _) == null)
+                {
+                    // delete any files that we already created during the restore
+                    IOExtensions.DeleteDirectory(_restoreConfiguration.DataDirectory);
+                }
+                else
+                {
+                    using (_serverStore.DatabasesLandlord.UnloadAndLockDatabase(_restoreConfiguration.DatabaseName, "failed restore"))
+                    {
+                        var result = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
+                        await _serverStore.Cluster.WaitForIndexNotification(result.Index);
+                    }
+                }
+                
                 throw;
             }
             finally

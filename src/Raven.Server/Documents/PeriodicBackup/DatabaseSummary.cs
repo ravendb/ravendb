@@ -7,5 +7,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public long AttachmentsCount { get; set; }
 
         public long RevisionsCount { get; set; }
+
+        public long ConflictsCount { get; set; }
     }
 }

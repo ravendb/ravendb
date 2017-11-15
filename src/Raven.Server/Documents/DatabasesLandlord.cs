@@ -637,7 +637,6 @@ namespace Raven.Server.Documents
                 DatabasesCache.TryRemove(dbName, out var _);
                 throw;
             }
-
         }
 
         public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null)
