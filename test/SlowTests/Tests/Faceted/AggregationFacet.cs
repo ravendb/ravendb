@@ -40,7 +40,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(1400.3, results["Make"].Values.First(x => x.Range == "toyota").Max.Value);
                     Assert.Equal(4900.3, results["Make"].Values.First(x => x.Range == "ford").Max.Value);
-                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hunday").Max.Value);
+                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hyundai").Max.Value);
                 }
 
             }
@@ -64,7 +64,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(2, results["Make"].Values.First(x => x.Range == "toyota").Count);
                     Assert.Equal(2, results["Make"].Values.First(x => x.Range == "ford").Count);
-                    Assert.Equal(1, results["Make"].Values.First(x => x.Range == "hunday").Count);
+                    Assert.Equal(1, results["Make"].Values.First(x => x.Range == "hyundai").Count);
                 }
             }
         }
@@ -87,7 +87,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(1400.3, results["Make"].Values.First(x => x.Range == "toyota").Max.Value);
                     Assert.Equal(4900.3, results["Make"].Values.First(x => x.Range == "ford").Max.Value);
-                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hunday").Max.Value);
+                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hyundai").Max.Value);
                 }
             }
         }
@@ -109,7 +109,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "toyota").Min.Value);
                     Assert.Equal(900.3, results["Make"].Values.First(x => x.Range == "ford").Min.Value);
-                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hunday").Min.Value);
+                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hyundai").Min.Value);
                 }
             }
         }
@@ -132,7 +132,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(2400.6, results["Make"].Values.First(x => x.Range == "toyota").Sum.Value);
                     Assert.Equal(5800.6, results["Make"].Values.First(x => x.Range == "ford").Sum.Value);
-                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hunday").Sum.Value);
+                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hyundai").Sum.Value);
                 }
             }
         }
@@ -154,7 +154,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results["Make"].Values.Count);
                     Assert.Equal(2400.6 / 2, results["Make"].Values.First(x => x.Range == "toyota").Average.Value);
                     Assert.Equal(5800.6 / 2, results["Make"].Values.First(x => x.Range == "ford").Average.Value);
-                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hunday").Average.Value);
+                    Assert.Equal(1000.3, results["Make"].Values.First(x => x.Range == "hyundai").Average.Value);
                 }
             }
         }
@@ -176,7 +176,7 @@ namespace SlowTests.Tests.Faceted
                     Assert.Equal(3, results.Result["Make"].Values.Count);
                     Assert.Equal(2400.6 / 2, results.Result["Make"].Values.First(x => x.Range == "toyota").Average.Value);
                     Assert.Equal(5800.6 / 2, results.Result["Make"].Values.First(x => x.Range == "ford").Average.Value);
-                    Assert.Equal(1000.3, results.Result["Make"].Values.First(x => x.Range == "hunday").Average.Value);
+                    Assert.Equal(1000.3, results.Result["Make"].Values.First(x => x.Range == "hyundai").Average.Value);
                 }
             }
         }
@@ -222,7 +222,7 @@ namespace SlowTests.Tests.Faceted
                 session.Store(new Car { Make = "Toyota", Year = 2012, Price = 2000.3m });
                 session.Store(new Car { Make = "Ford", Year = 2011, Price = 900.3m });
                 session.Store(new Car { Make = "Ford", Year = 2011, Price = 4900.3m });
-                session.Store(new Car { Make = "Hunday", Year = 2011, Price = 1000.3m });
+                session.Store(new Car { Make = "Hyundai", Year = 2011, Price = 1000.3m });
                 session.SaveChanges();
             }
 
