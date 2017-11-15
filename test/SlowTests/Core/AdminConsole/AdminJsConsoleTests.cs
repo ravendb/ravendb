@@ -88,10 +88,10 @@ namespace SlowTests.Core.AdminConsole
                 var serverUrl = database.Configuration.Core.ServerUrls;
 
                 var result3 = ExecuteScript(database, @"
-                                return database.Configuration.Core.ServerUrls
+                                return database.Configuration.Core.ServerUrls[0]
                              ");
 
-                Assert.Equal(serverUrl, result3.Values<string>());
+                Assert.Equal(serverUrl[0], result3.Value<string>());
             }
         }
 
