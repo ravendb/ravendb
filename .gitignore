@@ -223,5 +223,6 @@ artifacts/
 /Raven.Studio.Html5/Scripts/libs.min.js
 /Raven.Studio.Html5/node_modules/*
 /node_modules/
+/.idea/*
 /Raven.Server/Raven.Server_TemporaryKey.pfx
 /Raven.Studio.Html5/package-lock.json

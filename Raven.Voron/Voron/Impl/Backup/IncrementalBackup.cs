@@ -84,7 +84,7 @@ namespace Voron.Impl.Backup
 
                             if (firstJournalToBackup == -1)
                                 firstJournalToBackup = 0; // first time that we do incremental backup
-
+                                                                             
                             for (var journalNum = firstJournalToBackup; journalNum <= backupInfo.LastCreatedJournal; journalNum++)
                             {
                                 token.ThrowIfCancellationRequested();
@@ -143,10 +143,10 @@ namespace Voron.Impl.Backup
                                 header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
                             });
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
                             backupSuccess = false;
-                            throw;
+                            throw e;
                         }
                         finally
                         {
@@ -211,13 +211,16 @@ namespace Voron.Impl.Backup
         {
             var ownsPagers = options.OwnsPagers;
             options.OwnsPagers = false;
+            
             using (var env = new StorageEnvironment(options))
             {
                 foreach (var backupPath in backupPaths)
                 {
-                    Restore(env, backupPath);
+                    Restore(env, backupPath);                    
                 }
+                env.HeaderAccessor.Modify(x => x->Journal.LastSyncedJournal = -1);
             }
+            
             options.OwnsPagers = ownsPagers;
         }
 
@@ -231,7 +234,7 @@ namespace Voron.Impl.Backup
                     {
                         env.FlushLogToDataFile(txw);
                     }
-
+                    
                     using (var package = ZipFile.Open(singleBackupFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                     {
                         if (package.Entries.Count == 0)
@@ -344,9 +347,6 @@ namespace Voron.Impl.Backup
                             {
                                 header->TransactionId = lastTxHeader->TransactionId;
                                 header->LastPageNumber = lastTxHeader->LastPageNumber;
-
-                                header->Journal.LastSyncedJournal = journalNumber;
-                                header->Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
 
                                 header->Root = lastTxHeader->Root;
                                 header->FreeSpace = lastTxHeader->FreeSpace;
