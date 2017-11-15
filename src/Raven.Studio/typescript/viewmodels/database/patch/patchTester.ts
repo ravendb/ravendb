@@ -27,6 +27,7 @@ class patchTester extends viewModelBase {
     actions = {
         loadDocument: ko.observableArray<string>(),
         putDocument: ko.observableArray<any>(),
+        deleteDocument: ko.observableArray<string>(),
         info: ko.observableArray<string>()
     };
 
@@ -136,6 +137,7 @@ class patchTester extends viewModelBase {
     resetForm() {
         this.actions.loadDocument([]);
         this.actions.putDocument([]);
+        this.actions.deleteDocument([]);
         this.actions.info([]);
         this.afterDoc(undefined);
         this.beforeDoc(undefined);
@@ -195,6 +197,7 @@ class patchTester extends viewModelBase {
                         const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
                         this.actions.loadDocument(actions.LoadDocument);
                         this.actions.putDocument(actions.PutDocument);
+                        this.actions.deleteDocument(actions.DeleteDocument);
                         this.actions.info(debug.Info);
 
                         if (result.Status === "Patched") {
