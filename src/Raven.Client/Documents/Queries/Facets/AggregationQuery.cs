@@ -124,7 +124,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public override string ToString()
         {
-            var iq = GetIndexQuery(isAsync: false);
+            var iq = GetIndexQuery(_session is AsyncDocumentSession);
             return iq.ToString();
         }
     }
