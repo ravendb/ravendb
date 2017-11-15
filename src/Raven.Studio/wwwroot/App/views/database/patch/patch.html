@@ -128,6 +128,13 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#deletes" data-toggle="tab" title="Show information about deleted documents during patch execution">
+                        <i class="icon-trash"></i>
+                        <span>Deletes</span>
+                        <span class="label label-primary pull-right" data-bind="text: actions.deleteDocument().length || ''"></span>
+                    </a>
+                </li>
+                <li>
                     <a href="#output" data-toggle="tab" title="Show log generated during patch execution">
                         <i class="icon-administrator-js-console"></i>
                         <span>Output</span>
@@ -181,6 +188,14 @@
                             </ul>
 
                             <p data-bind="visible: actions.loadDocument().length === 0">No data available.</p>
+                        </div>
+                        <div class="tab-pane fade flex-vertical" id="deletes">
+                            <h3 class="flex-header">Deletes</h3>
+                            <ul class="flex-grow scroll" data-bind="foreach: actions.deleteDocument">
+                                <li data-bind="text: $data"></li>
+                            </ul>
+
+                            <p data-bind="visible: actions.deleteDocument().length === 0">No data available.</p>
                         </div>
                         <div class="tab-pane fade flex-vertical" id="output">
                             <h3 class="flex-header">Output</h3>
