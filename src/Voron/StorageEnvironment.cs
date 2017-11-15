@@ -346,7 +346,7 @@ namespace Voron
             }
             catch (Exception e)
             {
-                VoronUnrecoverableErrorException.Raise(this,e.Message);
+                VoronUnrecoverableErrorException.Raise(this, e.Message, e);
                 throw;
             }
         }
