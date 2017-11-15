@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using Raven.Server.ServerWide;
+using Sparrow.Platform;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config.Settings
@@ -9,12 +10,12 @@ namespace Raven.Server.Config.Settings
     public class PathSetting : PathSettingBase<PathSetting>
     {
         public PathSetting(string path, string baseDataDir = null)
-            : base(HandleAppDriveIfAbsolutePath(path), baseDataDir != null ? new PathSetting(baseDataDir) : null)
+            : base(ExpandConstantsInPath(path), baseDataDir != null ? new PathSetting(baseDataDir) : null)
         {
         }
 
         public PathSetting(string path, ResourceType type, string resourceName)
-            : base(HandleAppDriveIfAbsolutePath(EnsureResourceInfo(path, type, resourceName)))
+            : base(ExpandConstantsInPath(EnsureResourceInfo(path, type, resourceName)))
         {
         }
 
@@ -44,7 +45,7 @@ namespace Raven.Server.Config.Settings
             return Path.Combine(path, $"{type}s", name);
         }
 
-        private static string HandleAppDriveIfAbsolutePath(string path)
+        private static string ExpandConstantsInPath(string path)
         {
             if (path.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
             {
@@ -53,6 +54,14 @@ namespace Raven.Server.Config.Settings
 
                 if (string.IsNullOrEmpty(rootPath) == false)
                     return Regex.Replace(path, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
+            }
+
+
+            if (PlatformDetails.RunningOnPosix && path.StartsWith("$HOME", StringComparison.OrdinalIgnoreCase))
+            {
+                var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (string.IsNullOrEmpty(homeDir) == false)
+                    return path.Replace("$HOME", homeDir.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
             }
 
             return path;
