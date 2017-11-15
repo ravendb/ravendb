@@ -785,7 +785,10 @@ more responsive application.
                     result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
                 }
             }
-            DeletedEntities.Clear();
+            if (changes == null)
+            {
+                DeletedEntities.Clear();
+            }
         }
 
         private void PrepareForEntitiesPuts(SaveChangesData result)

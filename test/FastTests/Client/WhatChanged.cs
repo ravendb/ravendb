@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Session;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client
@@ -236,6 +237,35 @@ namespace FastTests.Client
                     var changes = newSession.Advanced.WhatChanged();
 
                     Assert.Equal(0, changes.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void WhatChanged_should_be_idempotent_operation()
+        {
+            //RavenDB-9150
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "user1" }, "users/1");
+                    session.Store(new User { Name = "user2", Age = 1 }, "users/2");
+                    session.Store(new User { Name = "user3", Age = 1}, "users/3");
+
+                    Assert.Equal(3, session.Advanced.WhatChanged().Count);
+                    session.SaveChanges();
+
+                    var user1 = session.Load<User>("users/1");
+                    var user2 = session.Load<User>("users/2");
+
+                    user1.Age = 10;
+                    session.Delete(user2);
+
+                    Assert.Equal(2, session.Advanced.WhatChanged().Count);
+                    Assert.Equal(2, session.Advanced.WhatChanged().Count);
+
                 }
             }
         }
