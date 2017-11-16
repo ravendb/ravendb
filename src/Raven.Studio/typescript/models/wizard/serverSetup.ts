@@ -22,6 +22,7 @@ class serverSetup {
     
     fixedLocalPort = ko.observable<number>();
     fixPortNumberOnLocalNode = ko.pureComputed(() => this.fixedLocalPort() != null);
+    runningOnPosix = ko.observable<boolean>();
     
     localIps = ko.observableArray<string>([]);
     
@@ -75,6 +76,8 @@ class serverSetup {
         } else {
             this.fixedLocalPort(null);
         }
+        
+        this.runningOnPosix(params.IsPosix);
     }
 
     private getPortPart() {

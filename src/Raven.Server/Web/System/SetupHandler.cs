@@ -142,6 +142,11 @@ namespace Raven.Server.Web.System
                 {
                     writer.WriteNull();   
                 }
+                
+                writer.WriteComma();
+                
+                writer.WritePropertyName(nameof(SetupParameters.IsPosix));
+                writer.WriteBool(setupParameters.IsPosix);
 
                 writer.WriteEndObject();
             }
