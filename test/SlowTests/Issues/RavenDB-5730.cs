@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
@@ -14,43 +15,43 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Whitespace_at_the_beginning_of_replication_destination_url_should_not_cause_issues()
+        public async Task Whitespace_at_the_beginning_of_replication_destination_url_should_not_cause_issues()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
                 var url = " " + storeB.Urls.First();
-                DoReplicationTest(storeA, storeB, url);
+                await DoReplicationTest(storeA, storeB, url);
             }
         }
 
         [Fact]
-        public void Whitespace_at_the_end_of_replication_destination_url_should_not_cause_issues()
+        public async Task Whitespace_at_the_end_of_replication_destination_url_should_not_cause_issues()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
                 var url = storeB.Urls.First() + " ";
-                DoReplicationTest(storeA, storeB, url);
+                await DoReplicationTest(storeA, storeB, url);
             }
         }
 
         [Fact]
-        public void Whitespace_at_the_beginning_and_end_of_replication_destination_url_should_not_cause_issues()
+        public async Task Whitespace_at_the_beginning_and_end_of_replication_destination_url_should_not_cause_issues()
         {
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
                 var url = " " + storeB.Urls.First() + " ";
-                DoReplicationTest(storeA, storeB, url);
+                await DoReplicationTest(storeA, storeB, url);
             }
         }       
 
-        private void DoReplicationTest(DocumentStore storeA, DocumentStore storeB, string url)
+        private async Task DoReplicationTest(DocumentStore storeA, DocumentStore storeB, string url)
         {
             var watcher = new ExternalReplication(storeB.Database, "Connection");
 
-            AddWatcherToReplicationTopology(storeA, watcher, new[] { url }).ConfigureAwait(false);
+             await AddWatcherToReplicationTopology(storeA, watcher, new[] { url }).ConfigureAwait(false);
             
             using (var session = storeA.OpenSession())
             {
