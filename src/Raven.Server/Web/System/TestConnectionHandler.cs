@@ -98,8 +98,10 @@ namespace Raven.Server.Web.System
             {
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                 writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
                 writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
+                writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                 writer.WriteNull();
             }
