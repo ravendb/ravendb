@@ -140,26 +140,33 @@ namespace Raven.Server.Web.Authentication
 
         public static void WriteCertificateAsPem(X509Certificate2 cert, string password, Stream s)
         {
+            
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(cert.Export(X509ContentType.Pkcs12, (string)null)), Array.Empty<char>());
             var entry = a.GetCertificate(a.Aliases.Cast<string>().First());
             var key = a.Aliases.Cast<string>().Select(a.GetKey).First(x => x != null);
             
-            using (var writer = new StreamWriter(s, Encoding.UTF8, 1024, leaveOpen: true))
+            using (var writer = new StreamWriter(s, Encoding.ASCII, 1024, leaveOpen: true))
             {
                 var pw = new PemWriter(writer);
+                pw.WriteObject(entry.Certificate);
+
+                object privateKey;
                 if (password != null)
                 {
-                    pw.WriteObject(key.Key,
-                        "AES-128-CBC",
-                        password.ToCharArray(), 
-                        CertificateUtils.GetSeededSecureRandom());
+                    privateKey = new MiscPemGenerator(
+                            key.Key,
+                            "AES-128-CBC",
+                            password.ToCharArray(), 
+                            CertificateUtils.GetSeededSecureRandom())
+                        .Generate();
                 }
                 else
                 {
-                    pw.WriteObject(key.Key);
+                    privateKey = key.Key;
                 }
-                pw.WriteObject(entry.Certificate);
+                pw.WriteObject(privateKey);
+
                 writer.Flush();
             }
         }
