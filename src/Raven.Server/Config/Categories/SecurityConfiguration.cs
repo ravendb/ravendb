@@ -97,12 +97,12 @@ namespace Raven.Server.Config.Categories
                 else
                 {
                     if (isServerUrlHttps)
-                        throw new InvalidOperationException($"Configured server address { configuration.Core.ServerUrls } requires HTTPS. Please set up certification information under { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } configuration key.");
+                        throw new InvalidOperationException($"Configured server address { string.Join(", ", configuration.Core.ServerUrls) } requires HTTPS. Please set up certification information under { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } configuration key.");
 
                     if (serverIsWithinUnsecuredAccessRange == false)
                     {
                         configuration.Security.UnsecureAccessWarningMessage =
-                            $"Configured {RavenConfiguration.GetKey(x => x.Core.ServerUrls)} \"{configuration.Core.ServerUrls}\" is not set within allowed unsecured access address range - { configuration.Security.UnsecuredAccessAllowed }. Use a server url within unsecure access address range ({RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)} option) or fill in server certificate information.";
+                            $"Configured {RavenConfiguration.GetKey(x => x.Core.ServerUrls)} \"{string.Join(", ", configuration.Core.ServerUrls)}\" is not set within allowed unsecured access address range - { configuration.Security.UnsecuredAccessAllowed }. Use a server url within unsecure access address range ({RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)} option) or fill in server certificate information.";
                         configuration.Security.IsUnsecureAccessSetupValid = false;
                     }
                 }
