@@ -5,17 +5,21 @@ using System.Text;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cli;
+using Sparrow.Platform;
 
 namespace Raven.Server.Commercial
 {
     public class SetupParameters
     {
         public int? FixedServerPortNumber { get;set; }
+        
+        public bool IsPosix { get; set; }
 
         public static SetupParameters Get(ServerStore serverStore)
         {
             var result = new SetupParameters();
             DetermineFixedPortNumber(serverStore, result);
+            result.IsPosix = PlatformDetails.RunningOnPosix;
             return result;
         }
 
