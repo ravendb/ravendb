@@ -1,0 +1,12 @@
+image: ravendb/ravendb:latest
+manifests:
+  -
+    image: ravendb/ravendb:ubuntu-latest
+    platform:
+      architecture: amd64
+      os: linux
+  -
+    image: ravendb/ravendb:windows-nanoserver-latest
+    platform:
+      architecture: amd64
+      os: windows
