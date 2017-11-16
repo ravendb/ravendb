@@ -878,7 +878,7 @@ namespace Raven.Server.Commercial
 
             foreach (var value in GetCertificateAlternativeNames(cert))
             {
-                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) || value.StartsWith(nodeTag + "-", StringComparison.OrdinalIgnoreCase) == false)
+                if (value.StartsWith(nodeTag + ".", StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
                 domain = value;
