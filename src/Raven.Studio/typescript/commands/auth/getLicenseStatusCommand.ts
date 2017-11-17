@@ -5,7 +5,7 @@ class getLicenseStatusCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         const url = endpoints.global.license.licenseStatus;
-        return this.query(url, null)
+        return this.query<Raven.Server.Commercial.LicenseStatus>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to get license status", response.responseText));
     }
 }

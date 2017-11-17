@@ -17,7 +17,7 @@ class importParent extends viewModelBase {
                     title: 'Import database from file',
                     nav: true,
                     tabName: "From file (.ravendbdump)",
-                    hash: appUrl.forCurrentDatabase().importDatabaseFromFileUrl
+                    dynamicHash: appUrl.forCurrentDatabase().importDatabaseFromFileUrl
                 },
                 {
                     route: 'databases/tasks/import/migrate',
@@ -25,7 +25,7 @@ class importParent extends viewModelBase {
                     title: 'Import database from another RavenDB',
                     tabName: "From another RavenDB Server",
                     nav: true,
-                    hash: appUrl.forCurrentDatabase().migrateDatabaseUrl
+                    dynamicHash: appUrl.forCurrentDatabase().migrateDatabaseUrl
                 },
                 {
                     route: 'databases/tasks/import/csv',
@@ -33,7 +33,7 @@ class importParent extends viewModelBase {
                     title: 'Import collection from CSV file',
                     tabName: "From CSV file",
                     nav: true,
-                    hash: appUrl.forCurrentDatabase().importCollectionFromCsv
+                    dynamicHash: appUrl.forCurrentDatabase().importCollectionFromCsv
                 }
             ])
             .buildNavigationModel();

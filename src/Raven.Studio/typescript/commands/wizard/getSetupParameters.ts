@@ -6,7 +6,7 @@ class getSetupParameters extends commandBase {
     execute(): JQueryPromise<Raven.Server.Commercial.SetupParameters> {      
         const url = endpoints.global.setup.setupParameters;
         
-        return this.query(url, null)
+        return this.query<Raven.Server.Commercial.SetupParameters>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to get setup parameters", response.responseText, response.statusText));            
     }
 }

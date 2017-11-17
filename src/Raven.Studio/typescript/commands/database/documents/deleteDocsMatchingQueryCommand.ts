@@ -14,7 +14,7 @@ class deleteDocsMatchingQueryCommand extends commandBase {
         };
 
         const url = endpoints.databases.queries.queries;
-        return this.del(url, JSON.stringify(args), this.db)
+        return this.del<operationIdDto>(url, JSON.stringify(args), this.db)
             .fail((response: JQueryXHR) => this.reportError("Error deleting docs matching query", response.responseText, response.statusText));
     }
 

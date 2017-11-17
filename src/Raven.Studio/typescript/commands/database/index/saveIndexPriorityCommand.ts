@@ -16,7 +16,7 @@ class saveIndexPriorityCommand extends commandBase {
         
         const url = endpoints.databases.index.indexesSetPriority;
         
-        return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })
+        return this.post<void>(url, JSON.stringify(payload), this.db, { dataType: undefined })
             .done(() => {
                 this.reportSuccess(`${this.indexName} Priority was set to ${this.priority}`);
             })

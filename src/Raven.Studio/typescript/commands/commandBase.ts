@@ -11,7 +11,7 @@ class commandBase {
     // TODO: better place for this?
     static ravenClientVersion = '4.0.0.0';
 
-    execute<T>(): JQueryPromise<T> {
+    execute(): JQueryPromise<any> {
         throw new Error("Execute must be overridden.");
     }
 
@@ -19,7 +19,7 @@ class commandBase {
         return appUrl.urlEncodeArgs(args);
     }
 
-    getTimeToAlert(longWait: boolean) {
+    getTimeToAlert(longWait: boolean): number {
         return longWait ? 60000 : 9000;
     }
 
@@ -43,7 +43,7 @@ class commandBase {
     protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
         const ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
-            const task = $.Deferred();
+            const task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
                 const allHeaders = xhr.getAllResponseHeaders();
                 if (allHeaders) {

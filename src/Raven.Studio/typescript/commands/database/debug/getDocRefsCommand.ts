@@ -20,7 +20,7 @@ class getDocRefsCommand extends commandBase {
         };
 
         var url = "/debug/docrefs";//TODO: use endpoints
-        var docRefsTask = $.Deferred();
+        var docRefsTask = $.Deferred<pagedResult<any>>();
         this.query<statusDebugDocrefsDto>(url, args, this.ownerDb).
             fail(response => docRefsTask.reject(response)).
             done((docRefs:statusDebugDocrefsDto) => {

@@ -8,7 +8,7 @@ class getSubscriptionsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<queryResultDto<subscriptionResponseItemDto>> {
-        return this.query(endpoints.databases.subscriptions.subscriptions, null, this.db)
+        return this.query<queryResultDto<subscriptionResponseItemDto>>(endpoints.databases.subscriptions.subscriptions, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to load subscriptions", response.responseText));
     }
 }

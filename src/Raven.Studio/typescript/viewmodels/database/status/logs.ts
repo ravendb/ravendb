@@ -87,7 +87,7 @@ class logs extends viewModelBase {
     fetchLogs(): JQueryPromise<logDto[]> {
         var db = this.activeDatabase();
         if (db) {
-            var deferred = $.Deferred();
+            var deferred = $.Deferred<logDto[]>();
             new getLogsCommand(db)
                 .execute()
                 .done((results: logDto[]) => {

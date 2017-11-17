@@ -8,7 +8,7 @@ class getClusterObserverDecisionsCommand extends commandBase {
         
         const url = endpoints.global.rachisAdmin.adminClusterObserverDecisions;
 
-        return this.query(url, null)
+        return this.query<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to get cluster observer log entries", response.responseText));
     }
 }

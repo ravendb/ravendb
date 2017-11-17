@@ -10,7 +10,7 @@ class loadDatabaseCommand extends commandBase {
 
     execute(): JQueryPromise<void> {
         const url = endpoints.databases.stats.stats;
-        return this.query<void>(url, null, this.db, null, this.getTimeToAlert(true));
+        return this.query<void>(url, null, this.db, null, null, this.getTimeToAlert(true));
     }
 }
 

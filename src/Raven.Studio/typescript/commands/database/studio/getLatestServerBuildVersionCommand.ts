@@ -13,7 +13,7 @@ class getLatestServerBuildVersionCommand extends commandBase {
             max: this.max
         }
 
-        return this.query("/studio-tasks/latest-server-build-version", args, null, null, this.getTimeToAlert(true));//TODO: use endpoints
+        return this.query("/studio-tasks/latest-server-build-version", args, null, null, null, this.getTimeToAlert(true));//TODO: use endpoints
     }
 }
 
