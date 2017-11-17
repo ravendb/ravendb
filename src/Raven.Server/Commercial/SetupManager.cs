@@ -1289,7 +1289,7 @@ namespace Raven.Server.Commercial
                         .UseShutdownTimeout(TimeSpan.FromMilliseconds(150))
                         .Build();
 
-                    webHost.Start();
+                    await webHost.StartAsync(token);
                 }
                 catch (Exception e)
                 {
@@ -1331,7 +1331,7 @@ namespace Raven.Server.Commercial
                                 result = await response.Content.ReadAsStringAsync();
                                 if (result != guid)
                                 {
-                                    throw new InvalidOperationException($"Expected result guid:{guid} but got {result}.");
+                                    throw new InvalidOperationException($"Expected result guid: {guid} but got {result}.");
                                 }
                             }
                         }
