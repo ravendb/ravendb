@@ -11,7 +11,7 @@ class copyIndexDialog extends dialogViewModelBase {
 
     //TODO: isPAste in copy dialog ? 
     constructor(private indexName: string, private db: database, private isPaste: boolean = false, elementToFocusOnDismissal?: string) {
-        super(elementToFocusOnDismissal);
+        super({ elementToFocusOnDismissal: elementToFocusOnDismissal });
         aceEditorBindingHandler.install();
     }
 

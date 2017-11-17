@@ -13,7 +13,7 @@ class deleteCertificateCommand extends commandBase {
         };
         const url = endpoints.global.adminCertificates.adminCertificates + this.urlEncodeArgs(args);
         
-        return this.del(url, null, null)
+        return this.del<Raven.Server.Commercial.LicenseStatus>(url, null, null)
             .fail((response: JQueryXHR) => this.reportError("Unable to delete certificate: " + this.certificateThumbprint, response.responseText, response.statusText));
     }
 }

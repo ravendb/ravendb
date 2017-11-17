@@ -8,7 +8,7 @@ class latestBuildReminder extends dialogViewModelBase {
     mute = ko.observable<boolean>(false);
 
     constructor(private latestServerBuild: serverBuildVersionDto, elementToFocusOnDismissal?: string) {
-        super(elementToFocusOnDismissal);
+        super({ elementToFocusOnDismissal: elementToFocusOnDismissal });
 
         this.mute.subscribe(() => {
             serverBuildReminder.mute(this.mute());

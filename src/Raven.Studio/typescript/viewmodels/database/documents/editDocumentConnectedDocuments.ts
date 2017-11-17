@@ -253,7 +253,7 @@ class connectedDocuments {
             return connectedDocuments.emptyDocResult<connectedDocumentItem>();
         }
 
-        const fetchTask = $.Deferred<pagedResult<connectedDocument>>();
+        const fetchTask = $.Deferred<pagedResult<connectedDocumentItem>>();
         new getDocumentRevisionsCommand(doc.getId(), this.db(), skip, take, true)
             .execute()
             .done(result => {

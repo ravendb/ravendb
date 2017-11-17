@@ -8,7 +8,7 @@ class chunkFetcher<T> {
         }
     }
 
-    task = $.Deferred();
+    task = $.Deferred<T[]>();
     result: T[] = [];
 
 

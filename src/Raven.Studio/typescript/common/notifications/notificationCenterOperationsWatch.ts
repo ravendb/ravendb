@@ -26,14 +26,14 @@ class notificationCenterOperationsWatch {
             progresses.push(onProgress);
         }
 
-        return this.getOrCreateOperation(operationId).promise();
+        return this.getOrCreateOperation<TResult>(operationId).promise();
     }
 
-    private getOrCreateOperation(operationId: number): JQueryDeferred<Raven.Client.Documents.Operations.IOperationResult> {
+    private getOrCreateOperation<TResult extends Raven.Client.Documents.Operations.IOperationResult>(operationId: number): JQueryDeferred<TResult> {
         if (this.operations.has(operationId)) {
-            return this.operations.get(operationId);
+            return this.operations.get(operationId) as JQueryDeferred<TResult>;
         } else {
-            const task = $.Deferred<Raven.Client.Documents.Operations.IOperationResult>();
+            const task = $.Deferred<TResult>();
             this.operations.set(operationId, task);
             return task;
         }

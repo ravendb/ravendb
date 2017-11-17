@@ -2,8 +2,8 @@ import commandBase = require("commands/commandBase");
 
 class getServerBuildVersionCommand extends commandBase {
 
-    execute(): JQueryPromise<serverBuildVersionDto> {
-        return this.query("/build/version", null);//TODO: use endpoints
+    execute() {
+        return this.query<serverBuildVersionDto>("/build/version", null);//TODO: use endpoints
     }
 }
 

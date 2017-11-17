@@ -454,8 +454,8 @@ class replicationStats extends viewModelBase {
         const onDataUpdate = (data: Raven.Server.Documents.Replication.LiveReplicationPerformanceCollector.ReplicationPerformanceStatsBase<Raven.Client.Documents.Replication.ReplicationPerformanceBase>[]) => {
             let timeRange: [Date, Date];
             if (!firstTime) {
-                const timeToRemap = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
-                timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x));
+                const timeToRemap: [number,  number] = this.brush.empty() ? this.xBrushNumericScale.domain() as [number, number] : this.brush.extent() as [number, number];
+                timeRange = timeToRemap.map(x => this.xBrushTimeScale.invert(x)) as [Date, Date];
             }
 
             this.data = data;
@@ -463,7 +463,7 @@ class replicationStats extends viewModelBase {
             const [workData, maxConcurrentReplications] = this.prepareTimeData();
 
             if (!firstTime) {
-                const newBrush: [number, number] = timeRange.map(x => this.xBrushTimeScale(x));
+                const newBrush = timeRange.map(x => this.xBrushTimeScale(x)) as [number,  number];
                 this.setZoomAndBrush(newBrush, brush => brush.extent(newBrush));
             }
 

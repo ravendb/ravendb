@@ -120,6 +120,7 @@ interface Storage {
 interface DurandalRouteConfiguration {
     tooltip?: string;
     dynamicHash?: KnockoutObservable<string> | (() => string);
+    tabName?: string;
 }
 
 declare module AceAjax {

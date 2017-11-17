@@ -22,7 +22,7 @@ class showDataDialog extends dialogViewModelBase {
     });
 
     constructor(private title: string, inputData: string, private lang: supportedLangs, elementToFocusOnDismissal?: string) {
-        super(elementToFocusOnDismissal);
+        super({ elementToFocusOnDismissal: elementToFocusOnDismissal });
 
         this.inputData(inputData);
     }

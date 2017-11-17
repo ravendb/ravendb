@@ -5,7 +5,8 @@
     "removeComments": false,
     "declaration": false,
     "sourceMap": true,
-    "target": "es5",
+    "target": "es5", 
+    "skipLibCheck": true,
     "module": "amd",
     "typeRoots": [
         "./typings/**/*"
