@@ -37,7 +37,7 @@ namespace Raven.TestDriver
         private readonly ConcurrentDictionary<DocumentStore, object> _documentStores =
             new ConcurrentDictionary<DocumentStore, object>();
 
-        private int _index;
+        private static int _index;
 
         protected virtual string DatabaseDumpFilePath => null;
 
