@@ -5,11 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
-using System.Threading.Tasks;
-
 using FastTests;
-using Raven.Client;
-using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -262,6 +258,7 @@ namespace SlowTests.Core.Indexing
                     session.SaveChanges();
                     WaitForIndexing(store);
 
+#if FEATURE_HIGHLIGHTING
                     FieldHighlightings highlightings;
                     companies = session.Advanced.DocumentQuery<Company>("Companies/CustomAnalyzers")
                         .Highlight("Name", 128, 1, out highlightings)
@@ -279,6 +276,7 @@ namespace SlowTests.Core.Indexing
                         "The <b style=\"background:yellow\">lazy</b> dogs, Bob@hotmail.com 123432.",
                         fragments.First()
                         );
+#endif
                 }
             }
         }

@@ -54,10 +54,33 @@ namespace Raven.Client.Documents.Session
             (indexName, collectionName) = ProcessQueryParameters(type, indexName, collectionName, Conventions);
 
             var queryStatistics = new QueryStatistics();
+#if FEATURE_HIGHLIGHTING
             var highlightings = new QueryHighlightings();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, type, queryStatistics, highlightings, isMapReduce);
+#endif
+            var ravenQueryProvider = new RavenQueryProvider<T>(
+                this,
+                indexName,
+                collectionName,
+                type,
+                queryStatistics,
+#if FEATURE_HIGHLIGHTING
+                highlightings,
+#endif
+                isMapReduce);
+
             var inspector = new RavenQueryInspector<T>();
-            inspector.Init(ravenQueryProvider, queryStatistics, highlightings, indexName, collectionName, null, this, isMapReduce);
+            inspector.Init(
+                ravenQueryProvider,
+                queryStatistics,
+#if FEATURE_HIGHLIGHTING
+                highlightings,
+#endif
+                indexName,
+                collectionName,
+                null,
+                this,
+                isMapReduce);
+
             return inspector;
         }
 

@@ -25,10 +25,12 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public int SkippedResults { get; set; }
 
+#if FEATURE_HIGHLIGHTING
         /// <summary>
         /// Highlighter results (if requested).
         /// </summary>
         public Dictionary<string, Dictionary<string, string[]>> Highlightings { get; set; }
+#endif
 
         /// <summary>
         /// The duration of actually executing the query server side
@@ -69,9 +71,9 @@ namespace Raven.Client.Documents.Queries
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
-                Highlightings = Highlightings?.ToDictionary(
-                    pair => pair.Key,
-                    x => new Dictionary<string, string[]>(x.Value)),
+#if FEATURE_HIGHLIGHTING
+                Highlightings = Highlightings?.ToDictionary(pair => pair.Key, x => new Dictionary<string, string[]>(x.Value)),
+#endif
                 ScoreExplanations = ScoreExplanations?.ToDictionary(x => x.Key, x => x.Value),
                 TimingsInMs = TimingsInMs?.ToDictionary(x => x.Key, x => x.Value),
                 LastQueryTime = LastQueryTime,

@@ -1,9 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -66,8 +64,10 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
+#if FEATURE_HIGHLIGHTING
                 using (var session = store.OpenSession())
                 {
+
                     FieldHighlightings highlightings;
 
                     var result = session.Advanced.DocumentQuery<object, BlogPosts_ForSearch>()
@@ -79,6 +79,7 @@ namespace SlowTests.Issues
                     //That works
                     Assert.NotEmpty(result);
                     Assert.NotEmpty(highlightings.GetFragments(result[0].Id));
+
                 }
 
                 using (var session = store.OpenSession())
@@ -94,6 +95,7 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(result);
                     Assert.NotEmpty(highlightings.GetFragments(result[0].Id)); //No highlightings
                 }
+#endif
             }
         }
     }

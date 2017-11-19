@@ -12,10 +12,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
-using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -30,7 +28,9 @@ namespace Raven.Client.Documents.Linq
         private readonly string _collectionName;
         private readonly IDocumentQueryGenerator _queryGenerator;
         private readonly QueryStatistics _queryStatistics;
+#if FEATURE_HIGHLIGHTING
         private readonly QueryHighlightings _highlightings;
+#endif
         private readonly bool _isMapReduce;
 
         /// <summary>
@@ -42,7 +42,9 @@ namespace Raven.Client.Documents.Linq
             string collectionName,
             Type originalQueryType,
             QueryStatistics queryStatistics,
+#if FEATURE_HIGHLIGHTING
             QueryHighlightings highlightings,
+#endif
             bool isMapReduce)
         {
             FieldsToFetch = new HashSet<FieldToFetch>();
@@ -52,7 +54,9 @@ namespace Raven.Client.Documents.Linq
             _indexName = indexName;
             _collectionName = collectionName;
             _queryStatistics = queryStatistics;
+#if FEATURE_HIGHLIGHTING
             _highlightings = highlightings;
+#endif
             _isMapReduce = isMapReduce;
         }
 
@@ -93,8 +97,16 @@ namespace Raven.Client.Documents.Linq
             if (typeof(T) == typeof(TS))
                 return this;
 
-            var ravenQueryProvider =
-                new RavenQueryProvider<TS>(_queryGenerator, _indexName, _collectionName, OriginalQueryType, _queryStatistics, _highlightings, _isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<TS>(
+                _queryGenerator,
+                _indexName,
+                _collectionName,
+                OriginalQueryType,
+                _queryStatistics,
+#if FEATURE_HIGHLIGHTING
+                _highlightings,
+#endif
+                _isMapReduce);
 
             ravenQueryProvider.Customize(_customizeQuery);
 
@@ -117,7 +129,17 @@ namespace Raven.Client.Documents.Linq
         {
             var a = _queryGenerator.CreateRavenQueryInspector<TS>();
 
-            a.Init(this, _queryStatistics, _highlightings, _indexName, _collectionName, expression, (InMemoryDocumentSessionOperations)_queryGenerator, _isMapReduce);
+            a.Init(
+                this,
+                _queryStatistics,
+#if FEATURE_HIGHLIGHTING
+                _highlightings,
+#endif
+                _indexName,
+                _collectionName,
+                expression,
+                (InMemoryDocumentSessionOperations)_queryGenerator,
+                _isMapReduce);
 
             return a;
         }
@@ -130,7 +152,16 @@ namespace Raven.Client.Documents.Linq
                 var queryInspectorGenericType = typeof(RavenQueryInspector<>).MakeGenericType(elementType);
                 var args = new object[]
                 {
-                    this, _queryStatistics, _highlightings, _indexName, _collectionName, expression, _queryGenerator, _isMapReduce
+                    this,
+                    _queryStatistics,
+#if FEATURE_HIGHLIGHTING
+                    _highlightings,
+#endif
+                    _indexName,
+                    _collectionName,
+                    expression,
+                    _queryGenerator,
+                    _isMapReduce
                 };
                 var queryInspectorInstance = Activator.CreateInstance(queryInspectorGenericType);
                 var methodInfo = queryInspectorGenericType.GetMethod("Init");

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if FEATURE_HIGHLIGHTING
+using System;
 using System.Collections;
 using System.Linq.Expressions;
 
@@ -76,3 +77,4 @@ namespace Raven.Client.Documents.Session
         }
     }
 }
+#endif
