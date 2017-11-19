@@ -21,7 +21,6 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -1238,7 +1237,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         private void UpdateStatsAndHighlightings(QueryResult queryResult)
         {
             QueryStats.UpdateQueryStats(queryResult);
+#if FEATURE_HIGHLIGHTING
             Highlightings.Update(queryResult);
+#endif
         }
 
         private void BuildSelect(StringBuilder writer)

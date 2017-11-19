@@ -9,12 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Linq
@@ -27,7 +22,9 @@ namespace Raven.Client.Documents.Linq
         private Expression _expression;
         private IRavenQueryProvider _provider;
         private QueryStatistics _queryStats;
+#if FEATURE_HIGHLIGHTING
         private QueryHighlightings _highlightings;
+#endif
         private string _indexName;
         private string _collectionName;
         private InMemoryDocumentSessionOperations _session;
@@ -39,7 +36,9 @@ namespace Raven.Client.Documents.Linq
         public void Init(
             IRavenQueryProvider provider,
             QueryStatistics queryStats,
+#if FEATURE_HIGHLIGHTING
             QueryHighlightings highlightings,
+#endif
             string indexName,
             string collectionName,
             Expression expression,
@@ -48,7 +47,9 @@ namespace Raven.Client.Documents.Linq
         {
             _provider = provider?.For<T>() ?? throw new ArgumentNullException(nameof(provider));
             _queryStats = queryStats;
+#if FEATURE_HIGHLIGHTING
             _highlightings = highlightings;
+#endif
             _indexName = indexName;
             _collectionName = collectionName;
             _session = session;
@@ -60,7 +61,9 @@ namespace Raven.Client.Documents.Linq
         private void AfterQueryExecuted(QueryResult queryResult)
         {
             _queryStats.UpdateQueryStats(queryResult);
+#if FEATURE_HIGHLIGHTING
             _highlightings.Update(queryResult);
+#endif
         }
 
         #region IOrderedQueryable<T> Members

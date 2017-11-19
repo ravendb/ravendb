@@ -73,14 +73,16 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(string s)
         {
-            if (s == null) return;
+            if (s == null)
+                return;
             fixed (char* pQ = s)
                 _buffer.Write((byte*)pQ, s.Length * sizeof(char));
         }
 
         public void Write(string[] s)
         {
-            if (s == null) return;
+            if (s == null)
+                return;
             for (int i = 0; i < s.Length; i++)
             {
                 Write(s[i]);
@@ -89,7 +91,8 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(List<string> s)
         {
-            if (s == null) return;
+            if (s == null)
+                return;
             for (int i = 0; i < s.Count; i++)
             {
                 Write(s[i]);
@@ -101,6 +104,7 @@ namespace Raven.Client.Documents.Queries
             _buffer.Dispose();
         }
 
+#if FEATURE_HIGHLIGHTING
         public void Write(HighlightedField[] highlightedFields)
         {
             if (highlightedFields == null) return;
@@ -112,6 +116,7 @@ namespace Raven.Client.Documents.Queries
                 Write(highlightedFields[i].FragmentsField);
             }
         }
+#endif
 
         public void Write(Parameters qp)
         {

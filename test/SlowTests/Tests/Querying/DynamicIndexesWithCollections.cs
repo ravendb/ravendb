@@ -217,6 +217,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
+#if FEATURE_HIGHLIGHTING
                     FieldHighlightings titleHighlightings;
                     FieldHighlightings categoryHighlightings;
 
@@ -235,6 +236,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+#endif
                 }
             }
         }

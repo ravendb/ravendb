@@ -1,3 +1,4 @@
+#if FEATURE_HIGHLIGHTING
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Queries;
@@ -73,3 +74,4 @@ namespace Raven.Client.Documents.Session
         }
     }
 }
+#endif

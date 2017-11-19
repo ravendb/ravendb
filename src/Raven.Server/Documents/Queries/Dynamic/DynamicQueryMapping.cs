@@ -21,7 +21,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public Dictionary<string, DynamicQueryMappingItem> GroupByFields { get; private set; }
 
+#if FEATURE_HIGHLIGHTING
         public string[] HighlightedFields { get; private set; }
+#endif
 
         public bool IsGroupBy { get; private set; }
 

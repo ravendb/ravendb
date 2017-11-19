@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -527,6 +526,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </remarks>
         TSelf Fuzzy(decimal fuzzy);
 
+#if FEATURE_HIGHLIGHTING
         /// <summary>
         ///     Adds matches highlighting for the specified field.
         /// </summary>
@@ -608,6 +608,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
         /// <param name="highlightings">Field highlights for all results.</param>
         TSelf Highlight<TValue>(Expression<Func<T, TValue>> propertySelector, Expression<Func<T, TValue>> keyPropertySelector, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
+#endif
 
         /// <summary>
         ///     Includes the specified path in the query, loading the document specified in that path
@@ -690,6 +691,7 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf CustomSortUsing(string typeName, bool descending);
 #endif
 
+#if FEATURE_HIGHLIGHTING
         /// <summary>
         ///     Sets the tags to highlight matches with.
         /// </summary>
@@ -703,6 +705,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="preTags">Prefix tags.</param>
         /// <param name="postTags">Postfix tags.</param>
         TSelf SetHighlighterTags(string[] preTags, string[] postTags);
+#endif
 
         /// <summary>
         /// Sorts the query results by distance.

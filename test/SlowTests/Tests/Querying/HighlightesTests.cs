@@ -82,6 +82,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var session = store.OpenSession())
                 {
+#if FEATURE_HIGHLIGHTING
                     FieldHighlightings titleHighlighting, slugHighlighting, contentHighlighting;
                     var results = session.Advanced.DocumentQuery<ISearchable>("ContentSearchIndex")
                         .WaitForNonStaleResults()
@@ -118,6 +119,7 @@ namespace SlowTests.Tests.Querying
 
                         orderedResults.Add(new SearchResults { Result = searchable, Highlights = highlights, Title = title });
                     }
+#endif
                 }
             }
         }

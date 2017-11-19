@@ -1,3 +1,4 @@
+#if FEATURE_HIGHLIGHTING
 // -----------------------------------------------------------------------
 //  <copyright file="HighlightedField.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -118,3 +119,4 @@ namespace Raven.Client.Documents.Queries
         }
     }
 }
+#endif

@@ -1,8 +1,6 @@
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using SlowTests.Utils.Analyzers;
 using Xunit;
 
@@ -37,6 +35,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+#if FEATURE_HIGHLIGHTING
                     FieldHighlightings highlightings;
 
                     var goodResult = session.Advanced.DocumentQuery<Question, QuestionIndex>()
@@ -53,6 +52,7 @@ namespace SlowTests.MailingList
                         .Search(x => x.QuestionText, badSearchTerm)
                         .OrderByScore()
                         .FirstOrDefault();
+#endif
                 }
             }
         }

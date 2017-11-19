@@ -826,9 +826,11 @@ namespace Raven.Client.Documents.Session
                 BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
+#if FEATURE_HIGHLIGHTING
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
+#endif
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,

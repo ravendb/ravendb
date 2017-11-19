@@ -6,7 +6,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
@@ -233,6 +232,7 @@ namespace Raven.Client.Documents.Session
 
         void OrderByScoreDescending();
 
+#if FEATURE_HIGHLIGHTING
         /// <summary>
         ///   Adds matches highlighting for the specified field.
         /// </summary>
@@ -286,7 +286,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="preTags">Prefix tags.</param>
         /// <param name="postTags">Postfix tags.</param>
-        void SetHighlighterTags(string[] preTags, string[] postTags);
+        void SetHighlighterTags(string[] preTags, string[] postTags);    
+#endif
 
         /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
