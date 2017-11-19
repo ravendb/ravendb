@@ -749,10 +749,14 @@ namespace Raven.Server.Documents.Queries
 
             var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
 
-            if (field.Aggregations.ContainsKey(aggregation))
-                throw new InvalidQueryException($"Detected duplicate facet aggregation operation '{aggregation}'. Each facet can only contain one of each available operations.", QueryText, parameters);
-
-            field.AddAggregation(aggregation, methodFieldName);
+            try
+            {
+                field.AddAggregation(aggregation, methodFieldName);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidQueryException("Parsing facet aggregation operation failed.", QueryText, parameters, e);
+            }
         }
 
         private SelectField GetSelectValue(string alias, FieldExpression expressionField, BlittableJsonReaderObject parameters)

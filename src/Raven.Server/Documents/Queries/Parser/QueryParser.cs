@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidQueryException("Update clause contains invalid script",Scanner.Input,e);
+                        throw new InvalidQueryException("Update clause contains invalid script", Scanner.Input, null, e);
                     }
                     break;
                 default:
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             catch (Exception e)
             {
-                throw new InvalidQueryException("Invalid script inside function " + name, Scanner.Input,e);
+                throw new InvalidQueryException("Invalid script inside function " + name, Scanner.Input, null, e);
             }
             return (name, functionText);
         }
@@ -280,7 +280,7 @@ namespace Raven.Server.Documents.Queries.Parser
             var functionStart = Scanner.Position;
             if (Scanner.FunctionBody())
             {
-                query.SelectFunctionBody = 
+                query.SelectFunctionBody =
                     Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
 
                 // validate that this is valid JS code
@@ -290,7 +290,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidQueryException("Select clause contains invalid script", Scanner.Input, e);
+                    throw new InvalidQueryException("Select clause contains invalid script", Scanner.Input, null, e);
                 }
 
                 return new List<(QueryExpression, StringSegment?)>();
@@ -909,7 +909,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan('.') == false)
                     break;
             }
-            
+
 
             token = new FieldExpression(parts)
             {
