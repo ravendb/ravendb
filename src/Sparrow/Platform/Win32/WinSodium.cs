@@ -29,8 +29,8 @@ namespace Sparrow.Platform.Win32
         // ReSharper disable once InconsistentNaming
         public static UIntPtr crypto_generichash_bytes()
         {
-            return _is32bits ? 
-                X86.crypto_generichash_bytes() : 
+            return _is32bits ?
+                X86.crypto_generichash_bytes() :
                 X64.crypto_generichash_bytes();
         }
 
@@ -67,7 +67,7 @@ namespace Sparrow.Platform.Win32
             ulong mlen)
         {
             return _is32bits ?
-                X86.crypto_sign_update(state,m, mlen) :
+                X86.crypto_sign_update(state, m, mlen) :
                 X64.crypto_sign_update(state, m, mlen);
         }
 
@@ -203,7 +203,7 @@ namespace Sparrow.Platform.Win32
                 X86.crypto_aead_chacha20poly1305_encrypt_detached(
                     c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k) :
                 X64.crypto_aead_chacha20poly1305_encrypt_detached(
-                    c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k) ;
+                    c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
         }
 
 
@@ -358,15 +358,15 @@ namespace Sparrow.Platform.Win32
 
         public static UIntPtr crypto_kx_secretkeybytes()
         {
-            return _is32bits ? 
-                X86.crypto_kx_secretkeybytes() : 
+            return _is32bits ?
+                X86.crypto_kx_secretkeybytes() :
                 X64.crypto_kx_secretkeybytes();
         }
 
         public static UIntPtr crypto_box_macbytes()
         {
-            return _is32bits ? 
-                X86.crypto_box_macbytes() : 
+            return _is32bits ?
+                X86.crypto_box_macbytes() :
                 X64.crypto_box_macbytes();
         }
 
@@ -519,9 +519,11 @@ namespace Sparrow.Platform.Win32
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                                $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Make sure that this machine has the appropriate C runtime for {LIB_SODIUM}.",
+                                $"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Please ensure that latest redistributable package is installed.",
                                 dllNotFoundEx);
                     }
+
+                    throw;
                 }
             }
 
@@ -814,9 +816,11 @@ namespace Sparrow.Platform.Win32
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                                $"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Make sure that this machine has the appropriate C runtime for {LIB_SODIUM}.",
-                                dllNotFoundEx);
+                            $"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Please ensure that latest redistributable package is installed.",
+                            dllNotFoundEx);
                     }
+
+                    throw;
                 }
             }
 
