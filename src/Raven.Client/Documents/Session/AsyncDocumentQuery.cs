@@ -310,12 +310,14 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#if FEATURE_CUSTOM_SORTING
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
         {
             CustomSortUsing(typeName, descending);
             return this;
         }
+#endif
 
         /// <inheritdoc />
         public IAsyncDocumentQuery<TResult> OfType<TResult>()

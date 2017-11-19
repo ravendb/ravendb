@@ -683,10 +683,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf RandomOrdering(string seed);
 
+#if FEATURE_CUSTOM_SORTING
         /// <summary>
         /// Order the search results randomly
         /// </summary>
         TSelf CustomSortUsing(string typeName, bool descending);
+#endif
 
         /// <summary>
         ///     Sets the tags to highlight matches with.

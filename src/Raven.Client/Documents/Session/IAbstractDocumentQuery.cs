@@ -53,10 +53,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void RandomOrdering(string seed);
 
+#if FEATURE_CUSTOM_SORTING
         /// <summary>
         /// Sort using custom sorter on the server
         /// </summary>
         void CustomSortUsing(string typeName, bool descending = false);
+#endif
 
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
@@ -176,7 +178,7 @@ namespace Raven.Client.Documents.Session
         ///   Matches where CmpXchg.Match(key, value)
         /// </summary>
         void CmpXchg(string key, object value);
-        
+
         /// <summary>
         ///   Add an AND to the query
         /// </summary>

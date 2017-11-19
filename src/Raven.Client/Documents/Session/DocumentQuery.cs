@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
         public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy, DeclareToken declareToken = null, List<LoadToken> loadTokens = null, string fromAlias = null)
-            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens ,fromAlias)
+            : base(session, indexName, collectionName, isGroupBy, declareToken, loadTokens, fromAlias)
         {
         }
 
@@ -165,7 +165,7 @@ namespace Raven.Client.Documents.Session
             CmpXchg(key, value);
             return this;
         }
-        
+
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
         {
@@ -554,12 +554,14 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#if FEATURE_CUSTOM_SORTING
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.CustomSortUsing(string typeName, bool descending)
         {
             CustomSortUsing(typeName, descending);
             return this;
         }
+#endif
 
         /// <inheritdoc />
         IGroupByDocumentQuery<T> IDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
