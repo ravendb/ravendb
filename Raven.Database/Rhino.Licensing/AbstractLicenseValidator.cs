@@ -252,8 +252,17 @@ namespace Rhino.Licensing
         /// </summary>
         public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false, bool forceUpdate = false)
         {
-            LicenseAttributes.Clear();
-            if (IsLicenseValid(firstTime,forceUpdate))
+            try
+            {
+                Monitor.Enter(LicenseAttributesLock);
+                LicenseAttributes.Clear();
+            }
+            finally
+            {
+                Monitor.Exit(LicenseAttributesLock);
+            }
+            
+            if (IsLicenseValid(firstTime, forceUpdate))
             {
                 onValidLicense();
 
@@ -320,7 +329,7 @@ namespace Rhino.Licensing
                         result = ValidateLicense(firstTime, forceUpdate);
                 }
 
-                if (result && IsOemLicense()) 
+                if (result && IsOemLicense())
                     return true;
 
                 if (result)
@@ -636,16 +645,28 @@ namespace Rhino.Licensing
             Name = name.Value;
 
             var license = doc.SelectSingleNode("/license");
-            foreach (XmlAttribute attrib in license.Attributes)
-            {
-                if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
-                    continue;
 
-                LicenseAttributes[attrib.Name] = attrib.Value;
+            try
+            {
+                Monitor.Enter(LicenseAttributesLock);
+
+                foreach (XmlAttribute attrib in license.Attributes)
+                {
+                    if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
+                        continue;
+
+                    LicenseAttributes[attrib.Name] = attrib.Value;
+                }
+            }
+            finally
+            {
+                Monitor.Exit(LicenseAttributesLock);
             }
 
             return true;
         }
+
+        public object LicenseAttributesLock = new object();
 
         private bool TryGetValidDocument(string licensePublicKey, XmlDocument doc)
         {

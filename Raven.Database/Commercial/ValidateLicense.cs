@@ -84,6 +84,7 @@ namespace Raven.Database.Commercial
             {
                 // Thread will execute code only if validationLockAcquired is false upon entering method, else it will return and not wait
                 Monitor.TryEnter(validationLockObject, ref validationLockAcquired);
+
                 if (validationLockAcquired)
                 {
                     var licensePath = GetLicensePath(config);
@@ -125,10 +126,21 @@ namespace Raven.Database.Commercial
                         }
 
                         var attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
-                        foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+
+                        try
                         {
-                            attributes[licenseAttribute.Key] = licenseAttribute.Value;
+                            Monitor.Enter(licenseValidator.LicenseAttributesLock);
+
+                            foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
+                            {
+                                attributes[licenseAttribute.Key] = licenseAttribute.Value;
+                            }
                         }
+                        finally
+                        {
+                            Monitor.Exit(licenseValidator.LicenseAttributesLock);
+                        }
+
                         attributes["UserId"] = licenseValidator.UserId.ToString();
                         var message = "Valid license at " + licensePath;
                         var status = "Commercial";
