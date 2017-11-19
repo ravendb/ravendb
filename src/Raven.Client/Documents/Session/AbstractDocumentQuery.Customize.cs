@@ -74,6 +74,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#if FEATURE_CUSTOM_SORTING
         /// <inheritdoc />
         IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName)
         {
@@ -87,6 +88,7 @@ namespace Raven.Client.Documents.Session
             CustomSortUsing(typeName, descending);
             return this;
         }
+#endif
 
         /// <inheritdoc />
         IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults(TimeSpan waitTimeout)

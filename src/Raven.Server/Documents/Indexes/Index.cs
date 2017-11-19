@@ -2044,8 +2044,10 @@ namespace Raven.Server.Documents.Indexes
 
                     var f = sortedField.Name;
 
+#if FEATURE_CUSTOM_SORTING
                     if (f.Value.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
+#endif
 
                     AssertKnownField(f);
                 }

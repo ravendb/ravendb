@@ -59,6 +59,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQueryCustomization RandomOrdering(string seed);
 
+#if FEATURE_CUSTOM_SORTING
         /// <summary>
         /// Sort using custom sorter on the server
         /// </summary>
@@ -68,6 +69,7 @@ namespace Raven.Client.Documents.Session
         /// Sort using custom sorter on the server
         /// </summary>
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
+#endif
 
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming

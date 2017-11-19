@@ -172,8 +172,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     var fieldName = field.Name;
 
+#if FEATURE_CUSTOM_SORTING
                     if (fieldName.Value.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
+#endif
 
                     if (mapFields.ContainsKey(field.Name))
                         continue;

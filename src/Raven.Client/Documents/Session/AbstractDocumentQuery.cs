@@ -273,6 +273,7 @@ namespace Raven.Client.Documents.Session
             OrderByTokens.AddLast(OrderByToken.CreateRandom(seed));
         }
 
+#if FEATURE_CUSTOM_SORTING
         public void CustomSortUsing(string typeName, bool descending)
         {
             if (descending)
@@ -283,6 +284,7 @@ namespace Raven.Client.Documents.Session
 
             OrderBy(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
         }
+#endif
 
         internal void AddGroupByAlias(string fieldName, string projectedName)
         {
@@ -350,7 +352,7 @@ namespace Raven.Client.Documents.Session
                 if (fieldName == null || fieldName.Equals(projectedName, StringComparison.Ordinal))
                     fieldName = aliasedFieldName;
             }
-            else if (fieldName != null &&_aliasToGroupByFieldName.TryGetValue(fieldName, out aliasedFieldName))
+            else if (fieldName != null && _aliasToGroupByFieldName.TryGetValue(fieldName, out aliasedFieldName))
             {
                 fieldName = aliasedFieldName;
             }
@@ -1070,7 +1072,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             tokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
-        
+
         /// <inheritdoc />
         public override string ToString()
         {
@@ -1630,7 +1632,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         public string LoadParameter(object id)
         {
-            return "$"+ AddQueryParameter(id);
+            return "$" + AddQueryParameter(id);
         }
     }
 }
