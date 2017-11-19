@@ -65,6 +65,9 @@ namespace Raven.Server.Documents.Queries
 
         public void AddAggregation(FacetAggregation aggregation, QueryFieldName name)
         {
+            if (Aggregations.ContainsKey(aggregation))
+                throw new InvalidOperationException($"Detected duplicate facet aggregation operation '{aggregation}'. Each facet can only contain one of each available operations.");
+
             Aggregations.Add(aggregation, name);
         }
 

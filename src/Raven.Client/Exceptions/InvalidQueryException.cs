@@ -20,8 +20,8 @@ namespace Raven.Client.Exceptions
         {
         }
 
-        public InvalidQueryException(string message, string queryText, Exception e)
-            : base(BuildMessage(message, queryText, null),e)
+        public InvalidQueryException(string message, string queryText, BlittableJsonReaderObject parameters, Exception e)
+            : base(BuildMessage(message, queryText, parameters), e)
         {
         }
 
