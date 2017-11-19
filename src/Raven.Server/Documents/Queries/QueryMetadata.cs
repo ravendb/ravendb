@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.From.Alias != null)
             {
                 fromAlias = Query.From.Alias;
-                RootAliasPaths[fromAlias] = (null, false , false, false);
+                RootAliasPaths[fromAlias] = (null, false, false, false);
             }
 
             if (Query.GroupBy != null)
@@ -749,6 +749,9 @@ namespace Raven.Server.Documents.Queries
 
             var methodFieldName = ExtractFieldNameFromArgument(me.Arguments[0], me.Name, parameters, QueryText);
 
+            if (field.Aggregations.ContainsKey(aggregation))
+                throw new InvalidQueryException($"Detected duplicate facet aggregation operation '{aggregation}'. Each facet can only contain one of each available operations.", QueryText, parameters);
+
             field.AddAggregation(aggregation, methodFieldName);
         }
 
@@ -871,7 +874,7 @@ namespace Raven.Server.Documents.Queries
                         name = GetIndexFieldName(method.Arguments[0] as FieldExpression, parameters);
                         byArrayBehavior = GroupByArrayBehavior.ByContent;
                         break;
-                    
+
                     default:
                         throw new InvalidQueryException($"Unsupported method '{method.Name}' in GROUP BY", QueryText, parameters);
                 }
@@ -942,7 +945,7 @@ namespace Raven.Server.Documents.Queries
                 QueryText, parameters);
         }
 
-                private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
+        private void ThrowInvalidArgumentToId(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("id() in simple select clause must only be used without arguments", QueryText, parameters);
         }
@@ -998,7 +1001,7 @@ namespace Raven.Server.Documents.Queries
         }
 
         public ExpressionEvaluator CmpXchgMethod;
-        
+
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
@@ -1053,7 +1056,7 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case MethodType.Sum:
                         case MethodType.Count:
-                            VisitFieldToken(leftSide,rightSide,parameters);
+                            VisitFieldToken(leftSide, rightSide, parameters);
                             break;
                     }
                 }
@@ -1384,7 +1387,7 @@ namespace Raven.Server.Documents.Queries
                 _expression = me;
                 _parameters = parameters;
             }
-            
+
             public object EvaluateSingleMethod(QueryResultRetrieverBase revtriver, Document doc)
             {
                 _query.TryAddFunction(_expression.Name, _expression.Name);
@@ -1411,7 +1414,7 @@ namespace Raven.Server.Documents.Queries
                             list.Add(f.FieldValue);
                             continue;
                         }
-                        
+
                         if (_metadata.Query.From.Alias.HasValue)
                         {
                             var alias = _metadata.Query.From.Alias.Value;
@@ -1425,7 +1428,7 @@ namespace Raven.Server.Documents.Queries
                             revtriver.TryGetValueFromDocument(doc, f.FieldValueWithoutAlias, out object value);
                             list.Add(value);
                         }
-                        else if(string.IsNullOrEmpty(f.FieldValue) == false)
+                        else if (string.IsNullOrEmpty(f.FieldValue) == false)
                         {
                             revtriver.TryGetValueFromDocument(doc, f.FieldValue, out object value);
                             list.Add(value);
@@ -1440,10 +1443,10 @@ namespace Raven.Server.Documents.Queries
                         throw new ArgumentException($"Invalid argument '{argument}' for the method '{_expression.Name}'");
                     }
                 }
-                return revtriver.InvokeFunction(_expression.Name, _query,list.ToArray());
+                return revtriver.InvokeFunction(_expression.Name, _query, list.ToArray());
             }
         }
-        
+
         public class ExpressionEvaluator
         {
             private readonly QueryMetadata _metadata;
@@ -1451,7 +1454,7 @@ namespace Raven.Server.Documents.Queries
             private readonly QueryExpression _left;
             private readonly ValueExpression _right;
             private readonly BlittableJsonReaderObject _parameters;
-            
+
             public ExpressionEvaluator(QueryMetadata metadata, OperatorType operatorType, QueryExpression left, ValueExpression right, BlittableJsonReaderObject parameters)
             {
                 _metadata = metadata;
@@ -1460,7 +1463,7 @@ namespace Raven.Server.Documents.Queries
                 _right = right;
                 _parameters = parameters;
             }
-            
+
             public bool EvaluateExpression(QueryResultRetrieverBase revtriver, Document doc)
             {
                 var parameterValue = _right.Token.ToString();
@@ -1468,29 +1471,29 @@ namespace Raven.Server.Documents.Queries
 
                 if (_left is MethodExpression me)
                 {
-                    value = (string)new SingleMethodEvaluator(_metadata, me, _parameters).EvaluateSingleMethod(revtriver,doc);
+                    value = (string)new SingleMethodEvaluator(_metadata, me, _parameters).EvaluateSingleMethod(revtriver, doc);
                 }
-                
+
                 switch (_operatorType)
                 {
                     case OperatorType.Equal:
                         return value == parameterValue;
                     case OperatorType.NotEqual:
                         return value != parameterValue;
-//                                    case OperatorType.LessThan:
-//                                        return value < parameterValue;
-//                                    case OperatorType.GreaterThan:
-//                                        return value > parameterValue;
-//                                    case OperatorType.LessThanEqual:
-//                                        return value <= parameterValue;
-//                                    case OperatorType.GreaterThanEqual:
-//                                        return value >= parameterValue;
+                    //                                    case OperatorType.LessThan:
+                    //                                        return value < parameterValue;
+                    //                                    case OperatorType.GreaterThan:
+                    //                                        return value > parameterValue;
+                    //                                    case OperatorType.LessThanEqual:
+                    //                                        return value <= parameterValue;
+                    //                                    case OperatorType.GreaterThanEqual:
+                    //                                        return value >= parameterValue;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
         }
-       
+
         private QueryFieldName ExtractFieldNameFromFirstArgument(List<QueryExpression> arguments, string methodName, BlittableJsonReaderObject parameters)
         {
             if (arguments == null || arguments.Count == 0)

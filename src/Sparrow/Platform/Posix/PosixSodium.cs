@@ -25,7 +25,7 @@ namespace Sparrow.Platform.Posix
             {
                 if (_isMac64)
                 {
-                    throw new PlatformNotSupportedException("RavenDB Cannot be executed on 32Bits MacOS. Please use Mac OSX El Capitan or higher");
+                    throw new PlatformNotSupportedException("RavenDB cannot be executed on 32-bit MacOS. Please use Mac OSX El Capitan or higher");
                 }
                 if (_isArm)
                 {
@@ -52,10 +52,10 @@ namespace Sparrow.Platform.Posix
             catch (Exception e)
             {
                 if (_isMac64)
-                    throw new Exception("Make sure libsodium is installed on your Mac Osx. Use `brew install libsodium`", e);
+                    throw new Exception("Make sure libsodium is installed on your Mac OSX. Use `brew install libsodium`", e);
 
                 if (PlatformDetails.RunningOnPosix)
-                        throw new Exception("Make sure libsodium is installed on your Linux OS. (install package `libsodium` or `libsodium-18`", e);
+                    throw new Exception("Make sure libsodium is installed on your Linux OS. (install package `libsodium` or `libsodium-18`", e);
 
                 throw new Exception("Make sure libsodium is installed on your Windows OS.", e);
             }
@@ -105,7 +105,7 @@ namespace Sparrow.Platform.Posix
             ulong mlen)
         {
             return _is32bits
-                ? (_isArm ? Arm.crypto_sign_update(state,m, mlen) : X86.crypto_sign_update(state, m, mlen))
+                ? (_isArm ? Arm.crypto_sign_update(state, m, mlen) : X86.crypto_sign_update(state, m, mlen))
                 : _isMac64 ? MacOsxX64.crypto_sign_update(state, m, mlen) : X64.crypto_sign_update(state, m, mlen);
         }
 
@@ -181,7 +181,7 @@ namespace Sparrow.Platform.Posix
                     X64.randombytes_buf(buffer, size);
             }
         }
-    
+
 
         public static void crypto_kdf_keygen(
             byte* masterkey)
