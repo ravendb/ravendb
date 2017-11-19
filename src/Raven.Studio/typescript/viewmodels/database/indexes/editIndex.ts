@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
-import documentModel = require("models/database/documents/document");
 import dialog = require("plugins/dialog");
 import indexDefinition = require("models/database/index/indexDefinition");
 import autoIndexDefinition = require("models/database/index/autoIndexDefinition");
@@ -72,7 +71,6 @@ class editIndex extends viewModelBase {
         autoCompleteBindingHandler.install();
 
         this.initializeObservables();
-        
 
         /* TODO: side by side
         this.canSaveSideBySideIndex = ko.computed(() => {
@@ -420,6 +418,12 @@ class editIndex extends viewModelBase {
             if (!this.isValid(field.validationGroup)) {
                 valid = false;
             }
+
+            if (field.hasSpatialOptions()) {               
+                if (!this.isValid(field.spatial().validationGroup)) {
+                    valid = false;
+                }
+            }                      
         });
 
         editedIndex.maps().forEach(map => {
