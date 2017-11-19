@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries
 
         public void AddAggregation(FacetAggregation aggregation, QueryFieldName name)
         {
-            Aggregations[aggregation] = name;
+            Aggregations.Add(aggregation, name);
         }
 
         public void AddOptions(string optionsAsStringOrParameterName, ValueTokenType type)
