@@ -16,7 +16,7 @@ class spatialOptions {
     canSpecifyTreeLevel: KnockoutComputed<boolean>;
     canSpecifyCoordinates: KnockoutComputed<boolean>;
 
-    validationGroup: KnockoutValidationGroup<any>;
+    validationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions) {
         this.type(dto.Type);
