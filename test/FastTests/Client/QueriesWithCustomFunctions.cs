@@ -12,6 +12,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Newtonsoft.Json;
 using Xunit;
 
 namespace FastTests.Client
@@ -2789,7 +2790,31 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
                 }
             }
         }
+        
+        [Fact]
+        public void Can_Project_With_JsonPropertyAttribute()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
+            {
+                var ids = new[] {"ids/1"};
 
+                var projection =
+                    from s in session.Query<Document>().Where(x => x.Id.In(ids))
+                    select new
+                    {
+                        Id = s.Id,
+                        Results = s.Results.Select(x => new
+                            {
+                                ResultValue = x.ResultValue
+                            })
+                            .ToArray()
+                    };
+
+                projection.ToList();
+            }
+        }                   
+        
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -3051,6 +3076,18 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
         {
             public string Name { get; set; }
             public string Friend { get; set; }
+        }
+
+        private class Document
+        {
+            public string Id { get; set; }
+            public Result[] Results { get; set; }
+        }
+
+        private class Result
+        {
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+            public decimal? ResultValue { get; set; }                
         }
     }
 }
