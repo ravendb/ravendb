@@ -442,6 +442,12 @@ namespace Raven.Client.Http
                     _lastKnownUrls = initialUrls;
                     throw;
                 }
+                catch (DatabaseDoesNotExistException e)
+                {
+                    if (initialUrls.Length == 1)
+                        throw;
+                    list.Add((url, e));
+                }
                 catch (Exception e)
                 {
                     if (initialUrls.Length == 0)
@@ -478,8 +484,13 @@ namespace Raven.Client.Http
 
             _lastKnownUrls = initialUrls;
 
-            throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine +
-                                         string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message))
+            ThrowExceptions(list);
+        }
+
+        protected virtual void ThrowExceptions(List<(string, Exception)> list)
+        {
+            throw new AggregateException("Failed to retrieve database topology from all known nodes" + Environment.NewLine +
+                                         string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message)) + Environment.NewLine
                 , list.Select(x => x.Item2));
         }
 
@@ -695,7 +706,7 @@ namespace Raven.Client.Http
                             {
                                 var name = databaseMissing.FirstOrDefault();
                                 if (name != null)
-                                    throw new DatabaseDoesNotExistException(name);
+                                    throw new DatabaseDoesNotExistException($"Database {name} does not exists");
                             }
 
                             if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
