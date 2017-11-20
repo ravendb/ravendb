@@ -252,16 +252,17 @@ namespace Rhino.Licensing
         /// </summary>
         public virtual void AssertValidLicense(Action onValidLicense, bool turnOffDiscoveryClient = false, bool firstTime = false, bool forceUpdate = false)
         {
+            Monitor.Enter(LicenseAttributesLock);
+
             try
             {
-                Monitor.Enter(LicenseAttributesLock);
                 LicenseAttributes.Clear();
             }
             finally
             {
                 Monitor.Exit(LicenseAttributesLock);
             }
-            
+
             if (IsLicenseValid(firstTime, forceUpdate))
             {
                 onValidLicense();
@@ -646,10 +647,10 @@ namespace Rhino.Licensing
 
             var license = doc.SelectSingleNode("/license");
 
+            Monitor.Enter(LicenseAttributesLock);
+
             try
             {
-                Monitor.Enter(LicenseAttributesLock);
-
                 foreach (XmlAttribute attrib in license.Attributes)
                 {
                     if (attrib.Name == "type" || attrib.Name == "expiration" || attrib.Name == "id")
