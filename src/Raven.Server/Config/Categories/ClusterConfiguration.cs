@@ -25,7 +25,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting SupervisorSamplePeriod { get; set; }
 
         [Description("As the maintenance supervisor, how long we wait to hear from a worker before it is time out.")]
-        [DefaultValue(1000)]
+        [DefaultValue(5000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("Cluster.ReceiveFromWorkerTimeoutInMs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting ReceiveFromWorkerTimeout { get; set; }
