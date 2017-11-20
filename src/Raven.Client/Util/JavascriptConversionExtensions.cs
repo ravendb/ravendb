@@ -510,8 +510,13 @@ namespace Raven.Client.Util
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (!(context.Node is MemberExpression memberExpression) 
-                    || memberExpression.Member.GetCustomAttributes().OfType<JsonPropertyAttribute>().Any() == false)
+                if (!(context.Node is MemberExpression memberExpression))
+                    return;
+                
+                var jsonPropertyAttribute = memberExpression.Member.GetCustomAttributes()
+                                                                    .OfType<JsonPropertyAttribute>()
+                                                                    .FirstOrDefault();
+                if (jsonPropertyAttribute == null)
                     return;
                 
                 context.PreventDefault();
@@ -521,7 +526,7 @@ namespace Raven.Client.Util
                 {
                     context.Visitor.Visit(memberExpression.Expression);
                     writer.Write(".");
-                    writer.Write(memberExpression.Member.Name);
+                    writer.Write(jsonPropertyAttribute.PropertyName ?? memberExpression.Member.Name);
                 }
             }
         }
