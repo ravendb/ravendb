@@ -181,13 +181,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var topology = ServerStore.GetClusterTopology(context);
                 var nodeTag = ServerStore.NodeTag;
 
-                if (topology.Members.Count == 0)
+                if (topology.AllNodes.Count == 0)
                 {
                     var tag = ServerStore.NodeTag ?? "A";
                     var serverUrl = ServerStore.GetNodeHttpServerUrl(HttpContext.Request.GetClientRequestedNodeUrl());
 
                     topology = new ClusterTopology(
-                        "dummy",
+                        topology.TopologyId ?? "dummy",
                         new Dictionary<string, string>
                         {
                             [tag] = serverUrl
