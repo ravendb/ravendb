@@ -535,7 +535,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                         </div>
                     </div>
 
-                    <div class="properties-item" data-bind="style: { visibility: canSpecifyTreeLevel() ? 'visible' : 'hidden' }">
+                    <div class="properties-item" data-bind="style: { visibility: canSpecifyTreeLevel() ? 'visible' : 'hidden' }, validationElement: maxTreeLevel">
                         <span class="properties-label">Max Tree Level</span>
                         <div class="btn-group properties-value">
                             <input class="form-control" type="number" data-bind="numericInput: maxTreeLevel" />

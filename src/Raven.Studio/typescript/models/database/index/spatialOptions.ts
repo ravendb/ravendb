@@ -16,6 +16,8 @@ class spatialOptions {
     canSpecifyTreeLevel: KnockoutComputed<boolean>;
     canSpecifyCoordinates: KnockoutComputed<boolean>;
 
+    validationGroup: KnockoutValidationGroup;
+
     constructor(dto: Raven.Client.Documents.Indexes.Spatial.SpatialOptions) {
         this.type(dto.Type);
         this.strategy(dto.Strategy);
@@ -39,7 +41,16 @@ class spatialOptions {
             }
             this.availableStrategies(availableStrategies);
         });
+        
         this.strategy.subscribe(newStrategy => this.updateMaxTreeLevelFromStrategy(newStrategy));
+
+        this.maxTreeLevel.extend({
+            min: 0
+        });
+
+        this.validationGroup = ko.validatedObservable({
+            maxTreeLevel: this.maxTreeLevel
+        });
     }
 
     toDto(): Raven.Client.Documents.Indexes.Spatial.SpatialOptions {
@@ -66,6 +77,7 @@ class spatialOptions {
             Strategy: "GeohashPrefixTree",
             Units: "Kilometers"
         };
+        
         return new spatialOptions(dto);
     }
 
