@@ -146,6 +146,13 @@ namespace Raven.Client.Http
             return Task.CompletedTask;
         }
 
+        protected override void ThrowExceptions(List<(string, Exception)> list)
+        {
+            throw new AggregateException("Failed to retrieve cluster topology from all known nodes" + Environment.NewLine +
+                                         string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message))
+                , list.Select(x => x.Item2));
+        }
+
         public override void Dispose()
         {
             _clusterTopologySemaphore.Wait();
