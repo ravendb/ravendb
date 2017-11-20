@@ -163,7 +163,7 @@ namespace Raven.Server.Rachis
                                     {
                                         if (_engine.Log.IsInfoEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reseason:{rvr.Message}");
+                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reason: {rvr.Message}");
                                         }
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
@@ -205,7 +205,7 @@ namespace Raven.Server.Rachis
                                 {
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reseason:{rvr.Message}");
+                                        _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reason: {rvr.Message}");
                                     }
                                     // we go a negative response here, so we can't proceed
                                     // we'll need to wait until the candidate has done something, like
