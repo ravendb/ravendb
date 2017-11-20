@@ -79,10 +79,12 @@ namespace Raven.Database.Commercial
 
         private void ExecuteInternal(InMemoryRavenConfiguration config, bool firstTime = false, bool forceUpdate = false)
         {
-            bool validationLockAcquired = false;
+            var validationLockAcquired = false;
+
             try
             {
-                // Thread will execute code only if validationLockAcquired is false upon entering method, else it will return and not wait
+                // thread will execute code only if validationLockAcquired is false upon entering method, 
+                // else it will return and not wait
                 Monitor.TryEnter(validationLockObject, ref validationLockAcquired);
 
                 if (validationLockAcquired)
@@ -127,10 +129,10 @@ namespace Raven.Database.Commercial
 
                         var attributes = new Dictionary<string, string>(AlwaysOnAttributes, StringComparer.OrdinalIgnoreCase);
 
+                        Monitor.Enter(licenseValidator.LicenseAttributesLock);
+
                         try
                         {
-                            Monitor.Enter(licenseValidator.LicenseAttributesLock);
-
                             foreach (var licenseAttribute in licenseValidator.LicenseAttributes)
                             {
                                 attributes[licenseAttribute.Key] = licenseAttribute.Value;
