@@ -6,6 +6,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Lambda2Js;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -500,6 +502,26 @@ namespace Raven.Client.Util
                     }
 
                     writer.Write(")");
+                }
+            }
+        }
+              
+        public class JsonPropertyAttributeSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MemberExpression memberExpression) 
+                    || memberExpression.Member.GetCustomAttributes().OfType<JsonPropertyAttribute>().Any() == false)
+                    return;
+                
+                context.PreventDefault();
+                var writer = context.GetWriter();
+
+                using (writer.Operation(memberExpression))
+                {
+                    context.Visitor.Visit(memberExpression.Expression);
+                    writer.Write(".");
+                    writer.Write(memberExpression.Member.Name);
                 }
             }
         }
