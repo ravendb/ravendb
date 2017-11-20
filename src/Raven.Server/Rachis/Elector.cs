@@ -38,8 +38,6 @@ namespace Raven.Server.Rachis
                     {
                         var rv = _connection.Read<RequestVote>(context);
 
-                        
-
                         ClusterTopology clusterTopology;
                         long lastIndex;
                         long lastTerm;
@@ -54,6 +52,17 @@ namespace Raven.Server.Rachis
                             clusterTopology = _engine.GetTopology(context);
                         }
 
+                        if (clusterTopology.TopologyId == null)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = rv.Term,
+                                VoteGranted = true,
+                                Message = "I might vote for you, because I'm not part of any cluster."
+                            });
+                            continue;
+                        }
+                        
                         if (clusterTopology.Members.ContainsKey(rv.Source) == false &&
                             clusterTopology.Promotables.ContainsKey(rv.Source) == false &&
                             clusterTopology.Watchers.ContainsKey(rv.Source) == false)
