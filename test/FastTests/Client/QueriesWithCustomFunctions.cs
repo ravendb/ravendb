@@ -2813,7 +2813,35 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
 
                 projection.ToList();
             }
-        }                   
+        }
+
+        [Fact]
+        public void Can_Project_With_Json_Property_Rename()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Document
+                {
+                    Number = 5
+                });
+
+                session.SaveChanges();
+
+                var projection =
+                    from s in session.Query<Document>()
+                    select new
+                    {
+                        Result = s.Number * 2
+                    };
+
+                Assert.Equal("FROM Documents as s SELECT { Result : s.Foo*2 }", projection.ToString());
+
+                var result = projection.ToList();
+
+                Assert.Equal(10, result[0].Result);
+            }
+        }
         
         public class ProjectionParameters : RavenTestBase
         {
@@ -3082,6 +3110,9 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
         {
             public string Id { get; set; }
             public Result[] Results { get; set; }
+
+            [JsonProperty(PropertyName = "Foo")]
+            public int Number { get; set; }
         }
 
         private class Result
