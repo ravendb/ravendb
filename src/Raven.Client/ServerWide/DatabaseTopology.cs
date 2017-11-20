@@ -102,7 +102,7 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, DatabasePromotionStatus> PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>();
 
         public LeaderStamp Stamp;
-        public bool DynamicNodesDistribution = true;
+        public bool DynamicNodesDistribution;
         public int ReplicationFactor = 1;
 
         public bool RelevantFor(string nodeTag)
