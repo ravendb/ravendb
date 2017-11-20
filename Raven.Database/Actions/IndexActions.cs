@@ -387,7 +387,7 @@ namespace Raven.Database.Actions
                 }
 
                 var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x).indexId).ToArray();
-                Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
+                SetIndexesPriority(indexesIds, prioritiesList);
 
                 for (var i = 0; i < createdIndexes.Count; i++)
                 {
@@ -409,10 +409,15 @@ namespace Raven.Database.Actions
             catch (Exception e)
             {
                 Log.WarnException("Could not create index batch", e);
-                foreach (var index in createdIndexes)
+
+                if (isReplication == false)
                 {
-                    DeleteIndex(index);
+                    foreach (var index in createdIndexes)
+                    {
+                        DeleteIndex(index);
+                    }
                 }
+
                 throw;
             }
         }
@@ -472,7 +477,7 @@ namespace Raven.Database.Actions
                 }
 
                 var indexesIds = createdIndexes.Select(x => Database.IndexStorage.GetIndexInstance(x.Name).indexId).ToArray();
-                Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
+                SetIndexesPriority(indexesIds, prioritiesList);
 
                 for (var i = 0; i < createdIndexes.Count; i++)
                 {
@@ -508,6 +513,58 @@ namespace Raven.Database.Actions
                 }
 
                 throw;
+            }
+        }
+
+        private void SetIndexesPriority(int[] indexesIds, List<IndexingPriority> prioritiesList)
+        {
+            for (var retries = 0; retries < 10; retries++)
+            {
+                try
+                {
+                    Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexesPriority(indexesIds, prioritiesList.ToArray()));
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (TransactionalStorageHelper.IsWriteConflict(e, out e))
+                    {
+                        Thread.Sleep(100);
+                        continue;
+                    }
+
+                    throw;
+                }
+            }
+
+            // we couldn't set the index priority for all indexes at once
+            // we'll try to set the index priority one by one
+
+            for (var i = 0; i < indexesIds.Length; i++)
+            {
+                var indexId = indexesIds[i];
+                var priority = prioritiesList[i];
+                try
+                {
+                    Database.TransactionalStorage.Batch(accessor => accessor.Indexing.SetIndexPriority(indexId, priority));
+                }
+                catch (Exception e)
+                {
+                    if (TransactionalStorageHelper.IsWriteConflict(e, out e) == false)
+                        throw;
+
+                    var message = $"Could not set index priority to: {priority} for index id: {indexId}";
+                    Log.ErrorException(message, e);
+                    Database.AddAlert(new Alert
+                    {
+                        AlertLevel = AlertLevel.Error,
+                        CreatedAt = SystemTime.UtcNow,
+                        Message = e.Message,
+                        Title = message,
+                        Exception = e.ToString(),
+                        UniqueKey = message
+                    });
+                }
             }
         }
 
@@ -1010,7 +1067,8 @@ namespace Raven.Database.Actions
                 Database.IndexStorage.DeleteSuggestionsData(instance.Name);
 
                 //remove the header information in a sync process
-                TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(instance.IndexId));
+                PrepareIndexDeletion(instance);
+
                 //and delete the data in the background
                 Database.Maintenance.StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
 
@@ -1041,6 +1099,32 @@ namespace Raven.Database.Actions
                         Version = instance.IndexVersion
                     })
                 );
+            }
+        }
+
+        private void PrepareIndexDeletion(int indexId)
+        {
+            var retries = 0;
+            while (true)
+            {
+                try
+                {
+                    TransactionalStorage.Batch(actions => actions.Indexing.PrepareIndexForDeletion(indexId));
+                    return;
+                }
+                catch (Exception e)
+                {
+                    if (TransactionalStorageHelper.IsWriteConflict(e, out e))
+                    {
+                        if (++retries >= 10)
+                            throw;
+
+                        Thread.Sleep(100);
+                        continue;
+                    }
+
+                    throw;
+                }
             }
         }
 
