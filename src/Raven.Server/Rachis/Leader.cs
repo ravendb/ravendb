@@ -60,6 +60,8 @@ namespace Raven.Server.Rachis
 
         private Thread _thread;
 
+        private int _previousPeersWereDisposed = 0;
+        
         public long LowestIndexInEntireCluster
         {
             get { return _lowestIndexInEntireCluster; }
@@ -239,14 +241,20 @@ namespace Raven.Server.Rachis
                     }
                     ambasaddor.Start();
                 }
-                ThreadPool.QueueUserWorkItem(_ =>
+                
+                if (old.Count > 0)
                 {
-                    foreach (var ambasaddor in old)
+                    Interlocked.Increment(ref _previousPeersWereDisposed);
+                    ThreadPool.QueueUserWorkItem(_ =>
                     {
-                        // it is not used by anything else, so we can close it
-                        ambasaddor.Value.Dispose();
-                    }
-                }, null);
+                        foreach (var ambasaddor in old)
+                        {
+                            // it is not used by anything else, so we can close it
+                            ambasaddor.Value.Dispose();
+                        }
+                        Interlocked.Decrement(ref _previousPeersWereDisposed);
+                    }, null);
+                }
             }
             finally
             {
@@ -314,6 +322,12 @@ namespace Raven.Server.Rachis
                     EnsureThatWeHaveLeadership(VotersMajority);
                     _engine.ReportLeaderTime(LeaderShipDuration);
 
+                    // don't trancate if we are disposing an old peer
+                    // otherwise he would not recieve notification that he was 
+                    // kick out of the cluster
+                    if(_previousPeersWereDisposed > 0) // Not Interlocked, because the race here is not interesting. 
+                        continue;
+                    
                     var lowestIndexInEntireCluster = GetLowestIndexInEntireCluster();
                     if (lowestIndexInEntireCluster != LowestIndexInEntireCluster)
                     {

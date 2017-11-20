@@ -37,7 +37,7 @@ namespace Raven.Client.Http
             {
                 if (watcher.Key == currentNodeTag)
                 {
-                    Promotables[watcher.Key] = clientRequestedUrl;
+                    Watchers[watcher.Key] = clientRequestedUrl;
                     return;
                 }
             }

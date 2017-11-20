@@ -179,7 +179,6 @@ namespace Raven.Server.Rachis
                         while (_leader.Running && disposeRequested == false)
                         {
                             disposeRequested = _dispose; // we give last loop before closing
-
                             // TODO: how to close
                             entries.Clear();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -246,9 +245,13 @@ namespace Raven.Server.Rachis
                                 }
                                 if (aer.CurrentTerm != _engine.CurrentTerm)
                                     ThrowInvalidTermChanged(aer);
+                                
                                 UpdateLastMatchFromFollower(aer.LastLogIndex);
                             }
-
+                            
+                            if(disposeRequested)
+                                break;
+                            
                             var task = _leader.WaitForNewEntries();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             using (context.OpenReadTransaction())
@@ -256,6 +259,7 @@ namespace Raven.Server.Rachis
                                 if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
                                     continue; // instead of waiting, we have new entries, start immediately
                             }
+                            
                             // either we have new entries to send, or we waited for long enough 
                             // to send another heartbeat
                             task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
@@ -326,6 +330,10 @@ namespace Raven.Server.Rachis
             }
             finally
             {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Node {_tag} is disposed with the message '{StatusMessage}'.");
+                }
                 _connection?.Dispose();
             }
         }
@@ -707,10 +715,18 @@ namespace Raven.Server.Rachis
             _dispose = true;
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Dispose");
+                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Request to dispose node {_tag}");
             }
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+            {
+                if (_thread.Join(TimeSpan.FromSeconds(60)) == false)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Waited 60 seconds for disposing node {_tag}, continue the thread anyway.");
+                    }
+                }
+            }
         }
     }
 }
