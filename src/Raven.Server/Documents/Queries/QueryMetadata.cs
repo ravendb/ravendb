@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Facets;
@@ -1516,6 +1517,9 @@ namespace Raven.Server.Documents.Queries
 
             if (argument is ValueExpression value) // escaped string might go there
                 return new QueryFieldName(value.Token, value.Value == ValueTokenType.String);
+            
+            if (argument is MethodExpression method && method.ToString() == Constants.Documents.Indexing.Fields.DocumentIdFieldName) //id property might be written as id()
+                return new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false);
 
             throw new InvalidQueryException($"Method {methodName}() expects a field name as its argument", queryText, parameters);
         }
