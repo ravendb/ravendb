@@ -75,10 +75,10 @@ namespace Raven.Database.FileSystem.Actions
             }
         }
 
-        private void SaveSynchronizationSourceInformation(FileSystemInfo sourceFileSystem, Etag lastSourceEtag)
+        private void SaveSynchronizationSourceInformation(FileSystemInfo sourceFileSystem, Etag lastSourceEtag, bool force = false)
         {
             var lastSynchronizationInformation = GetLastSynchronization(sourceFileSystem.Id);
-            if (EtagUtil.IsGreaterThan(lastSynchronizationInformation.LastSourceFileEtag, lastSourceEtag))
+            if (EtagUtil.IsGreaterThan(lastSynchronizationInformation.LastSourceFileEtag, lastSourceEtag) && force == false)
             {
                 return;
             }
@@ -127,7 +127,7 @@ namespace Raven.Database.FileSystem.Actions
             return info;
         }
 
-        public void IncrementLastEtag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
+        public void IncrementLastEtag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag, bool force)
         {
             try
             {
@@ -139,7 +139,7 @@ namespace Raven.Database.FileSystem.Actions
                 {
                     Id = sourceServerId,
                     Url = sourceFileSystemUrl
-                }, sourceFileETag);
+                }, sourceFileETag, force);
             }
             catch (Exception ex)
             {
