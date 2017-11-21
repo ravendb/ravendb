@@ -189,6 +189,11 @@ namespace Raven.Server.Commercial
 
             try
             {
+                var licenseStatus = serverStore.LicenseManager.GetLicenseStatus(setupInfo.License);
+
+                if (licenseStatus.Expired)
+                    throw new InvalidOperationException("The provided license for " + setupInfo.License.Name + " has expired (" + licenseStatus.Expiration + ")");
+
                 AssertNoClusterDefined(serverStore);
                 
                 progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
