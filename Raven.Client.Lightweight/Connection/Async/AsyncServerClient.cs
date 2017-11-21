@@ -232,6 +232,7 @@ namespace Raven.Client.Connection.Async
                 {
                     DataAsJson = RavenJObject.FromObject(topology)
                 };
+                await executor.UpdateReplicationInformationIfNeededAsync(this).ConfigureAwait(false);
                 replicationAwareRequestExecuter.ReplicationInformer.UpdateReplicationInformationFromDocument(doc);
             }
         }
