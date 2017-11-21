@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize)
+        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)
         {
             _startWith = startWith ?? throw new ArgumentNullException(nameof(startWith));
             _startAfter = startAfter;
@@ -58,6 +58,7 @@ namespace Raven.Client.Documents.Commands
             _exclude = exclude;
             _start = start;
             _pageSize = pageSize;
+            _metadataOnly = metadataOnly;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
