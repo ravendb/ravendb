@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -515,7 +516,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (string.IsNullOrEmpty(key))
                     return JsValue.Undefined;
-                BlittableJsonReaderObject value;
+                BlittableJsonReaderObject value = null;
                 var prefix = _database.Name + "/";
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())

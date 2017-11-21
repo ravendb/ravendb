@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
@@ -51,7 +52,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new CompareExchangeCommand(key, updateJson, index);
+                var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, _) = await ServerStore.SendToLeaderAsync(command);
@@ -69,6 +70,70 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
+        }
+        
+        [RavenAction("/databases/*/cmpxchg", "Delete", AuthorizationStatus.ValidUser)]
+        public async Task DeleteCmpXchgValue()
+        {
+            var prefix = Database.Name + "/";
+            var key = prefix + GetStringQueryString("key");
+
+            // ReSharper disable once PossibleInvalidOperationException
+            var index = GetLongQueryString("index", true).Value;
+
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var command = new RemoveCompareExchangeCommand(key, index);
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    (var raftIndex, var result) = await ServerStore.SendToLeaderAsync(command);
+                    await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
+                    using (context.OpenReadTransaction())
+                    {
+                        var res = ServerStore.Cluster.GetCmpXchg(context, key);
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(CmpXchgResult<object>.Value)] = (BlittableJsonReaderObject)result,
+                            [nameof(CmpXchgResult<object>.Index)] = res.Index,
+                            [nameof(CmpXchgResult<object>.Successful)] = res.Index == -1
+                        });
+                    }
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/cmpxchg/list", "GET", AuthorizationStatus.ValidUser)]
+        public Task ListCmpXchgValues()
+        {
+            var prefix = Database.Name + "/";
+            var key = prefix + GetStringQueryString("key", false);
+            var page = GetIntValueQueryString("page", false) ?? 0;
+            var size = GetIntValueQueryString("size", false) ?? 1024;
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    using (context.OpenReadTransaction())
+                    writer.WriteArray(context, "Results", ServerStore.Cluster.GetCmpXchgByPrefix(context, key, page, size), 
+                        (textWriter, operationContext, item) =>
+                    {
+                        operationContext.Write(textWriter,new DynamicJsonValue
+                        {
+                            ["Key"] = item.Key,
+                            ["Value"] = item.Value,
+                            ["Index"] = item.Index
+                        });
+                    });
+                    writer.WriteEndObject();
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
         }
     }
 }

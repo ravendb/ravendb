@@ -56,6 +56,143 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
+    public class ListCompareExchangeValuesOperation : IOperation<IEnumerable<(string Key, long Index, object Value)>>
+    {
+        private readonly string _keyPrefix;
+        private readonly int? _page;
+        private readonly int? _size;
+
+        public RavenCommand<IEnumerable<(string Key, long Index, object Value)>> GetCommand(IDocumentStore store, DocumentConventions conventions, 
+            JsonOperationContext context, HttpCache cache)
+        {
+            return new ListCompareExchangeValuesCommand(_keyPrefix, _page, _size, conventions);
+        }
+
+        public ListCompareExchangeValuesOperation(string keyPrefix, int? page = null, int? size = null)
+        {
+            _keyPrefix = keyPrefix;
+            _page = page;
+            _size = size;
+        }
+
+        private class ListCompareExchangeValuesCommand : RavenCommand<IEnumerable<(string Key, long Index, object Value)>>
+        {
+            private readonly string _keyPrefix;
+            private readonly int? _page;
+            private readonly int? _size;
+            private readonly DocumentConventions _conventions;
+
+            public ListCompareExchangeValuesCommand(string keyPrefix, int? page, int? size, DocumentConventions conventions)
+            {
+                _keyPrefix = keyPrefix;
+                _page = page;
+                _size = size;
+                _conventions = conventions;
+            }
+
+            public override bool IsReadRequest => true;
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/cmpxchg/list?key={_keyPrefix}";
+                
+                if (_page != null)
+                {
+                    url += $"&page={_page}";
+                }
+                
+                if (_size != null)
+                {
+                    url += "&size={_size}";
+                }
+                
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethods.Get,
+                };
+                return request;
+            }
+
+            private IEnumerable<(string Key, long Index, object Value)> GetResult(BlittableJsonReaderArray array)
+            {
+                if(array == null)
+                    yield break;
+                
+                foreach (BlittableJsonReaderObject item in array)
+                {
+                    if(item == null)
+                        continue;
+                    
+                    item.TryGet("Index", out long index);
+                    item.TryGet("Value", out BlittableJsonReaderObject raw);
+                    item.TryGet("Key", out string key);
+                    
+                    object val = null;
+                    raw?.TryGet("Object", out val);
+                    
+                    yield return (key, index, val);
+                }
+            }
+            
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                response.TryGet("Results", out BlittableJsonReaderArray array);
+                Result = GetResult(array);
+            }
+        }
+    }
+
+    public class RemoveCompareExchangeOperation<T> : IOperation<CmpXchgResult<T>>
+    {
+        private readonly string _key;
+        private readonly long _index;
+
+        public RemoveCompareExchangeOperation(string key, long index)
+        {
+            _key = key;
+            _index = index;
+        }
+
+        public RavenCommand<CmpXchgResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        {
+            return new RemoveCompareExchangeCommand(_key, _index, conventions);
+        }
+
+        private class RemoveCompareExchangeCommand : RavenCommand<CmpXchgResult<T>>
+        {
+            private readonly string _key;
+            private readonly long _index;
+            private readonly DocumentConventions _conventions;
+
+            public RemoveCompareExchangeCommand(string key, long index, DocumentConventions conventions = null)
+            {
+                if (string.IsNullOrEmpty(key))
+                    throw new ArgumentNullException(nameof(key), "The key argument must have value");
+
+                _key = key;
+                _index = index;
+                _conventions = conventions ?? DocumentConventions.Default;
+            }
+
+            public override bool IsReadRequest => true;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={_key}&index={_index}";
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethods.Delete,
+                };
+                return request;
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                Result = CmpXchgResult<T>.ParseFromBlittable(response, _conventions);
+            }
+        }
+
+    }
+    
     public class GetCompareExchangeValueOperation<T> : IOperation<CmpXchgResult<T>>
     {
         private readonly string _key;

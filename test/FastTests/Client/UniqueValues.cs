@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Client
@@ -52,6 +55,66 @@ namespace FastTests.Client
             Assert.True(res2.Successful);
         }
 
+        [Fact]
+        public async Task CanListCompareExchange()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
+            {
+                Name = "Karmel"
+            }, 0));
+            var res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test2", new User
+            {
+                Name = "Karmel"
+            }, 0));
+
+            Assert.Equal("Karmel", res.Value.Name);
+            Assert.True(res.Successful);
+            Assert.Equal("Karmel", res2.Value.Name);
+            Assert.True(res2.Successful);
+            
+            var list = (await store.Operations.SendAsync(new ListCompareExchangeValuesOperation("test"))).ToList();
+            Assert.Equal(2, list.Count);
+            Assert.Equal("canlistcompareexchange_1/test", list[0].Key);
+            Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
+            Assert.Equal("canlistcompareexchange_1/test2", list[1].Key);
+            Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
+
+        }
+        
+        [Fact]
+        public async Task CanRemoveUnique()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
+            Assert.Equal("Karmel", res.Value);
+            Assert.True(res.Successful);
+            
+            res = await store.Operations.SendAsync(new RemoveCompareExchangeOperation<string>("test", res.Index));
+            Assert.True(res.Successful);
+        }
+        
+        [Fact]
+        public async Task RemoveUniqueFailed()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
+            Assert.Equal("Karmel", res.Value);
+            Assert.True(res.Successful);
+            
+            res = await store.Operations.SendAsync(new RemoveCompareExchangeOperation<string>("test", 0));
+            Assert.False(res.Successful);
+            
+            res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test"));
+            Assert.Equal("Karmel", res.Value);
+            Assert.True(res.Successful);
+        }
+        
         [Fact]
         public async Task ReturnCurrentValueWhenPuttingConcurrently()
         {
