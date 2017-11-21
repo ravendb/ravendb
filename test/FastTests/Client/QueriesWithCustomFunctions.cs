@@ -2843,6 +2843,26 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
             }
         }
         
+        [Fact]
+        public void Can_Project_Where_Id_StartsWith()
+        {
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
+            {
+                session.Store(new User(), "users/1");
+                session.Store(new User(), "users/2");
+                session.Store(new User(), "bunny/1");
+                session.Store(new User(), "bunny/2");
+                session.Store(new User(), "bunny/3");
+
+                session.SaveChanges();
+
+                var query = session.Query<User>().Where(u => u.Id.StartsWith("bunny")).ToList();
+                
+                Assert.Equal(3, query.Count);
+            }
+        }
+        
         public class ProjectionParameters : RavenTestBase
         {
             public class Document

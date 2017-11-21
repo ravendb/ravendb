@@ -74,6 +74,7 @@ namespace Raven.Server.Documents.Queries
             private readonly List<Slice> _ids;
             private readonly Sort _sort;
             private readonly MapQueryResultRetriever _resultsRetriever;
+            private string _startsWith;
 
             public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection,
                 IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand, Reference<int> totalResults)
@@ -92,8 +93,8 @@ namespace Raven.Server.Documents.Queries
 
                 _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
                 
-                _ids = ExtractIdsFromQuery(query,_resultsRetriever);
-
+                (_ids, _startsWith) = ExtractIdsFromQuery(query,_resultsRetriever);
+                
                 _sort = ExtractSortFromQuery(query);
 
             }
@@ -117,24 +118,22 @@ namespace Raven.Server.Documents.Queries
                 return new Sort(customFieldName);
             }
 
-            private List<Slice> ExtractIdsFromQuery(IndexQueryServerSide query, MapQueryResultRetriever resultsRetriever)
+            private (List<Slice>, string) ExtractIdsFromQuery(IndexQueryServerSide query, MapQueryResultRetriever resultsRetriever)
             {
                 if (string.IsNullOrWhiteSpace(query.Query))
-                    return null;
+                    return (null, null);
 
                 if (query.Metadata.Query.Where == null)
-                    return null;
+                    return (null, null);
 
                 if (query.Metadata.IndexFieldNames.Contains(QueryFieldName.DocumentId) == false)
-                    return null;
+                    return (null, null);
 
                 var idsRetriever = new RetrieveDocumentIdsVisitor(resultsRetriever, query.Metadata, _context.Allocator);
 
                 idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
-
                 
-                
-                return idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList();
+                return (idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList() , idsRetriever.StartsWith);
             }
 
             public bool MoveNext()
@@ -198,8 +197,14 @@ namespace Raven.Server.Documents.Queries
             private IEnumerable<Document> GetDocuments()
             {
                 IEnumerable<Document> documents;
-                if (_ids != null && _ids.Count > 0)
+                if (_startsWith != null)
+                {
+                    documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize);
+                }
+                else if (_ids != null && _ids.Count > 0)
+                {
                     documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults);
+                }
                 else if (_isAllDocsCollection)
                 {
                     documents = _documents.GetDocumentsFrom(_context, 0, _start, _query.PageSize);
@@ -210,7 +215,6 @@ namespace Raven.Server.Documents.Queries
                     documents = _documents.GetDocumentsFrom(_context, _collection, 0, _start, _query.PageSize);
                     _totalResults.Value = (int)_documents.GetCollection(_collection, _context).Count;
                 }
-
                 return ApplySorting(documents);
             }
 
@@ -310,6 +314,7 @@ namespace Raven.Server.Documents.Queries
                 private readonly MapQueryResultRetriever _resultsRetriever;
                 private readonly QueryMetadata _metadata;
                 private readonly ByteStringContext _allocator;
+                public string StartsWith;
 
                 public readonly List<Slice> Ids = new List<Slice>();
 
@@ -387,6 +392,14 @@ namespace Raven.Server.Documents.Queries
                     else if (expression is InExpression ie)
                     {
                         VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
+                    }
+                    else if (name == "startsWith")
+                    {
+                        if (expression is ValueExpression iv)
+                        {
+                            var prefix = QueryBuilder.GetValue(_query, _metadata, parameters, iv);
+                            StartsWith = prefix.Value?.ToString();
+                        }
                     }
                     else
                     {
