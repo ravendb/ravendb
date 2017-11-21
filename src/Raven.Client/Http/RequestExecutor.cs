@@ -442,11 +442,12 @@ namespace Raven.Client.Http
                     _lastKnownUrls = initialUrls;
                     throw;
                 }
-                catch (DatabaseDoesNotExistException e)
+                catch (DatabaseDoesNotExistException)
                 {
-                    if (initialUrls.Length == 1)
-                        throw;
-                    list.Add((url, e));
+                    // Will happen on all node in the cluster,
+                    // so errors immediately
+                    _lastKnownUrls = initialUrls;
+                    throw;
                 }
                 catch (Exception e)
                 {
