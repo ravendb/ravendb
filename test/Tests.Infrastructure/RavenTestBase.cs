@@ -482,7 +482,7 @@ namespace FastTests
             SecurityClearance clearance,
             RavenServer server = null)
         {
-            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
+            var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder, out _);
             var serverCertificate = new X509Certificate2(serverCertPath);
             using (var store = GetDocumentStore(new Options
             {
