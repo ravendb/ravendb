@@ -147,7 +147,9 @@ namespace Raven.Server.Documents.Indexes
         private bool _allocationCleanupNeeded;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private long _lastLowMemoryEventTicks = 0;
-        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromMinutes(1).Ticks;
+
+        // delay a bit after low mem is over in order to let the flush(es) to finish (or at least do some major flushing writes)
+        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromSeconds(1).Ticks; 
 
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
