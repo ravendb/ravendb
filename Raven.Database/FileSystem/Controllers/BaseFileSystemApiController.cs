@@ -83,7 +83,7 @@ namespace Raven.Database.FileSystem.Controllers
             get { return FileSystem.Historian; }
         }
 
-        private NameValueCollection QueryString
+        protected NameValueCollection QueryString
         {
             get { return queryString ?? (queryString = HttpUtility.ParseQueryString(Request.RequestUri.Query)); }
         }

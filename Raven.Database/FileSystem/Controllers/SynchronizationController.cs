@@ -462,7 +462,10 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/IncrementLastETag")]
         public HttpResponseMessage IncrementLastETag(Guid sourceServerId, string sourceFileSystemUrl, string sourceFileETag)
         {
-            Synchronizations.IncrementLastEtag(sourceServerId, sourceFileSystemUrl, sourceFileETag);
+            bool force;
+            bool.TryParse(QueryString["force"], out force);
+
+            Synchronizations.IncrementLastEtag(sourceServerId, sourceFileSystemUrl, sourceFileETag, force);
 
             return GetEmptyMessage();
         }
