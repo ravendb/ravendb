@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -762,6 +763,20 @@ namespace Raven.Server.Commercial
             }
         }
 
+        public static void AssertCanListenToPort(int port)
+        {
+            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            var ipEndPoints = ipProperties.GetActiveTcpListeners();
+
+            foreach (var activePort in ipEndPoints)
+            {
+                if (activePort.Port == port)
+                {
+                    throw new InvalidOperationException($"The requested port '{port}' is already in use by another process. You may go back, change the port and try again.");
+                }
+            }
+        }
+
         public static async Task ValidateServerCanRunWithSuppliedSettings(CancellationToken token, SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode)
         {
             var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
@@ -795,6 +810,8 @@ namespace Raven.Server.Commercial
 
         public static void ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo)
         {
+            AssertCanListenToPort(setupInfo.NodeSetupInfos[LocalNodeTag].Port);
+
             if (setupMode == SetupMode.LetsEncrypt)
             {
                 if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
