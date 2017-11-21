@@ -2,6 +2,7 @@
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -49,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                throw new ConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value");
+                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value");
 
             subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
 

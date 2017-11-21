@@ -44,7 +44,8 @@ namespace Raven.Client.Documents.Subscriptions
             Redirect,
             ForbiddenReadOnly,
             Forbidden,
-            Invalid
+            Invalid,
+            ConcurrencyReconnect
         }
 
         internal class SubscriptionRedirectData

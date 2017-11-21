@@ -98,6 +98,10 @@ namespace Raven.Server.Documents.Subscriptions
             }
             catch (Exception ex)
             {                
+                if (ex.InnerException != null && ex.InnerException is SubscriptionException se)
+                {
+                    throw se;
+                }
                 throw new SubscriptionDoesNotBelongToNodeException(
                     $"Subscription {name} has failed to acknowledge batch, therefore another server should be attempted", ex);
             }

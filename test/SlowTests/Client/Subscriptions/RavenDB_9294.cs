@@ -42,7 +42,7 @@ namespace SlowTests.Client.Subscriptions
                 var reconnectHappened = new AsyncManualResetEvent();
 
                 firstBatchHappened.Reset();
-                worker.OnSubscriptionConnectionRetry += () => reconnectHappened.Set();
+                worker.OnSubscriptionConnectionRetry += x => reconnectHappened.Set();
                 _ = worker.Run(x => firstBatchHappened.Set());
                 Assert.False(await reconnectHappened.WaitAsync(TimeSpan.FromSeconds(6)),"Client reconnected");
 
