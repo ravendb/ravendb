@@ -756,7 +756,7 @@ namespace RachisTests
                     {
                         if (disposedOnce == false)
                         {
-                            subscription.OnSubscriptionConnectionRetry += () =>
+                            subscription.OnSubscriptionConnectionRetry += x =>
                             {
                                 subscriptionRetryBegins.SetAndResetAtomically();
                             };

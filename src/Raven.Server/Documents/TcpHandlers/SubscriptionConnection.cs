@@ -317,8 +317,26 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     });
                 }
+                else if (ex is SubscriptionChangeVectorUpdateConcurrencyException subscriptionConcurrency)
+                {
+                    if (connection._logger.IsInfoEnabled)
+                    {
+                        connection._logger.Info("Subscription change vector update concurrency error", ex);
+                    }
+                    await connection.WriteJsonAsync(new DynamicJsonValue
+                    {
+                        [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                        [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
+                        [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                    });
+                }
                 else
                 {
+                    if (connection._logger.IsInfoEnabled)
+                    {
+                        connection._logger.Info("Subscription error", ex);
+                    }
                     await connection.WriteJsonAsync(new DynamicJsonValue
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Error),

@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
-        public event Action OnSubscriptionConnectionRetry;
+        public event Action<Exception> OnSubscriptionConnectionRetry;
 
         internal SubscriptionWorker(SubscriptionWorkerOptions options, IDocumentStore documentStore, string dbName)
         {
@@ -259,6 +259,8 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         AppropriateNode = appropriateNode
                     };
+                case SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect:
+                    throw new SubscriptionChangeVectorUpdateConcurrencyException(connectionStatus.Message);
                 default:
                     throw new ArgumentException(
                         $"Subscription '{_options.SubscriptionName}' could not be opened, reason: {connectionStatus.Status}");
@@ -499,7 +501,7 @@ namespace Raven.Client.Documents.Subscriptions
                         {
                             await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
                             var onSubscriptionConnectionRetry = OnSubscriptionConnectionRetry;
-                            onSubscriptionConnectionRetry?.Invoke();
+                            onSubscriptionConnectionRetry?.Invoke(ex);
                         }
                         else
                         {
@@ -557,6 +559,8 @@ namespace Raven.Client.Documents.Subscriptions
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
                     
+                    return true;
+                case SubscriptionChangeVectorUpdateConcurrencyException ce:
                     return true;
                 case SubscriptionInUseException _:
                 case SubscriptionDoesNotExistException _:
