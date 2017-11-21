@@ -208,6 +208,16 @@ namespace Raven.Client.Documents.Queries.Facets
                         return Convert.ChangeType(constant.Value, type);
                     case ExpressionType.Convert:
                         return ParseUnaryExpression((UnaryExpression)operand);
+                    case ExpressionType.New:
+                        try
+                        {
+                            var invoke = Expression.Lambda(operand).Compile();
+                            return invoke.DynamicInvoke();
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Could not understand expression " + operand, e);
+                        }
                 }
             }
 
