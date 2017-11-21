@@ -421,7 +421,7 @@ namespace Raven.Server
 
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
 
-            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert);
+            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
         }
 
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
@@ -951,10 +951,10 @@ namespace Raven.Server
         private HttpsConnectionAdapter _httpsConnectionAdapter;
         public (IPAddress[] Addresses, int Port) ListenEndpoints { get; private set; }
 
-        internal void SetCertificate(X509Certificate2 certificate)
+        internal void SetCertificate(X509Certificate2 certificate, byte[] rawBytes, string password)
         {
             var certificateHolder = Certificate;
-            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate);
+            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password);
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
                 _httpsConnectionAdapter.SetCertificate(certificate);
         }

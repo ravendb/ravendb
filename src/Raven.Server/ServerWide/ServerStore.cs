@@ -622,7 +622,7 @@ namespace Raven.Server.ServerWide
                             certStream.Flush(true);
                         }
                         
-                        Server.SetCertificate(newClusterCertificate);
+                        Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
                         
                     }
                     break;

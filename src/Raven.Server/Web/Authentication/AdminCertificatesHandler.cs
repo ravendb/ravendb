@@ -98,7 +98,7 @@ namespace Raven.Server.Web.Authentication
             }
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.Certificate);
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.Certificate, out var clientCertBytes);
 
             var newCertDef = new CertificateDefinition
             {
@@ -109,12 +109,7 @@ namespace Raven.Server.Web.Authentication
                 SecurityClearance = certificate.SecurityClearance,
                 Thumbprint = selfSignedCertificate.Thumbprint
             };
-
-            if (PlatformDetails.RunningOnPosix)
-            {
-                ValidateCaExistsInOsStores(newCertDef.Certificate, certificate.Name, ServerStore);
-            }
-
+			
             var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
@@ -130,7 +125,7 @@ namespace Raven.Server.Web.Authentication
                 entry = archive.CreateEntry(certificate.Name + ".pem");
                 using (var s = entry.Open())
                 {
-                    WriteCertificateAsPem(selfSignedCertificate, certificate.Password, s);
+                    WriteCertificateAsPem(clientCertBytes, certificate.Password, s);
                 }
             }
 
@@ -138,11 +133,11 @@ namespace Raven.Server.Web.Authentication
         }
 
 
-        public static void WriteCertificateAsPem(X509Certificate2 cert, string password, Stream s)
+        public static void WriteCertificateAsPem(byte[] rawBytes, string exportPassword, Stream s)
         {
             
             var a = new Pkcs12Store();
-            a.Load(new MemoryStream(cert.Export(X509ContentType.Pkcs12, (string)null)), Array.Empty<char>());
+            a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
             var entry = a.GetCertificate(a.Aliases.Cast<string>().First());
             var key = a.Aliases.Cast<string>().Select(a.GetKey).First(x => x != null);
             
@@ -152,12 +147,12 @@ namespace Raven.Server.Web.Authentication
                 pw.WriteObject(entry.Certificate);
 
                 object privateKey;
-                if (password != null)
+                if (exportPassword != null)
                 {
                     privateKey = new MiscPemGenerator(
                             key.Key,
                             "AES-128-CBC",
-                            password.ToCharArray(), 
+                            exportPassword.ToCharArray(), 
                             CertificateUtils.GetSeededSecureRandom())
                         .Generate();
                 }
@@ -171,88 +166,8 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static void ValidateCaExistsInOsStores(string base64Cert, string name, ServerStore serverStore)
-        {
-            // Implementation of SslStream AuthenticateAsServer is different in Linux. See RavenDB-8524
-            // A list of allowed CAs is sent from the server to the client. The handshake will fail if the client's CA is not in that list. This list is taken from the root and certificate authority stores of the OS.
-            // In this workaround we make sure that the CA (who signed the certificate) is registered in one of the OS stores.
-
-            var x509Certificate2 = new X509Certificate2(Convert.FromBase64String(base64Cert));
-
-            var chain = new X509Chain
-            {
-                ChainPolicy =
-                    {
-                        RevocationMode = X509RevocationMode.NoCheck,
-                        RevocationFlag = X509RevocationFlag.ExcludeRoot,
-                        VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority,
-                        VerificationTime = DateTime.UtcNow,
-                        UrlRetrievalTimeout = new TimeSpan(0, 0, 0)
-                    }
-            };
-
-            if (chain.Build(x509Certificate2) == false)
-            {
-                var status = new StringBuilder();
-                if (chain.ChainStatus.Length != 0)
-                {
-                    status.Append("Chain Status:\r\n");
-                    foreach (var chainStatus in chain.ChainStatus)
-                        status.Append(chainStatus.Status + " : " + chainStatus.StatusInformation + "\r\n");
-                }
-
-                throw new InvalidOperationException($"The certificate chain for {name} is broken, admin assistance required. {status}");
-            }
-
-            var rootCert = GetRootCertificate(chain);
-            if (rootCert == null)
-                throw new InvalidOperationException($"The certificate chain for {name} is broken. Reason: partial chain, cannot extract CA from chain. Admin assistance required.");
-
-
-            using (var machineRootStore = new X509Store(StoreName.Root, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
-            using (var machineCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine, OpenFlags.ReadOnly))
-            using (var userRootStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
-            using (var userCaStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, OpenFlags.ReadOnly))
-            {
-                // workaround for lack of cert store inheritance RavenDB-8904
-                if (machineCaStore.Certificates.Contains(rootCert) == false
-                    && machineRootStore.Certificates.Contains(rootCert) == false
-                    && userCaStore.Certificates.Contains(rootCert) == false
-                    && userRootStore.Certificates.Contains(rootCert) == false)
-                {
-                    var path = new[]
-                    {
-                        serverStore.Configuration.Security.CertificatePath,
-                        serverStore.Configuration.Security.CertificateExec,
-                    }.FirstOrDefault(File.Exists) ?? "no path defined";
-
-                    throw new InvalidOperationException($"Cannot save the client certificate '{name}'. " +
-                                                        $"First, you must register the CA of the certificate '{rootCert.SubjectName.Name}' in the trusted root store, on the server machine." +
-                                                        $"The server certificate is located in: '{path}'" +
-                                                        "This step is required because you are trying to save a certificate which was signed by an unknown or self-signed certificate authority.");
-                }
-            }
-        }
-
-        public static X509Certificate2 GetRootCertificate(X509Chain chain)
-        {
-            if (chain.ChainElements.Count < 1)
-                return null;
-
-            var lastElement = chain.ChainElements[chain.ChainElements.Count - 1];
-
-            foreach (var status in lastElement.ChainElementStatus)
-            {
-                if (status.Status == X509ChainStatusFlags.PartialChain)
-                {
-                    return null;
-                }
-            }
-
-            return lastElement.Certificate;
-        }
-
-        [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
+        
+		[RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             // one of the first admin action is to create a certificate, so let
@@ -314,11 +229,6 @@ namespace Raven.Server.Web.Authentication
                     // The other certificates are secondary certificates and will contain a link to the primary certificate.
                     currentCertificate.Thumbprint = x509Certificate.Thumbprint;
                     currentCertificate.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
-
-                    if (PlatformDetails.RunningOnPosix)
-                    {
-                        ValidateCaExistsInOsStores(currentCertificate.Certificate, currentCertificate.Name, ServerStore);
-                    }
 
                     if (first)
                     {

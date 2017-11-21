@@ -416,11 +416,11 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
-        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate)
+        public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password)
         {
             ValidateExpiration(source, loadedCertificate);
 
-            ValidatePrivateKey(source, null, loadedCertificate.Export(X509ContentType.Pkcs12, (string)null), out var privateKey);
+            ValidatePrivateKey(source, password, rawBytes, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
 
