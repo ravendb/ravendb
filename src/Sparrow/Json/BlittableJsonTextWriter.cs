@@ -185,16 +185,16 @@ namespace Sparrow.Json
             WriteRawStringWhichMustBeWithoutEscapeChars(strBuffer, size);
         }
 
-        public void WriteString(string str)
+        public void WriteString(string str, bool skipEscaping = false)
         {
             using (var lazyStr = _context.GetLazyString(str))
             {
-                WriteString(lazyStr);
+                WriteString(lazyStr, skipEscaping);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteString(LazyStringValue str)
+        public void WriteString(LazyStringValue str, bool skipEscaping = false)
         {
             if (str == null)
             {
@@ -202,11 +202,17 @@ namespace Sparrow.Json
                 return;
             }
 
-            var strBuffer = str.Buffer;
             var size = str.Size;
+            
+            if (size == 1 && str.IsControlCodeCharacter(out var b))
+            {
+                WriteString($@"\u{b:X4}", skipEscaping: true);
+                return;
+            }
 
+            var strBuffer = str.Buffer;
             var escapeSequencePos = size;
-            var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
+            var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
 
             // We ensure our buffer will have enough space to deal with the whole string.
             int bufferSize = 2 * numberOfEscapeSequences + size + 1;
