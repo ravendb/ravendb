@@ -381,11 +381,6 @@ namespace Raven.Server.Web.System
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
 
-                var licenseStatus = ServerStore.LicenseManager.GetLicenseStatus(setupInfo.License);
-
-                if (licenseStatus.Expired)
-                    throw new InvalidOperationException("The provided license for " + setupInfo.License.Name + " has expired (" + licenseStatus.Expiration + ")");
-
                 var operationResult = await ServerStore.Operations.AddOperation(
                     null, "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
