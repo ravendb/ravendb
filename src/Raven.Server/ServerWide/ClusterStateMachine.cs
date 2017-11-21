@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide
         private static readonly TableSchema ItemsSchema;
 
         private static readonly TableSchema CmpXchgItemsSchema;
-        private enum UniqueItems
+        public enum UniqueItems
         {
             Key,
             Index,
@@ -205,8 +205,10 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveEtlProcessStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader, out _);
                         break;
-                    case nameof(CompareExchangeCommand):
-                        CompareExchange(context, type, cmd, index);
+                    case nameof(AddOrUpdateCompareExchangeCommand):
+                    case nameof(RemoveCompareExchangeCommand):
+                        CompareExchange(context, type, cmd, index, out var removeItem);
+                        leader?.SetStateOf(index, removeItem);
                         break;
                      case nameof(InstallUpdatedServerCertificateCommand):
                          InstallUpdatedServerCertificate(context, cmd, index);
@@ -485,7 +487,8 @@ namespace Raven.Server.ServerWide
                 items.DeleteByPrimaryKeyPrefix(loweredKey);
             }
 
-            DeleteIdentities(context, databaseName);
+            DeleteTreeByPrefix(context, UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null), Identities);
+            DeleteTreeByPrefix(context, databaseName + "/", CmpXchg, RootObjectType.Table);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -927,35 +930,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public unsafe void CompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        public void CompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
-            cmd.TryGet(nameof(CompareExchangeCommand.Key), out string key);
-            cmd.TryGet(nameof(CompareExchangeCommand.Index), out long cmdIndex);
-            var dbKey = key.ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
-            using (items.Allocate(out TableValueBuilder tvb))
-            {
-                cmd.TryGet(nameof(CompareExchangeCommand.Value), out BlittableJsonReaderObject value);
-                value = context.ReadObject(value, nameof(CompareExchangeCommand.Value));
+            var compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
+            result = compareExchange.Execute(context,items,index);
+            OnTransactionDispose(context, index);
+        }
 
-                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                tvb.Add(index);
-                tvb.Add(value.BasePointer, value.Size);
-
-                if (items.ReadByKey(keySlice, out var reader))
-                {
-                    var itemIndex = *(long*)reader.Read((int)UniqueItems.Index, out var _);
-                    if (cmdIndex == itemIndex)
-                    {
-                        items.Update(reader.Id, tvb);
-                    }
-                }
-                else
-                {
-                    items.Set(tvb);
-                }
-            }
+        private void OnTransactionDispose(TransactionOperationContext context, long index)
+        {
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
             {
                 if (transaction is LowLevelTransaction llt && llt.Committed)
@@ -972,8 +956,8 @@ namespace Raven.Server.ServerWide
                     }, null);
             };
         }
-
-        public unsafe (long Index, BlittableJsonReaderObject Value) GetCmpXchg(TransactionOperationContext context, string key)
+        
+        public (long Index, BlittableJsonReaderObject Value) GetCmpXchg(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
             var dbKey = key.ToLowerInvariant();
@@ -981,12 +965,48 @@ namespace Raven.Server.ServerWide
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    var index = *(long*)reader.Read((int)UniqueItems.Index, out var _);
-                    var value = reader.Read((int)UniqueItems.Value, out var size);
-                    return (index, new BlittableJsonReaderObject(value, size, context));
+                    var index = ReadCmpXchgIndex(reader);
+                    var value = ReadCmpXchgValue(context, reader);
+                    return (index, value);
                 }
-                return (0, null);
+                return (-1, null);
             }
+        }
+        
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCmpXchgByPrefix(TransactionOperationContext context, string prefix, 
+            int currentPage = 0, int pageSize = 1024)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
+            var dbKey = prefix.ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            {
+                foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, currentPage * pageSize))
+                {
+                    pageSize--;
+                    var key = ReadCmpXchgKey(context, item.Value.Reader);
+                    var index = ReadCmpXchgIndex(item.Value.Reader);
+                    var value = ReadCmpXchgValue(context, item.Value.Reader);
+                    yield return (key, index, value);
+                    
+                    if(pageSize == 0)
+                        yield break;
+                }
+            }
+        }
+
+        private static unsafe string ReadCmpXchgKey(TransactionOperationContext context, TableValueReader reader)
+        {
+            return new LazyStringValue(null, reader.Read((int)UniqueItems.Key, out var size), size, context);
+        }
+
+        private static unsafe BlittableJsonReaderObject ReadCmpXchgValue(TransactionOperationContext context, TableValueReader reader)
+        {
+            return new BlittableJsonReaderObject(reader.Read((int)UniqueItems.Value, out var size), size, context);
+        }
+
+        private static unsafe long ReadCmpXchgIndex(TableValueReader reader)
+        {
+            return *(long*)reader.Read((int)UniqueItems.Index, out var _);
         }
 
         public IEnumerable<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, int start, int take)
@@ -1105,13 +1125,13 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static void DeleteIdentities<T>(TransactionOperationContext<T> context, string name)
+        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice, 
+            RootObjectType type = RootObjectType.VariableSizeTree)
             where T : RavenTransaction
         {
             const int batchSize = 1024;
-            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
+            var identities = context.Transaction.InnerTransaction.ReadTree(treeSlice, type);
 
-            var prefixString = UpdateValueForDatabaseCommand.GetStorageKey(name, null);
             using (Slice.From(context.Allocator, prefixString, out var prefix))
             {
                 var toRemove = new List<Slice>();
