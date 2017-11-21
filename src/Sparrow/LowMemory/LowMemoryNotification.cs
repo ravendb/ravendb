@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -119,6 +123,46 @@ namespace Sparrow.LowMemory
             thread.Start();
         }
 
+        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory) MemoryStatsInternal()
+        {
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                var workingSet =
+                    PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
+                        ? currentProcess.WorkingSet64
+                        : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+
+                long totalUnmanagedAllocations = 0;
+                foreach (var stats in NativeMemory.ThreadAllocations.Values
+                    .Where(x => x.ThreadInstance.IsAlive)
+                    .GroupBy(x => x.Name)
+                    .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
+                {
+                    var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
+                    totalUnmanagedAllocations += unmanagedAllocations;
+                }
+
+                var managedMemory = GC.GetTotalMemory(false);
+
+                return (workingSet, totalUnmanagedAllocations, managedMemory);
+            }
+        }
+
+        public static Size GetCurrentProcessMemoryMappedShared()
+        {
+            // because we are usually using memory mapped files, we don't want
+            // to account for memory that was loaded into our own working set
+            // but that the OS can discard with no cost (because it can load
+            // the data from disk without needing to write it)
+
+            var memoryStats = MemoryStatsInternal();
+
+            var sharedMemory = memoryStats.WorkingSet - memoryStats.TotalUnmanagedAllocations - memoryStats.ManagedMemory;
+            // if this is negative, we'll just ignore this
+            var mappedShared = new Size(Math.Max(0, sharedMemory), SizeUnit.Bytes);
+            return mappedShared;            
+        }
+
         private void MonitorMemoryUsage()
         {
             NativeMemory.EnsureRegistered();
@@ -130,9 +174,7 @@ namespace Sparrow.LowMemory
             {
                 long totalUnmanagedAllocations = 0;
 
-                var handles = MemoryInformation.GetMemoryInfo().AvailableMemory.GetValue(SizeUnit.Bytes) < _lowMemoryThreshold * 2 ?
-                    paranoidModeHandles :
-                    memoryAvailableHandles;
+                var handles = SelectWaitMode(paranoidModeHandles, memoryAvailableHandles);
                 switch (WaitHandle.WaitAny(handles, timeout))
                 {
                     case WaitHandle.WaitTimeout:
@@ -151,8 +193,12 @@ namespace Sparrow.LowMemory
 
                         var memInfo = MemoryInformation.GetMemoryInfo();
 
-                        var availableMem = memInfo.AvailableMemory.GetValue(SizeUnit.Bytes);
-                        if (availableMem < _lowMemoryThreshold)
+                        var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
+                        var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared).GetValue(SizeUnit.Bytes);
+
+                        if (availableMem < _lowMemoryThreshold || 
+                            // at all times, we want 2% or 1 GB, the lowest of the two
+                            memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)))
                         {
                             if (LowMemoryState == false)
                             {
@@ -199,6 +245,14 @@ namespace Sparrow.LowMemory
                         return;
                 }
             }
+        }
+
+        private WaitHandle[] SelectWaitMode(WaitHandle[] paranoidModeHandles, WaitHandle[] memoryAvailableHandles)
+        {
+            var memoryInfoResult = MemoryInformation.GetMemoryInfo();
+            var handles = (memoryInfoResult.AvailableMemory + GetCurrentProcessMemoryMappedShared()).GetValue(SizeUnit.Bytes) < 
+                _lowMemoryThreshold * 2 ? paranoidModeHandles : memoryAvailableHandles;
+            return handles;
         }
 
         private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long physicalMem)

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -32,29 +33,22 @@ namespace Raven.Server.ServerWide.Memory
                 // a lot of the memory that we use is actually from memory mapped files, as such, we can
                 // rely on the OS to page it out (without needing to write, since it is read only in this case)
                 // so we try to calculate how much such memory we can use with this assumption 
-                var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
+                var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
 
-                currentUsage = new ProcessMemoryUsage(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64);
+                currentUsage = new ProcessMemoryUsage(currentProcess.WorkingSet64,
+                    Math.Max(0, currentProcess.WorkingSet64 - mappedSharedMem.GetValue(SizeUnit.Bytes)));
 
-                if (memoryMappedSize < Size.Zero)
-                {
-                    // in this case, we are likely paging, our working set is smaller than the memory we allocated
-                    // it isn't _neccesarily_ a bad thing, we might be paged on allocated memory we aren't using, but
-                    // at any rate, we'll ignore that and just use the actual physical memory available
-                    memoryMappedSize = Size.Zero;
-                }
-                var minMemoryToLeaveForMemoryMappedFiles = memoryInfoResult.TotalPhysicalMemory / 4;
-
-                var memoryAssumedFreeOrCheapToFree = (memoryInfoResult.AvailableMemory + memoryMappedSize - minMemoryToLeaveForMemoryMappedFiles);
+                var memoryAssumedFreeOrCheapToFree = memoryInfoResult.AvailableMemory + mappedSharedMem;
 
                 // there isn't enough available memory to try, we want to leave some out for other things
-                if (memoryAssumedFreeOrCheapToFree < memoryInfoResult.TotalPhysicalMemory / 10)
+                if (memoryAssumedFreeOrCheapToFree < 
+                    Size.Min(memoryInfoResult.TotalPhysicalMemory / 50, new Size(1, SizeUnit.Gigabytes)) )
                 {
                     if (logger.IsInfoEnabled)
                     {
                         logger.Info(
-                            $"{threadStats.Name} which is already using {currentlyAllocated}/{currentMaximumAllowedMemory} and the system has" +
-                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{memoryMappedSize} in mmap " +
+                            $"{threadStats.Name} which is already using {currentlyAllocated}/{currentMaximumAllowedMemory} and the system has " +
+                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{mappedSharedMem} in mmap " +
                             "files that can be cleanly released, not enough to proceed in batch.");
                     }
 
@@ -73,7 +67,7 @@ namespace Raven.Server.ServerWide.Memory
                     {
                         logger.Info(
                             $"{threadStats} which is already using {currentlyAllocated}/{currentMaximumAllowedMemory} and the system has" +
-                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{memoryMappedSize} in mmap " +
+                            $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{mappedSharedMem} in mmap " +
                             "files that can be cleanly released, not enough to proceed in batch.");
                     }
                     return false;
@@ -89,7 +83,7 @@ namespace Raven.Server.ServerWide.Memory
                 {
                     logger.Info(
                         $"Increasing memory budget for {threadStats.Name} which is using  {currentlyAllocated}/{oldBudget} and the system has" +
-                        $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM with {memoryMappedSize} in mmap " +
+                        $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM with {mappedSharedMem} in mmap " +
                         $"files that can be cleanly released. Budget increased to {currentMaximumAllowedMemory}");
                 }
 
