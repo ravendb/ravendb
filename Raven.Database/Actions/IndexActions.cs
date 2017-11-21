@@ -1067,7 +1067,7 @@ namespace Raven.Database.Actions
                 Database.IndexStorage.DeleteSuggestionsData(instance.Name);
 
                 //remove the header information in a sync process
-                PrepareIndexDeletion(instance);
+                PrepareIndexDeletion(instance.IndexId);
 
                 //and delete the data in the background
                 Database.Maintenance.StartDeletingIndexDataAsync(instance.IndexId, instance.Name);
