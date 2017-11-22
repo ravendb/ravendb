@@ -113,10 +113,11 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
-                ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, ThrowLoadDocument));
+                ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnLoadDocument));
                 ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, LoadDocumentByPath));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
+                ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnPutDocument));
                 ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CmpXchangeValue));
 
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, GetMetadata));
@@ -469,9 +470,14 @@ namespace Raven.Server.Documents.Patch
                 return LoadDocumentInternal(args[0].AsString());
             }
 
-            private JsValue ThrowLoadDocument(JsValue self, JsValue[] args)
+            private JsValue ThrowOnLoadDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method LoadDocument was renamed to 'load'");
+            }
+
+            private JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
+            {
+                throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
 
             private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
