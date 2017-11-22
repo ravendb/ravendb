@@ -109,8 +109,8 @@ namespace Raven.Client.Extensions
 
             if (query.ExplainScores)
             {
-                writer.WritePropertyName(nameof(query.DisableCaching));
-                writer.WriteBool(query.DisableCaching);
+                writer.WritePropertyName(nameof(query.ExplainScores));
+                writer.WriteBool(query.ExplainScores);
                 writer.WriteComma();
             }
 
