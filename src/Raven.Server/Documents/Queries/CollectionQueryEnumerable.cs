@@ -393,7 +393,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
                     }
-                    else if (name == "startsWith")
+                    else if (string.Equals(name,"startsWith", StringComparison.InvariantCultureIgnoreCase))
                     {
                         if (expression is ValueExpression iv)
                         {
