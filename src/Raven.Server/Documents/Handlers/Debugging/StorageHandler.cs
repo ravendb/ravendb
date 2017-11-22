@@ -62,7 +62,65 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        //TODO: consider adding this to debug-info-package, need to think how to handle the parameters in a generic manner
+        [RavenAction("/databases/*/debug/storage/all-environments/report", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        public Task AllEnvironmentsReport()
+        {
+            var name = GetStringQueryString("database");
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("DatabaseName");
+                    writer.WriteString(name);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Environments");
+                    writer.WriteStartArray();
+                    WriteAllEnvs(writer, context);
+                    writer.WriteEndArray();
+
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private void WriteAllEnvs(BlittableJsonTextWriter writer, DocumentsOperationContext context)
+        {
+            var envs = Database.GetAllStoragesEnvironment();
+
+            bool first = true;
+            foreach (var env in envs)
+            {
+                if (env == null)
+                    continue;
+
+                if (!first)
+                    writer.WriteComma();
+                first = false;
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("Environment");
+                writer.WriteString(env.Name);
+                writer.WriteComma();
+
+                writer.WritePropertyName("Type");
+                writer.WriteString(env.Type.ToString());
+                writer.WriteComma();
+
+                var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetDetailedReport(env, false));
+                writer.WritePropertyName("Report");
+                writer.WriteObject(context.ReadObject(djv, env.Name));
+
+                writer.WriteEndObject();
+            }
+        }
+
+
         [RavenAction("/databases/*/debug/storage/environment/report", "GET", AuthorizationStatus.ValidUser)]
         public Task EnvironmentReport()
         {
