@@ -75,7 +75,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo("Starting validation.");
                 onProgress(progress);
 
-                ValidateSetupInfo(SetupMode.Secured, setupInfo);
+                ValidateSetupInfo(SetupMode.Secured, setupInfo, serverStore);
 
                 try
                 {
@@ -201,7 +201,7 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
                 try
                 {
-                    ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo);
+                    ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
                 }
                 catch (Exception e)
                 {
@@ -768,16 +768,24 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void AssertCanListenToPort(int port)
+        public static void AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
         {
-            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
-            var ipEndPoints = ipProperties.GetActiveTcpListeners();
+            var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
+            var requestedEndpoints = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port));
+            var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
+            
 
-            foreach (var activePort in ipEndPoints)
+            var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
+            var activeTcpListeners = ipProperties.GetActiveTcpListeners();
+
+            foreach (var requestedEndpoint in requestedEndpoints)
             {
-                if (activePort.Port == port)
+                if (activeTcpListeners.Contains(requestedEndpoint))
                 {
-                    throw new InvalidOperationException($"The requested port '{port}' is already in use by another process. You may go back, change the port and try again.");
+                    if (currentServerEndpoints.Contains(requestedEndpoint))
+                        continue; // OK... used by the current server
+
+                    throw new InvalidOperationException($"The requested endpoint '{requestedEndpoint.Address}:{requestedEndpoint.Port}' is already in use by another process. You may go back in the wizard, change the settings and try again.");
                 }
             }
         }
@@ -813,10 +821,8 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo)
+        public static void ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
-            AssertCanListenToPort(setupInfo.NodeSetupInfos[LocalNodeTag].Port);
-
             if (setupMode == SetupMode.LetsEncrypt)
             {
                 if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
@@ -838,6 +844,8 @@ namespace Raven.Server.Commercial
                 if (node.Value.Port == 0)
                     setupInfo.NodeSetupInfos[node.Key].Port = 443;
             }
+
+            AssertLocalNodeCanListenToEndpoints(setupInfo, serverStore);
         }
 
         public static bool IsValidEmail(string email)
