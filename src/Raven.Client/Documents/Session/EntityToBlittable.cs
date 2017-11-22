@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Session
 
                 var documentType = conventions.GetClrType(id, document);
                 if (documentType != null)
-                {
+                {                    
                     var type = Type.GetType(documentType);
                     if (type != null && entityType.IsAssignableFrom(type))
                     {
@@ -177,8 +177,7 @@ namespace Raven.Client.Documents.Session
             {
                 var propertyValue = document[propertyName];
 
-                var propertyArray = propertyValue as BlittableJsonReaderArray;
-                if (propertyArray != null)
+                if (propertyValue is BlittableJsonReaderArray propertyArray)
                 {
                     simplified |= TrySimplifyJson(propertyArray);
                     continue;
@@ -188,8 +187,7 @@ namespace Raven.Client.Documents.Session
                 if (propertyObject == null)
                     continue;
 
-                string type;
-                if (propertyObject.TryGet(Constants.Json.Fields.Type, out type) == false)
+                if (propertyObject.TryGet(Constants.Json.Fields.Type, out string type) == false)
                 {
                     simplified |= TrySimplifyJson(propertyObject);
                     continue;
@@ -203,8 +201,7 @@ namespace Raven.Client.Documents.Session
                 if (document.Modifications == null)
                     document.Modifications = new DynamicJsonValue(document);
 
-                BlittableJsonReaderArray values;
-                if (propertyObject.TryGet(Constants.Json.Fields.Values, out values) == false)
+                if (propertyObject.TryGet(Constants.Json.Fields.Values, out BlittableJsonReaderArray values) == false)
                 {
                     if (propertyObject.Modifications == null)
                         propertyObject.Modifications = new DynamicJsonValue(propertyObject);

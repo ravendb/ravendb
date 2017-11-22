@@ -90,7 +90,8 @@ namespace Raven.Server.NotificationCenter
                 if (existing?.PostponedUntil != null && existing.PostponedUntil.Value > SystemTime.UtcNow)
                     postponeUntil = existing.PostponedUntil;
 
-                using (var json = context.ReadObject(notification.ToJson(), "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                var jsonValue = notification.ToJson();
+                using (var json = context.ReadObject(jsonValue, "notification", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     Store(context.GetLazyString(notification.Id), notification.CreatedAt, postponeUntil, json, tx);
                 }

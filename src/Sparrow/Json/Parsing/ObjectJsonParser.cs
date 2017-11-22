@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using Sparrow.Collections;
 using Sparrow.Extensions;
 using Sparrow.Utils;
@@ -469,6 +471,21 @@ namespace Sparrow.Json.Parsing
                         var djv = new DynamicJsonValue
                         {
                             [item.Key] = item.Value
+                        };
+                        dja.Add(djv);
+                    }
+                    current = dja;
+                    continue;
+                }
+
+                if (current is Dictionary<string,object> @params)
+                {
+                    var dja = new DynamicJsonArray();
+                    foreach (var item in @params)
+                    {
+                        var djv = new DynamicJsonValue
+                        {
+                            [item.Key] = Convert.ToString(item.Value)
                         };
                         dja.Add(djv);
                     }

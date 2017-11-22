@@ -1,5 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Lucene.Net.Search;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Raven.Client;
+using Raven.Client.Extensions;
+using Raven.Client.Json;
+using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -7,65 +16,86 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class RequestLatencyDetail : INotificationDetails
     {
-        public Dictionary<string, Queue<RequestLatencyInfo>> RequestLatencies { get; set; }
-
-        public RequestLatencyDetail()
+        private const int RequestLatencyDetailLimit = 50;
+        public Dictionary<string, List<RequestLatencyInfo>> RequestLatencies = new Dictionary<string, List<RequestLatencyInfo>>(StringComparer.OrdinalIgnoreCase);
+     
+        public void Update(string path, IQueryCollection requestQuery, long duration, string database, long requestContentLength)
         {
-            RequestLatencies = new Dictionary<string, Queue<RequestLatencyInfo>>();
-        }
-        
-        public void Update(string queryString, long duration, string action)
-        {
-            if (RequestLatencies.TryGetValue(action, out var hintQueue) == false)
+            if (RequestLatencies.TryGetValue(database, out var hintQueue) == false)
             {
-                var queue = new Queue<RequestLatencyInfo>();
-                queue.Enqueue(new RequestLatencyInfo(queryString, duration, action));
-                RequestLatencies.Add(action, queue);
+                var queue = new List<RequestLatencyInfo>
+                {
+                    new RequestLatencyInfo(path, duration, database, new Parameters(requestQuery.ToDictionary(x => x.Key, x => (object)x.Value.FirstOrDefault())),
+                        requestContentLength)
+                };
+                RequestLatencies.Add(database, queue);
             }
             else
             {
-                hintQueue.Enqueue(new RequestLatencyInfo(queryString, duration, action));
+                if (hintQueue.Count > RequestLatencyDetailLimit)
+                {
+                    while (hintQueue.Count > RequestLatencyDetailLimit)
+                    {
+                        hintQueue.RemoveAt(hintQueue.Count - 1);
+                    }
+                }
+
+                hintQueue.Add(new RequestLatencyInfo(path, duration, database, new Parameters(requestQuery.ToDictionary(x => x.Key, x => (object)x.Value.FirstOrDefault())), requestContentLength));
             }
         }
 
         public DynamicJsonValue ToJson()
         {
-            var djv = new DynamicJsonValue();
-            
-            var dict = new DynamicJsonValue();
-            djv[nameof(RequestLatencies)] = dict;
-            
+            var latencies = new DynamicJsonValue();
+
             foreach (var key in RequestLatencies.Keys)
             {
                 var queue = RequestLatencies[key];
-                if (queue == null)
-                    continue;
-
                 var list = new DynamicJsonArray();
-                foreach (var details in queue)
+                if (queue != null)
                 {
-                    list.Add(details.ToJson());
+                    foreach (var details in queue)
+                    {
+                        list.Add(details.ToJson());
+                    }
                 }
 
-                dict[key] = list;
+                latencies[key] = list;
             }
 
-            return djv;
+            return new DynamicJsonValue
+            {
+                [nameof(RequestLatencies)] = latencies,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.RavenClrType] = typeof(RequestLatencyDetail).AssemblyQualifiedName
+                }
+            };
         }
     }
 
-    public struct RequestLatencyInfo : IDynamicJsonValueConvertible
+    public class RequestLatencyInfo 
     {
-        public readonly string QueryString;
-        public readonly long Duration;
-        public readonly DateTime Date;
-        public readonly string Action;
+        public string Path;
+        public long Duration;
+        public DateTime Date;
+        public string Database;
+        public Dictionary<string,string> Parameters;
+        public long RequestContentLength;
 
-        public RequestLatencyInfo(string queryString, long duration, string action)
+        //for deserialization
+        protected RequestLatencyInfo()
         {
-            QueryString = queryString;
+            
+        }
+        
+        public RequestLatencyInfo(string path, long duration, string database, Parameters parameters, long requestContentLength)
+        {
+            Path = path;
             Duration = duration;
-            Action = action;
+            Database = database;
+            Parameters = parameters.ToDictionary(kvp => kvp.Key, kvp => Convert.ToString(kvp.Value));
+            RequestContentLength = requestContentLength;
             Date = DateTime.UtcNow;
         }
 
@@ -73,10 +103,16 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         {
             return new DynamicJsonValue
             {
-                [nameof(QueryString)] = QueryString,
+                [nameof(Path)] = Path,
                 [nameof(Duration)] = Duration,
                 [nameof(Date)] = Date,
-                [nameof(Action)] = Action
+                [nameof(Database)] = Database,
+                [nameof(Parameters)] = Parameters.ToJson(),
+                [nameof(RequestContentLength)] = RequestContentLength,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.RavenClrType] = typeof(RequestLatencyInfo).FullName
+                }
             };
         }
     }

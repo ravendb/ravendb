@@ -33,13 +33,18 @@ using Sparrow.Json;
 using Facet = Raven.Client.Documents.Queries.Facets.Facet;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Web.System;
 
 namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
-    {
+    {        
+        public static readonly Func<BlittableJsonReaderObject, RequestLatencyInfo> RequestLatencyInfo = GenerateJsonDeserializationRoutine<RequestLatencyInfo>();
+        
+        public static readonly Func<BlittableJsonReaderObject, RequestLatencyDetail> RequestLatencyDetail = GenerateJsonDeserializationRoutine<RequestLatencyDetail>();
+        
         public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader = GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport = GenerateJsonDeserializationRoutine<DatabaseStatusReport>();

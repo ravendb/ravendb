@@ -785,7 +785,7 @@ namespace Raven.Server.Documents
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
         {
-            if (record == null)
+            if (record == null || DocumentsStorage == null)
                 return;
 
             ClientConfiguration = record.Client;
