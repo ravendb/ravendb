@@ -26,7 +26,7 @@ namespace Raven.Server.ServerWide.Commands
             Index = index;
         }
 
-        public abstract object Execute(TransactionOperationContext context, Table items, long index);
+        public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
         
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
@@ -42,24 +42,26 @@ namespace Raven.Server.ServerWide.Commands
         public RemoveCompareExchangeCommand(){}
         public RemoveCompareExchangeCommand(string key, long index) : base(key, index){}
         
-        public override unsafe object Execute(TransactionOperationContext context, Table items, long index)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
             var dbKey = Key.ToLowerInvariant();
-            BlittableJsonReaderObject result = null;
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
                     var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
                     var storeValue = reader.Read((int)ClusterStateMachine.UniqueItems.Value, out var size);
-                    result = new BlittableJsonReaderObject(storeValue, size, context);
+                    var result = new BlittableJsonReaderObject(storeValue, size, context);
                     if (Index == itemIndex)
                     {
+                        result = result.Clone(context);
                         items.Delete(reader.Id);
+                        return (index, result);
                     }
+                    return (itemIndex, result);
                 }
             }
-            return result;
+            return (index, null);
         }
     }
     
@@ -74,11 +76,11 @@ namespace Raven.Server.ServerWide.Commands
             Value = value;
         }
 
-        public override unsafe object Execute(TransactionOperationContext context, Table items, long index)
+        public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
             var dbKey = Key.ToLowerInvariant();
             Value = Value.Clone(context);
-            
+            long itemIndex;
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
@@ -88,10 +90,15 @@ namespace Raven.Server.ServerWide.Commands
 
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
+                    itemIndex = *(long*)reader.Read((int)ClusterStateMachine.UniqueItems.Index, out var _);
                     if (Index == itemIndex)
                     {
                         items.Update(reader.Id, tvb);
+                    }
+                    else
+                    {
+                        // concurrency violation, so we return the current value
+                        return (itemIndex, new BlittableJsonReaderObject(reader.Read((int)ClusterStateMachine.UniqueItems.Value, out var size), size, context));
                     }
                 }
                 else
@@ -99,7 +106,7 @@ namespace Raven.Server.ServerWide.Commands
                     items.Set(tvb);
                 }
             }
-            return null;
+            return (index, Value);
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
