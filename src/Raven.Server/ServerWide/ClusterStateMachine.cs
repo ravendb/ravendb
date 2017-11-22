@@ -996,7 +996,7 @@ namespace Raven.Server.ServerWide
 
         private static unsafe string ReadCmpXchgKey(TransactionOperationContext context, TableValueReader reader)
         {
-            return new LazyStringValue(null, reader.Read((int)UniqueItems.Key, out var size), size, context);
+            return context.AllocateStringValue(null, reader.Read((int)UniqueItems.Key, out var size), size);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCmpXchgValue(TransactionOperationContext context, TableValueReader reader)

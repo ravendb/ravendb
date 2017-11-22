@@ -55,16 +55,16 @@ namespace Raven.Server.Web.System
                 var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    (var raftIndex, _) = await ServerStore.SendToLeaderAsync(command);
+                    (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var res = ServerStore.Cluster.GetCmpXchg(context, key);
+                        var tuple = (ValueTuple<long,object>)res ;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CmpXchgResult<object>.Index)] = res.Index,
-                            [nameof(CmpXchgResult<object>.Value)] = res.Value,
-                            [nameof(CmpXchgResult<object>.Successful)] = res.Index == raftIndex
+                            [nameof(CmpXchgResult<object>.Index)] = tuple.Item1,
+                            [nameof(CmpXchgResult<object>.Value)] = tuple.Item2,
+                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Item1 == raftIndex
                         });
                     }
                     writer.Flush();
@@ -88,16 +88,16 @@ namespace Raven.Server.Web.System
                 var command = new RemoveCompareExchangeCommand(key, index);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    (var raftIndex, var result) = await ServerStore.SendToLeaderAsync(command);
+                    (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var res = ServerStore.Cluster.GetCmpXchg(context, key);
+                        var tuple = (ValueTuple<long,object>)res ;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CmpXchgResult<object>.Value)] = (BlittableJsonReaderObject)result,
-                            [nameof(CmpXchgResult<object>.Index)] = res.Index,
-                            [nameof(CmpXchgResult<object>.Successful)] = res.Index == -1
+                            [nameof(CmpXchgResult<object>.Index)] = tuple.Item1,
+                            [nameof(CmpXchgResult<object>.Value)] = tuple.Item2,
+                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Item1 == raftIndex
                         });
                     }
                     writer.Flush();
@@ -109,9 +109,9 @@ namespace Raven.Server.Web.System
         public Task ListCmpXchgValues()
         {
             var prefix = Database.Name + "/";
-            var key = prefix + GetStringQueryString("key", false);
-            var page = GetIntValueQueryString("page", false) ?? 0;
-            var size = GetIntValueQueryString("size", false) ?? 1024;
+            var key = prefix + GetStringQueryString("startsWith", false);
+            var page = GetStart();
+            var size = GetPageSize();
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {

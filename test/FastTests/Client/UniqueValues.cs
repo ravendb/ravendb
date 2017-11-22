@@ -76,9 +76,9 @@ namespace FastTests.Client
             
             var list = (await store.Operations.SendAsync(new ListCompareExchangeValuesOperation("test"))).ToList();
             Assert.Equal(2, list.Count);
-            Assert.Equal("canlistcompareexchange_1/test", list[0].Key);
+            Assert.Equal($"{store.Database.ToLower()}/test", list[0].Key);
             Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
-            Assert.Equal("canlistcompareexchange_1/test2", list[1].Key);
+            Assert.Equal($"{store.Database.ToLower()}/test2", list[1].Key);
             Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
 
         }
