@@ -6,6 +6,8 @@ namespace Sparrow.Platform.Win32
 {
     public static unsafe class WinSodium
     {
+        private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+
         private static readonly bool _is32bits;
 
         static WinSodium()
