@@ -194,6 +194,13 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
+        ///     Gets or sets the max size of the cache in requestExecutor.
+        ///     Default value is 512MB
+        /// </summary>
+        /// <value>The max size of cache in requestExecutor.</value>
+        public long MaxHttpCacheSize { get; set; } = 1024 * 1024L * 512L;
+
+        /// <summary>
         ///     If set to 'true' then it will throw an exception when any query is performed (in session)
         ///     without explicit page size set.
         ///     This can be useful for development purposes to pinpoint all the possible performance bottlenecks

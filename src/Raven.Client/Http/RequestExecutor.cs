@@ -59,7 +59,7 @@ namespace Raven.Client.Http
 
         public readonly AsyncLocal<AggressiveCacheOptions> AggressiveCaching = new AsyncLocal<AggressiveCacheOptions>();
 
-        public readonly HttpCache Cache = new HttpCache();
+        public readonly HttpCache Cache;
 
         public Topology Topology => _nodeSelector?.Topology;
 
@@ -123,6 +123,8 @@ namespace Raven.Client.Http
 
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
+            Cache = new HttpCache(conventions.MaxHttpCacheSize);
+
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
                 Cache.Dispose();
