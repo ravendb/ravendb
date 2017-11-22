@@ -123,7 +123,7 @@ namespace Sparrow.LowMemory
             thread.Start();
         }
 
-        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory) MemoryStatsInternal()
+        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory) MemoryStats()
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
@@ -152,7 +152,7 @@ namespace Sparrow.LowMemory
             // but that the OS can discard with no cost (because it can load
             // the data from disk without needing to write it)
 
-            var memoryStats = MemoryStatsInternal();
+            var memoryStats = MemoryStats();
 
             var sharedMemory = memoryStats.WorkingSet - memoryStats.TotalUnmanagedAllocations - memoryStats.ManagedMemory;
             // if this is negative, we'll just ignore this
