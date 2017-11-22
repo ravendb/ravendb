@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -29,6 +30,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Raven.Server.Web.Authentication;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
@@ -119,7 +121,7 @@ namespace Raven.Server.Commercial
             public string Domain { get; set; }
             public string Certificate { get; set; }
 
-            [JsonIgnore]
+            [Sparrow.Json.JsonIgnore]
             public X509Certificate2 CertificateInstance { get; set; }
         }
 
@@ -679,7 +681,7 @@ namespace Raven.Server.Commercial
                 }
 
 
-                if (map == null && registrationInfo.SubDomains.Exists(x => x.SubDomain.StartsWith("A-") || x.SubDomain.StartsWith("A.")) == false)
+                if (map == null && registrationInfo.SubDomains.Exists(x => x.SubDomain.StartsWith("A.", StringComparison.OrdinalIgnoreCase)) == false)
                 {
                     progress.AddInfo("DNS update started successfully, since current node (A) DNS record didn't change, not waiting for full DNS propogation.");
                     return;
@@ -1342,6 +1344,10 @@ namespace Raven.Server.Commercial
                             return true;
                         };
                     }
+
+                    if (addresses.Length > 0)
+                        await AssertDnsUpdatedSuccessfully(serverUrl, addresses, token);
+                    
                     using (var client = new HttpClient(httpMessageHandler)
                     {
                         BaseAddress = new Uri(serverUrl),
@@ -1365,14 +1371,6 @@ namespace Raven.Server.Commercial
                         }
                         catch (Exception e)
                         {
-                            var problemIsLocal = await DetectIfDnsUpdateDidNotReachLocally(serverUrl, token);
-
-                            if (problemIsLocal)
-                                throw new InvalidOperationException(
-                                    $"Cannot resolve '{serverUrl}' locally but succesded resolving the address using google's api ({GoogleDnsApi})."
-                                    + Environment.NewLine + "Try to clear your local/network DNS cache and restart validation.", e);
-
-
                             throw new InvalidOperationException($"Client failed to contact webhost listening to '{serverUrl}'.{Environment.NewLine}" +
                                                                 $"Settings file:{settingsPath}.{Environment.NewLine}" +
                                                                 $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
@@ -1388,52 +1386,70 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<bool> DetectIfDnsUpdateDidNotReachLocally(string serverUrl, CancellationToken token)
+        private static async Task AssertDnsUpdatedSuccessfully(string serverUrl, IPEndPoint[] expectedAddresses, CancellationToken token)
         {
-            try
-            {
-                var canGoogleResolveDnsTask = CanGoogleResolveDns(serverUrl, token);
-                var canResolveLocallyTask = CanResolveHostNameLocally(serverUrl);
-                var timeout = Task.Delay(TimeSpan.FromSeconds(3), token);
-
-                var done = await Task.WhenAny(Task.WhenAll(canGoogleResolveDnsTask, canResolveLocallyTask), timeout);
-                if (done == timeout)
-                    return false;
-                return await canGoogleResolveDnsTask && !(await canResolveLocallyTask);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            await ResolveUsingGoogleApi(serverUrl, expectedAddresses, token);
+            await ResolveHostNameLocally(serverUrl, expectedAddresses);
         }
 
-        private static async Task<bool> CanResolveHostNameLocally(string serverUrl)
+        private static async Task ResolveHostNameLocally(string serverUrl, IPEndPoint[] expectedAddresses)
         {
+            var hostname = new Uri(serverUrl).Host;
+            var expectedIps = expectedAddresses.Select(address => address.Address.ToString()).ToHashSet();
+            HashSet<string> actualIps;
+
             try
             {
-                var ipAddresses = await Dns.GetHostAddressesAsync(serverUrl);
-                return ipAddresses.Length != 0;
+                actualIps = (await Dns.GetHostAddressesAsync(hostname)).Select(address => address.ToString()).ToHashSet();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Cannot resolve '{hostname}' locally but succeeded resolving the address using google's api ({GoogleDnsApi})."
+                    + Environment.NewLine + "Try to clear your local/network DNS cache and restart validation."
+                    + Environment.NewLine + "Another temporary solution is to configure your local network connection to use google's DNS server (8.8.8.8).", e);
             }
+
+            if (expectedIps.SetEquals(actualIps) == false)
+                throw new InvalidOperationException(
+                    $"Tried to resolve '{hostname}' locally but got an outdated result."
+                    + Environment.NewLine + $"Expected to get these ips: {string.Join(", ", expectedIps)} while the actual result was: {string.Join(", ", actualIps)}"
+                    + Environment.NewLine + $"If we try resolving through google's api ({GoogleDnsApi}), it works well."
+                    + Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again."
+                    + Environment.NewLine + "Another temporary solution is to configure your local network connection to use google's DNS server (8.8.8.8).");
         }
 
-        private static async Task<bool> CanGoogleResolveDns(string serverUrl, CancellationToken token)
+        private static async Task ResolveUsingGoogleApi(string serverUrl, IPEndPoint[] expectedAddresses, CancellationToken token)
         {
             using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, cancellationTokenSource.Token))
             using (var client = new HttpClient { BaseAddress = new Uri(GoogleDnsApi) })
             {
-                var response = await client.GetAsync($"/resolve?name={serverUrl}", cts.Token);
-
-                if (response.IsSuccessStatusCode == false)
-                    return false;
+                var hostname = new Uri(serverUrl).Host;
+                var response = await client.GetAsync($"/resolve?name={hostname}", cts.Token);
 
                 var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if (response.IsSuccessStatusCode == false)
+                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                                                        + $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
+
                 dynamic dnsResult = JsonConvert.DeserializeObject(responseString);
-                return dnsResult.Status == 0; // 0 means no error
+
+                // DNS response format: https://developers.google.com/speed/public-dns/docs/dns-over-https
+
+                if (dnsResult.Status != 0)
+                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                                                        + $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
+                                                        Environment.NewLine + $"Please delete the cache file: '{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".ravendb", "le.cache")}' and try again. If the issue persists, contact RavenDB's support.");
+
+                JArray answers = dnsResult.Answer;
+                var googleIps = answers.Select(answer => answer["data"].ToString()).ToHashSet();
+                var expectedIps = expectedAddresses.Select(address => address.Address.ToString()).ToHashSet();
+
+                if (googleIps.SetEquals(expectedIps) == false)
+                    throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                        + $"Expected to get these ips: {string.Join(", ", expectedIps)} while google's actual result was: {string.Join(", ", googleIps)}"
+                + Environment.NewLine + $"Please delete the cache file: '{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".ravendb", "le.cache")}' and try again. If the issue persists, contact RavenDB's support.");
             }
         }
 
