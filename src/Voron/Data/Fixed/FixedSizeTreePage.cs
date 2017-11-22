@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Global;
 
@@ -137,6 +138,7 @@ namespace Voron.Data.Fixed
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal FixedSizeTreeEntry* GetEntry(int position)
         {
+            Debug.Assert(position >= 0 && ((position == 0 && NumberOfEntries == 0) || position < NumberOfEntries) ,$"FixedSizeTreePage: Requested an out of range entry {position} from [0-{NumberOfEntries-1}]");
             return GetEntry(Pointer + StartPosition, position, _entrySize);
         }
 

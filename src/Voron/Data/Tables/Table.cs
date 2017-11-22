@@ -1205,12 +1205,15 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index)
+        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, int skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
                 if (it.SeekToLast() == false)
+                    yield break;
+                
+                if(it.Skip(-skip) == false)
                     yield break;
 
                 var result = new TableValueHolder();
@@ -1222,28 +1225,6 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, int skip)
-        {
-            var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate())
-            {
-                if (it.SeekToLast() == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-                    if (skip > 0)
-                    {
-                        skip--;
-                        continue;
-                    }
-
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                } while (it.MovePrev());
-            }
-        }
 
         public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {
