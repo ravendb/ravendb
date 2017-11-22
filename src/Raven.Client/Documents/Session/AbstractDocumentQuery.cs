@@ -225,8 +225,6 @@ namespace Raven.Client.Documents.Session
                 IndexName,
                 indexQuery,
                 FieldsToFetchToken,
-                TheWaitForNonStaleResults,
-                Timeout,
                 DisableEntitiesTracking);
         }
 
