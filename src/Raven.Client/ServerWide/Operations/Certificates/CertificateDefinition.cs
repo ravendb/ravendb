@@ -12,6 +12,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         public string Password;
         public SecurityClearance SecurityClearance;
         public string Thumbprint;
+        public DateTime NotAfter;
         public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
         public string CollectionPrimaryKey = string.Empty;
         public List<string> CollectionSecondaryKeys = new List<string>();
@@ -29,6 +30,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 [nameof(Name)] = Name,
                 [nameof(Certificate)] = Certificate,
                 [nameof(Thumbprint)] = Thumbprint,
+                [nameof(NotAfter)] = NotAfter,
                 [nameof(SecurityClearance)] = SecurityClearance,
                 [nameof(Permissions)] = permissions,
                 [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,

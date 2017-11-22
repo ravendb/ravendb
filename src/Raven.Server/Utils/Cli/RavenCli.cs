@@ -493,7 +493,8 @@ namespace Raven.Server.Utils.Cli
                     Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
                     Permissions = new Dictionary<string, DatabaseAccess>(),
                     SecurityClearance = SecurityClearance.ClusterNode,
-                    Thumbprint = cert.Thumbprint
+                    Thumbprint = cert.Thumbprint,
+                    NotAfter = cert.NotAfter
                 }.ToJson();
 
                 using (var certificate = ctx.ReadObject(json, "Server/Certificate/Definition"))

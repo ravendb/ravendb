@@ -1298,6 +1298,7 @@ namespace Raven.Server.ServerWide
             {
                 Certificate = Convert.ToBase64String(certificateCertificate.Export(X509ContentType.Cert)),
                 Thumbprint = certificateCertificate.Thumbprint,
+                NotAfter = certificateCertificate.NotAfter,
                 Name = name,
                 SecurityClearance = SecurityClearance.ClusterNode
             };

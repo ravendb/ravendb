@@ -392,6 +392,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             {
                                 Certificate = nodeInfo.Certificate,
                                 Thumbprint = certificate.Thumbprint,
+                                NotAfter = certificate.NotAfter,
                                 Name = "Server Certificate for " + nodeUrl,
                                 SecurityClearance = SecurityClearance.ClusterNode
                             };
