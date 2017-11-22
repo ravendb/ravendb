@@ -17,7 +17,6 @@ namespace Raven.Client.Http
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<HttpCache>("Client");
 
-        private readonly long _maxSize;
         private readonly ConcurrentDictionary<string, HttpCacheItem> _items = new ConcurrentDictionary<string, HttpCacheItem>();
         private long _totalSize;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
@@ -27,9 +26,11 @@ namespace Raven.Client.Http
         /// </summary>
         public int NumberOfItems => _items.Count;
 
+        public long MaxSize { get; set; }
+
         public HttpCache(long maxSize = 1024 * 1024L * 512L)
         {
-            _maxSize = maxSize;
+            MaxSize = maxSize;
             _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
         }
@@ -103,7 +104,7 @@ namespace Raven.Client.Http
         {
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
-            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize && _isFreeSpaceRunning.Raise())
+            if (Interlocked.Add(ref _totalSize, result.Size) > MaxSize && _isFreeSpaceRunning.Raise())
             {
                 Task.Run(() => FreeSpace());
             }
@@ -155,7 +156,7 @@ namespace Raven.Client.Http
                 Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
 
             var sizeCleared = 0L;
-            var sizeToClear = _maxSize / 4;
+            var sizeToClear = MaxSize / 4;
             var start = SystemTime.UtcNow;
 
             var items = _items.OrderBy(x => x.Value.LastServerUpdate)
