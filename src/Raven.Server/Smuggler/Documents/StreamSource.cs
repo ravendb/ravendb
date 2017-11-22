@@ -9,7 +9,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -335,6 +334,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
+                    _context.CachedProperties.NewDocument();
+
                     ReadObject(builder);
 
                     var data = builder.CreateReader();
@@ -431,6 +432,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
+                    _context.CachedProperties.NewDocument();
+
                     ReadObject(builder);
 
                     var data = builder.CreateReader();
@@ -520,6 +523,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
+                    _context.CachedProperties.NewDocument();
+
                     ReadObject(builder);
 
                     var data = builder.CreateReader();
@@ -581,6 +586,8 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
                     builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    _context.CachedProperties.NewDocument();
 
                     ReadObject(builder);
 
