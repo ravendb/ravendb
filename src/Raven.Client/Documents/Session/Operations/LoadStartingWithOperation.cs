@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting documents with ids starting with '{_startWith}' from {_session.StoreIdentifier}");
 
-            return new GetDocumentCommand(_startWith, _startAfter, _matches, _exclude, _start, _pageSize);
+            return new GetDocumentCommand(_startWith, _startAfter, _matches, _exclude, _start, _pageSize, metadataOnly: false);
         }
 
         public void WithStartWith(string idPrefix, string matches = null, int start = 0, int pageSize = 25,
