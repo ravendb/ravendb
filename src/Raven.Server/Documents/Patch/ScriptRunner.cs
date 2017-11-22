@@ -116,6 +116,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnLoadDocument));
                 ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, LoadDocumentByPath));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
+                ScriptEngine.SetValue("DeleteDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnDeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
                 ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnPutDocument));
                 ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CmpXchangeValue));
@@ -478,6 +479,11 @@ namespace Raven.Server.Documents.Patch
             private JsValue ThrowOnPutDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
+            }
+            
+            private JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
+            {
+                throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
             }
 
             private static JsValue ConvertJsTimeToTimeSpanString(JsValue self, JsValue[] args)
