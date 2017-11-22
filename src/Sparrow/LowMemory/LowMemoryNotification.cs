@@ -133,13 +133,10 @@ namespace Sparrow.LowMemory
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
 
                 long totalUnmanagedAllocations = 0;
-                foreach (var stats in NativeMemory.ThreadAllocations.Values
-                    .Where(x => x.ThreadInstance.IsAlive)
-                    .GroupBy(x => x.Name)
-                    .OrderByDescending(x => x.Sum(y => y.TotalAllocated)))
+                foreach (var stats in NativeMemory.ThreadAllocations.Values)
                 {
-                    var unmanagedAllocations = stats.Sum(x => x.TotalAllocated);
-                    totalUnmanagedAllocations += unmanagedAllocations;
+                    if (stats.ThreadInstance.IsAlive)
+                        totalUnmanagedAllocations += stats.TotalAllocated;
                 }
 
                 var managedMemory = GC.GetTotalMemory(false);
