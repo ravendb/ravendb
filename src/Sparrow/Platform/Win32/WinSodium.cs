@@ -6,7 +6,7 @@ namespace Sparrow.Platform.Win32
 {
     public static unsafe class WinSodium
     {
-        private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Download the latest version matching your platform from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+        private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
 
         private static readonly bool _is32bits;
 
@@ -507,8 +507,6 @@ namespace Sparrow.Platform.Win32
         {
             private const string LIB_SODIUM = "libsodium.x86.dll";
 
-            internal const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
-
             public static void Initialize()
             {
                 try
@@ -826,17 +824,17 @@ namespace Sparrow.Platform.Win32
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                            $"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {X86.ErrString}",
+                            $"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
                             dllNotFoundEx);
                     }
 
                     throw new DllNotFoundException(
-                        $"{LIB_SODIUM} is missing. Also make sure to have {X86.ErrString}",
+                        $"{LIB_SODIUM} is missing. Also make sure to have {ErrString}",
                         dllNotFoundEx);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {X86.ErrString}", e);
+                    throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {ErrString}", e);
                 }
             }
 
