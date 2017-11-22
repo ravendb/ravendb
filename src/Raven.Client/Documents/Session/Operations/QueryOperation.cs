@@ -18,26 +18,27 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
-        private readonly bool _waitForNonStaleResults;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
-        private readonly TimeSpan? _timeout;
         private QueryResult _currentQueryResults;
         private readonly FieldsToFetchToken _fieldsToFetch;
         private Stopwatch _sp;
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Raven.NewClient.Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<QueryOperation>("Client");
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
-        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
-                              FieldsToFetchToken fieldsToFetch, bool waitForNonStaleResults, TimeSpan? timeout,
-                              bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public QueryOperation(
+            InMemoryDocumentSessionOperations session,
+            string indexName,
+            IndexQuery indexQuery,
+            FieldsToFetchToken fieldsToFetch,
+            bool disableEntitiesTracking,
+            bool metadataOnly = false,
+            bool indexEntriesOnly = false)
         {
             _session = session;
             _indexName = indexName;
             _indexQuery = indexQuery;
-            _waitForNonStaleResults = waitForNonStaleResults;
-            _timeout = timeout;
             _fieldsToFetch = fieldsToFetch;
             DisableEntitiesTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
@@ -85,7 +86,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             StartTiming();
 
-            if (_waitForNonStaleResults == false)
+            if (_indexQuery.WaitForNonStaleResults == false)
                 return null;
 
             return _session.DocumentStore.DisableAggressiveCaching();
@@ -164,7 +165,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (result == null)
                 throw new IndexDoesNotExistException("Could not find index " + _indexName);
 
-            if (_waitForNonStaleResults && result.IsStale)
+            if (_indexQuery.WaitForNonStaleResults && result.IsStale)
             {
                 _sp?.Stop();
                 var msg = $"Waited for {_sp?.ElapsedMilliseconds:#,#;;0} ms for the query to return non stale result.";
