@@ -107,6 +107,9 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (char.IsLetterOrDigit(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '-')
                     break;
             TokenLength = _pos - TokenStart;
+            //This covers the cases where the identifier starts with either @@ or _@ but not _
+            if(TokenLength == 1 && (_q[TokenStart] == '@' || TokenStart+1<_q.Length && _q[TokenStart] == '_' && _q[TokenStart+1] == '@'))
+                throw new QueryParser.ParseException(Column + ":" + Line + " Illegal identifier detected starting with "+ _q[TokenStart] + " in query: '" + Input + "'");
             Column += TokenLength;
             return true;
         }
