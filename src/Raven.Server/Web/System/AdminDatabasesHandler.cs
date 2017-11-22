@@ -822,6 +822,7 @@ namespace Raven.Server.Web.System
             ServerStore.EnsureNotPassive();
 
             var waitOnRecordDeletion = new List<string>();
+            var deletedDatabases = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "docs");
@@ -843,6 +844,7 @@ namespace Raven.Server.Web.System
                                 {
                                     throw new InvalidOperationException($"Database '{databaseName}' doesn't reside on node '{node}' so it can't be deleted from it");
                                 }
+                                deletedDatabases.Add(node);
                                 record.Topology.RemoveFromTopology(node);
                             }
 
@@ -903,7 +905,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
-                        [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(waitOnRecordDeletion)
+                        [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(deletedDatabases)
                     });
                 }
             }
