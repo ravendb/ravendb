@@ -114,13 +114,12 @@ namespace Sparrow.Json
 
         public void Dispose()
         {
-            _returnBuffer.Dispose();
-            if (Used == 0)
-                return;
-
-            _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
-            Used = 0;
-
+            using (_returnBuffer)
+            {
+                if (Used != 0)
+                    _stream.Write(_buffer.Buffer.Array, _buffer.Buffer.Offset, Used);
+                Used = 0;
+            }
         }
 
         public void EnsureSingleChunk(JsonParserState state)
@@ -360,7 +359,7 @@ namespace Sparrow.Json
             head.Used++;
             return;
 
-            Grow:
+Grow:
             WriteByteUnlikely(data);
         }
 
