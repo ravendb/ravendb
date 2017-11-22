@@ -54,12 +54,25 @@ namespace Raven.Server.Rachis
 
                         if (clusterTopology.TopologyId == null)
                         {
-                            _connection.Send(context, new RequestVoteResponse
+                            if (HasAlreadyVoted(context, rv, out whoGotMyVoteIn))
                             {
-                                Term = rv.Term,
-                                VoteGranted = true,
-                                Message = "I might vote for you, because I'm not part of any cluster."
-                            });
+                                _connection.Send(context, new RequestVoteResponse
+                                {
+                                    Term = _engine.CurrentTerm,
+                                    VoteGranted = false,
+                                    Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
+                                });
+                            }
+                            else
+                            {
+                                _connection.Send(context, new RequestVoteResponse
+                                {
+                                    Term = rv.Term,
+                                    VoteGranted = true,
+                                    Message = "I am voting for you because I'm not part of any cluster"
+                                });
+                            }
+
                             continue;
                         }
                         
@@ -174,26 +187,12 @@ namespace Raven.Server.Rachis
                             {
                                 Term = rv.Term,
                                 VoteGranted = true,
-                                Message = "I might vote for you"
+                                Message = "I am voting for you"
                             });
                             continue;
                         }
 
-                        bool alreadyVoted = false;
-                        using (context.OpenWriteTransaction())
-                        {
-                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
-                            if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
-                            {
-                                alreadyVoted = true;
-                            }
-                            else
-                            {
-                                _engine.CastVoteInTerm(context, rv.Term, rv.Source);
-                            }
-                            context.Transaction.Commit();
-                        }
-                        if (alreadyVoted)
+                        if (HasAlreadyVoted(context, rv, out whoGotMyVoteIn))
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
@@ -208,7 +207,7 @@ namespace Raven.Server.Rachis
                             {
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = true,
-                                Message = "I've voted for you"
+                                Message = "I am voting for you"
                             });
                         }
                     }
@@ -238,6 +237,27 @@ namespace Raven.Server.Rachis
                     _connection.Dispose();
                 }
             }
+        }
+
+        private bool HasAlreadyVoted(TransactionOperationContext context, RequestVote rv, out string whoGotMyVoteIn)
+        {
+            var alreadyVoted = false;
+
+            using (context.OpenWriteTransaction())
+            {
+                whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
+                {
+                    alreadyVoted = true;
+                }
+                else
+                {
+                    _engine.CastVoteInTerm(context, rv.Term, rv.Source);
+                }
+                context.Transaction.Commit();
+            }
+
+            return alreadyVoted;
         }
     }
 }
