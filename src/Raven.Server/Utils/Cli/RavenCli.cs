@@ -25,6 +25,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
+using SizeClient = Raven.Client.Util.Size;
 
 namespace Raven.Server.Utils.Cli
 {
@@ -67,12 +68,11 @@ namespace Raven.Server.Utils.Cli
                         break;
                     case "%M":
                         {
-                            var json = MemoryStatsHandler.MemoryStatsInternal();
-                            var humaneProp = (json["Humane"] as DynamicJsonValue);
-                            msg.Append($"WS:{humaneProp?["WorkingSet"]}");
-                            msg.Append($"|UM:{humaneProp?["TotalUnmanagedAllocations"]}");
-                            msg.Append($"|M:{humaneProp?["ManagedAllocations"]}");
-                            msg.Append($"|MP:{humaneProp?["TotalMemoryMapped"]}");
+                            var memoryStats = MemoryStatsWithMapping();
+                            msg.Append($"WS:{memoryStats.WorkingSet}");
+                            msg.Append($"|UM:{memoryStats.TotalUnmanagedAllocations}");
+                            msg.Append($"|M:{memoryStats.ManagedMemory}");
+                            msg.Append($"|MP:{memoryStats.TotalMemoryMapped}");
                         }
                         break;
                     case "%R":
@@ -610,12 +610,11 @@ namespace Raven.Server.Utils.Cli
         {
             WriteText("Before simulating low-mem, memory stats: ", TextColor, cli, newLine: false);
 
-            var json = MemoryStatsHandler.MemoryStatsInternal();
-            var humaneProp = (json["Humane"] as DynamicJsonValue);
-            StringBuilder msg = new StringBuilder();
-            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
-            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
-            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
+            var memoryStats = MemoryStatsWithMapping();
+            var msg = new StringBuilder();
+            msg.Append($"Working Set:{memoryStats.WorkingSet}");
+            msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Managed Memory:{memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
             WriteText("Sending Low Memory simulation signal... ", TextColor, cli, newLine: false);
@@ -624,12 +623,36 @@ namespace Raven.Server.Utils.Cli
 
             WriteText("After sending low mem simulation event, memory stats: ", TextColor, cli, newLine: false);
             msg.Clear();
-            msg.Append($"Working Set:{humaneProp?["WorkingSet"]}");
-            msg.Append($" Unmamanged Memory:{humaneProp?["TotalUnmanagedAllocations"]}");
-            msg.Append($" Managed Memory:{humaneProp?["ManagedAllocations"]}");
+            msg.Append($"Working Set:{memoryStats.WorkingSet}");
+            msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
+            msg.Append($" Managed Memory:{memoryStats.ManagedMemory}");
             WriteText(msg.ToString(), ConsoleColor.Cyan, cli);
 
             return true;
+        }
+
+        public static (
+            string WorkingSet, 
+            string TotalUnmanagedAllocations, 
+            string ManagedMemory, 
+            string TotalMemoryMapped) MemoryStatsWithMapping()
+        {
+            var memoryStats = LowMemoryNotification.MemoryStats();
+
+            long totalMemoryMapped = 0;
+            foreach (var mapping in NativeMemory.FileMapping)
+            {
+                foreach (var singleMapping in mapping.Value)
+                {
+                    totalMemoryMapped += singleMapping.Value;
+                }
+            }
+
+            return (
+                SizeClient.Humane(memoryStats.WorkingSet),
+                SizeClient.Humane(memoryStats.TotalUnmanagedAllocations),
+                SizeClient.Humane(memoryStats.ManagedMemory),
+                SizeClient.Humane(totalMemoryMapped));
         }
 
         private static bool CommandImportDir(List<string> args, RavenCli cli)
