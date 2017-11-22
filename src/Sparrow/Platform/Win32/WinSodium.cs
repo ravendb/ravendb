@@ -6,6 +6,8 @@ namespace Sparrow.Platform.Win32
 {
     public static unsafe class WinSodium
     {
+        private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Download the latest version matching your platform from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+
         private static readonly bool _is32bits;
 
         static WinSodium()
@@ -505,8 +507,6 @@ namespace Sparrow.Platform.Win32
         {
             private const string LIB_SODIUM = "libsodium.x86.dll";
 
-            private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Download from : https://www.microsoft.com/en-us/download/details.aspx?id=48145 or the latest version matching your platform from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
-
             public static void Initialize()
             {
                 try
@@ -809,8 +809,6 @@ namespace Sparrow.Platform.Win32
         private static class X64
         {
             private const string LIB_SODIUM = "libsodium.x64.dll";
-
-            private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Download from : https://www.microsoft.com/en-us/download/details.aspx?id=48145";
 
             public static void Initialize()
             {
