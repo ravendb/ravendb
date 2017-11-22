@@ -32,7 +32,7 @@ namespace Raven.Server.Indexing
             else
                 _file = new FileStream(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
 
-            _tx.ReadTree(_tree).AddStream(name, Stream.Null);
+            _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
         }
 
         public override void FlushBuffer(byte[] b, int offset, int len)
