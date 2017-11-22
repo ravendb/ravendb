@@ -505,7 +505,7 @@ namespace Sparrow.Platform.Win32
         {
             private const string LIB_SODIUM = "libsodium.x86.dll";
 
-            private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Download from : https://www.microsoft.com/en-us/download/details.aspx?id=48145 or the latest version matching your platform from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+            internal const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
 
             public static void Initialize()
             {
@@ -531,7 +531,7 @@ namespace Sparrow.Platform.Win32
                 }
                 catch (Exception e)
                 {
-                    throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existance of {ErrString}", e);
+                    throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {ErrString}", e);
                 }
             }
 
@@ -810,8 +810,6 @@ namespace Sparrow.Platform.Win32
         {
             private const string LIB_SODIUM = "libsodium.x64.dll";
 
-            private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). Download from : https://www.microsoft.com/en-us/download/details.aspx?id=48145";
-
             public static void Initialize()
             {
                 try
@@ -826,17 +824,17 @@ namespace Sparrow.Platform.Win32
                     if (File.Exists(LIB_SODIUM))
                     {
                         throw new IncorrectDllException(
-                            $"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
+                            $"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {X86.ErrString}",
                             dllNotFoundEx);
                     }
 
                     throw new DllNotFoundException(
-                        $"{LIB_SODIUM} is missing. Also make sure to have {ErrString}",
+                        $"{LIB_SODIUM} is missing. Also make sure to have {X86.ErrString}",
                         dllNotFoundEx);
                 }
                 catch(Exception e)
                 {
-                    throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existance of {ErrString}", e);
+                    throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {X86.ErrString}", e);
                 }
             }
 
