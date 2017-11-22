@@ -31,6 +31,8 @@ namespace Raven.Server.Indexing
                 _file = new TempCryptoStream(_fileTempPath);
             else
                 _file = new FileStream(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
+
+            _tx.ReadTree(_tree).AddStream(name, Stream.Null);
         }
 
         public override void FlushBuffer(byte[] b, int offset, int len)
