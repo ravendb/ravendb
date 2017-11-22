@@ -97,7 +97,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var fieldsToFetch = new FieldsToFetch(query, null);
             var totalResults = new Reference<int>();
             var documents = new CollectionQueryEnumerable(Database, Database.DocumentsStorage, fieldsToFetch, collection, query, context, includeDocumentsCommand, totalResults);
-
             try
             {
                 foreach (var document in documents)
@@ -105,7 +104,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     cancellationToken.ThrowIfCancellationRequested();
 
                     resultToFill.AddResult(document);
-
                     includeDocumentsCommand.Gather(document);
                 }
             }
@@ -118,7 +116,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             includeDocumentsCommand.Fill(resultToFill.Includes);
-            resultToFill.TotalResults = totalResults.Value;
+
+            resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0)?-1: totalResults.Value;
         }
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, string collection, DocumentsOperationContext context)
