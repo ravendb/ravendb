@@ -983,7 +983,7 @@ namespace Raven.Server.ServerWide
                 foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, currentPage * pageSize))
                 {
                     pageSize--;
-                    var key = ReadCmpXchgKey(context, item.Value.Reader);
+                    var key = ReadCmpXchgKey(item.Value.Reader);
                     var index = ReadCmpXchgIndex(item.Value.Reader);
                     var value = ReadCmpXchgValue(context, item.Value.Reader);
                     yield return (key, index, value);
@@ -994,9 +994,10 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe string ReadCmpXchgKey(TransactionOperationContext context, TableValueReader reader)
+        private static unsafe string ReadCmpXchgKey(TableValueReader reader)
         {
-            return context.AllocateStringValue(null, reader.Read((int)UniqueItems.Key, out var size), size);
+            var ptr = reader.Read((int)UniqueItems.Key, out var size);
+            return Encodings.Utf8.GetString(ptr, size);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCmpXchgValue(TransactionOperationContext context, TableValueReader reader)
