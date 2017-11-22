@@ -107,7 +107,8 @@ namespace Raven.Server.Web.Authentication
                 Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
                 Permissions = certificate.Permissions,
                 SecurityClearance = certificate.SecurityClearance,
-                Thumbprint = selfSignedCertificate.Thumbprint
+                Thumbprint = selfSignedCertificate.Thumbprint,
+                NotAfter = selfSignedCertificate.NotAfter
             };
 			
             var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
@@ -228,6 +229,7 @@ namespace Raven.Server.Web.Authentication
                     // The first certificate in the collection will be the primary certificate and its thumbprint will be the one shown in a GET request
                     // The other certificates are secondary certificates and will contain a link to the primary certificate.
                     currentCertificate.Thumbprint = x509Certificate.Thumbprint;
+                    currentCertificate.NotAfter = x509Certificate.NotAfter;
                     currentCertificate.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
 
                     if (first)
@@ -476,7 +478,8 @@ namespace Raven.Server.Web.Authentication
                         Certificate = existingCertificate.Certificate,
                         Permissions = newCertificate.Permissions,
                         SecurityClearance = newCertificate.SecurityClearance,
-                        Thumbprint = existingCertificate.Thumbprint
+                        Thumbprint = existingCertificate.Thumbprint,
+                        NotAfter = existingCertificate.NotAfter
                     }));
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Index);
 

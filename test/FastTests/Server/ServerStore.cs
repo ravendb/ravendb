@@ -138,7 +138,8 @@ namespace FastTests.Server
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                         Permissions = new Dictionary<string, DatabaseAccess>(),
                         SecurityClearance = SecurityClearance.ClusterAdmin,
-                        Thumbprint = certificate.Thumbprint
+                        Thumbprint = certificate.Thumbprint,
+                        NotAfter = certificate.NotAfter
                     }));
                 }
 
@@ -172,7 +173,8 @@ namespace FastTests.Server
                             Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             Permissions = null,
                             SecurityClearance = SecurityClearance.ClusterAdmin,
-                            Thumbprint = certificate.Thumbprint
+                            Thumbprint = certificate.Thumbprint,
+                            NotAfter = certificate.NotAfter
                         }));
                     }
                 }
@@ -186,7 +188,8 @@ namespace FastTests.Server
                             Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             Permissions = null,
                             SecurityClearance = SecurityClearance.ClusterAdmin,
-                            Thumbprint = certificate.Thumbprint
+                            Thumbprint = certificate.Thumbprint,
+                            NotAfter = certificate.NotAfter
                         }));
                     }
                 }

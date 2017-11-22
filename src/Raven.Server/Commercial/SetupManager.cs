@@ -288,9 +288,7 @@ namespace Raven.Server.Commercial
                     {
                         throw new InvalidOperationException("Failed to create the configuration settings.", e);
                     }
-
-                    serverStore.EnsureServerCertificateIsInClusterState();
-
+                    
                     progress.Processed++;
                     progress.AddInfo("Configuration settings created.");
                     progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode finished successfully.");
@@ -1020,6 +1018,7 @@ namespace Raven.Server.Commercial
                                     throw new InvalidOperationException($"Failed to add node '{node.Key}' to the cluster.", e);
                                 }
                             }
+                            serverStore.EnsureServerCertificateIsInClusterState();
                         }
                         catch (Exception e)
                         {
@@ -1453,7 +1452,8 @@ namespace Raven.Server.Commercial
                 Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
                 Permissions = new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance = SecurityClearance.ClusterAdmin,
-                Thumbprint = selfSignedCertificate.Thumbprint
+                Thumbprint = selfSignedCertificate.Thumbprint,
+                NotAfter = selfSignedCertificate.NotAfter
             };
 
             var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
