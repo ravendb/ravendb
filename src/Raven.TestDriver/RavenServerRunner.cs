@@ -38,7 +38,7 @@ namespace Raven.TestDriver
                     "--ServerUrl=http://127.0.0.1:0",
                     "--RunInMemory=true",
                     "--Testing.ParentProcessId=" + Process.GetCurrentProcess().Id,
-                    "--Setup.AvoidRestart=true"
+                    "--Setup.Mode=None"
                 };
 
             var argumentsString = string.Join(" ", commandArguments); 

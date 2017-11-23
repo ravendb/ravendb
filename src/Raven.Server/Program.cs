@@ -150,7 +150,7 @@ namespace Raven.Server
 
                             IsRunningNonInteractive = false;
                             rerun = CommandLineSwitches.NonInteractive || 
-                                configuration.Core.SetupMode == SetupMode.Initial && configuration.Core.SetupAvoidRestart == false ? RunAsNonInteractive() : RunInteractive(server);
+                                configuration.Core.SetupMode == SetupMode.Initial ? RunAsNonInteractive() : RunInteractive(server);
 
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
