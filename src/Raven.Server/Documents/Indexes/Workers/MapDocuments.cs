@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
-                    var pageSize = _index.GetPageSize();
+                    var pageSize = int.MaxValue;
 
                     var sw = new Stopwatch();
                     IndexWriteOperation indexWriter = null;

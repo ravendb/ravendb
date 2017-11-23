@@ -146,10 +146,7 @@ namespace Raven.Server.Documents.Indexes
 
         private bool _allocationCleanupNeeded;
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
-        private long _lastLowMemoryEventTicks = 0;
-
-        // delay a bit after low mem is over in order to let the flush(es) to finish (or at least do some major flushing writes)
-        private readonly long _lowMemoryIntervalTicks = TimeSpan.FromSeconds(1).Ticks; 
+        private bool _batchStopped;
 
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
@@ -846,6 +843,12 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
+                                        if (_batchStopped)
+                                        {
+                                            _batchStopped = false;
+                                            DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
+                                        }
+
                                         TimeSpentIndexing.Stop();
                                     }
 
@@ -2332,7 +2335,7 @@ namespace Raven.Server.Documents.Indexes
 
         public int GetPageSize()
         {
-            return IsLowMemory() ? MinBatchSize + 1 : int.MaxValue;
+            return _lowMemoryFlag.IsRaised() ? MinBatchSize + 1 : int.MaxValue;
         }
 
         public bool CanContinueBatch(
@@ -2343,9 +2346,10 @@ namespace Raven.Server.Documents.Indexes
         {
             stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
 
-            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
+            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize && DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0))
             {
-                stats.RecordMapCompletedReason($"The batch was stopped after processing {MinBatchSize} documents because of low memory");
+                _batchStopped = true;
+                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#0} documents because of low memory");
                 return false;
             }
 
@@ -2586,21 +2590,11 @@ namespace Raven.Server.Documents.Indexes
             _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
             _allocationCleanupNeeded = true;
             _lowMemoryFlag.Raise();
-            _lastLowMemoryEventTicks = DateTime.UtcNow.Ticks;
         }
 
         public void LowMemoryOver()
         {
             _lowMemoryFlag.Lower();
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsLowMemory()
-        {
-            if (_lowMemoryFlag.IsRaised())
-                return true;
-
-            return DateTime.UtcNow.Ticks - _lastLowMemoryEventTicks <= _lowMemoryIntervalTicks;
         }
 
         private Regex GetOrAddRegex(string arg)
