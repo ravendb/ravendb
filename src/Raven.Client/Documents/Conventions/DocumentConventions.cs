@@ -18,7 +18,9 @@ using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
+using Size = Sparrow.Size;
 
 namespace Raven.Client.Documents.Conventions
 {
@@ -200,7 +202,7 @@ namespace Raven.Client.Documents.Conventions
         ///     Default value is 512MB
         /// </summary>
         /// <value>The max size of cache in requestExecutor.</value>
-        public long MaxHttpCacheSize { get; set; } = 1024 * 1024L * 512L;
+        public Size MaxHttpCacheSize { get; set; } = new Size(512, SizeUnit.Megabytes);
 
         /// <summary>
         ///     If set to 'true' then it will throw an exception when any query is performed (in session)
