@@ -16,6 +16,8 @@ class clusterNode {
     usableMemoryInGb = ko.observable<number>();
     usableMemory = ko.pureComputed(() => this.getNumber(this.usableMemoryInGb()));
     errorDetails = ko.observable<string>();
+    isLeader = ko.observable<boolean>();
+    
     errorDetailsShort = ko.pureComputed(() => {
         const longError = this.errorDetails();
         return generalUtils.trimMessage(longError);
@@ -40,10 +42,16 @@ class clusterNode {
     cssIcon = ko.pureComputed(() => {
         const type = this.type();
         switch (type) {
-            case "Member":
-                return "icon-cluster-member";
+            case "Member":                
+                if (this.isLeader()) {
+                    return "icon-node-leader";
+                } else {
+                    return "icon-cluster-member";
+                }
+                
             case "Promotable":
                 return "icon-cluster-promotable";
+                
             case "Watcher":
                 return "icon-cluster-watcher";
         }
@@ -58,6 +66,7 @@ class clusterNode {
         this.installedMemoryInGb(incoming.installedMemoryInGb());
         this.usableMemoryInGb(incoming.usableMemoryInGb());
         this.errorDetails(incoming.errorDetails());
+        this.isLeader(incoming.isLeader());
     }
 
     static for(tag: string, serverUrl: string, type: clusterNodeType, connected: boolean, errorDetails?: string) {
