@@ -298,6 +298,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             DisposeWriters();
 
+            _indexSearcherHolder?.Dispose();
             _converter?.Dispose();
             _directory?.Dispose();
 
