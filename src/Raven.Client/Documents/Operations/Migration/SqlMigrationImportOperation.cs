@@ -7,9 +7,9 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations
+namespace Raven.Client.Documents.Operations.Migration
 {
-    public class SqlMigrationImportOperation : IOperation<SqlMigrationImportResult>
+    public class SqlMigrationImportOperation : IMaintenanceOperation<SqlMigrationImportResult>
     {
         private readonly string _connectionString;
         private readonly bool _binaryToAttachment;
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations
             _tables = tables;
         }
 
-        public RavenCommand<SqlMigrationImportResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<SqlMigrationImportResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new SqlMigrationImportCommand(_connectionString, _tables, _binaryToAttachment, _trimStrings, _skipUnsupportedTypes, _batchSize);
         }
@@ -111,9 +111,9 @@ namespace Raven.Client.Documents.Operations
                     {
                         if (first)
                             first = false;
-                        else 
+                        else
                             writer.WriteComma();
-                        
+
                         writer.WriteStartObject();
 
                         writer.WritePropertyName(nameof(table.Name));

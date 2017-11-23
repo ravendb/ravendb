@@ -1,5 +1,4 @@
-﻿
-namespace Raven.Client.Documents.Operations
+﻿namespace Raven.Client.Documents.Operations.Migration
 {
     public class SqlMigrationSchemaResult
     {

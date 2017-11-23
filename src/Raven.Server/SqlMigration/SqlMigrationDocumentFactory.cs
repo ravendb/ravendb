@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Migration;
 
 namespace Raven.Server.SqlMigration
 {

@@ -4,31 +4,31 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Commands
+namespace Raven.Client.ServerWide.Operations
 {
-    public class GetOperationStateOperation : IMaintenanceOperation<OperationState>
+    public class GetServerWideOperationStateOperation : IServerOperation<OperationState>
     {
         private readonly long _id;
 
-        public GetOperationStateOperation(long id)
+        public GetServerWideOperationStateOperation(long id)
         {
             _id = id;
         }
 
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetOperationStateCommand(DocumentConventions.Default, _id);
+            return new GetServerWideOperationStateCommand(DocumentConventions.Default, _id);
         }
     }
 
-    public class GetOperationStateCommand : RavenCommand<OperationState>
+    public class GetServerWideOperationStateCommand : RavenCommand<OperationState>
     {
         public override bool IsReadRequest => true;
 
         private readonly DocumentConventions _conventions;
         private readonly long _id;
 
-        public GetOperationStateCommand(DocumentConventions conventions, long id)
+        public GetServerWideOperationStateCommand(DocumentConventions conventions, long id)
         {
             _conventions = conventions;
             _id = id;
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/operations/state?id={_id}";
+            url = $"{node.Url}/operations/state?id={_id}";
 
             return new HttpRequestMessage
             {

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Migration;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -115,7 +115,8 @@ namespace Raven.Server.SqlMigration
                         AddError(SqlMigrationImportResult.Error.ErrorType.TableNotExist, $"Couldn't find table '{table.Name}' in the SQL database (Table name must include schema name)", table.Name);
                         tables.Remove(table);
                     }
-                    else count++;
+                    else
+                        count++;
                 }
             }
 
@@ -144,7 +145,8 @@ namespace Raven.Server.SqlMigration
             {
                 AddErrors(tables.Where(table =>
                     {
-                        if (!first) return true;
+                        if (!first)
+                            return true;
                         ValidateDuplicateNames(new List<SqlTable>(table.EmbeddedTables), false);
                         return table.IsEmbedded == false;
                     }).GroupBy(table => table.NewName)
@@ -206,7 +208,7 @@ namespace Raven.Server.SqlMigration
                     {
                         try
                         {
-                            return _database.Factory.FromReader(reader, table, out _, this);                           
+                            return _database.Factory.FromReader(reader, table, out _, this);
                         }
                         catch (Exception e)
                         {

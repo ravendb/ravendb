@@ -5,6 +5,7 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.Migration;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Suggestion;
@@ -26,7 +27,6 @@ namespace Raven.Client.Json.Converters
 {
     internal class JsonDeserializationClient : JsonDeserializationBase
     {
-        
         public static readonly Func<BlittableJsonReaderObject, SmugglerProgressBase.CountsWithSkippedCountAndLastEtag> CountsWithSkippedCountAndLastEtag = GenerateJsonDeserializationRoutine<SmugglerProgressBase.CountsWithSkippedCountAndLastEtag>();
 
         public static readonly Func<BlittableJsonReaderObject, CommandResult> CommandResult = GenerateJsonDeserializationRoutine<CommandResult>();
@@ -138,7 +138,7 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, PeriodicBackupStatus> PeriodicBackupStatus = GenerateJsonDeserializationRoutine<PeriodicBackupStatus>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsOperationResult> ConfigureRevisionsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsOperationResult>();
-        
+
         internal static readonly Func<BlittableJsonReaderObject, ExternalReplication> ExternalReplication = GenerateJsonDeserializationRoutine<ExternalReplication>();
 
         internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
@@ -157,7 +157,7 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
-        internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();                
+        internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();
 
         internal static readonly Func<BlittableJsonReaderObject, S3Settings> S3Settings = GenerateJsonDeserializationRoutine<S3Settings>();
 

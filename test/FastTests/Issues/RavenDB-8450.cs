@@ -24,10 +24,10 @@ namespace FastTests.Issues
                 {
                     s.Store(new PersonWithAddress
                     {
-                       Address = new Address
-                       {
-                           Country = "hello\r\nthere"
-                       }
+                        Address = new Address
+                        {
+                            Country = "hello\r\nthere"
+                        }
                     });
                     s.SaveChanges();
                 }
@@ -37,18 +37,18 @@ namespace FastTests.Issues
                     Query = "from PersonWithAddresses as u select { Self: u }"
                 }));
 
-                Assert.DoesNotContain("\r\n",result);
+                Assert.DoesNotContain("\r\n", result);
             }
         }
 
-        public class SubscriptionTryoutOperation : RavenCommand<string> , IOperation<string>
+        public class SubscriptionTryoutOperation : RavenCommand<string>, IOperation<string>
         {
             private readonly SubscriptionTryout _tryout;
 
             public SubscriptionTryoutOperation(SubscriptionTryout tryout)
             {
                 _tryout = tryout;
-                ResponseType=RavenCommandResponseType.Raw;
+                ResponseType = RavenCommandResponseType.Raw;
             }
 
             public RavenCommand<string> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)

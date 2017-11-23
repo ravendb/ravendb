@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations
+namespace Raven.Client.ServerWide.Operations
 {
-    public class CompactDatabaseOperation : IOperation<OperationIdResult>
+    public class CompactDatabaseOperation : IServerOperation<OperationIdResult>
     {
         private readonly CompactSettings _compactSettings;
 
@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations
             _compactSettings = compactSettings ?? throw new ArgumentNullException(nameof(compactSettings));
         }
 
-        public RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new CompactDatabaseCommand(conventions, context, _compactSettings);
         }
