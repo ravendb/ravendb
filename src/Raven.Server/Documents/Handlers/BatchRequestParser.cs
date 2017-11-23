@@ -521,8 +521,6 @@ namespace Raven.Server.Documents.Handlers
                 case 4:
                     if (*(int*)state.StringBuffer == 1701869908)
                         return CommandPropertyName.Type;
-                    if (*(int*)state.StringBuffer == 1734440005)
-                        return CommandPropertyName.ChangeVector;
                     if (*(int*)state.StringBuffer == 1701667150)
                         return CommandPropertyName.Name;
                     return CommandPropertyName.NoSuchProperty;
