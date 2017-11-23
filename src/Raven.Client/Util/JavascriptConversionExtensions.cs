@@ -333,7 +333,23 @@ namespace Raven.Client.Util
                             return;
                         }
                     }
-
+                    case "SelectMany":
+                    {
+                        if (methodCallExpression.Arguments.Count > 2)
+                            return;
+                        
+                        context.PreventDefault();
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {                                                                                                                
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(".reduce(function(a, b) { return a.concat(");
+                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            writer.Write("(b)); }, [])");
+                                                        
+                            return;
+                        }
+                    }
                     default:
                         return;
                 }
