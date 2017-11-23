@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using CsvHelper;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
@@ -17,10 +16,10 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class CsvStreamSource : ISmugglerSource, IDisposable
     {
-        private Stream _stream;
-        private DocumentsOperationContext _context;
+        private readonly Stream _stream;
+        private readonly DocumentsOperationContext _context;
         private DatabaseItemType _currentType;
-        private string _collection;
+        private readonly string _collection;
         private StreamReader _reader;
         private CsvReader _csvReader;
         private bool _hasId;
@@ -30,7 +29,7 @@ namespace Raven.Server.Smuggler.Documents
         /// <summary>
         /// This dictionary maps the index of a property to its nested segments.
         /// </summary>
-        private Dictionary<int, string[]> _nestedPropertyDictionary = null;
+        private Dictionary<int, string[]> _nestedPropertyDictionary;
 
         public CsvStreamSource(Stream stream, DocumentsOperationContext context, string collection)
         {
@@ -57,41 +56,51 @@ namespace Raven.Server.Smuggler.Documents
         private readonly List<IDisposable> _disposibales = new List<IDisposable>();
         private static readonly string CollectionFullPath = $"{Constants.Documents.Metadata.Key}.{Constants.Documents.Metadata.Collection}";
 
-        private void ProcessFieldsIfNeeded()
+        private bool ProcessFieldsIfNeeded()
         {
             if (_headersProcessed)
-                return;
-            for (var i = 0; i < _csvReader.FieldHeaders.Length; i++)
+                return false;
+
+            if (_csvReader.ReadHeader() == false)
+                throw new InvalidOperationException("CSV file must contain a header row.");
+
+            for (var i = 0; i < _csvReader.Context.HeaderRecord.Length; i++)
             {
-                if (_csvReader.FieldHeaders[i].Equals(Constants.Documents.Metadata.Id))
+                if (_csvReader.Context.HeaderRecord[i].Equals(Constants.Documents.Metadata.Id))
                 {
                     _hasId = true;
                     _idIndex = i;
                 }
-                if (_csvReader.FieldHeaders[i].Equals(Constants.Documents.Metadata.Collection) || _csvReader.FieldHeaders[i].Equals(CollectionFullPath))
+
+                if (_csvReader.Context.HeaderRecord[i].Equals(Constants.Documents.Metadata.Collection) || _csvReader.Context.HeaderRecord[i].Equals(CollectionFullPath))
                 {
                     _hasCollection = true;
                     _collectionIndex = i;
                 }
-                if (_csvReader.FieldHeaders[i][0] == '@')
+
+                if (_csvReader.Context.HeaderRecord[i][0] == '@')
                     continue;
-                var indexOfDot = _csvReader.FieldHeaders[i].IndexOf('.');
+
+                var indexOfDot = _csvReader.Context.HeaderRecord[i].IndexOf('.');
                 //We probably have a nested property
                 if (indexOfDot >= 0)
                 {
                     if (_nestedPropertyDictionary == null)
                         _nestedPropertyDictionary = new Dictionary<int, string[]>();
-                    (var arr,var hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.FieldHeaders[i]);
+
+                    (var arr, var hasSegments) = SplitByDotWhileIgnoringEscapedDot(_csvReader.Context.HeaderRecord[i]);
                     //May be false if all dots are escaped
                     if (hasSegments)
                         _nestedPropertyDictionary[i] = arr;
                 }
             }
+
             _headersProcessed = true;
+            return true;
         }
 
-        private (string[] Segments, bool HasSegments) SplitByDotWhileIgnoringEscapedDot(string csvReaderFieldHeader)
-        {            
+        private static (string[] Segments, bool HasSegments) SplitByDotWhileIgnoringEscapedDot(string csvReaderFieldHeader)
+        {
             List<string> segments = new List<string>();
             bool escaped = false;
             int startSegment = 0;
@@ -129,11 +138,19 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
+            string[] csvReaderFieldHeaders = null;
             while (_csvReader.Read())
             {
-                ProcessFieldsIfNeeded();
+                if (ProcessFieldsIfNeeded())
+                {
+                    csvReaderFieldHeaders = new string[_csvReader.Context.HeaderRecord.Length];
+                    _csvReader.Context.HeaderRecord.CopyTo(csvReaderFieldHeaders, 0);
+
+                    continue;
+                }
+
                 var context = actions.GetContextForNewDocument();
-                yield return ConvertRecordToDocumentItem(context, _csvReader.CurrentRecord, _csvReader.FieldHeaders, _collection);
+                yield return ConvertRecordToDocumentItem(context, _csvReader.Context.Record, csvReaderFieldHeaders, _collection);
             }
 
         }
@@ -159,7 +176,7 @@ namespace Raven.Server.Smuggler.Documents
                     if (_nestedPropertyDictionary != null && _nestedPropertyDictionary.TryGetValue(i, out var segments))
                     {
                         var nestedData = data;
-                        for (var j = 0;; j++)
+                        for (var j = 0; ; j++)
                         {
                             //last segment holds the data
                             if (j == segments.Length - 1)
@@ -225,7 +242,7 @@ namespace Raven.Server.Smuggler.Documents
                 return s.Substring(1, s.Length - 2);
             if (s.StartsWith('[') && s.EndsWith(']'))
             {
-                var array = _context.ParseBufferToArray(s,"CsvImport/ArrayValue",
+                var array = _context.ParseBufferToArray(s, "CsvImport/ArrayValue",
                     BlittableJsonDocumentBuilder.UsageMode.None);
                 _disposibales.Add(array);
                 return array;
