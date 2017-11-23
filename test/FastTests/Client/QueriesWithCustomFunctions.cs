@@ -3008,15 +3008,13 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
                                 };
                     
                     Assert.Equal("FROM TestableDTOs as item SELECT { " +
-                                 "Id : id(item), data : item.Data, " +
-                                 "values : Object.getOwnPropertyNames(item.Data).map(function(k){return item.Data[k]})" +
-                                                                               ".reduce(function(a, b) { return a.concat(b);},[])" +
-                                                                               ".map(function(n){return n;})" +
-                                                                               ".length > 0 " +
-                                         "? Object.getOwnPropertyNames(item.Data).map(function(k){return item.Data[k]})" +
-                                                                                ".reduce(function(a, b) { return a.concat(b);},[])" +
-                                                                                ".map((function(n){return n;})) " +
-                                         ": [null] }"
+                                 "Id : id(item), " +
+                                 "data : item.Data, " +
+                                 "values : (function(arr){return arr.length > 0 ? arr : [null]})" +
+                                             "(Object.getOwnPropertyNames(item.Data)" +
+                                                    ".map(function(k){return item.Data[k]})" +
+                                                    ".reduce(function(a, b) { return a.concat(b);},[])" +
+                                                    ".map((function(n){return n;}))) }"
                                 , query.ToString());
                     
                     var first = await query.FirstAsync();

@@ -304,7 +304,6 @@ namespace Raven.Client.Util
                     case "DefaultIfEmpty":
                     {
                         context.PreventDefault();
-                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
 
                         object defaultVal = null;                       
                         var genericArguments = methodCallExpression.Arguments[0].Type.GetGenericArguments();
@@ -327,9 +326,9 @@ namespace Raven.Client.Util
                         var writer = context.GetWriter();
                         using (writer.Operation(methodCallExpression))
                         {
-                            writer.Write(".length > 0 ? ");
+                            writer.Write($"(function(arr){{return arr.length > 0 ? arr : [{defaultVal?? "null"}]}})(");
                             context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write($" : [{defaultVal?? "null"}]");
+                            writer.Write($")");
                             return;
                         }
                     }
