@@ -8,6 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -19,7 +20,6 @@ namespace Raven.Client.Documents.Operations
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
         private readonly long _id;
-        private readonly bool _isServerStoreOperation;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Action<IOperationProgress> OnProgressChanged;
@@ -28,13 +28,12 @@ namespace Raven.Client.Documents.Operations
 
         internal long Id => _id;
 
-        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, bool isServerStoreOperation = false)
+        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
             _conventions = conventions;
             _id = id;
-            _isServerStoreOperation = isServerStoreOperation;
         }
 
         private async Task Initialize()
@@ -62,7 +61,7 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         private async Task FetchOperationStatus()
         {
-            var command = new GetOperationStateCommand(_conventions, _id, _isServerStoreOperation);
+            var command = GetOperationStateCommand(_conventions, _id);
 
             await _requestExecutor.ExecuteAsync(command, _context).ConfigureAwait(false);
 
@@ -71,6 +70,11 @@ namespace Raven.Client.Documents.Operations
                 OperationId = _id,
                 State = command.Result
             });
+        }
+
+        protected virtual RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
+        {
+            return new GetOperationStateCommand(conventions, id);
         }
 
         public void OnNext(OperationStatusChange change)
@@ -150,6 +154,19 @@ namespace Raven.Client.Documents.Operations
             where TResult : IOperationResult
         {
             return AsyncHelpers.RunSync(() => WaitForCompletionAsync<TResult>(timeout));
+        }
+    }
+
+    public class ServerWideOperation : Operation
+    {
+        public ServerWideOperation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
+            : base(requestExecutor, changes, conventions, id)
+        {
+        }
+
+        protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
+        {
+            return new GetServerWideOperationStateCommand(conventions, id);
         }
     }
 }

@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
@@ -42,12 +43,12 @@ namespace SlowTests.Server.Documents
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                var compactOperation = store.Operations.Send(new CompactDatabaseOperation(new CompactSettings
+                var compactOperation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
                 {
                     DatabaseName = store.Database,
                     Documents = true,
                     Indexes = new[] { "Orders/ByCompany", "Orders/Totals" }
-                }), isServerOperation: true);
+                }));
                 await compactOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
@@ -88,11 +89,11 @@ namespace SlowTests.Server.Documents
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
-                var operation = await store.Operations.SendAsync(new CompactDatabaseOperation(new CompactSettings
+                var operation = await store.Maintenance.Server.SendAsync(new CompactDatabaseOperation(new CompactSettings
                 {
                     DatabaseName = store.Database,
                     Documents = true
-                }), isServerOperation: true);
+                }));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));

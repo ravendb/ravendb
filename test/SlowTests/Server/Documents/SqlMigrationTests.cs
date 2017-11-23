@@ -7,6 +7,7 @@ using System.Runtime.Serialization;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Migration;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
@@ -113,7 +114,7 @@ namespace SlowTests.Server.Documents
                 };
                 var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
-                var result = store.Operations.Send(operation);
+                var result = store.Maintenance.Send(operation);
 
                 Assert.True(result.Success);
 
@@ -154,7 +155,7 @@ namespace SlowTests.Server.Documents
 
                 var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
-                var result = store.Operations.Send(operation);
+                var result = store.Maintenance.Send(operation);
 
                 Assert.True(result.Success);
 
@@ -185,7 +186,7 @@ namespace SlowTests.Server.Documents
 
                 var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
-                var result = store.Operations.Send(operation);
+                var result = store.Maintenance.Send(operation);
 
                 Assert.True(result.Success);
 
@@ -258,7 +259,7 @@ namespace SlowTests.Server.Documents
 
                 var operation = new SqlMigrationImportOperation(ConnectionStringName, tablesToWrite, binaryToAttachment: true, trimStrings: true, skipUnsupportedTypes: false, batchSize: 5);
 
-                var result = store.Operations.Send(operation);
+                var result = store.Maintenance.Send(operation);
 
                 Assert.False(result.Success);
                 Assert.True(result.Errors[0].Message.Contains("Couldn't find table 'dbo.NotExists' in the SQL database (Table name must include schema name)"));
@@ -281,7 +282,7 @@ namespace SlowTests.Server.Documents
                 Initialize(store);
                 var operation = new SqlMigrationSchemaOperation(ConnectionStringName);
 
-                var result = store.Operations.Send(operation);
+                var result = store.Maintenance.Send(operation);
 
                 Assert.True(result.Success);
                 Assert.Equal(result.Tables.Length, 8);

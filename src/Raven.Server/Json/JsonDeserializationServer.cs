@@ -1,7 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.Migration;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Replication.Messages;
@@ -16,21 +16,18 @@ using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Commercial;
-using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
-using Facet = Raven.Client.Documents.Queries.Facets.Facet;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Smuggler.Migration;
@@ -108,7 +105,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, UnsecuredSetupInfo> UnsecuredSetupInfo = GenerateJsonDeserializationRoutine<UnsecuredSetupInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ClaimDomainInfo> ClaimDomainInfo = GenerateJsonDeserializationRoutine<ClaimDomainInfo>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, ListDomainsInfo> ListDomainsInfo = GenerateJsonDeserializationRoutine<ListDomainsInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
@@ -130,7 +127,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, LastEtagsInfo> OperationState = GenerateJsonDeserializationRoutine<LastEtagsInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, ImportInfo> ImportInfo = GenerateJsonDeserializationRoutine<ImportInfo>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, SqlMigrationImportOperation.SqlMigrationTable> SqlMigrationTable = SqlMigrationImportOperation.SqlMigrationTable.ManualDeserializationFunc;
 
         public static readonly Func<BlittableJsonReaderObject, MoreLikeThisOptions> MoreLikeThisOptions = GenerateJsonDeserializationRoutine<MoreLikeThisOptions>();

@@ -6,9 +6,9 @@ using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations
+namespace Raven.Client.Documents.Operations.Migration
 {
-    public class SqlMigrationSchemaOperation : IOperation<SqlMigrationSchemaResult>
+    public class SqlMigrationSchemaOperation : IMaintenanceOperation<SqlMigrationSchemaResult>
     {
         private readonly string _connectionStringName;
 
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations
             _connectionStringName = connectionStringName;
         }
 
-        public RavenCommand<SqlMigrationSchemaResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<SqlMigrationSchemaResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new SqlMigrationSchemaCommand(_connectionStringName);
         }
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations
                 {
                     Method = HttpMethods.Get
                 };
-            
+
                 return request;
             }
 

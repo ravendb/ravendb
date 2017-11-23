@@ -72,8 +72,7 @@ namespace Raven.Client.Documents.Operations
 
         public async Task<Operation> SendAsync(IMaintenanceOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
         {
-            JsonOperationContext context;
-            using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
+            using (RequestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 

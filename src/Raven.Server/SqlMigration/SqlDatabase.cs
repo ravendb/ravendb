@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Migration;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.SqlMigration
@@ -63,13 +63,13 @@ namespace Raven.Server.SqlMigration
                 if (parentTable != null)
                 {
                     table = new SqlEmbeddedTable(item.Name, item.Query, this, item.NewName, parentTable.Name);
-                    parentTable.EmbeddedTables.Add((SqlEmbeddedTable) table);
-                    EmbeddedTables.Add((SqlEmbeddedTable) table);
+                    parentTable.EmbeddedTables.Add((SqlEmbeddedTable)table);
+                    EmbeddedTables.Add((SqlEmbeddedTable)table);
                 }
                 else
                 {
                     table = new SqlParentTable(item.Name, item.Query, this, item.NewName, item.Patch);
-                    ParentTables.Add((SqlParentTable) table);
+                    ParentTables.Add((SqlParentTable)table);
                 }
 
                 if (item.EmbeddedTables != null)
@@ -123,7 +123,7 @@ namespace Raven.Server.SqlMigration
                     var name = GetTableNameFromReader(reader);
                     if (temp.ContainsKey(name) == false)
                         temp[name] = new List<string>();
-                   temp[name].Add(reader["COLUMN_NAME"].ToString());
+                    temp[name].Add(reader["COLUMN_NAME"].ToString());
                 }
 
                 return temp;
@@ -178,7 +178,7 @@ namespace Raven.Server.SqlMigration
                 if (temp.Any(table => parentColumnName.Where((t, i) => table.ForeignKeys.TryAdd(t, childTableName[i]) == false).Any()))
                     throw new InvalidOperationException($"Column '{parentColumnName}' cannot reference multiple tables.");
             }
-        }      
+        }
 
         private void SetPrimaryKeys()
         {
@@ -202,8 +202,8 @@ namespace Raven.Server.SqlMigration
         public string GetParentTableNewName(string tableName)
         {
             return (from table in ParentTables
-                       where table.Name == tableName
-                       select table.NewName).FirstOrDefault() ?? tableName;
+                    where table.Name == tableName
+                    select table.NewName).FirstOrDefault() ?? tableName;
         }
 
         public bool TryGetNewName(string foreignKeyTableName, out string newName)
@@ -212,7 +212,8 @@ namespace Raven.Server.SqlMigration
 
             foreach (var table in ParentTables)
             {
-                if (table.Name != foreignKeyTableName) continue;
+                if (table.Name != foreignKeyTableName)
+                    continue;
 
                 newName = table.NewName;
                 return true;

@@ -85,7 +85,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "oren" }, "users/1");               
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
@@ -190,7 +190,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupStatus = 
+                    var getPeriodicBackupStatus =
                         new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
                     var status = store.Maintenance.Server.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null && status.LastIncrementalBackup != null;
@@ -474,7 +474,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, true);
+                var stateRequest = new GetServerWideOperationStateOperation(restoreResult.OperationId);
 
                 SpinWait.SpinUntil(() =>
                 {
@@ -522,7 +522,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
-                
+
                 var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -546,7 +546,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                var stateRequest = new GetOperationStateOperation(restoreResult.OperationId, true);
+                var stateRequest = new GetServerWideOperationStateOperation(restoreResult.OperationId);
                 store.Maintenance.Server.Send(stateRequest);
 
                 SpinWait.SpinUntil(() =>
@@ -634,7 +634,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Contains("Journals directory must be empty of any files or folders", e.InnerException.Message);
 
                 restoreConfiguration.BackupLocation = backupPath;
-                restoreConfiguration.DataDirectory = emptyFolder; ;
+                restoreConfiguration.DataDirectory = emptyFolder;
+                ;
                 restoreConfiguration.IndexingStoragePath = backupPath;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
