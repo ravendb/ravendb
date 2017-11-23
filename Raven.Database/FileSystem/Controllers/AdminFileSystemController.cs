@@ -734,5 +734,19 @@ namespace Raven.Database.FileSystem.Controllers
 
             return GetMessageWithObjectAsTask(topology);
         }
+
+        [HttpPost]
+        [RavenRoute("fs/{fileSystemName}/admin/changedbid")]
+        public HttpResponseMessage ChangeDbId()
+        {
+            Guid old = FileSystem.Storage.Id;
+            var newId = FileSystem.Storage.ChangeId();
+
+            return GetMessageWithObject(new
+            {
+                OldId = old,
+                NewId = newId
+            });
+        }
     }
 }
