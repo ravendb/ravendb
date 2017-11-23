@@ -42,6 +42,10 @@ class clusterTopology {
             const nodes = this.nodes();
             return nodes.filter(x => x.type() === "Watcher").length;
         });
+
+        this.nodes().forEach(node => {      
+            node.isLeader(node.tag() === this.leader());
+        });
     }
 
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
@@ -70,8 +74,10 @@ class clusterTopology {
         toDelete.forEach(x => this.nodes.remove(x));
 
         newNodes.forEach(node => {
-            const matchedNode = existingNodes.find(x => x.serverUrl() === node.serverUrl());
-
+            node.isLeader(node.tag() == incomingChanges.Leader);
+            
+            const matchedNode = existingNodes.find(x => x.serverUrl() === node.serverUrl());           
+                        
             if (matchedNode) {
                 matchedNode.updateWith(node);
             } else {
