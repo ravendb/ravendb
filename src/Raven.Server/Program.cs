@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.Loader;
 using System.Threading;
@@ -8,11 +6,9 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
-using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server
@@ -241,16 +237,15 @@ namespace Raven.Server
             var i = 0;
             while (Console.KeyAvailable == false)
             {
-                var json = MemoryStatsHandler.MemoryStatsInternal();
-                var humaneProp = (json["Humane"] as DynamicJsonValue);
+                var stats = RavenCli.MemoryStatsWithMemoryMappedInfo();
                 var reqCounter = server.Metrics.Requests.RequestsPerSec;
 
                 Console.Write($"\r {((i++ % 2) == 0 ? "*" : "+")} ");
 
-                Console.Write($" {humaneProp?["WorkingSet"],-14} ");
-                Console.Write($" | {humaneProp?["TotalUnmanagedAllocations"],-14} ");
-                Console.Write($" | {humaneProp?["ManagedAllocations"],-14} ");
-                Console.Write($" | {humaneProp?["TotalMemoryMapped"],-17} ");
+                Console.Write($" {stats.WorkingSet,-14} ");
+                Console.Write($" | {stats.TotalUnmanagedAllocations,-14} ");
+                Console.Write($" | {stats.ManagedMemory,-14} ");
+                Console.Write($" | {stats.TotalMemoryMapped,-17} ");
 
                 Console.Write($"| {Math.Round(reqCounter.OneSecondRate, 1),-14:#,#.#;;0} ");
 

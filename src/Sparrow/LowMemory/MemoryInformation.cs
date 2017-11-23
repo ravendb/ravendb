@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Win32;
+using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
@@ -294,6 +296,28 @@ namespace Sparrow.LowMemory
                     Logger.Info("Error while trying to get available memory, will stop trying and report that there is 256MB free only from now on", e);
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
+            }
+        }
+
+        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory) MemoryStats()
+        {
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                var workingSet =
+                    PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
+                        ? currentProcess.WorkingSet64
+                        : GetRssMemoryUsage(currentProcess.Id);
+
+                long totalUnmanagedAllocations = 0;
+                foreach (var stats in NativeMemory.ThreadAllocations.Values)
+                {
+                    if (stats.ThreadInstance.IsAlive)
+                        totalUnmanagedAllocations += stats.TotalAllocated;
+                }
+
+                var managedMemory = GC.GetTotalMemory(false);
+
+                return (workingSet, totalUnmanagedAllocations, managedMemory);
             }
         }
 

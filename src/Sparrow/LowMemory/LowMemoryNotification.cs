@@ -123,28 +123,6 @@ namespace Sparrow.LowMemory
             thread.Start();
         }
 
-        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory) MemoryStats()
-        {
-            using (var currentProcess = Process.GetCurrentProcess())
-            {
-                var workingSet =
-                    PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
-                        ? currentProcess.WorkingSet64
-                        : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
-
-                long totalUnmanagedAllocations = 0;
-                foreach (var stats in NativeMemory.ThreadAllocations.Values)
-                {
-                    if (stats.ThreadInstance.IsAlive)
-                        totalUnmanagedAllocations += stats.TotalAllocated;
-                }
-
-                var managedMemory = GC.GetTotalMemory(false);
-
-                return (workingSet, totalUnmanagedAllocations, managedMemory);
-            }
-        }
-
         public static Size GetCurrentProcessMemoryMappedShared()
         {
             // because we are usually using memory mapped files, we don't want
@@ -152,9 +130,10 @@ namespace Sparrow.LowMemory
             // but that the OS can discard with no cost (because it can load
             // the data from disk without needing to write it)
 
-            var memoryStats = MemoryStats();
+            var stats = MemoryInformation.MemoryStats();
 
-            var sharedMemory = memoryStats.WorkingSet - memoryStats.TotalUnmanagedAllocations - memoryStats.ManagedMemory;
+            var sharedMemory = stats.WorkingSet - stats.TotalUnmanagedAllocations - stats.ManagedMemory;
+
             // if this is negative, we'll just ignore this
             var mappedShared = new Size(Math.Max(0, sharedMemory), SizeUnit.Bytes);
             return mappedShared;            
@@ -193,7 +172,7 @@ namespace Sparrow.LowMemory
                         var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
                         var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared).GetValue(SizeUnit.Bytes);
 
-                        if (availableMem < _lowMemoryThreshold || 
+                        if (availableMem < _lowMemoryThreshold &&
                             // at all times, we want 2% or 1 GB, the lowest of the two
                             memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)))
                         {
