@@ -16,9 +16,10 @@
                             </div>
                         </div>
                         <div data-bind="if: !isCreatingNewDocument()">
-                            <a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">
-                                <span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>
-                            </a>
+                            <!-- todo: bring back the star when doing issue RavenDB-8110 (vNext) -->
+                            <!--<a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">-->
+                                <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
+                            <!--</a>-->
                             <span class="obj-name" data-bind="text: userSpecifiedId"></span>
                             
                             <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision"> | REVISION</span>
