@@ -68,7 +68,7 @@ namespace Raven.Server.Utils.Cli
                         break;
                     case "%M":
                         {
-                            var memoryStats = MemoryStatsWithMapping();
+                            var memoryStats = MemoryStatsWithMemoryMappedInfo();
                             msg.Append($"WS:{memoryStats.WorkingSet}");
                             msg.Append($"|UM:{memoryStats.TotalUnmanagedAllocations}");
                             msg.Append($"|M:{memoryStats.ManagedMemory}");
@@ -611,7 +611,7 @@ namespace Raven.Server.Utils.Cli
         {
             WriteText("Before simulating low-mem, memory stats: ", TextColor, cli, newLine: false);
 
-            var memoryStats = MemoryStatsWithMapping();
+            var memoryStats = MemoryStatsWithMemoryMappedInfo();
             var msg = new StringBuilder();
             msg.Append($"Working Set:{memoryStats.WorkingSet}");
             msg.Append($" Unmamanged Memory:{memoryStats.TotalUnmanagedAllocations}");
@@ -633,12 +633,12 @@ namespace Raven.Server.Utils.Cli
         }
 
         public static (
-            string WorkingSet, 
-            string TotalUnmanagedAllocations, 
-            string ManagedMemory, 
-            string TotalMemoryMapped) MemoryStatsWithMapping()
+            string WorkingSet,
+            string TotalUnmanagedAllocations,
+            string ManagedMemory,
+            string TotalMemoryMapped) MemoryStatsWithMemoryMappedInfo()
         {
-            var memoryStats = LowMemoryNotification.MemoryStats();
+            var stats = MemoryInformation.MemoryStats();
 
             long totalMemoryMapped = 0;
             foreach (var mapping in NativeMemory.FileMapping)
@@ -650,9 +650,9 @@ namespace Raven.Server.Utils.Cli
             }
 
             return (
-                SizeClient.Humane(memoryStats.WorkingSet),
-                SizeClient.Humane(memoryStats.TotalUnmanagedAllocations),
-                SizeClient.Humane(memoryStats.ManagedMemory),
+                SizeClient.Humane(stats.WorkingSet),
+                SizeClient.Humane(stats.TotalUnmanagedAllocations),
+                SizeClient.Humane(stats.ManagedMemory),
                 SizeClient.Humane(totalMemoryMapped));
         }
 
