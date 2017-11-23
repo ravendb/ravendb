@@ -363,8 +363,7 @@ more responsive application.
                 return DeserializeFromTransformer(entityType, null, document);
             }
 
-            DocumentInfo docInfo;
-            if (DocumentsById.TryGetValue(id, out docInfo))
+            if (DocumentsById.TryGetValue(id, out var docInfo))
             {
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
@@ -425,19 +424,7 @@ more responsive application.
         /// <returns></returns>
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound)
         {
-            //TODO: consider removing this function entirely, leaving only the EntityToBlittalbe version
             return EntityToBlittable.ConvertToEntity(entityType, id, documentFound);
-        }
-
-        private void RegisterMissingProperties(object o, string id, object value)
-        {
-            Dictionary<string, object> dictionary;
-            if (EntityToBlittable.MissingDictionary.TryGetValue(o, out dictionary) == false)
-            {
-                EntityToBlittable.MissingDictionary[o] = dictionary = new Dictionary<string, object>();
-            }
-
-            dictionary[id] = value;
         }
 
         /// <summary>
@@ -955,8 +942,7 @@ more responsive application.
         /// <param name="entity">The entity.</param>
         public void Evict<T>(T entity)
         {
-            DocumentInfo documentInfo;
-            if (DocumentsByEntity.TryGetValue(entity, out documentInfo))
+            if (DocumentsByEntity.TryGetValue(entity, out var documentInfo))
             {
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
@@ -1181,8 +1167,7 @@ more responsive application.
         {
             foreach (var nested in values)
             {
-                var bObject = nested as BlittableJsonReaderObject;
-                if (bObject != null)
+                if (nested is BlittableJsonReaderObject bObject)
                     HandleInternalMetadata(bObject);
                 var bArray = nested as BlittableJsonReaderArray;
                 if (bArray == null)
@@ -1191,12 +1176,12 @@ more responsive application.
             }
         }
 
-        public object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
+        private object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document)
         {
             HandleInternalMetadata(document);
             return EntityToBlittable.ConvertToEntity(entityType, id, document);
         }
-
+        
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));

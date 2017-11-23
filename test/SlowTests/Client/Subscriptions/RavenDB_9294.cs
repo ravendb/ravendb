@@ -28,7 +28,11 @@ namespace SlowTests.Client.Subscriptions
 
                 var firstBatchHappened = new AsyncManualResetEvent();
 
-                worker.AfterAcknowledgment += async x => firstBatchHappened.Set();
+                worker.AfterAcknowledgment += x =>
+                {
+                    firstBatchHappened.Set();
+                    return Task.CompletedTask;
+                };
 
                 _ = worker.Run(x => { });
                 Assert.True(await firstBatchHappened.WaitAsync(_reasonableWaitTime));

@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Conventions
             }
 
             _reader.Init(jsonObject);
-            using (DefaultRavenContractResolver.Register((o, key, value) =>
+            using (DefaultRavenContractResolver.RegisterExtensionDataSetter((o, key, value) =>
             {
                 JToken id;
                 if (key == Constants.Documents.Metadata.Key && value is JObject json)

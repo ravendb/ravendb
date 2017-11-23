@@ -146,6 +146,8 @@ namespace Raven.Client.Documents.Conventions
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
 
+        public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; } = true;
+
         public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable
         {
             get => _deserializeEntityFromBlittable;

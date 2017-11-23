@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -20,20 +21,47 @@ namespace Raven.Client.Documents.Conventions
     internal class DefaultRavenContractResolver : DefaultContractResolver
     {
         [ThreadStatic]
-        private static ExtensionDataSetter _currentExtensionData;
+        private static ExtensionDataSetter _currentExtensionSetter;
+        [ThreadStatic]
+        private static ExtensionDataGetter _currentExtensionGetter;
 
         public struct ClearExtensionData : IDisposable
         {
+            private readonly ExtensionDataSetter _setter;
+            private readonly ExtensionDataGetter _getter;
+
+            public ClearExtensionData(ExtensionDataSetter setter, ExtensionDataGetter getter)
+            {
+                _setter = setter;
+                _getter = getter;
+            }
+
+            [SuppressMessage("ReSharper", "DelegateSubtraction")]
             public void Dispose()
             {
-                _currentExtensionData = null;
+                if (_setter != null)
+                {
+                    _currentExtensionSetter -= _setter;
+                }
+                if (_getter != null)
+                {
+                    _currentExtensionGetter -= _getter;
+                }
+                
             }
         }
 
-        public static ClearExtensionData Register(ExtensionDataSetter setter)
+        public static ClearExtensionData RegisterExtensionDataSetter(ExtensionDataSetter setter)
         {
-            _currentExtensionData = setter;
-            return new ClearExtensionData();
+            _currentExtensionSetter += setter;
+            return new ClearExtensionData(setter, null);
+        }
+        
+        
+        public static ClearExtensionData RegisterExtensionDataGetter(ExtensionDataGetter getter)
+        {
+            _currentExtensionGetter += getter;
+            return new ClearExtensionData(null, getter);
         }
 
         protected override JsonObjectContract CreateObjectContract(Type objectType)
@@ -44,8 +72,9 @@ namespace Raven.Client.Documents.Conventions
             {
                 if (jsonObjectContract.Properties.Contains(key))
                     return;
-                _currentExtensionData?.Invoke(o, key, value);
+                _currentExtensionSetter?.Invoke(o, key, value);
             };
+            jsonObjectContract.ExtensionDataGetter += (o) => _currentExtensionGetter?.Invoke(o);
             return jsonObjectContract;
         }
 
