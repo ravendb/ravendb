@@ -427,12 +427,12 @@ namespace Raven.Server.Web.System
                 Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
                 RejectClients = false, //TODO: implement me!
                 LoadError = null,
-                IndexingErrors = db?.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) ?? 0,
+                IndexingErrors = db?.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0,
 
                 DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
                 HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
                 HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
-                IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
+                IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
                 IndexingStatus = indexingStatus,
 
                 NodesTopology = nodesTopology,
