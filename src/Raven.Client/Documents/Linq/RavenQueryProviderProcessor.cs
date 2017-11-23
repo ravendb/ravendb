@@ -1911,7 +1911,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var name = GetSelectPath(expression.Members[1]);
             var parameter = expression?.Arguments[0] as ParameterExpression;
-
+            
+            if (_fromAlias == null)
+            {
+                AddFromAlias(parameter?.Name);
+            }
+            
+            if (expression.Arguments[1] is MethodCallExpression mce
+                && mce.Method.DeclaringType == typeof(RavenQuery)
+                && mce.Method.Name == "Raw")
+            {
+                if (mce.Arguments.Count == 1)
+                {
+                    AppendLineToOutputFunction(name, (mce.Arguments[0] as ConstantExpression)?.Value.ToString());
+                }
+                else
+                {
+                    var path = ToJs(mce.Arguments[0]);
+                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
+                    AppendLineToOutputFunction(name, $"{path}.{raw}");
+                }
+                return;
+            }
+            
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
                 new JavascriptCompilationOptions(
@@ -1931,11 +1953,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
-
-            if (_fromAlias == null)
-            {
-                AddFromAlias(parameter?.Name);
-            }
 
             if (loadSupport.HasLoad)
             {
