@@ -203,7 +203,14 @@ namespace Raven.Server.Documents.Queries
                 }
                 else if (_ids != null && _ids.Count > 0)
                 {
-                    documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults);
+                    if (_isAllDocsCollection)
+                    {
+                        documents = _documents.GetDocuments(_context, _ids, _start, _query.PageSize, _totalResults);
+                    }
+                    else
+                    {
+                        documents = _documents.GetDocuments(_context, _ids, _collection, _start, _query.PageSize, _totalResults);
+                    }
                 }
                 else if (_isAllDocsCollection)
                 {
