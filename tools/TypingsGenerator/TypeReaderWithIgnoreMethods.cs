@@ -18,14 +18,14 @@ namespace TypingsGenerator
         public override IEnumerable<FieldInfo> GetFields(TypeInfo type)
         {
             return base.GetFields(type)
-                .Where(f => f.GetCustomAttribute<JsonIgnoreAttribute>() == null && f.GetCustomAttribute<Sparrow.Json.JsonIgnoreAttribute>() == null);
+                .Where(f => f.GetCustomAttribute<JsonIgnoreAttribute>() == null && f.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() == null);
         }
 
         public override IEnumerable<PropertyInfo> GetProperties(TypeInfo type)
         {
             return base.GetProperties(type).Where(p =>
                 p.GetCustomAttribute<JsonIgnoreAttribute>() == null
-                && p.GetCustomAttribute<Sparrow.Json.JsonIgnoreAttribute>() == null
+                && p.GetCustomAttribute<Sparrow.Json.JsonDeserializationIgnoreAttribute>() == null
                 && !IsDictionaryIndexer(p)
                 && !IsFunctionProperty(p));
         }

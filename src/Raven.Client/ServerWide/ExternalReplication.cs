@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide
         public string ConnectionStringName;
         public string MentorNode;
 
-        [JsonIgnore]
+        [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
 
         public ExternalReplication() { }

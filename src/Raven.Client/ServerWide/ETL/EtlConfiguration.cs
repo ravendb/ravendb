@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.ETL
 
         public string ConnectionStringName { get; set; }
 
-        [JsonIgnore]
+        [JsonDeserializationIgnore]
         [Newtonsoft.Json.JsonIgnore]
         internal T Connection { get; set; }
 

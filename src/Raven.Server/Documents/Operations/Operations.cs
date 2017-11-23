@@ -248,17 +248,17 @@ namespace Raven.Server.Documents.Operations
 
             public long Id;
 
-            [JsonIgnore]
+            [JsonDeserializationIgnore]
             public Task<IOperationResult> Task;
 
-            [JsonIgnore]
+            [JsonDeserializationIgnore]
             public OperationCancelToken Token;
 
             public OperationDescription Description;
 
             public OperationState State;
 
-            [JsonIgnore]
+            [JsonDeserializationIgnore]
             public DocumentDatabase Database;
 
             public bool Killable => Token != null;

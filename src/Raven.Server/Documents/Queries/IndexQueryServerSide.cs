@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        [JsonIgnore]
+        [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
         private IndexQueryServerSide()
