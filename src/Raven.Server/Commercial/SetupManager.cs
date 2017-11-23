@@ -121,7 +121,7 @@ namespace Raven.Server.Commercial
             public string Domain { get; set; }
             public string Certificate { get; set; }
 
-            [Sparrow.Json.JsonIgnore]
+            [JsonDeserializationIgnore]
             public X509Certificate2 CertificateInstance { get; set; }
         }
 
