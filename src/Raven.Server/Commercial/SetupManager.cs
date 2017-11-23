@@ -21,6 +21,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Https;
@@ -978,18 +979,13 @@ namespace Raven.Server.Commercial
 
                             publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out domainFromCert);
 
-                            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                            using (var tx = ctx.OpenWriteTransaction())
+                            try
                             {
-                                try
-                                {
-                                    serverStore.Engine.DeleteTopology(ctx);
-                                    tx.Commit();
-                                }
-                                catch (Exception e)
-                                {
-                                    throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
-                                }
+                                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "");
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                             }
 
                             serverStore.EnsureNotPassive(publicServerUrl);
@@ -1003,15 +999,13 @@ namespace Raven.Server.Commercial
                             {
                                 if (node.Key == LocalNodeTag)
                                     continue;
+									
                                 progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
                                 onProgress(progress);
 
                                 setupInfo.NodeSetupInfos[node.Key].PublicServerUrl =
                                     GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port, out var _);
-
-                                if (node.Key == LocalNodeTag)
-                                    continue;
-
+                                
                                 try
                                 {
                                     await serverStore.AddNodeToClusterAsync(setupInfo.NodeSetupInfos[node.Key].PublicServerUrl, node.Key, validateNotInTopology: false);
