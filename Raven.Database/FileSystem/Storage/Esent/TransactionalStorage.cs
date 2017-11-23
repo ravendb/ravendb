@@ -29,6 +29,7 @@ using Raven.Database.FileSystem.Plugins;
 using Raven.Database.FileSystem.Storage.Esent.Backup;
 using Raven.Database.FileSystem.Storage.Esent.Schema;
 using Raven.Database.Util;
+using Raven.Storage.Esent;
 using BackupOperation = Raven.Database.FileSystem.Storage.Esent.Backup.BackupOperation;
 
 namespace Raven.Database.FileSystem.Storage.Esent
@@ -567,6 +568,27 @@ namespace Raven.Database.FileSystem.Storage.Esent
         {
             Console.Write(message);
             Console.WriteLine();
+        }
+
+        public Guid ChangeId()
+        {
+            Guid newId = Guid.NewGuid();
+            instance.WithDatabase(database, (session, dbid, tx) =>
+            {
+                using (var details = new Table(session, dbid, "details", OpenTableGrbit.None))
+                {
+                    Api.JetMove(session, details, JET_Move.First, MoveGrbit.None);
+                    var columnids = Api.GetColumnDictionary(session, details);
+                    using (var update = new Update(session, details, JET_prep.Replace))
+                    {
+                        Api.SetColumn(session, details, columnids["id"], newId.ToByteArray());
+                        update.Save();
+                    }
+                }
+                return tx;
+            });
+            Id = newId;
+            return newId;
         }
     }
 }

@@ -30,5 +30,7 @@ namespace Raven.Database.FileSystem.Storage
         void Compact(InMemoryRavenConfiguration configuration, Action<string> output);
 
         IDisposable DisableBatchNesting();
+
+        Guid ChangeId();
     }
 }

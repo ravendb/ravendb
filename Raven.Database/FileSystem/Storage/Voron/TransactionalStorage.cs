@@ -389,5 +389,20 @@ namespace Raven.Database.FileSystem.Storage.Voron
             Console.Write(message);
             Console.WriteLine();
         }
+
+        public Guid ChangeId()
+        {
+            var newId = Guid.NewGuid();
+            using (var changeIdWriteBatch = new WriteBatch())
+            {
+                tableStorage.Details.Delete(changeIdWriteBatch, "id");
+                tableStorage.Details.Add(changeIdWriteBatch, "id", newId.ToByteArray());
+
+                tableStorage.Write(changeIdWriteBatch);
+            }
+
+            Id = newId;
+            return newId;
+        }
     }
 }
