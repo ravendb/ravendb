@@ -27,6 +27,7 @@ using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -123,7 +124,7 @@ namespace Raven.Client.Http
 
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            Cache = new HttpCache(conventions.MaxHttpCacheSize);
+            Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
 
             _disposeOnceRunner = new DisposeOnce<ExceptionRetry>(() =>
             {
