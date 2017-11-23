@@ -55,11 +55,16 @@ namespace Raven.Server.Documents.Indexes
 
         public Logger Logger => _logger;
 
+        public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<IndexStore>(_documentDatabase.Name);
+
+            var stoppedConcurrentIndexBatches = _documentDatabase.Configuration.Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory;
+            StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
         }
 
         public void HandleDatabaseRecordChange(DatabaseRecord record, long index)

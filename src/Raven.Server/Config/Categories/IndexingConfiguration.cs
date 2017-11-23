@@ -84,6 +84,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; protected set; }
 
+        [Description("EXPERT ONLY")]
+        [DefaultValue(3)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory { get; protected set; }
+
         [Description("Number of seconds after which mapping will end even if there is more to map. By default we will map everything we can in single batch.")]
         [DefaultValue(-1)]
         [TimeUnit(TimeUnit.Seconds)]
