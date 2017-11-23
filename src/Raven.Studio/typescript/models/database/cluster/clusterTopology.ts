@@ -74,7 +74,7 @@ class clusterTopology {
         toDelete.forEach(x => this.nodes.remove(x));
 
         newNodes.forEach(node => {
-            node.isLeader(node.tag() == incomingChanges.Leader);
+            node.isLeader(node.tag() === incomingChanges.Leader);
             
             const matchedNode = existingNodes.find(x => x.serverUrl() === node.serverUrl());           
                         
