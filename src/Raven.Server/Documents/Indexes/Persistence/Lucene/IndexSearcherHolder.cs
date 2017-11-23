@@ -3,20 +3,17 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using Sparrow.Logging;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Raven.Server.Documents.Queries;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Threading;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexSearcherHolder
+    public class IndexSearcherHolder: IDisposable
     {
         private readonly Func<IState, IndexSearcher> _recreateSearcher;
         private readonly DocumentDatabase _documentDatabase;
@@ -105,6 +102,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 _states = _states.Remove(state);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var state in _states)
+            {
+                using (state)
+                {
+                    state.MarkForDisposal();
+                }
             }
         }
 
