@@ -3,11 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Issues;
-using FastTests.Server.Documents.Indexing.MapReduce;
+using FastTests.Server.NotificationCenter;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
-using SlowTests.Issues;
 using SlowTests.Voron.Issues;
 
 /*
@@ -29,23 +31,35 @@ namespace Tryouts
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
 
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            Console.WriteLine();
-
-            for (int i = 0; i < 10000; i++)
+            using (var documentStore = new DocumentStore
             {
-                Console.WriteLine(i);
-                using (var test = new RavenDB_9104())
-                    test.EmptyListAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.ListContainingNullAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.ListWithRatingAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.ListWithRatingNullAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.NullListAsync().Wait();
+                Database = "Northwind",
+                Urls = new []{ "http://127.0.0.1:8080" }               
+            })
+            {
+                documentStore.Initialize();
+                long x = 0;
+                var mre = new ManualResetEventSlim();
+                Parallel.For(0, 10, i =>
+                {
+                    while (mre.IsSet == false)
+                    {
+
+                        var databaseRecord = documentStore.Admin.Server.Send(new GetDatabaseRecordOperation("test"));
+                        if (databaseRecord == null)
+                        {
+                            documentStore.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord("test")));
+                        }
+                    
+                        Console.Write(Interlocked.Increment(ref x));
+                    }
+                });
+
+                Console.ReadKey();                
+                mre.Set();
             }
+
+
         }
 
         static async Task MainAsync()

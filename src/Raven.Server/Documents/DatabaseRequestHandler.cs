@@ -73,7 +73,7 @@ namespace Raven.Server.Documents
                     Database
                         .NotificationCenter
                         .RequestLatency
-                        .AddHint(HttpContext.Request.Path, sw.ElapsedMilliseconds, source);
+                        .AddHint(HttpContext.Request.Path,HttpContext.Request.Query, sw.ElapsedMilliseconds, source, HttpContext.Request.ContentLength ?? 0);
                 }
                 catch (Exception e)
                 {

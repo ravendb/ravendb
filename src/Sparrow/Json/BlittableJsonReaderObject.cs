@@ -270,6 +270,20 @@ namespace Sparrow.Json
             {
                 obj = (T)result;
             }
+            //just in case -> have better exception in this use-case
+            else if (typeof(T) == typeof(BlittableJsonReaderObject) && 
+                     result.GetType() == typeof(BlittableJsonReaderArray))
+            {
+                obj = default(T);
+                ThrowFormatException(result, result.GetType().FullName, "BlittableJsonReaderObject");
+            }
+            //just in case -> have better exception in this use-case
+            else if (typeof(T) == typeof(BlittableJsonReaderArray) && 
+                     result.GetType() == typeof(BlittableJsonReaderObject))
+            {
+                obj = default(T);
+                ThrowFormatException(result, result.GetType().FullName, "BlittableJsonReaderArray");
+            }
             else
             {
                 obj = default(T);
@@ -279,7 +293,7 @@ namespace Sparrow.Json
                     if (type.GetTypeInfo().IsEnum)
                     {
                         obj = (T)Enum.Parse(type, result.ToString());
-                    }
+                    }                
                     else if (type == typeof(DateTime))
                     {
                         if (ChangeTypeToString(result, out string dateTimeString) == false)

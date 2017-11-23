@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -35,6 +39,47 @@ namespace FastTests.Server.NotificationCenter
                 }
 
                 Assert.Equal(1, actions.Count);
+            }
+        }
+
+        [Fact]
+        public void Request_latency_hints_are_stored_and_can_be_read()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var queryParams1 = new Dictionary<string,string[]>
+                {
+                    { "Param1", new[]{ "Val1","Val2" } },
+                    { "Param2", new[]{ "Val3" } }
+                };
+
+                database.NotificationCenter
+                    .RequestLatency
+                    .AddHint("/databases/testDB", 
+                                new TestRequestParams(queryParams1), 5, "TestDB", 1024);
+
+                var queryParams2 = new Dictionary<string, string[]>
+                {
+                    { "Param3", new[]{ "Val4" } },
+                    { "Param4", new[]{ "Val5" } }
+                };
+
+                //two notifications for TestDB2
+                database.NotificationCenter
+                    .RequestLatency
+                    .AddHint("/databases/testDB2",
+                        new TestRequestParams(queryParams2), 10, "TestDB2", 2048);
+
+                database.NotificationCenter
+                    .RequestLatency
+                    .AddHint("/databases/testDB2",
+                        new TestRequestParams(queryParams2), 1, "TestDB2", 2048);
+
+                var storedRequestLatencyDetails = database.NotificationCenter.RequestLatency.GetRequestLatencyDetails();
+                Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies.Count);
+                Assert.Equal(1, storedRequestLatencyDetails.RequestLatencies["TestDB"].Count);
+
+                Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies["TestDB2"].Count);
             }
         }
 
@@ -487,5 +532,99 @@ namespace FastTests.Server.NotificationCenter
 
             public bool ShouldPersist => true;
         }
+    }
+
+    public class TestRequestParams : IDictionary<string,string[]>,IQueryCollection
+    {
+        private readonly Dictionary<string,string[]> _data;
+
+        public TestRequestParams()
+        {
+            _data = new Dictionary<string, string[]>();
+        }
+
+        public TestRequestParams(IDictionary<string, string[]> data)
+        {
+            _data = new Dictionary<string, string[]>(data);
+        }
+
+        IEnumerator<KeyValuePair<string, string[]>> IEnumerable<KeyValuePair<string, string[]>>.GetEnumerator()
+        {
+            return _data.GetEnumerator();
+        }
+
+        public IEnumerator<KeyValuePair<string, StringValues>> GetEnumerator()
+        {
+            return _data.Select(x => KeyValuePair.Create(x.Key, new StringValues(x.Value))).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+
+        public void Add(string key, string[] value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool ContainsKey(string key)
+        {
+            return _data.ContainsKey(key);
+        }
+
+        public bool Remove(string key)
+        {
+            return _data.Remove(key);
+        }
+
+        public bool TryGetValue(string key, out string[] value)
+        {
+            return _data.TryGetValue(key, out value);
+        }
+
+        string[] IDictionary<string, string[]>.this[string key]
+        {
+            get => _data[key];
+            set => _data[key] = value;
+        }
+
+        public bool TryGetValue(string key, out StringValues value)
+        {
+            var success = _data.TryGetValue(key, out var val);
+            value = new StringValues(val);
+            return success;
+        }
+
+        public void Add(KeyValuePair<string, string[]> item)
+        {
+            _data.Add(item.Key,item.Value);
+        }
+
+        public void Clear()
+        {
+            _data.Clear();
+        }
+
+        public bool Contains(KeyValuePair<string, string[]> item)
+        {
+            return _data.Contains(item);
+        }
+
+        public void CopyTo(KeyValuePair<string, string[]>[] array, int arrayIndex)
+        {
+        }
+
+        public bool Remove(KeyValuePair<string, string[]> item)
+        {
+            return _data.Remove(item.Key);
+        }
+
+        public int Count => _data.Count;
+        public bool IsReadOnly => false;
+        public ICollection<string> Keys => _data.Keys;
+        public ICollection<string[]> Values => _data.Values;
+
+        public StringValues this[string key] => new StringValues(_data[key]);
     }
 }

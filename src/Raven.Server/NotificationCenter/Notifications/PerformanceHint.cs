@@ -23,7 +23,9 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             json[nameof(Source)] = Source;
             json[nameof(HintType)] = HintType;
-            json[nameof(Details)] = Details?.ToJson();
+
+            var jsonValue = Details?.ToJson();
+            json[nameof(Details)] = jsonValue;
 
             return json;
         }

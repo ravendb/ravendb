@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -15,17 +16,21 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Web
 {
     public abstract class RequestHandler
     {
+        private static readonly Logger _logger = LoggingSource.Instance.GetLogger<RequestHandler>("RequestHandler");
+
         public const string StartParameter = "start";
 
         public const string PageSizeParameter = "pageSize";
@@ -56,7 +61,7 @@ namespace Raven.Server.Web
 
         public virtual void Init(RequestHandlerContext context)
         {
-            _context = context;
+            _context = context;            
         }
 
         protected Stream TryGetRequestFromStream(string itemName)
@@ -350,6 +355,50 @@ namespace Raven.Server.Web
         private static void InvalidCountOfValues(string name)
         {
             throw new ArgumentException($"Query string value '{name}' must appear exactly once");
+        }
+
+        protected DisposableAction TrackRequestTime(bool doPerformanceHintIfTooLong = true)
+        {
+            var sw = Stopwatch.StartNew();
+            _context.HttpContext.Response.OnStarting(state => 
+            {
+                sw.Stop();
+                var httpContext = (HttpContext)state;
+                httpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString());
+                return Task.FromResult(0);
+            }, _context.HttpContext);
+
+            return new DisposableAction(() =>
+            {
+                try
+                {
+                    if (doPerformanceHintIfTooLong)
+                    {
+                        var threshold = _context.RavenServer.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan;
+                        if (threshold.TotalMilliseconds >= sw.ElapsedMilliseconds)
+                        {                            
+                            _context.RavenServer
+                                    .ServerStore
+                                    .NotificationCenter
+                                    .RequestLatency
+                                    .AddHint(_context.HttpContext.Request.Path,
+                                             _context.HttpContext.Request.Query,
+                                             sw.ElapsedMilliseconds,
+                                             _context.Database.Name,
+                                             _context.HttpContext.Request.ContentLength ?? 0);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    //precaution - should never arrive here
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info($"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {_context.HttpContext.Request.Path}",e);
+                    }
+                    throw;
+                }
+            });
         }
 
         protected Task NoContent()

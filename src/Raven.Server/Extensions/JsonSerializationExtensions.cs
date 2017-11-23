@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using Microsoft.AspNetCore.Http;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Sparrow.Json.Parsing;
 
@@ -6,18 +7,34 @@ namespace Raven.Server.Extensions
 {
     public static class JsonSerializationExtensions
     {
+        public static DynamicJsonValue ToJson(this IQueryCollection queryCollection)
+        {
+            var jsonMap = new DynamicJsonValue();
+            if (queryCollection == null) //precaution, prevent NRE
+                return null;
+
+            foreach (var kvp in queryCollection)
+            {
+                jsonMap[kvp.Key] = kvp.Value.ToArray();
+            }
+
+            return jsonMap;
+        }
+        
         public static DynamicJsonValue ToJson(this IndexDefinition definition)
         {
-            var result = new DynamicJsonValue();
-            result[nameof(IndexDefinition.Etag)] = definition.Etag;
-            result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
-            result[nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString();
-            result[nameof(IndexDefinition.Priority)] = definition.Priority?.ToString();
-            result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;
-            result[nameof(IndexDefinition.Name)] = definition.Name;
-            result[nameof(IndexDefinition.Reduce)] = definition.Reduce;
-            result[nameof(IndexDefinition.Type)] = definition.Type.ToString();
-            result[nameof(IndexDefinition.Maps)] = new DynamicJsonArray(definition.Maps);
+            var result = new DynamicJsonValue
+            {
+                [nameof(IndexDefinition.Etag)] = definition.Etag,
+                [nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex,
+                [nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString(),
+                [nameof(IndexDefinition.Priority)] = definition.Priority?.ToString(),
+                [nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection,
+                [nameof(IndexDefinition.Name)] = definition.Name,
+                [nameof(IndexDefinition.Reduce)] = definition.Reduce,
+                [nameof(IndexDefinition.Type)] = definition.Type.ToString(),
+                [nameof(IndexDefinition.Maps)] = new DynamicJsonArray(definition.Maps)
+            };
 
             var fields = new DynamicJsonValue();
             foreach (var kvp in definition.Fields)
@@ -25,24 +42,28 @@ namespace Raven.Server.Extensions
                 DynamicJsonValue spatial = null;
                 if (kvp.Value.Spatial != null)
                 {
-                    spatial = new DynamicJsonValue();
-                    spatial[nameof(SpatialOptions.MaxTreeLevel)] = kvp.Value.Spatial.MaxTreeLevel;
-                    spatial[nameof(SpatialOptions.MaxX)] = kvp.Value.Spatial.MaxX;
-                    spatial[nameof(SpatialOptions.MaxY)] = kvp.Value.Spatial.MaxY;
-                    spatial[nameof(SpatialOptions.MinX)] = kvp.Value.Spatial.MinX;
-                    spatial[nameof(SpatialOptions.MinY)] = kvp.Value.Spatial.MinY;
-                    spatial[nameof(SpatialOptions.Strategy)] = kvp.Value.Spatial.Strategy.ToString();
-                    spatial[nameof(SpatialOptions.Type)] = kvp.Value.Spatial.Type.ToString();
-                    spatial[nameof(SpatialOptions.Units)] = kvp.Value.Spatial.Units.ToString();
+                    spatial = new DynamicJsonValue
+                    {
+                        [nameof(SpatialOptions.MaxTreeLevel)] = kvp.Value.Spatial.MaxTreeLevel,
+                        [nameof(SpatialOptions.MaxX)] = kvp.Value.Spatial.MaxX,
+                        [nameof(SpatialOptions.MaxY)] = kvp.Value.Spatial.MaxY,
+                        [nameof(SpatialOptions.MinX)] = kvp.Value.Spatial.MinX,
+                        [nameof(SpatialOptions.MinY)] = kvp.Value.Spatial.MinY,
+                        [nameof(SpatialOptions.Strategy)] = kvp.Value.Spatial.Strategy.ToString(),
+                        [nameof(SpatialOptions.Type)] = kvp.Value.Spatial.Type.ToString(),
+                        [nameof(SpatialOptions.Units)] = kvp.Value.Spatial.Units.ToString()
+                    };
                 }
 
-                var field = new DynamicJsonValue();
-                field[nameof(IndexFieldOptions.Analyzer)] = kvp.Value.Analyzer;
-                field[nameof(IndexFieldOptions.Indexing)] = kvp.Value.Indexing?.ToString();
-                field[nameof(IndexFieldOptions.Spatial)] = spatial;
-                field[nameof(IndexFieldOptions.Storage)] = kvp.Value.Storage?.ToString();
-                field[nameof(IndexFieldOptions.Suggestions)] = kvp.Value.Suggestions;
-                field[nameof(IndexFieldOptions.TermVector)] = kvp.Value.TermVector?.ToString();
+                var field = new DynamicJsonValue
+                {
+                    [nameof(IndexFieldOptions.Analyzer)] = kvp.Value.Analyzer,
+                    [nameof(IndexFieldOptions.Indexing)] = kvp.Value.Indexing?.ToString(),
+                    [nameof(IndexFieldOptions.Spatial)] = spatial,
+                    [nameof(IndexFieldOptions.Storage)] = kvp.Value.Storage?.ToString(),
+                    [nameof(IndexFieldOptions.Suggestions)] = kvp.Value.Suggestions,
+                    [nameof(IndexFieldOptions.TermVector)] = kvp.Value.TermVector?.ToString()
+                };
 
                 fields[kvp.Key] = field;
             }

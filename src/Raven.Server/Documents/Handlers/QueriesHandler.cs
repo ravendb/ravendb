@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
-            using (TrackRequestTime("DeleteByQuery"))
+            using (TrackRequestTime())
             {
                 var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
