@@ -2914,6 +2914,65 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
                 }
             }
         }
+               					
+        [Fact]
+        public void Custom_Functions_With_SelectMany()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var nestedNode = new Node
+                {
+                    Name = "Parent",
+                    Children = Enumerable.Range(0, 10).Select(x => new Node()
+                    {
+                        Name = "Child" + x,
+                        Children = Enumerable.Range(0, 5).Select(y => new Node()
+                        {
+                            Name = "Grandchild" + (x * 5 + y),
+                            Children = null
+                        }).ToList()
+                    }).ToList()
+                };
+
+                var simpleNode = new Node
+                {
+                    Name = "ChildlessParent",
+                    Children = null
+                };
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(nestedNode);
+                    session.Store(simpleNode);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Node>().Select(node => new
+                    {
+                        Grandchildren = node.Children.SelectMany(x => x.Children).ToList()
+                    });
+
+                    Assert.Equal("FROM Nodes as node SELECT " +
+                                 "{ Grandchildren : node.Children.reduce(function(a, b) { return a.concat((function(x){return x.Children;})(b)); }, []) }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    
+                    Assert.Equal(50, queryResult[0].Grandchildren.Count);
+                    Assert.Null(queryResult[1].Grandchildren);
+                    
+                    for (var i = 0; i < 50; i++)
+                    {
+                        Assert.Equal("Grandchild" + i, queryResult[0].Grandchildren[i].Name);
+                    }
+                }
+            }
+        }
         
         public class ProjectionParameters : RavenTestBase
         {
@@ -3204,7 +3263,12 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
             public List<double> Doubles { get; set; }
             public List<User> Users { get; set; }           
         }
-
+                
+        private class Node
+        {
+            public string Name { get; set; }
+            public List<Node> Children = new List<Node>();
+        }
     }
 }
 

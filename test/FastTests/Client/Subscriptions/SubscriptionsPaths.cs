@@ -19,7 +19,7 @@ namespace FastTests.Client.Subscriptions
             public List<Node> Children = new List<Node>();
         }
 
-        [Fact(Skip = "RavenDB-8790")]
+        [Fact]
         public void PositivePathWithCollectionsTyped()
         {
             var nestedNode = new Node
@@ -122,7 +122,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
             }
         }
 
-        [Fact(Skip= "RavenDB-8790")]
+        [Fact]
         public void NegativePathWithCollectionsTyped()
         {
             var nestedNode = new Node
@@ -154,7 +154,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
                 }
                 var subscriptionID = store.Subscriptions.Create<Node>(node => 
                 node.Children.All(x => 
-                    x.Children.All(i => i.Name == "Parent")));
+                    x.Children.All(i => i.Name == "Grandchild")));
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<Node>(new SubscriptionWorkerOptions(subscriptionID));
 
@@ -163,7 +163,7 @@ From Nodes as n Where areAllGrandchildsGrandchilds(n)"
 
                 Node key;
                 Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
-                Assert.True(keys.TryTake(out key, TimeSpan.FromSeconds(20)));
+                Assert.False(keys.TryTake(out key, TimeSpan.FromSeconds(1)));
                 subscription.Dispose();
             }
         }
