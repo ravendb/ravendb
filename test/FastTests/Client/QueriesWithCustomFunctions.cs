@@ -2973,6 +2973,64 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
                 }
             }
         }
+                       
+        [Fact]
+        public async Task Can_SelectMany_From_Dictionary() 
+        {
+            using (var store = GetDocumentStore ()) 
+            {
+                using (var session = store.OpenAsyncSession ()) 
+                {
+                    var testable = new TestableDTO 
+                    {
+                        Data = new Dictionary<string, IList<string>> 
+                        {
+                            { "a", new List<string> { "a1", "a2", "a3" } },
+                            { "b", new List<string> { "b1", "b2", "b3" } }
+                        }
+                    };
+                                                   
+                    await session.StoreAsync(testable);                   
+                    await session.SaveChangesAsync();
+                }
+                
+                using (var session = store.OpenAsyncSession ()) 
+                {
+                    var query = from item in session.Query<TestableDTO>()
+                                select new 
+                                {
+                                    Id = item.Id,
+                                    data = item.Data,
+                                    values = item.Data.SelectMany(c => c.Value)
+                                                      .Select(n => n)
+                                                      .DefaultIfEmpty()
+                                                      .ToList()
+                                };
+                    
+                    Assert.Equal("FROM TestableDTOs as item SELECT { " +
+                                 "Id : id(item), data : item.Data, " +
+                                 "values : Object.getOwnPropertyNames(item.Data).map(function(k){return item.Data[k]})" +
+                                                                               ".reduce(function(a, b) { return a.concat(b);},[])" +
+                                                                               ".map(function(n){return n;})" +
+                                                                               ".length > 0 " +
+                                         "? Object.getOwnPropertyNames(item.Data).map(function(k){return item.Data[k]})" +
+                                                                                ".reduce(function(a, b) { return a.concat(b);},[])" +
+                                                                                ".map((function(n){return n;})) " +
+                                         ": [null] }"
+                                , query.ToString());
+                    
+                    var first = await query.FirstAsync();
+                    
+                    Assert.Collection ( first.values,
+                        i => Assert.Equal ( "a1", i ),
+                        i => Assert.Equal ( "a2", i ),
+                        i => Assert.Equal ( "a3", i ),
+                        i => Assert.Equal ( "b1", i ),
+                        i => Assert.Equal ( "b2", i ),
+                        i => Assert.Equal ( "b3", i ) );
+                }
+            }
+        }
         
         public class ProjectionParameters : RavenTestBase
         {
@@ -3268,6 +3326,12 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
         {
             public string Name { get; set; }
             public List<Node> Children = new List<Node>();
+        }
+        
+        private class TestableDTO 
+        {
+            public string Id { get; set; }
+            public IDictionary<string, IList<string>> Data { get; set; } 
         }
     }
 }

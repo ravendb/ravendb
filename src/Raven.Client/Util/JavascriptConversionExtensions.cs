@@ -338,14 +338,42 @@ namespace Raven.Client.Util
                         if (methodCallExpression.Arguments.Count > 2)
                             return;
                         
-                        context.PreventDefault();
                         var writer = context.GetWriter();
                         using (writer.Operation(methodCallExpression))
                         {                                                                                                                
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(".reduce(function(a, b) { return a.concat(");
-                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                            writer.Write("(b)); }, [])");
+                            if (IsDictionary(methodCallExpression.Arguments[0].Type))
+                            {
+                                if (!(methodCallExpression.Arguments[1] is LambdaExpression lambda) ||
+                                    !(lambda.Body is MemberExpression member) ||
+                                    member.Member.Name != "Key" && member.Member.Name != "Value")
+                                    return;
+                                
+                                context.PreventDefault();
+
+                                writer.Write("Object.getOwnPropertyNames(");
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(")");
+
+                                if (member.Member.Name == "Value")
+                                {
+                                    writer.Write(".map(function(k){return ");
+                                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                    writer.Write("[k]})");
+                                }
+                                
+                                writer.Write(".reduce(function(a, b) { return a.concat(b);},[])");
+
+                            }
+                            
+                            else
+                            {
+                                context.PreventDefault();
+                                
+                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                                writer.Write(".reduce(function(a, b) { return a.concat(");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                                writer.Write("(b)); }, [])");
+                            }
                                                         
                             return;
                         }
@@ -403,6 +431,15 @@ namespace Raven.Client.Util
                     return Activator.CreateInstance(type);
                 }
                 return null;
+            }
+            
+            private static bool IsDictionary(Type type)
+            {
+                if (type.GetGenericArguments().Length == 0)
+                    return type == typeof(Dictionary<,>) || type == typeof(IDictionary<,>);
+
+                return typeof(Dictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition()) ||
+                       typeof(IDictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
         }
 
