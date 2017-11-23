@@ -248,7 +248,7 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
-                    availableRamInBytes = vmStats.FreePagesCount * (ulong)pageSize;
+                    availableRamInBytes = (vmStats.FreePagesCount + vmStats.InactivePagesCount) * (ulong)pageSize;
                 }
 
                 Size availableRam, totalPhysicalMemory;
