@@ -22,9 +22,10 @@ namespace Raven.Server.Commercial
         {
             False = 0,
             True = 1,
-            Int = 2,
+            Int8 = 2,
             Date = 3,
-            String = 4
+            String = 4,
+            Int32 = 5
         }
 
         private static DateTime FromDosDate(ushort number)
@@ -66,8 +67,11 @@ namespace Raven.Server.Commercial
                         case ValueType.True:
                             val = true;
                             break;
-                        case ValueType.Int:
+                        case ValueType.Int8:
                             val = (int)br.ReadByte();
+                            break;
+                        case ValueType.Int32:
+                            val = br.ReadInt32();
                             break;
                         case ValueType.Date:
                             val = FromDosDate(br.ReadUInt16());
