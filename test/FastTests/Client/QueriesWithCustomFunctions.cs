@@ -2863,6 +2863,58 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
             }
         }
         
+        [Fact]
+        public void Can_Use_DefaultIfEmpty() 
+        {
+            using (var store = GetDocumentStore ())
+            {
+                var lists = new Lists
+                {
+                    Strings = new List<string>(),
+                    Bools = new List<bool>(),
+                    Chars = new List<char>(),
+                    Ints = new List<int>(),
+                    Longs = new List<long>(),
+                    Decimals = new List<decimal>(),
+                    Doubles = new List<double>(),
+                    Users = new List<User>()
+                };
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(lists);           
+                    session.SaveChanges();
+                }
+                
+                using (var session = store.OpenSession())
+                {
+                    var query = from l in session.Query<Lists>()
+                                select new 
+                                {
+                                      Strings = l.Strings.DefaultIfEmpty(),
+                                      Bools = l.Bools.DefaultIfEmpty(),
+                                      Chars = l.Chars.DefaultIfEmpty(),
+                                      Ints = l.Ints.DefaultIfEmpty(),
+                                      Longs = l.Longs.DefaultIfEmpty(),                                     
+                                      Decimals = l.Decimals.DefaultIfEmpty(),
+                                      Doubles = l.Doubles.DefaultIfEmpty(),
+                                      Users = l.Users.DefaultIfEmpty()                                  
+                                };                   
+                    
+                    var result = query.ToList();
+                    
+                    Assert.Equal(lists.Strings.DefaultIfEmpty() , result[0].Strings);
+                    Assert.Equal(lists.Bools.DefaultIfEmpty() , result[0].Bools);
+                    Assert.Equal(lists.Chars.DefaultIfEmpty() , result[0].Chars);
+                    Assert.Equal(lists.Ints.DefaultIfEmpty() , result[0].Ints);
+                    Assert.Equal(lists.Longs.DefaultIfEmpty() , result[0].Longs);
+                    Assert.Equal(lists.Decimals.DefaultIfEmpty() , result[0].Decimals);
+                    Assert.Equal(lists.Doubles.DefaultIfEmpty() , result[0].Doubles);
+                    Assert.Equal(lists.Users.DefaultIfEmpty() , result[0].Users);
+                }
+            }
+        }
+        
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -3140,6 +3192,19 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public decimal? ResultValue { get; set; }                
         }
+        
+        private class Lists
+        {
+            public List<string> Strings { get; set; }
+            public List<bool> Bools { get; set; }           
+            public List<char> Chars { get; set; }
+            public List<int> Ints { get; set; }
+            public List<long> Longs { get; set; }
+            public List<decimal> Decimals { get; set; }
+            public List<double> Doubles { get; set; }
+            public List<User> Users { get; set; }           
+        }
+
     }
 }
 

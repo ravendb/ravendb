@@ -301,6 +301,38 @@ namespace Raven.Client.Util
                             return;
                         }
                     }
+                    case "DefaultIfEmpty":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+
+                        object defaultVal = null;                       
+                        var genericArguments = methodCallExpression.Arguments[0].Type.GetGenericArguments();
+                        if (genericArguments.Length > 0)
+                        {
+                            if (genericArguments[0] == typeof(bool))
+                            {
+                                defaultVal = "false";
+                            }
+                            else if (genericArguments[0] == typeof(char))
+                            {
+                                defaultVal = '0';
+                            }
+                            else
+                            {
+                                defaultVal = GetDefault(genericArguments[0]);
+                            }                            
+                        }
+                        
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            writer.Write(".length > 0 ? ");
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write($" : [{defaultVal?? "null"}]");
+                            return;
+                        }
+                    }
 
                     default:
                         return;
@@ -347,7 +379,15 @@ namespace Raven.Client.Util
 
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
-
+            
+            private static object GetDefault(Type type)
+            {
+                if (type.GetTypeInfo().IsValueType)
+                {
+                    return Activator.CreateInstance(type);
+                }
+                return null;
+            }
         }
 
         public class CmpXchgMatchSupport : JavascriptConversionExtension
