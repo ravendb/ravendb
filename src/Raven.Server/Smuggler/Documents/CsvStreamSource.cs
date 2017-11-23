@@ -16,6 +16,8 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class CsvStreamSource : ISmugglerSource, IDisposable
     {
+        private static readonly string CollectionFullPath = $"{Constants.Documents.Metadata.Key}.{Constants.Documents.Metadata.Collection}";
+
         private readonly Stream _stream;
         private readonly DocumentsOperationContext _context;
         private DatabaseItemType _currentType;
@@ -26,10 +28,16 @@ namespace Raven.Server.Smuggler.Documents
         private int _idIndex;
         private bool _hasCollection;
         private int _collectionIndex;
+
         /// <summary>
         /// This dictionary maps the index of a property to its nested segments.
         /// </summary>
         private Dictionary<int, string[]> _nestedPropertyDictionary;
+
+        private bool _headersProcessed;
+        private string[] _csvReaderFieldHeaders;
+
+        private readonly List<IDisposable> _disposibales = new List<IDisposable>();
 
         public CsvStreamSource(Stream stream, DocumentsOperationContext context, string collection)
         {
@@ -51,10 +59,6 @@ namespace Raven.Server.Smuggler.Documents
                 _csvReader.Dispose();
             });
         }
-
-        private bool _headersProcessed;
-        private readonly List<IDisposable> _disposibales = new List<IDisposable>();
-        private static readonly string CollectionFullPath = $"{Constants.Documents.Metadata.Key}.{Constants.Documents.Metadata.Collection}";
 
         private bool ProcessFieldsIfNeeded()
         {
@@ -94,6 +98,9 @@ namespace Raven.Server.Smuggler.Documents
                         _nestedPropertyDictionary[i] = arr;
                 }
             }
+
+            _csvReaderFieldHeaders = new string[_csvReader.Context.HeaderRecord.Length];
+            _csvReader.Context.HeaderRecord.CopyTo(_csvReaderFieldHeaders, 0);
 
             _headersProcessed = true;
             return true;
@@ -138,19 +145,13 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            string[] csvReaderFieldHeaders = null;
             while (_csvReader.Read())
             {
                 if (ProcessFieldsIfNeeded())
-                {
-                    csvReaderFieldHeaders = new string[_csvReader.Context.HeaderRecord.Length];
-                    _csvReader.Context.HeaderRecord.CopyTo(csvReaderFieldHeaders, 0);
-
                     continue;
-                }
 
                 var context = actions.GetContextForNewDocument();
-                yield return ConvertRecordToDocumentItem(context, _csvReader.Context.Record, csvReaderFieldHeaders, _collection);
+                yield return ConvertRecordToDocumentItem(context, _csvReader.Context.Record, _csvReaderFieldHeaders, _collection);
             }
 
         }
