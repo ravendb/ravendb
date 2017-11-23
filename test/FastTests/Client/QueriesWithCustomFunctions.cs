@@ -1365,6 +1365,43 @@ FROM Users as u SELECT output(u)", query.ToString());
                 }
             }
         }
+        
+        [Fact]
+        public void Custom_Functions_With_Escape_Hatch_Inside_Let()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Birthday = new DateTime(1942, 8, 1)
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                                let days = RavenQuery.Raw<int>("Math.ceil((Date.now() - Date.parse(u.Birthday)) / (1000*60*60*24))")
+                                select new
+                                {
+                                    Days = days
+                                };
+                    Assert.Equal(
+@"DECLARE function output(u) {
+	var days = Math.ceil((Date.now() - Date.parse(u.Birthday)) / (1000*60*60*24));
+	return { Days : days };
+}
+FROM Users as u SELECT output(u)", query.ToString());
+                    
+                    var queryResult = query.ToList();
+                    
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(Math.Ceiling((DateTime.Now - new DateTime(1942, 8, 1)).TotalDays), queryResult[0].Days);
+                }
+            }
+        }
 
         [Fact]
         public void Custom_Functions_Escape_Hatch_With_Path()
