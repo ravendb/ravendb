@@ -93,7 +93,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var ex = Assert.Throws<IndexCompilationException>(() => store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                var ex = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "invalidIndex",
                     Maps =

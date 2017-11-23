@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Assert.Equal("Torun", addressesTotalCount[0].City);
                 }
 
-                var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
                 Assert.Equal("Auto/Addresses/ByCountReducedByCity", indexDefinitions[0].Name);
@@ -241,7 +241,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Assert.Equal("Desk", sumOfLinesByNameClass[0].NameOfProduct);
                 }
 
-                var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
                 Assert.Equal("Auto/OrderLines/ByQuantityReducedByProductName", indexDefinitions[0].Name);
@@ -312,7 +312,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                     commands.RequestExecutor.Execute(command, commands.Context);
 
-                    var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+                    var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
                     Assert.Equal(1, indexDefinitions.Length); // the above queries should be handled by the same auto index
 

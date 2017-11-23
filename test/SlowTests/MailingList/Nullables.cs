@@ -38,8 +38,8 @@ namespace SlowTests.MailingList
                     commands.Delete("5", null);
                 }
 
-                store.Admin.Send(new DeleteIndexOperation("test"));
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new DeleteIndexOperation("test"));
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Name = "test",
                     Maps = { "from doc in docs.Docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }" },

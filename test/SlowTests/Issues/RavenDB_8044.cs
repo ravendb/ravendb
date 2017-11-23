@@ -63,14 +63,14 @@ namespace SlowTests.Issues
         {
             await WaitForValueAsync(async () => await GetMembersCount(storeB, _database), 1);
 
-            var record = await storeB.Admin.Server.SendAsync(new GetDatabaseRecordOperation(_database));
+            var record = await storeB.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(_database));
 
             Assert.Equal(node, record.Topology.Members[0]);
         }
 
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
             };
 
 
-            var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(record));
+            var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(record));
 
             foreach (var server in Servers)
             {
@@ -118,7 +118,7 @@ namespace SlowTests.Issues
 
         private async Task DeleteDatabaseInCluster(string databaseName, IDocumentStore store, string fromNode)
         {
-            var databaseResult = await store.Admin.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true, fromNode));
+            var databaseResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true, fromNode));
 
             foreach (var server in Servers)
             {

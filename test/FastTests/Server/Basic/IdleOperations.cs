@@ -70,7 +70,7 @@ namespace FastTests.Server.Basic
                     var name = "IdleOperations_CleanupResources_DB_" + i;
                     var doc = new DatabaseRecord(name);
 
-                    store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                     var documentDatabase = landlord.TryGetOrCreateResourceStore("IdleOperations_CleanupResources_DB_" + i).Result;
 
@@ -98,7 +98,7 @@ namespace FastTests.Server.Basic
                     else
                         Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
 
-                    store.Admin.Server.Send(new DeleteDatabasesOperation(name, true));
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, true));
                 }
             }
         }

@@ -40,9 +40,9 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
                 
-                SpinWait.SpinUntil(() => store.Admin.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
+                SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
 
-                Assert.True(store.Admin.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
+                Assert.True(store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
 
                 using (var session = store.OpenSession())
                 {
@@ -78,9 +78,9 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                SpinWait.SpinUntil(() => store.Admin.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
+                SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
 
-                Assert.True(store.Admin.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
+                Assert.True(store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).IsInvalidIndex);
 
                 using (var session = store.OpenSession())
                 {
@@ -121,7 +121,7 @@ namespace SlowTests.Issues
                     session.Query<User, Failing_index>().ToList();
                 }
 
-                var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(failingIndex.IndexName));
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName));
 
                 Assert.False(indexStats.IsInvalidIndex);
                 Assert.NotEqual(IndexState.Error, indexStats.State);

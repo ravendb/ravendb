@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 
@@ -68,7 +68,7 @@ select {
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 

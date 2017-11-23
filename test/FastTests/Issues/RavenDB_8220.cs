@@ -27,7 +27,7 @@ where Map.Nested.Key = 'Color'  and Map.Value.Nested.Color = 'Blue'
 from items 
 where Map.Value.Nested.Key = 'Color'  and Map.Value.Nested.Value.Color = 'Blue'
 " });
-                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Name.Length).ToList();
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Name.Length).ToList();
 
                 Assert.Equal(3, indexes.Count);
                 Assert.Equal(indexes[1].Name.Substring(0, 64), indexes[2].Name.Substring(0, 64));

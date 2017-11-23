@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
             {
                 //Create an index
                 store.Initialize();
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Name = "TestItemsIndex",
                     Maps = { @"from item in docs.TestItems

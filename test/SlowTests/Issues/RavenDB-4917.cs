@@ -14,14 +14,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                Assert.Equal(0, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(0, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 store.ExecuteIndex(new Customer_Index());
                 store.ExecuteIndex(new Customer_Index()); // potential side-by-side
 
-                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(1, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
             }
         }
 

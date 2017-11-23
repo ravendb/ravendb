@@ -26,7 +26,7 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { doc.Name }" },
                     Name = "test"

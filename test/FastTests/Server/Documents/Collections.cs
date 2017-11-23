@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents
                         {Constants.Documents.Metadata.Collection, "People"}
                     });
 
-                    var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());
+                    var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 
                     Assert.Equal(2, collectionStats.Collections.Count);
 
@@ -51,7 +51,7 @@ namespace FastTests.Server.Documents
                 Path = path
             }))
             {
-                var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());
+                var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 
                 Assert.Equal(2, collectionStats.Collections.Count);
 

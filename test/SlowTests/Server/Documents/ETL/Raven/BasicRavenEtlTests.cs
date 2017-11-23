@@ -326,7 +326,7 @@ loadToAddresses(load(this.AddressId));
                     }
                 }
 
-                var stats = dest.Admin.Send(new GetStatisticsOperation());
+                var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(15, stats.CountOfDocuments);
 
@@ -353,7 +353,7 @@ loadToAddresses(load(this.AddressId));
                     Assert.Equal(0, addresses.Length);
                 }
 
-                stats = dest.Admin.Send(new GetStatisticsOperation());
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(12, stats.CountOfDocuments);
             }

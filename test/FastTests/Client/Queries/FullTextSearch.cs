@@ -33,7 +33,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags }" },
                     Name = "test"
@@ -70,7 +70,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags,doc.Name }" },
                     Name = "test"
@@ -110,7 +110,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags }" },
                     Name = "test"
@@ -324,7 +324,7 @@ namespace FastTests.Client.Queries
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags }" },
                     Name = "test"
@@ -388,7 +388,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Name = "test"
@@ -425,7 +425,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
@@ -463,7 +463,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
@@ -491,7 +491,7 @@ namespace FastTests.Client.Queries
             using (var store = GetDocumentStore())
             {
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
@@ -523,7 +523,7 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>

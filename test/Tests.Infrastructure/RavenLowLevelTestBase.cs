@@ -78,7 +78,7 @@ namespace FastTests
                     Settings = configuration
                 };
 
-                var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 1));
+                var result = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 1));
 
                 try
                 {
@@ -101,7 +101,7 @@ namespace FastTests
             {
                 store.Initialize();
 
-                store.Admin.Server.Send(new DeleteDatabasesOperation(dbName, true));
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, true));
             }
         }
 

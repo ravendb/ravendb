@@ -22,7 +22,7 @@ namespace SlowTests.Bugs.Indexing
             using (var documentStore = GetDocumentStore())
             {
                 new FooIndex().Execute(documentStore);
-                Assert.NotNull(documentStore.Admin.Send(new GetIndexOperation(FooIndexName)));
+                Assert.NotNull(documentStore.Maintenance.Send(new GetIndexOperation(FooIndexName)));
             }
         }
 

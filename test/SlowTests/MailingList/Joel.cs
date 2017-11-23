@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
             }))
             {
                 new Index().Execute(store);
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("Index"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("Index"));
                 Assert.Equal(@"docs.Items.Select(item => new {
     Query = new object[] {
         item.Age,

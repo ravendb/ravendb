@@ -19,7 +19,7 @@ namespace SlowTests.Voron.Bugs
                 Path = NewDataPath()
             }))
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -34,7 +34,7 @@ namespace SlowTests.Voron.Bugs
 
                 WaitForIndexing(store);
 
-                var errors = store.Admin.ForDatabase(store.Database).Send(new GetIndexErrorsOperation());
+                var errors = store.Maintenance.ForDatabase(store.Database).Send(new GetIndexErrorsOperation());
 
                 Assert.Empty(errors.SelectMany(x => x.Errors));
             }
@@ -48,10 +48,10 @@ namespace SlowTests.Voron.Bugs
                 Path = NewDataPath()
             }))
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
-                store.Admin.Send(new DeleteIndexOperation("Orders/ByCompany"));
-                store.Admin.Send(new DeleteIndexOperation("Orders/Totals"));
+                store.Maintenance.Send(new DeleteIndexOperation("Orders/ByCompany"));
+                store.Maintenance.Send(new DeleteIndexOperation("Orders/Totals"));
 
                 for (int i = 0; i < 3; i++)
                 {

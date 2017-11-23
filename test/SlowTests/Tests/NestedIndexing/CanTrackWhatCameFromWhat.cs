@@ -28,7 +28,7 @@ namespace SlowTests.Tests.NestedIndexing
 
         public void CreateIndex(DocumentStore store)
         {
-            store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+            store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
             {
                 Maps = { @"
 from i in docs.Items

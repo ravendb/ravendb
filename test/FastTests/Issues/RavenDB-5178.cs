@@ -15,7 +15,7 @@ namespace FastTests.Issues
 
                 var doc = new DatabaseRecord(longName);
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
                 try
                 {
                     store.Database = longName;
@@ -26,7 +26,7 @@ namespace FastTests.Issues
                 }
                 finally
                 {
-                    store.Admin.Server.Send(new DeleteDatabasesOperation(longName, true));
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(longName, true));
                 }
             }
         }

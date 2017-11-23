@@ -414,7 +414,7 @@ namespace FastTests.Server.Documents.Revisions
                     await store.Commands().DeleteAsync(id, null);
                 }
 
-                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                var statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
@@ -439,12 +439,12 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
-                await store.Admin.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
                 {
                     DocumentIds = new[] { id, "users/not/exists" }
                 }));
 
-                statistics = store.Admin.Send(new GetStatisticsOperation());
+                statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 1 : 0, statistics.CountOfDocuments);
                 Assert.Equal(0, statistics.CountOfRevisionDocuments);
             }
@@ -481,7 +481,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 database.Time.UtcDateTime = () => DateTime.UtcNow;
 
-                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                var statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(21, statistics.CountOfDocuments);
                 Assert.Equal(20, statistics.CountOfRevisionDocuments);
 
@@ -495,13 +495,13 @@ namespace FastTests.Server.Documents.Revisions
                     database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore("Users", DateTime.UtcNow);
                 }
 
-                statistics = store.Admin.Send(new GetStatisticsOperation());
+                statistics = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(21, statistics.CountOfDocuments);
                 Assert.Equal(10, statistics.CountOfRevisionDocuments);
             }
         }
 
-        public class DeleteRevisionsOperation : IAdminOperation
+        public class DeleteRevisionsOperation : IMaintenanceOperation
         {
             private readonly AdminRevisionsHandler.Parameters _parameters;
 

@@ -38,13 +38,13 @@ namespace SlowTests.Issues
 
                 // now fetch index definition modify map (only by giving extra write space)
                 var indexName = new Users_ByName().IndexName;
-                var indexDef = store.Admin.Send(new GetIndexOperation(indexName));
+                var indexDef = store.Maintenance.Send(new GetIndexOperation(indexName));
                 var indexId1 = indexDef.Etag;
 
                 indexDef.Maps = new HashSet<string> { "   " + indexDef.Maps.First().Replace(" ", "  \t ") + "   " };
-                store.Admin.Send(new PutIndexesOperation(indexDef));
+                store.Maintenance.Send(new PutIndexesOperation(indexDef));
 
-                indexDef = store.Admin.Send(new GetIndexOperation(indexName));
+                indexDef = store.Maintenance.Send(new GetIndexOperation(indexName));
                 var indexId2 = indexDef.Etag;
 
                 // and verify if index wasn't reset
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
             }
 
             WaitForIndexing(store);
-            store.Admin.Send(new StopIndexingOperation());
+            store.Maintenance.Send(new StopIndexingOperation());
         }
     }
 }

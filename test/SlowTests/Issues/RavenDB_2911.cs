@@ -51,7 +51,7 @@ namespace SlowTests.Issues
 
                 Assert.True(SpinWait.SpinUntil(() =>
                 {
-                    var indexWithErrors = store.Admin.Send(new GetIndexStatisticsOperation("Index/with/errors"));
+                    var indexWithErrors = store.Maintenance.Send(new GetIndexStatisticsOperation("Index/with/errors"));
                     return indexWithErrors.IsInvalidIndex;
                 }, TimeSpan.FromSeconds(10))); //precaution
 

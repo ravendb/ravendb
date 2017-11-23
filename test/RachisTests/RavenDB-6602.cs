@@ -32,7 +32,7 @@ namespace RachisTests
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                var databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 Assert.True(databaseResult.RaftCommandIndex > 0); //sanity check                
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));

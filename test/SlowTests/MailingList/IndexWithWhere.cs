@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
             {
                 new Index_ByDescriptionAndTitle().Execute(store);
 
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("Index/ByDescriptionAndTitle"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("Index/ByDescriptionAndTitle"));
                 Assert.Equal(@"docs.Documents.Where(doc => doc.Title == ""dfsdfsfd"").Select(doc => new {
     Description = doc.Description,
     Title = doc.Title
@@ -74,7 +74,7 @@ namespace SlowTests.MailingList
             {
                 new Index_ByDescriptionAndTitle2().Execute(store);
 
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("Index/ByDescriptionAndTitle2"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("Index/ByDescriptionAndTitle2"));
                 Assert.Equal(@"docs.Documents.Where(doc => doc.IsDeleted == false).Select(doc => new {
     Description = doc.Description,
     Title = doc.Title

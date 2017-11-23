@@ -51,7 +51,7 @@ namespace SlowTests.Server.Documents.Notifications
                 Certificate = null
             }.Initialize())
             {
-                var result = store.Admin.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
+                var result = store.Maintenance.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
                 var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                 await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
 
@@ -225,7 +225,7 @@ namespace SlowTests.Server.Documents.Notifications
                 Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
                 // ensure the db still works
-                store.Admin.Send(new GetStatisticsOperation());
+                store.Maintenance.Send(new GetStatisticsOperation());
             }
         }
 

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexesStatisticsOperation : IAdminOperation<IndexStats[]>
+    public class GetIndexesStatisticsOperation : IMaintenanceOperation<IndexStats[]>
     {
         public RavenCommand<IndexStats[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

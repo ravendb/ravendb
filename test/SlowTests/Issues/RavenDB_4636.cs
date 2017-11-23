@@ -20,15 +20,15 @@ namespace SlowTests.Issues
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
-                var result = store.Admin.Send(new GetClientConfigurationOperation());
-                var serverResult = store.Admin.Server.Send(new GetServerWideClientConfigurationOperation());
+                var result = store.Maintenance.Send(new GetClientConfigurationOperation());
+                var serverResult = store.Maintenance.Server.Send(new GetServerWideClientConfigurationOperation());
                 Assert.Null(serverResult);
                 Assert.Null(result.Configuration);
 
-                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10 }));
+                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10 }));
 
-                result = store.Admin.Send(new GetClientConfigurationOperation());
-                serverResult = store.Admin.Server.Send(new GetServerWideClientConfigurationOperation());
+                result = store.Maintenance.Send(new GetClientConfigurationOperation());
+                serverResult = store.Maintenance.Server.Send(new GetServerWideClientConfigurationOperation());
                 Assert.NotNull(serverResult);
                 Assert.Equal(10, serverResult.MaxNumberOfRequestsPerSession.Value);
 
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(10, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
-                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = true }));
+                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = true }));
 
                 using (var session = store.OpenSession())
                 {
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
-                store.Admin.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15 }));
+                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15 }));
 
                 using (var session = store.OpenSession())
                 {
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(15, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
-                store.Admin.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15, Disabled = true }));
+                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15, Disabled = true }));
 
                 using (var session = store.OpenSession())
                 {
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
-                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = false }));
+                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10, Disabled = false }));
 
                 using (var session = store.OpenSession())
                 {
@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(10, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
-                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 20, ReadBalanceBehavior = ReadBalanceBehavior.FastestNode }));
+                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 20, ReadBalanceBehavior = ReadBalanceBehavior.FastestNode }));
 
                 using (var session = store.OpenSession())
                 {
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
                 Assert.Equal(20, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(ReadBalanceBehavior.FastestNode, requestExecutor.Conventions.ReadBalanceBehavior);
 
-                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = true }));
+                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = true }));
 
                 using (var session = store.OpenSession())
                 {
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                 Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
                 Assert.Equal(ReadBalanceBehavior.None, requestExecutor.Conventions.ReadBalanceBehavior);
 
-                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = false }));
+                store.Maintenance.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = false }));
 
                 using (var session = store.OpenSession())
                 {

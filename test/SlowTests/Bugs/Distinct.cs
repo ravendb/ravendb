@@ -35,7 +35,7 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(_index));
+                store.Maintenance.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {
@@ -67,7 +67,7 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(_index));
+                store.Maintenance.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {
@@ -97,7 +97,7 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(_index));
+                store.Maintenance.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {
@@ -128,7 +128,7 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(_index));
+                store.Maintenance.Send(new PutIndexesOperation(_index));
 
                 using (var s = store.OpenSession())
                 {

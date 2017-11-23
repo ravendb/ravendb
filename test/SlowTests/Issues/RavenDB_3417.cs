@@ -18,11 +18,11 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 
-                var indexingPerformanceStatistics = store.Admin.Send(new GetIndexPerformanceStatisticsOperation());
+                var indexingPerformanceStatistics = store.Maintenance.Send(new GetIndexPerformanceStatisticsOperation());
 
                 Assert.Equal(3, indexingPerformanceStatistics.Length);
 

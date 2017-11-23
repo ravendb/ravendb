@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                         .Where(x => x.FirstName == "Alex")
                         .ToListAsync();
 
-                    indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 25));
+                    indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 25));
                     Assert.Equal(1, indexes.Length);
                     Assert.Equal("Auto/Users/ByFirstName", indexes[0].Name);
                 }
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
 
                 Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
 
-                indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 25));
+                indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 25));
                 Assert.Equal("Auto/Users/ByFirstNameAndLastName", indexes[0].Name);
             }
         }

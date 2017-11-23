@@ -93,7 +93,7 @@ namespace Raven.Client.Documents
             AssertInitialized();
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
 
-            return Admin.SendAsync(new PutIndexesOperation(indexesToAdd), token);
+            return Maintenance.SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }
 
         private DocumentConventions _conventions;
@@ -210,7 +210,7 @@ namespace Raven.Client.Documents
             session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
         }
 
-        public abstract AdminOperationExecutor Admin { get; }
+        public abstract MaintenanceOperationExecutor Maintenance { get; }
         public abstract OperationExecutor Operations { get; }
 
         protected void OnTopologyUpdatedInternal(string databaseName)

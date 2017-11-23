@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Suggestions
 
         public void Setup(IDocumentStore store)
         {
-            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+            store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Name = "test",
                 Maps = { "from doc in docs.Users select new { doc.Name }" },

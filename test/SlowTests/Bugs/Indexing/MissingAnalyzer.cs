@@ -19,7 +19,7 @@ namespace SlowTests.Bugs.Indexing
         {
             using (var store = GetDocumentStore())
             {
-                var e = Assert.Throws<IndexCompilationException>(() => store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                var e = Assert.Throws<IndexCompilationException>(() => store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { doc.Name }" },
                     Fields =

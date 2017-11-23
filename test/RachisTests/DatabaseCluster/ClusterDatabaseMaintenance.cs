@@ -33,7 +33,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
                 Servers[1].Dispose();
 
@@ -57,7 +57,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var createRes = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                var createRes = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
 
                 var member = createRes.Topology.Members.Single();
 
@@ -78,7 +78,7 @@ namespace RachisTests.DatabaseCluster
                     }
                 }
 
-                var res = await store.Admin.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
+                var res = await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
@@ -105,7 +105,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 Assert.Equal(3, res.Topology.Members.Count);
             }
@@ -138,7 +138,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
@@ -178,7 +178,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.Members.Count);
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
@@ -241,7 +241,7 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology = new DatabaseTopology();
                 doc.Topology.Members.Add("A");
                 doc.Topology.Members.Add("B");
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
                 Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
 
@@ -283,7 +283,7 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology.Members.Add("A");
                 doc.Topology.Members.Add("B");
                 doc.Topology.Members.Add("C");
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
                 Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
@@ -323,27 +323,27 @@ namespace RachisTests.DatabaseCluster
 
                 var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
-                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(0, dbToplogy.Promotables.Count);
 
                 var node = Servers[1].ServerStore.Engine.Tag;
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                await leaderStore.Admin.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
+                await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
 
                 await WaitForValueAsync(async () =>
                 {
-                    var records = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    var records = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     return records.DeletionInProgress.Count;
                 }, 1);
 
-                DatabaseRecord record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                DatabaseRecord record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                 Assert.Single(record.DeletionInProgress);
                 Assert.Equal(node, record.DeletionInProgress.First().Key);
                 await leader.ServerStore.RemoveFromClusterAsync(node);
 
-                record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
                 Assert.Null(record);
             }
@@ -365,20 +365,20 @@ namespace RachisTests.DatabaseCluster
 
                 var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
-                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
                 Assert.Equal(2, dbToplogy.AllNodes.Count());
                 Assert.Equal(0, dbToplogy.Promotables.Count);
 
                 var nodeNotInDbGroup = Servers.Single(s => dbGroupNodes.Contains(s) == false)?.ServerStore.NodeTag;
-                leaderStore.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
-                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                leaderStore.Maintenance.Server.Send(new AddDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(1, dbToplogy.Promotables.Count);
                 Assert.Equal(nodeNotInDbGroup, dbToplogy.Promotables[0]);
 
-                await leaderStore.Admin.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
-                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                await leaderStore.Maintenance.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
                 Assert.Equal(3, dbToplogy.AllNodes.Count());
                 Assert.Equal(0, dbToplogy.Promotables.Count);
@@ -399,7 +399,7 @@ namespace RachisTests.DatabaseCluster
             {
                 leaderStore.Initialize();
                 await CreateDatabaseInCluster(databaseName, 1, leader.WebUrl);
-                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(1, dbToplogy.Members.Count);
             }
             var dataDir = Servers[0].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
@@ -420,7 +420,7 @@ namespace RachisTests.DatabaseCluster
             {
                 leaderStore.Initialize();
                 await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
-                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(1, dbToplogy.Members.Count);
             }
         }
@@ -440,7 +440,7 @@ namespace RachisTests.DatabaseCluster
                 leaderStore.Initialize();
                 var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, groupSize, leader.WebUrl);
                 await Task.Delay(TimeSpan.FromSeconds(10));
-                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(groupSize, dbToplogy.Members.Count);
            
                 var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
@@ -455,7 +455,7 @@ namespace RachisTests.DatabaseCluster
                 Servers[1] = GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 // ensure that at this point we still can't talk to node 
                 await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
-                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(1, dbToplogy.Rehabs.Count);
                 Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
 
@@ -466,14 +466,14 @@ namespace RachisTests.DatabaseCluster
                 await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag);
                 await Servers[1].ServerStore.WaitForState(RachisState.Follower);
                 await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
-                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(groupSize, dbToplogy.Members.Count);
             }
         }
 
         private static async Task<int> GetPromotableCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
@@ -483,7 +483,7 @@ namespace RachisTests.DatabaseCluster
 
         private static async Task<int> GetRehabCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
@@ -493,7 +493,7 @@ namespace RachisTests.DatabaseCluster
 
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;

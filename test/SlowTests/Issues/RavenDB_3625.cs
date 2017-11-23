@@ -16,7 +16,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 IndexCreation.CreateIndexes(new List<AbstractIndexCreationTask> { new TestStrIndex(), new TestIntIndex() }, store);
-                var names = store.Admin.Send(new GetIndexNamesOperation(0, 3));
+                var names = store.Maintenance.Send(new GetIndexNamesOperation(0, 3));
 
                 Assert.Equal(2, names.Length);
                 Assert.Contains("TestIntIndex", names);
@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { new TestStrIndex(), new TestIntIndex() }, store);
-                var names = await store.Admin.SendAsync(new GetIndexNamesOperation(0, 3));
+                var names = await store.Maintenance.SendAsync(new GetIndexNamesOperation(0, 3));
 
                 Assert.Equal(2, names.Length);
                 Assert.Contains("TestIntIndex", names);

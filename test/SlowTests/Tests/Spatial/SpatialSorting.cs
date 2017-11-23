@@ -66,7 +66,7 @@ namespace SlowTests.Tests.Spatial
                 }
             };
 
-            store.Admin.Send(new PutIndexesOperation(indexDefinition));
+            store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 
             var indexDefinition2 = new IndexDefinition
             {
@@ -86,7 +86,7 @@ namespace SlowTests.Tests.Spatial
                 }
             };
 
-            store.Admin.Send(new PutIndexesOperation(indexDefinition2));
+            store.Maintenance.Send(new PutIndexesOperation(indexDefinition2));
 
             using (var session = store.OpenSession())
             {

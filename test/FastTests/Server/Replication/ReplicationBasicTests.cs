@@ -317,8 +317,8 @@ namespace FastTests.Server.Replication
                 Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/1", 15000));
                 Assert.NotNull(WaitForDocumentToReplicate<User>(store2, "users/2", 5000));
 
-                var stats1 = store1.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
-                var stats2 = store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
+                var stats1 = store1.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
+                var stats2 = store2.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
 
                 Assert.NotEmpty(stats1.Outgoing);
                 Assert.Empty(stats1.Incoming);

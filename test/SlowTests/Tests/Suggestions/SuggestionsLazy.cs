@@ -22,7 +22,7 @@ namespace SlowTests.Tests.Suggestions
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "Test",
                     Maps = { "from doc in docs.Users select new { doc.Name }" },
@@ -66,7 +66,7 @@ namespace SlowTests.Tests.Suggestions
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "Test",
                     Maps = { "from doc in docs.Users select new { doc.Name }" },

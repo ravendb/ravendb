@@ -58,7 +58,7 @@ namespace SlowTests.Bugs.MapRedue
                 RemoveAllDocuments(store);
 
                 // index should return no document
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
 
                 // insert documents one document with the same id as one of documents inserted before
@@ -70,7 +70,7 @@ namespace SlowTests.Bugs.MapRedue
                 }
 
                 // index should return one document
-                stats = store.Admin.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
             }
         }

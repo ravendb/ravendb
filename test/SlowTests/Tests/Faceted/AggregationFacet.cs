@@ -226,7 +226,7 @@ namespace SlowTests.Tests.Faceted
                 session.SaveChanges();
             }
 
-            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+            store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Maps = { "from car in docs.Cars select new { car.Make, car.Year, car.Price}" },
                 Fields = new Dictionary<string, IndexFieldOptions>

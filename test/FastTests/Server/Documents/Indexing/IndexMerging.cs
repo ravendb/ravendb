@@ -151,9 +151,9 @@ namespace FastTests.Server.Documents.Indexing
                 new UsersByEmail().Execute(store);
                 new UsersByAge().Execute(store);
 
-                var index1 = store.Admin.Send(new GetIndexOperation("UsersByName"));
-                var index2 = store.Admin.Send(new GetIndexOperation("UsersByEmail"));
-                var index3 = store.Admin.Send(new GetIndexOperation("UsersByAge"));
+                var index1 = store.Maintenance.Send(new GetIndexOperation("UsersByName"));
+                var index2 = store.Maintenance.Send(new GetIndexOperation("UsersByEmail"));
+                var index3 = store.Maintenance.Send(new GetIndexOperation("UsersByAge"));
 
                 var dictionary = new Dictionary<string, IndexDefinition>
                 {
@@ -275,7 +275,7 @@ namespace FastTests.Server.Documents.Indexing
                     Type = IndexType.Map
                 };
 
-                store.Admin.Send(new PutIndexesOperation(byName, byEmail, byAge));
+                store.Maintenance.Send(new PutIndexesOperation(byName, byEmail, byAge));
 
                 var dictionary = new Dictionary<string, IndexDefinition>
                 {
@@ -319,7 +319,7 @@ selectnew{Age=doc.Age
                     Type = IndexType.Map
                 };
 
-                store.Admin.Send(new PutIndexesOperation(index1, index2));
+                store.Maintenance.Send(new PutIndexesOperation(index1, index2));
 
                 var dictionary = new Dictionary<string, IndexDefinition>
                 {

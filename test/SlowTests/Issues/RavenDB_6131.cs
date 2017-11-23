@@ -54,7 +54,7 @@ namespace SlowTests.Issues
 
                 Assert.True(Directory.Exists(tempPath));
 
-                await store.Admin.SendAsync(new DeleteIndexOperation(index.IndexName));
+                await store.Maintenance.SendAsync(new DeleteIndexOperation(index.IndexName));
 
                 Assert.False(Directory.Exists(tempPath));
             }
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
 
                     Assert.True(Directory.Exists(tempPath));
 
-                    await store.Admin.SendAsync(new DeleteIndexOperation(index.IndexName));
+                    await store.Maintenance.SendAsync(new DeleteIndexOperation(index.IndexName));
 
                     Assert.False(Directory.Exists(tempPath));
                 }

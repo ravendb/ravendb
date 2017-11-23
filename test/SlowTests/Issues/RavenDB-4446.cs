@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
+                var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(40000, stats.EntriesCount);
             }
         }
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
+                var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                 Assert.Equal(30000, stats.EntriesCount);
             }
         }

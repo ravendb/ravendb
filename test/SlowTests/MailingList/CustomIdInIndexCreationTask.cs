@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
             {
                 new Task_Index().Execute(store);
 
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("Task/Index"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("Task/Index"));
                 Assert.Contains("Id(", indexDefinition.Maps.First());
             }
         }

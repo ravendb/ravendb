@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.Indexing
             using (var store = GetDocumentStore())
             {
                 var ioe = Assert.Throws<IndexCompilationException>(() =>
-                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                    store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                     {
 
                         Maps = { @"from user in docs.Users 
@@ -33,7 +33,7 @@ namespace SlowTests.Bugs.Indexing
             using (var store = GetDocumentStore())
             {
                 var ioe = Assert.Throws<IndexCompilationException>(() =>
-                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                    store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                     {
                         Maps = { "from user in docs.Users orderby user.Id select new { user.Name}" },
                         Name = "test"
@@ -42,7 +42,7 @@ namespace SlowTests.Bugs.Indexing
                 Assert.Contains(@"OrderBy calls are not valid during map or reduce phase, but the following was found:", ioe.Message);
 
                 ioe = Assert.Throws<IndexCompilationException>(() =>
-                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                    store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                     {
                         Maps = { "docs.Users.OrderBy(user => user.Id).Select(user => new { user.Name })" },
                         Name = "test2"

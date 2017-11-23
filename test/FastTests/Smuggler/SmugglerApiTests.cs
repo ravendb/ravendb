@@ -102,7 +102,7 @@ namespace FastTests.Smuggler
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
-                    var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes);
                 }
@@ -153,7 +153,7 @@ namespace FastTests.Smuggler
                     var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     var exportResult = (SmugglerResult)exportOperation.WaitForCompletion();
 
-                    var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     var progress = (SmugglerResult.SmugglerProgress)exportResult.Progress;
 
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
@@ -162,7 +162,7 @@ namespace FastTests.Smuggler
                     var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     var importResult = (SmugglerResult)importOperation.WaitForCompletion();
 
-                    stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+                    stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     progress = (SmugglerResult.SmugglerProgress)importResult.Progress;
 
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
@@ -269,7 +269,7 @@ namespace FastTests.Smuggler
 
                     await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
 
-                    var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
                 }
@@ -283,7 +283,7 @@ namespace FastTests.Smuggler
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
-                    var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(10, stats.CountOfRevisionDocuments);
                 }
@@ -339,13 +339,13 @@ namespace FastTests.Smuggler
 
                     await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
 
-                    var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
 
                     await store1.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
-                    stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
                 }
@@ -365,7 +365,7 @@ namespace FastTests.Smuggler
                     Active = true,
                     DeleteFrequencyInSec = 100,
                 };
-                await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
+                await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
                 await session.SaveChangesAsync();
             }
         }

@@ -51,7 +51,7 @@ namespace SlowTests.Client.Indexing
                 Assert.Equal(2, deleteResult.Total);
 
                 var statistics = await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(1, statistics.CountOfDocuments);
@@ -61,11 +61,11 @@ namespace SlowTests.Client.Indexing
                     var hilo = await session.LoadAsync<dynamic>("Raven/Hilo/users");
                     Assert.NotNull(hilo);
 
-                    var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                    var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
                 }
 
-                await store.Admin.SendAsync(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 using (var session = store.OpenAsyncSession())
                 {

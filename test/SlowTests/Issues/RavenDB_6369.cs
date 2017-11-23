@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             {
                 new Users_ByName().Execute(store);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {

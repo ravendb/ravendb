@@ -238,7 +238,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("orders/2", orders[2].Id);
                     Assert.Equal("orders/4", orders[3].Id);
 
-                    var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
+                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
 
                     Assert.Equal(1, indexes.Count);
                     Assert.Equal("Auto/Orders/ByShipTo.Country", indexes[0].Name);
@@ -276,7 +276,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("orders/2", orders[2].Id);
                     Assert.Equal("orders/4", orders[3].Id);
 
-                    var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
+                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
 
                     Assert.Equal(1, indexes.Count);
                     Assert.Equal("Auto/Orders/ByShipTo.ZipCode", indexes[0].Name);
@@ -343,7 +343,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("users/1", users[0].Id);
                     Assert.Equal("users/3", users[1].Id);
 
-                    var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
+                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).OrderBy(x => x.Etag).ToList();
 
                     Assert.Equal("Auto/Users/ByName", indexes[0].Name);
                     Assert.Equal("Auto/Users/ByAgeAndName", indexes[1].Name);

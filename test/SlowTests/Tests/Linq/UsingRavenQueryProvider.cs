@@ -55,7 +55,7 @@ namespace SlowTests.Tests.Linq
                             select new {doc.Name, doc.Age},
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForQueryToComplete(session);
 
@@ -105,7 +105,7 @@ namespace SlowTests.Tests.Linq
                                       select new { doc.Name, doc.Age },
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForQueryToComplete(session);
 
@@ -145,7 +145,7 @@ namespace SlowTests.Tests.Linq
                         }
                         .ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForQueryToComplete(session);
 
@@ -196,7 +196,7 @@ namespace SlowTests.Tests.Linq
                         Indexes = {{x => x.Name, FieldIndexing.Search}}
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForIndexing(store);
 
@@ -242,7 +242,7 @@ namespace SlowTests.Tests.Linq
                                       },
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     
                     WaitForIndexing(store);
@@ -304,7 +304,7 @@ namespace SlowTests.Tests.Linq
                         Map = docs => from doc in docs select new { doc.Name, doc.Age },
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                    
 
@@ -327,7 +327,7 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
                             Name = "DateTime",
@@ -372,7 +372,7 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "DateTime",
@@ -407,7 +407,7 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "DateTime",
@@ -448,7 +448,7 @@ namespace SlowTests.Tests.Linq
             {
                 store.Initialize();
 
-                store.Admin.Send(new PutIndexesOperation(new [] {
+                store.Maintenance.Send(new PutIndexesOperation(new [] {
                     new IndexDefinition
                     {
                         Name = "ByLineCost",

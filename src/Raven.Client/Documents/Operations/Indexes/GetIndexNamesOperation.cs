@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class GetIndexNamesOperation : IAdminOperation<string[]>
+    public class GetIndexNamesOperation : IMaintenanceOperation<string[]>
     {
         private readonly int _start;
         private readonly int _pageSize;

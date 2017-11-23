@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map,
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                 {
                     for (int i = 0; i < 10; i++)
                     {
-                        store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                        store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                         {
                             Maps =
                             {

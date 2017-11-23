@@ -28,7 +28,7 @@ namespace SlowTests.Server.Basic
                 var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Users" }), CancellationToken.None);
                 await operation.WaitForCompletionAsync();
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(0, stats.CountOfDocuments);
             }

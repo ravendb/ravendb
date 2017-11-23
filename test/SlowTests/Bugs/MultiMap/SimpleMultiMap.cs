@@ -21,7 +21,7 @@ namespace SlowTests.Bugs.MultiMap
             {
                 new CatsAndDogs().Execute(store);
 
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("CatsAndDogs"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("CatsAndDogs"));
 
                 Assert.Equal(2, indexDefinition.Maps.Count);
                 Assert.Equal(LinuxTestUtils.Dos2Unix(@"docs.Cats.Select(cat => new {

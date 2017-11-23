@@ -307,7 +307,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = indexName,
@@ -383,7 +383,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingMRTests";
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = indexName,
@@ -456,7 +456,7 @@ namespace SlowTests.Tests.Querying
             using (var store = GetDocumentStore())
             {
                 const string indexName = "BlogsForHighlightingTests";
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = indexName,

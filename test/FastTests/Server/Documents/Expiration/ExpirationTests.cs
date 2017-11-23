@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Expiration
                 Active = true,
                 DeleteFrequencyInSec = 100,
             };
-            await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
+            await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
         }
 
         [Fact]
@@ -130,7 +130,7 @@ namespace FastTests.Server.Documents.Expiration
                 var expiredDocumentsCleaner = database.ExpiredDocumentsCleaner;
                 await expiredDocumentsCleaner.CleanupExpiredDocs();
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
             }
         }

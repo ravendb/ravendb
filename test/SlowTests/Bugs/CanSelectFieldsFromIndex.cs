@@ -43,7 +43,7 @@ namespace SlowTests.Bugs
 
                 var fieldOptions = new IndexFieldOptions {Storage = FieldStorage.Yes};
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                                                                           {
                                                                               Maps = { "from doc in docs from project in doc.projects select new {doc.email, doc.name, project };" },
                                                                               Name = "EmailAndProject",

@@ -34,7 +34,7 @@ namespace SlowTests.Bugs
                     Map = ids => from id in ids
                         select new {id.Id, id.Value},
                 }.ToIndexDefinition(new DocumentConventions());
-                store.Admin.Send(new PutIndexesOperation(index));
+                store.Maintenance.Send(new PutIndexesOperation(index));
             }
         }
 

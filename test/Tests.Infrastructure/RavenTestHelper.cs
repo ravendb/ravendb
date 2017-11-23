@@ -83,7 +83,7 @@ namespace FastTests
 
         public static void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
         {
-            var errors = store.Admin.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
+            var errors = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
 
             Assert.Empty(errors.SelectMany(x => x.Errors));
         }

@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Indexes
             if (Priority.HasValue)
                 indexDefinition.Priority = Priority.Value;
 
-            return store.Admin.SendAsync(new PutIndexesOperation(indexDefinition), token);
+            return store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition), token);
         }
 
         /// <summary>

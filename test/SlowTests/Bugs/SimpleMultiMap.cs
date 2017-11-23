@@ -17,7 +17,7 @@ namespace SlowTests.Bugs
                 //store.Conventions.PrettifyGeneratedLinqExpressions = false;
                 new CatsAndDogs().Execute(store);
 
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("CatsAndDogs"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("CatsAndDogs"));
                 Assert.Equal(2, indexDefinition.Maps.Count);
                 Assert.Equal(@"docs.Cats.Select(cat => new {
     Name = cat.Name

@@ -15,7 +15,7 @@ namespace SlowTests.Bugs.MultiMap
             using(var store = GetDocumentStore())
             {
                 var exception = Assert.Throws<IndexCompilationException>(() =>
-                                    store.Admin.Send(new PutIndexesOperation(new[] {
+                                    store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                         new IndexDefinition
                                                         {
                                                             Maps =
@@ -43,7 +43,7 @@ Additional fields		: Title", exception.Message);
             using (var store = GetDocumentStore())
             {
                 var exception = Assert.Throws<IndexCompilationException>(() => 
-                                    store.Admin.Send(new PutIndexesOperation(new[] {
+                                    store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                         new IndexDefinition
                                                         {
                                                             Maps =

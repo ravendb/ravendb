@@ -23,7 +23,7 @@ namespace FastTests.Issues
                 Directory.CreateDirectory(indexPath);
                 using (File.Create(Path.Combine(indexPath, "Raven.Voron")))
                 {
-                    var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Admin.SendAsync(new PutIndexesOperation(new IndexDefinition
+                    var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.SendAsync(new PutIndexesOperation(new IndexDefinition
                     {
                         Name = "abc",
                         Maps =

@@ -91,7 +91,7 @@ namespace SlowTests.Issues
                 using (db.NotificationCenter.TrackActions(notificationsQueue, null))
                 {
                     definition.Name = index.IndexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] { definition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { definition}));
 
                     WaitForIndexing(store);
 
@@ -119,7 +119,7 @@ namespace SlowTests.Issues
                     Assert.Equal("users/2-a", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
                 }
 
-                var indexStats = store.Admin.Send(new GetIndexStatisticsOperation(index.IndexName));
+                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
 
                 Assert.Equal(3, indexStats.MaxNumberOfOutputsPerDocument);
             }

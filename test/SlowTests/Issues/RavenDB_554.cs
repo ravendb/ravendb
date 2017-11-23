@@ -28,7 +28,7 @@ namespace SlowTests.Issues
             using (var docStore = GetDocumentStore())
             {
 
-                docStore.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                docStore.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Name = IndexName,
                     Maps =

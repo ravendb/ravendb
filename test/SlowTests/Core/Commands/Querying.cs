@@ -38,7 +38,7 @@ namespace SlowTests.Core.Commands
                     commands.Put("contacts/2", null, contact2, new Dictionary<string, object> { { "@collection", "Contacts" } });
                     commands.Put("contacts/3", null, contact3, new Dictionary<string, object> { { "@collection", "Contacts" } });
 
-                    store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                    store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                     {
                         Maps = { "from contact in docs.Contacts select new { contact.FirstName }" },
                         Name = indexName
@@ -79,7 +79,7 @@ namespace SlowTests.Core.Commands
 
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                    store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                     {
                         Maps = { "from doc in docs.Companies select new { doc.Name }" },
                         Name = "Test"

@@ -45,7 +45,7 @@ namespace Raven.Traffic
                     {
                         try
                         {
-                            store.Admin.Send(new GetStatisticsOperation());
+                            store.Maintenance.Send(new GetStatisticsOperation());
                         }
                         catch (Exception)
                         {

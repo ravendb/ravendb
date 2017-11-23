@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                     Maps = { "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}" }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(oldIndexDef));
+                store.Maintenance.Send(new PutIndexesOperation(oldIndexDef));
 
                 using (var session = store.OpenSession())
                 {
@@ -86,7 +86,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 new TestIndex().Execute(store);
 
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
-                store.Admin.Send(new StartIndexingOperation());
+                store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
                     Maps = { "from person in docs.People\nselect new {\n\tFirstName = person.FirstName\n}" }
                 };
 
-                await store.Admin.SendAsync(new PutIndexesOperation(oldIndexDef));
+                await store.Maintenance.SendAsync(new PutIndexesOperation(oldIndexDef));
 
                 using (var session = store.OpenSession())
                 {
@@ -140,7 +140,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                await store.Admin.SendAsync(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 await new TestIndex().ExecuteAsync(store);
 
@@ -155,7 +155,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
-                await store.Admin.SendAsync(new StartIndexingOperation());
+                await store.Maintenance.SendAsync(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
@@ -189,11 +189,11 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store);
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 new TestIndex().Execute(store);
 
-                Assert.Null(store.Admin.Send(new GetIndexOperation(Constants.Documents.Indexing.SideBySideIndexNamePrefix + indexName)));
+                Assert.Null(store.Maintenance.Send(new GetIndexOperation(Constants.Documents.Indexing.SideBySideIndexNamePrefix + indexName)));
             }
         }
     }

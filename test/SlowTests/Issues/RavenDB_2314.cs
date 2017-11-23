@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                 {
                     var pizzeriaDocCount = session.Query<Pizzeria, SpatialIndex>().Count();
                     var pizzerias = session.Query<Pizzeria, SpatialIndex>().ToList();
-                    var stats = store.Admin.Send(new GetStatisticsOperation());
+                    var stats = store.Maintenance.Send(new GetStatisticsOperation());
                     /*
                     var indexErrors = store.Admin.Send(new GetIndexErrorsOperation());
                     if (indexErrors.Errors.Length != 2)

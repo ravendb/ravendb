@@ -24,7 +24,7 @@ namespace SlowTests.Bugs
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { doc.Name}"},
                     Fields = { { "Name", filedOptions } },
@@ -63,7 +63,7 @@ namespace SlowTests.Bugs
 
                 // Overloading the email property into a catchall freeform container to avoid rewriting the test entirely.
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { Email = doc.Name, Name = doc.Name }" },
                     Fields = { { "Email", filedOptions } },
@@ -110,7 +110,7 @@ namespace SlowTests.Bugs
 
                 // Overloading the email property into a catchall freeform container to avoid rewriting the test entirely.
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs select new { Email = doc.Name, Name = doc.Name }" },
                     Fields = { { "Email", filedOptions } },

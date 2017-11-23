@@ -15,7 +15,7 @@ namespace SlowTests.Issues
             {
                 new MapIndex().Execute(store);
 
-                var indexes = store.Admin.Send(new GetIndexNamesOperation(0, 128));
+                var indexes = store.Maintenance.Send(new GetIndexNamesOperation(0, 128));
                 Assert.Contains("MapIndex", indexes);
             }
 

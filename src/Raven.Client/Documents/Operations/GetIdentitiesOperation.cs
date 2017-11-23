@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class GetIdentitiesOperation : IAdminOperation<Dictionary<string,long>>
+    public class GetIdentitiesOperation : IMaintenanceOperation<Dictionary<string,long>>
     {
         public RavenCommand<Dictionary<string, long>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

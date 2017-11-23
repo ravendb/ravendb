@@ -39,7 +39,7 @@ namespace SlowTests.Tests.Indexes
                                        }
                 }.ToIndexDefinition(store.Conventions);
                 indexDefinition.Name = "Hi";
-                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                 using (var session = store.OpenSession())
                 {

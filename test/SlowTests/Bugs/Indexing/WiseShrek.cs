@@ -71,7 +71,7 @@ namespace SlowTests.Bugs.Indexing
                 var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.Exact, };
                 var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Search, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"from s in docs.Softs select new { s.f_platform, s.f_name, s.f_alias,s.f_License,s.f_totaldownload}" },
 

@@ -41,15 +41,15 @@ namespace Indexing.Benchmark
                 Database = DbName
             }.Initialize();
 
-            if (_store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))
+            if (_store.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, 100)).Contains(DbName))
             {
-                _store.Admin.Send(new GetStatisticsOperation()); // give some time for database to load
-                _store.Admin.Server.Send(new DeleteDatabasesOperation(DbName, hardDelete: true));
+                _store.Maintenance.Send(new GetStatisticsOperation()); // give some time for database to load
+                _store.Maintenance.Server.Send(new DeleteDatabasesOperation(DbName, hardDelete: true));
             }
 
             var doc = new DatabaseRecord(DbName);
 
-            _store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+            _store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
         }
 
         public void Execute()
@@ -66,21 +66,21 @@ namespace Indexing.Benchmark
             mapReduceIndexesBench.Execute();
             Console.WriteLine($"{Environment.NewLine}-----------------------------");
 
-            _store.Admin.Send(new StopIndexingOperation());
+            _store.Maintenance.Send(new StopIndexingOperation());
 
-            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.Admin.Send(new GetStatisticsOperation()).Indexes.Length}");
+            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length}");
 
             var staleIndexes = new HashSet<string>();
 
-            foreach (var indexName in _store.Admin.Send(new GetIndexNamesOperation(0, 1024)))
+            foreach (var indexName in _store.Maintenance.Send(new GetIndexNamesOperation(0, 1024)))
             {
-                _store.Admin.Send(new ResetIndexOperation(indexName));
+                _store.Maintenance.Send(new ResetIndexOperation(indexName));
                 staleIndexes.Add(indexName);
             }
 
             Console.WriteLine("All indexes have been reset");
 
-            _store.Admin.Send(new StartIndexingOperation());
+            _store.Maintenance.Send(new StartIndexingOperation());
 
             var sw = Stopwatch.StartNew();
 
@@ -88,15 +88,15 @@ namespace Indexing.Benchmark
 
             WaitForNonStaleIndexes(staleIndexes, sw);
 
-            _store.Admin.Send(new StopIndexingOperation());
+            _store.Maintenance.Send(new StopIndexingOperation());
 
-            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.Admin.Send(new GetStatisticsOperation()).Indexes.Length}");
+            Console.WriteLine($"Indexing stopped. Number of indexes in the database: {_store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length}");
 
             staleIndexes = new HashSet<string>();
 
-            foreach (var indexName in _store.Admin.Send(new GetIndexNamesOperation(0, 1024)))
+            foreach (var indexName in _store.Maintenance.Send(new GetIndexNamesOperation(0, 1024)))
             {
-                _store.Admin.Send(new ResetIndexOperation(indexName));
+                _store.Maintenance.Send(new ResetIndexOperation(indexName));
                 staleIndexes.Add(indexName);
             }
 
@@ -128,11 +128,11 @@ namespace Indexing.Benchmark
                 staleIndexes.Add(employeesGroupByCountry.IndexName);
             }
 
-            _store.Admin.Send(new StartIndexingOperation());
+            _store.Maintenance.Send(new StartIndexingOperation());
 
             sw = Stopwatch.StartNew();
 
-            Console.WriteLine($"Indexing is working again. Number of indexes in the database: {_store.Admin.Send(new GetStatisticsOperation()).Indexes.Length}. Waiting for non stale results");
+            Console.WriteLine($"Indexing is working again. Number of indexes in the database: {_store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length}. Waiting for non stale results");
 
             WaitForNonStaleIndexes(staleIndexes, sw);
         }
@@ -141,7 +141,7 @@ namespace Indexing.Benchmark
         {
             do
             {
-                var stats = _store.Admin.Send(new GetStatisticsOperation());
+                var stats = _store.Maintenance.Send(new GetStatisticsOperation());
 
                 if (stats.StaleIndexes.Length != staleIndexes.Count)
                 {

@@ -106,7 +106,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "Users/ByActive",
                     Maps = { "from u in docs.Users select new { u.Active}" }

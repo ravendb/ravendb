@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {  new IndexDefinition()
+                store.Maintenance.Send(new PutIndexesOperation(new[] {  new IndexDefinition()
                 {
                     Name = "Foos/TestIndex",
                     Maps =

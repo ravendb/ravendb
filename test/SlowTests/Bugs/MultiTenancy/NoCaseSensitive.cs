@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var documentStore = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("repro");
-                documentStore.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                documentStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = documentStore.OpenSession("repro"))
                 {

@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class DeleteIndexOperation : IAdminOperation
+    public class DeleteIndexOperation : IMaintenanceOperation
     {
         private readonly string _indexName;
 

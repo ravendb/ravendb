@@ -145,15 +145,15 @@ namespace StressTests
                 var dbname = $"Northwind{i}";
                 DbNumToDbName.Add(i, dbname);
                 var doc = new DatabaseRecord(dbname);
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
-                store.Admin.ForDatabase(dbname).Send(new CreateSampleDataOperation());
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.ForDatabase(dbname).Send(new CreateSampleDataOperation());
                 Console.WriteLine($"Done creating {dbname}");
             }
             Console.WriteLine("Waiting for non stale last database");
             var statOperation = new GetStatisticsOperation();
             while (true)
             {
-                var stat = store.Admin.ForDatabase(DbNumToDbName[numberOfDatabases - 1]).Send(statOperation);
+                var stat = store.Maintenance.ForDatabase(DbNumToDbName[numberOfDatabases - 1]).Send(statOperation);
                 if (stat.StaleIndexes.Any())
                     Thread.Sleep(500);
                 else

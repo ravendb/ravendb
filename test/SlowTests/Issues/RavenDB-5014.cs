@@ -37,7 +37,7 @@ namespace SlowTests.Issues
 
                     new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId.OperationId).WaitForCompletion(TimeSpan.FromSeconds(15));
 
-                    var collectionStats = store.Admin.Send(new GetCollectionStatisticsOperation());
+                    var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 
                     Assert.Equal(3, collectionStats.Collections["Companies"]);
                 }

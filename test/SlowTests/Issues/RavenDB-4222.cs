@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 var indexName = "test";
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = indexName,
                     Maps = { @"from doc in docs.Orders
@@ -45,10 +45,10 @@ doc.Name
                     var result = session.Query<Order>(indexName).ToList();
                     Assert.Equal(1, result.Count);
                 }
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
 
-                store.Admin.Send(new DisableIndexOperation(indexName));
+                store.Maintenance.Send(new DisableIndexOperation(indexName));
 
                 using (var session = store.OpenSession())
                 {
@@ -57,10 +57,10 @@ doc.Name
                 }
 
                 WaitForIndexing(store);
-                stats = store.Admin.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
 
-                var testIndex = store.Admin.Send(new GetIndexStatisticsOperation(indexName));
+                var testIndex = store.Maintenance.Send(new GetIndexStatisticsOperation(indexName));
                 Assert.Equal(1, testIndex.EntriesCount);
             }
         }

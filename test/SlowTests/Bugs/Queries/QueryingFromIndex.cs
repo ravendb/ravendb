@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.Queries
                                   }
                 }.ToIndexDefinition(store.Conventions);
 
-                store.Admin.Send(new PutIndexesOperation(definition));
+                store.Maintenance.Send(new PutIndexesOperation(definition));
 
                 using (var session = store.OpenSession())
                 {
@@ -64,7 +64,7 @@ namespace SlowTests.Bugs.Queries
                                       doc.Name
                                   }
                 }.ToIndexDefinition(store.Conventions);
-                store.Admin.Send(new PutIndexesOperation(definition));
+                store.Maintenance.Send(new PutIndexesOperation(definition));
 
 
                 using (var session = store.OpenSession())

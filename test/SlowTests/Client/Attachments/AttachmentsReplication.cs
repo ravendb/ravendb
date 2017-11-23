@@ -303,7 +303,7 @@ namespace SlowTests.Client.Attachments
 
         public static void AssertAttachmentCount(DocumentStore store, long uniqueAttachmentCount, long? attachmentCount = null, long? documentsCount = null)
         {
-            var statistics = store.Admin.Send(new GetStatisticsOperation());
+            var statistics = store.Maintenance.Send(new GetStatisticsOperation());
             Assert.Equal(attachmentCount ?? uniqueAttachmentCount, statistics.CountOfAttachments);
             Assert.Equal(uniqueAttachmentCount, statistics.CountOfUniqueAttachments);
 
@@ -595,7 +595,7 @@ namespace SlowTests.Client.Attachments
         private static void AssertRevisions(DocumentStore store, string[] names, Action<IDocumentSession, List<User>> assertAction,
             long expectedCountOfAttachments, long expectedCountOfDocuments = 2, long expectedCountOfUniqueAttachments = 3)
         {
-            var statistics = store.Admin.Send(new GetStatisticsOperation());
+            var statistics = store.Maintenance.Send(new GetStatisticsOperation());
             Assert.Equal(expectedCountOfAttachments, statistics.CountOfAttachments);
             Assert.Equal(expectedCountOfUniqueAttachments, statistics.CountOfUniqueAttachments);
             Assert.Equal(4, statistics.CountOfRevisionDocuments);

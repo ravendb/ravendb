@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "UsersByName",
                     Maps = { "docs.users.Select(x=>new {x.FirstName })" }

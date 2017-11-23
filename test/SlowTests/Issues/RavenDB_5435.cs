@@ -49,7 +49,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Admin.Send(new CompactIndexOperation(new Users_ByName().IndexName));
+                var operation = store.Maintenance.Send(new CompactIndexOperation(new Users_ByName().IndexName));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())

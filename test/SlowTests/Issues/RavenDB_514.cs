@@ -12,7 +12,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Name = "test",
                     Maps = { "from p in docs.Products select new { p.Price} .Boost(2)" }
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "test",
                     Maps = { "docs.Products.Select(p =>new { p.Price } .Boost(2))" }

@@ -150,7 +150,7 @@ namespace RachisTests
 
                 await subscription.DisposeAsync();
 
-                var deleteResult = store.Admin.Server.Send(new DeleteDatabasesOperation(defaultDatabase, hardDelete: true));
+                var deleteResult = store.Maintenance.Server.Send(new DeleteDatabasesOperation(defaultDatabase, hardDelete: true));
 
                 foreach (var ravenServer in Servers)
                 {
@@ -500,7 +500,7 @@ namespace RachisTests
             });
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
             var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
-            var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+            var record = await store.Maintenance.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
 
             foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
@@ -607,7 +607,7 @@ namespace RachisTests
               
                 var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
                 var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
-                var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+                var record = await store.Maintenance.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
 
                 foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
                 {
@@ -658,7 +658,7 @@ namespace RachisTests
 
                 var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
                 var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
-                var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+                var record = await store.Maintenance.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
 
                 foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
                 {
@@ -722,7 +722,7 @@ namespace RachisTests
 
                 var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subscriptionName, store.Database);
                 var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
-                var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+                var record = await store.Maintenance.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
 
                 foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
                 {

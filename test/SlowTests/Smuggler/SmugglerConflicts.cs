@@ -80,7 +80,7 @@ namespace SlowTests.Smuggler
                 await SetupReplicationAsync(_store2, store3);
                 WaitForDocument(store3, "people/1-A");
 
-                var stats = await store3.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(7, stats.CountOfDocuments);
                 Assert.Equal(0, stats.CountOfDocumentsConflicts);
                 Assert.Equal(0, stats.CountOfConflicts);
@@ -180,12 +180,12 @@ namespace SlowTests.Smuggler
 
             Assert.Equal(2, WaitUntilHasConflict(store1, "users/fitzchak").Length);
 
-            var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+            var stats = await store1.Maintenance.SendAsync(new GetStatisticsOperation());
             Assert.Equal(3, stats.CountOfDocuments);
             Assert.Equal(4, stats.CountOfDocumentsConflicts);
             Assert.Equal(8, stats.CountOfConflicts);
 
-            stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+            stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
             Assert.Equal(7, stats.CountOfDocuments);
             Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
@@ -242,12 +242,12 @@ namespace SlowTests.Smuggler
 
             Assert.Equal(2, WaitUntilHasConflict(store3, "users/fitzchak").Length);
 
-            var stats = await store3.Admin.SendAsync(new GetStatisticsOperation());
+            var stats = await store3.Maintenance.SendAsync(new GetStatisticsOperation());
             Assert.Equal(3, stats.CountOfDocuments);
             Assert.Equal(4, stats.CountOfDocumentsConflicts);
             Assert.Equal(8, stats.CountOfConflicts);
 
-            stats = await store4.Admin.SendAsync(new GetStatisticsOperation());
+            stats = await store4.Maintenance.SendAsync(new GetStatisticsOperation());
             Assert.Equal(7, stats.CountOfDocuments);
             Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
@@ -259,7 +259,7 @@ namespace SlowTests.Smuggler
             {
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(3, stats.CountOfDocuments);
                 Assert.Equal(4, stats.CountOfDocumentsConflicts);
                 Assert.Equal(8, stats.CountOfConflicts);
@@ -283,7 +283,7 @@ namespace SlowTests.Smuggler
             {
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), _file);
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(3, stats.CountOfDocuments);
                 Assert.Equal(4, stats.CountOfDocumentsConflicts);
                 Assert.Equal(13, stats.CountOfConflicts);

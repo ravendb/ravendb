@@ -155,13 +155,13 @@ namespace SlowTests.Bugs.Stacey
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinitionBuilder<Aspect>("AspectsByName")
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinitionBuilder<Aspect>("AspectsByName")
                 {
                     Map = orders => from order in orders
                                     select new { order.Name }
                 }.ToIndexDefinition(store.Conventions)));
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinitionBuilder<Entity>("test")
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinitionBuilder<Entity>("test")
                 {
                     Map = docs => from i in docs.WhereEntityIs<Entity>("Aspects", "Currencies")
                                   select new { i.Name }

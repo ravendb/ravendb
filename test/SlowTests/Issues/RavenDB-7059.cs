@@ -88,7 +88,7 @@ namespace SlowTests.Issues
         
         private async Task CreateDatabasesInCluster(int clusterSize, string databaseName, IDocumentStore store)
         {
-            var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName), clusterSize));
+            var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName), clusterSize));
             Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
             {
@@ -111,7 +111,7 @@ namespace SlowTests.Issues
                     return false;
 
 
-                var identities = store.Admin.Send(new GetIdentitiesOperation());
+                var identities = store.Maintenance.Send(new GetIdentitiesOperation());
                 if (identities.TryGetValue(collection, out long value) && identityToWaitFor >= value)
                 {
                     break;

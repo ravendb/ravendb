@@ -175,7 +175,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Name = "test",
@@ -183,7 +183,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                                                 }}));
 
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Name = "test2",

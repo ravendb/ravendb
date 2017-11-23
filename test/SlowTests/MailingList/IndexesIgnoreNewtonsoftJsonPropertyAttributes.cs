@@ -75,7 +75,7 @@ namespace SlowTests.MailingList
             {
                 new StudentDtos_ByEmailDomain().Execute(store);
 
-                var definition = store.Admin.Send(new GetIndexOperation(new StudentDtos_ByEmailDomain().IndexName));
+                var definition = store.Maintenance.Send(new GetIndexOperation(new StudentDtos_ByEmailDomain().IndexName));
 
                 Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,

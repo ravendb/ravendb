@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var result = store.Admin.Send(new FormatOperation(@"from c in docs.Companies
+                var result = store.Maintenance.Send(new FormatOperation(@"from c in docs.Companies
                 select new
                 {
 
@@ -27,7 +27,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private class FormatOperation : IAdminOperation<FormatOperation.Result>
+        private class FormatOperation : IMaintenanceOperation<FormatOperation.Result>
         {
             private readonly string _expression;
 

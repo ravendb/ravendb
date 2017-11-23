@@ -57,7 +57,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
                 new NewIndex().Execute(store);
 
                 var e = Assert.Throws<RavenException>(() =>
@@ -71,7 +71,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains("The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
-                store.Admin.Send(new StartIndexingOperation());
+                store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 

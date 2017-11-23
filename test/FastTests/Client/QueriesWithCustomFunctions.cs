@@ -2015,7 +2015,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                             doc.Name, doc.FriendId
                         }
                 }.ToIndexDefinition(store.Conventions);
-                store.Admin.Send(new PutIndexesOperation(definition));
+                store.Maintenance.Send(new PutIndexesOperation(definition));
 
                 using (var session = store.OpenSession())
                 {
@@ -2069,7 +2069,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                                       doc.FriendId
                                   }
                 }.ToIndexDefinition(store.Conventions);
-                store.Admin.Send(new PutIndexesOperation(definition));
+                store.Maintenance.Send(new PutIndexesOperation(definition));
 
                 using (var session = store.OpenSession())
                 {

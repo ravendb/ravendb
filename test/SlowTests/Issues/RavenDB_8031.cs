@@ -27,9 +27,9 @@ namespace SlowTests.Issues
                     Database = dbName
                 }.Initialize())
                 {
-                    Assert.Throws<DatabaseDoesNotExistException>(() => store2.Admin.Send(new GetStatisticsOperation()));
+                    Assert.Throws<DatabaseDoesNotExistException>(() => store2.Maintenance.Send(new GetStatisticsOperation()));
 
-                    store.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
 
                     try
                     {
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
 
                             try
                             {
-                                await store2.Admin.SendAsync(new GetStatisticsOperation());
+                                await store2.Maintenance.SendAsync(new GetStatisticsOperation());
 
                                 return;
                             }
@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                     }
                     finally
                     {
-                        store.Admin.Server.Send(new DeleteDatabasesOperation(dbName, hardDelete: true));
+                        store.Maintenance.Server.Send(new DeleteDatabasesOperation(dbName, hardDelete: true));
                     }
                 }
             }

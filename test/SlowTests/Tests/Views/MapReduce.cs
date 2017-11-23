@@ -41,7 +41,7 @@ select new {
 
         private static void Fill(IDocumentStore store)
         {
-            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+            store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Name = "CommentsCountPerBlog",
                 Maps = { Map },
@@ -117,7 +117,7 @@ select new {
 
                     Assert.True(SpinWait.SpinUntil(() =>
                     {
-                        stats = store.Admin.Send(new GetIndexStatisticsOperation("CommentsCountPerBlog"));
+                        stats = store.Maintenance.Send(new GetIndexStatisticsOperation("CommentsCountPerBlog"));
 
                         return stats.ReduceAttempts != null;
                     }, TimeSpan.FromSeconds(5)));

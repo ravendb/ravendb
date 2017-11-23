@@ -28,12 +28,12 @@ namespace SlowTests.Smuggler
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(1059, stats.CountOfDocuments);
                 Assert.Equal(3, stats.CountOfIndexes); // there are 4 in ravendbdump, but Raven/DocumentsByEntityName is skipped
 
-                var collectionStats = await store.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(1059, collectionStats.CountOfDocuments);
                 Assert.Equal(9, collectionStats.Collections.Count);
                 Assert.Equal(8, collectionStats.Collections["Categories"]);
@@ -68,13 +68,13 @@ namespace SlowTests.Smuggler
             {
                 Assert.NotNull(stream);
 
-                await store.Admin.SendAsync(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
 
                 var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
                 var result = operation.WaitForCompletion<SmugglerResult>();
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(0, stats.CountOfDocuments);
 
@@ -138,12 +138,12 @@ namespace SlowTests.Smuggler
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(5, stats.CountOfRevisionDocuments);
                 Assert.Equal(6, stats.LastDocEtag);
 
-                var collectionStats = await store.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
                 Assert.Equal(2, collectionStats.Collections.Count);
                 Assert.Equal(1, collectionStats.Collections["@empty"]);

@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     Assert.Contains("Index2", e.Message);
                 }
 
-                var indexInfo = store.Admin.Send(new GetStatisticsOperation()).Indexes;
+                var indexInfo = store.Maintenance.Send(new GetStatisticsOperation()).Indexes;
                 Assert.Equal(2, indexInfo.Length);
                 Assert.True(indexInfo.Any(index => index.Name.Equals("Index1")));
                 Assert.True(indexInfo.Any(index => index.Name.Equals("Index3")));
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                     Assert.Contains("Index2", e.InnerExceptions.First().Message);
                 }
 
-                var indexInfo = store.Admin.Send(new GetStatisticsOperation()).Indexes;
+                var indexInfo = store.Maintenance.Send(new GetStatisticsOperation()).Indexes;
                 Assert.Equal(2, indexInfo.Length);
                 Assert.True(indexInfo.Any(index => index.Name.Equals("Index1")));
                 Assert.True(indexInfo.Any(index => index.Name.Equals("Index3")));

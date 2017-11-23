@@ -112,7 +112,7 @@ namespace SlowTests.Server.Replication
                 var destIndexNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 1)
-                    destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
+                    destIndexNames = destination.Maintenance.Send(new GetIndexNamesOperation(0, 1024));
 
                 Assert.NotNull(destIndexNames); //precaution
                 Assert.Equal(1, destIndexNames.Length);
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Replication
                 var destIndexNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 2)
-                    destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
+                    destIndexNames = destination.Maintenance.Send(new GetIndexNamesOperation(0, 1024));
 
                 Assert.NotNull(destIndexNames); //precaution
                 Assert.Equal(2, destIndexNames.Length);
@@ -170,7 +170,7 @@ namespace SlowTests.Server.Replication
                 var destIndexNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 2)
-                    destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
+                    destIndexNames = destination.Maintenance.Send(new GetIndexNamesOperation(0, 1024));
 
                 sw.Restart();
 

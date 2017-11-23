@@ -28,7 +28,7 @@ namespace SlowTests.Bugs.Queries
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "People/ByAge",
                     Maps =

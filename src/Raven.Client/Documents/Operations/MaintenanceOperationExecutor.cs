@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class AdminOperationExecutor
+    public class MaintenanceOperationExecutor
     {
         private readonly DocumentStoreBase _store;
         private readonly string _databaseName;
@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations
 
         private RequestExecutor RequestExecutor => _requestExecutor ?? (_requestExecutor = _store.GetRequestExecutor(_databaseName));
 
-        public AdminOperationExecutor(DocumentStoreBase store, string databaseName = null)
+        public MaintenanceOperationExecutor(DocumentStoreBase store, string databaseName = null)
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
@@ -25,25 +25,25 @@ namespace Raven.Client.Documents.Operations
 
         public ServerOperationExecutor Server => _serverOperationExecutor ?? (_serverOperationExecutor = new ServerOperationExecutor(_store));
 
-        public AdminOperationExecutor ForDatabase(string databaseName)
+        public MaintenanceOperationExecutor ForDatabase(string databaseName)
         {
             if (string.Equals(_databaseName, databaseName, StringComparison.OrdinalIgnoreCase))
                 return this;
 
-            return new AdminOperationExecutor(_store, databaseName);
+            return new MaintenanceOperationExecutor(_store, databaseName);
         }
 
-        public void Send(IAdminOperation operation)
+        public void Send(IMaintenanceOperation operation)
         {
             AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public TResult Send<TResult>(IAdminOperation<TResult> operation)
+        public TResult Send<TResult>(IMaintenanceOperation<TResult> operation)
         {
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task SendAsync(IAdminOperation operation, CancellationToken token = default(CancellationToken))
+        public async Task SendAsync(IMaintenanceOperation operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IAdminOperation<TResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<TResult> SendAsync<TResult>(IMaintenanceOperation<TResult> operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (RequestExecutor.ContextPool.AllocateOperationContext(out context))
@@ -65,12 +65,12 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public Operation Send(IAdminOperation<OperationIdResult> operation)
+        public Operation Send(IMaintenanceOperation<OperationIdResult> operation)
         {
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task<Operation> SendAsync(IAdminOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> SendAsync(IMaintenanceOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (RequestExecutor.ContextPool.AllocateOperationContext(out context))

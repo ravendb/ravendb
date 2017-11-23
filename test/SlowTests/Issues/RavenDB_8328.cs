@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                 CreateDatabase = false
             }))
             {
-                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10)); // checking it index survived restart
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)); // checking it index survived restart
                 Assert.Equal(1, indexes.Length);
                 Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)", indexes[0].Name);
 

@@ -44,11 +44,11 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 }
                 Assert.True(WaitForDocument(store2, "marker"));
 
-                var collectionStatistics = await store1.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                var collectionStatistics = await store1.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(8, collectionStatistics.Collections["DailyInvoices"]);
                 Assert.Equal(30, collectionStatistics.Collections["Invoices"]);
 
-                collectionStatistics = await store2.Admin.SendAsync(new GetCollectionStatisticsOperation());
+                collectionStatistics = await store2.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(30, collectionStatistics.Collections["Invoices"]);
                 Assert.False(collectionStatistics.Collections.ContainsKey("DailyInvoices"));
                 Assert.Equal(32, collectionStatistics.CountOfDocuments);

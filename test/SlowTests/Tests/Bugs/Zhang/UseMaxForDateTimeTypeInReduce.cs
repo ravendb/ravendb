@@ -55,7 +55,7 @@ select new {Name = g.Key, CreatedTime = createdTime}
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "test",

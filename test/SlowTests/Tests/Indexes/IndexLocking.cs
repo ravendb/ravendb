@@ -23,13 +23,13 @@ namespace SlowTests.Tests.Indexes
                 };
                 index.Execute(store);
 
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("IndexSample"));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.Unlock);
 
                 var database = await GetDatabase(store.Database);
                 database.IndexStore.GetIndex("IndexSample").SetLock(IndexLockMode.LockedIgnore);
 
-                indexDefinition = store.Admin.Send(new GetIndexOperation("IndexSample"));
+                indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexSample"));
                 Assert.Equal(indexDefinition.LockMode, IndexLockMode.LockedIgnore);
             }
         }
@@ -54,16 +54,16 @@ namespace SlowTests.Tests.Indexes
                     var results = session.Query<Person>().Customize(x => x.WaitForNonStaleResults()).Statistics(out statistics).Where(x => x.Name == "Vasia").ToList();
                 }
 
-                store.Admin.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.Unlock));
-                var index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
+                store.Maintenance.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.Unlock));
+                var index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.Unlock, index.LockMode);
 
-                store.Admin.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedError));
-                index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
+                store.Maintenance.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedError));
+                index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.LockedError, index.LockMode);
 
-                store.Admin.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedIgnore));
-                index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
+                store.Maintenance.Send(new SetIndexesLockOperation(statistics.IndexName, IndexLockMode.LockedIgnore));
+                index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexLockMode.LockedIgnore, index.LockMode);
             }
         }

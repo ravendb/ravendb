@@ -107,7 +107,7 @@ namespace SlowTests.Issues
                     Assert.Null(session.Load<Order>("orders/1-A"));
                 }
 
-                var statistics = store.Admin.Send(new GetStatisticsOperation());
+                var statistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(1, statistics.CountOfDocuments); // hilo doc
             }

@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Linq
                             select new {doc.Revision},
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
-                    store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                     WaitForIndexing(store);
 

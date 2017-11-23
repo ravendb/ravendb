@@ -23,17 +23,17 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 new Index().Execute(store);
 
                 WaitForIndexing(store);
 
-                var staleness = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.False(staleness.IsStale);
                 Assert.Empty(staleness.StalenessReasons);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -52,15 +52,15 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                staleness = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.True(staleness.IsStale);
                 Assert.Equal(5, staleness.StalenessReasons.Count);
 
-                store.Admin.Send(new StartIndexingOperation());
+                store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
-                staleness = store.Admin.Send(new GetIndexStalenessOperation(new Index().IndexName));
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(new Index().IndexName));
                 Assert.False(staleness.IsStale);
                 Assert.Empty(staleness.StalenessReasons);
             }
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private class GetIndexStalenessOperation : IAdminOperation<IndexStaleness>
+        private class GetIndexStalenessOperation : IMaintenanceOperation<IndexStaleness>
         {
             private readonly string _indexName;
 

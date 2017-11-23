@@ -19,8 +19,8 @@ namespace SlowTests.Issues
                 };
                 for (int i = 0; i < 10; i++)
                 {
-                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition}));
-                    store.Admin.Send(new DeleteIndexOperation("test"));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition}));
+                    store.Maintenance.Send(new DeleteIndexOperation("test"));
                 }
             }
         }

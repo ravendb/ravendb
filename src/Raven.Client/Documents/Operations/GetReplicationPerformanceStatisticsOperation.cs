@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetReplicationPerformanceStatisticsOperation : IAdminOperation<ReplicationPerformance>
+    public class GetReplicationPerformanceStatisticsOperation : IMaintenanceOperation<ReplicationPerformance>
     {
         public RavenCommand<ReplicationPerformance> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

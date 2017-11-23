@@ -213,7 +213,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 WaitForMarker(store1, store2);
-                var statistics = store2.Admin.Send(new GetStatisticsOperation());
+                var statistics = store2.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 2 : 1, statistics.CountOfDocuments);
                 Assert.Equal(4, statistics.CountOfRevisionDocuments);
 
@@ -242,13 +242,13 @@ namespace FastTests.Server.Documents.Revisions
                 Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
                 Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
 
-                await store1.Admin.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
+                await store1.Maintenance.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
                 {
                     DocumentIds = new[] { id, "users/not/exists" }
                 }));
                 WaitForMarker(store1, store2);
 
-                statistics = store2.Admin.Send(new GetStatisticsOperation());
+                statistics = store2.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 3 : 2, statistics.CountOfDocuments);
 
                 Assert.Equal(0, statistics.CountOfRevisionDocuments);

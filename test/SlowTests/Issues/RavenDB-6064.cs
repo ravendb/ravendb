@@ -63,7 +63,7 @@ namespace SlowTests.Issues
 
                 using (var s = store.OpenSession())
                 {
-                    var errors = store.Admin.Send(new GetIndexErrorsOperation())[0];
+                    var errors = store.Maintenance.Send(new GetIndexErrorsOperation())[0];
                     Assert.Empty(errors.Errors);
                     var collection = s.Query<User, User_Index>().ToList();
                     Assert.NotEmpty(collection);

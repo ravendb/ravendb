@@ -39,7 +39,7 @@ select new {
 
         private static void Fill(IDocumentStore store)
         {
-            store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+            store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Name = "CommentsCountPerBlog",
                 Maps = { Map },

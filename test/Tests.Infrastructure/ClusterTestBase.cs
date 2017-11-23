@@ -71,7 +71,7 @@ namespace Tests.Infrastructure
 
         protected static DatabasePutResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
         {
-            return store.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), replicationFactor));
+            return store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), replicationFactor));
         }
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded)
@@ -540,7 +540,7 @@ namespace Tests.Infrastructure
                 Database = record.DatabaseName
             }.Initialize())
             {
-                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
+                databaseResult = store.Maintenance.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
             }
             var currentServers = Servers.Where(s => s.ServerStore.GetClusterTopology().TryGetNodeTagByUrl(leadersUrl).HasUrl).ToArray();
             int numberOfInstances = 0;

@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                     session.Store(new { Names = new[] { "a", "b" } });
                     session.SaveChanges();
                 }
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "test",
                     Maps = { "from doc in docs from name in doc.Names select new { Name = name.Length / (name.Length - 1) }" }
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                 IndexingError[] errors = null;
                 var result = SpinWait.SpinUntil(() =>
                 {
-                    errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                    errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
                     return errors?.Length > 0;
                 }, TimeSpan.FromSeconds(20));
 
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
-                var recoveredErrors = store.Admin.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                var recoveredErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
 
                 Assert.NotEmpty(recoveredErrors);
 

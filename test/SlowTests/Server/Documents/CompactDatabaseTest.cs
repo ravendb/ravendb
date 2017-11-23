@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents
                 Path = path
             }))
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 for (int i = 0; i < 3; i++)
                 {

@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Indexes
             try
             {
                 var indexesToAdd = CreateIndexesToAdd(indexesList, conventions);
-                await store.Admin.SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
+                await store.Maintenance.SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)

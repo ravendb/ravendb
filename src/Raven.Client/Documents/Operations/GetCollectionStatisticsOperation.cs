@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetCollectionStatisticsOperation : IAdminOperation<CollectionStatistics>
+    public class GetCollectionStatisticsOperation : IMaintenanceOperation<CollectionStatistics>
     {
         public RavenCommand<CollectionStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

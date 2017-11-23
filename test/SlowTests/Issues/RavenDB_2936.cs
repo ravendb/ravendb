@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "Users/ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" }
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "Users/ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" }

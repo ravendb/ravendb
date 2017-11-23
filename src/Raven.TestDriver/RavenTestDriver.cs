@@ -56,7 +56,7 @@ namespace Raven.TestDriver
             var documentStore = GlobalServer.Value;
 
             var createDatabaseOperation = new CreateDatabaseOperation(new DatabaseRecord(name));
-            documentStore.Admin.Server.Send(createDatabaseOperation);
+            documentStore.Maintenance.Server.Send(createDatabaseOperation);
 
             var store = new DocumentStore
             {
@@ -73,7 +73,7 @@ namespace Raven.TestDriver
 
                 try
                 {
-                    store.Admin.Server.Send(new DeleteDatabasesOperation(store.Database, true));
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(store.Database, true));
                 }
                 catch (DatabaseDoesNotExistException)
                 {
@@ -236,7 +236,7 @@ namespace Raven.TestDriver
 
         public void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
         {
-            var admin = store.Admin.ForDatabase(database);
+            var admin = store.Maintenance.ForDatabase(database);
 
             timeout = timeout ?? TimeSpan.FromMinutes(1);
 

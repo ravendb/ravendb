@@ -27,7 +27,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("Test");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
                 store.Database = "Test";
 
                 var indexDefinition = new IndexDefinitionBuilder<Test, Test>("TestIndex")
@@ -36,7 +36,7 @@ namespace SlowTests.Bugs.MultiTenancy
                                                                             select new { movie.Name }
                 }.ToIndexDefinition(new DocumentConventions());
                 indexDefinition.Name = "TestIndex";
-                store.Admin.ForDatabase("Test").Send(new PutIndexesOperation(new[] {indexDefinition}));
+                store.Maintenance.ForDatabase("Test").Send(new PutIndexesOperation(new[] {indexDefinition}));
 
                 using (var session = store.OpenSession())
                 {

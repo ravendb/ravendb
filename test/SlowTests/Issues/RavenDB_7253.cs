@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
                 await mre.WaitAsync(TimeSpan.FromSeconds(20));
 
-                await store.Admin.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
+                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true));
 
                 Assert.True(await task.WaitWithTimeout(TimeSpan.FromSeconds(20)));
             }

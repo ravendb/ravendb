@@ -153,7 +153,7 @@ namespace SlowTests.Core.Streaming
 
                     var indexDefinition = indexDef.ToIndexDefinition(store.Conventions, true);
                     indexDefinition.Name = "MyClass/ByIndex";
-                    store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
                     WaitForIndexing(store);
 

@@ -37,7 +37,7 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Maps = { "from doc in docs select new { doc.Name}" },
@@ -76,7 +76,7 @@ namespace SlowTests.Bugs.Indexing
 
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs select new { doc.Name}" },
@@ -95,7 +95,7 @@ namespace SlowTests.Bugs.Indexing
                     Assert.Throws<RavenException>(() => WaitForIndexing(store));
                 }
 
-                var fooIndex = store.Admin.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "foo");
+                var fooIndex = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.First(x => x.Name == "foo");
 
                 Assert.True(fooIndex.State == IndexState.Error);
 

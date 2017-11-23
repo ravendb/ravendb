@@ -35,7 +35,7 @@ namespace Raven.Client.Documents
 
         private AsyncMultiDatabaseHiLoIdGenerator _asyncMultiDbHiLo;
 
-        private AdminOperationExecutor _adminOperationExecutor;
+        private MaintenanceOperationExecutor _maintenanceOperationExecutor;
 
         private OperationExecutor _operationExecutor;
 
@@ -359,12 +359,12 @@ namespace Raven.Client.Documents
 
         public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
-        public override AdminOperationExecutor Admin
+        public override MaintenanceOperationExecutor Maintenance
         {
             get
             {
                 AssertInitialized();
-                return _adminOperationExecutor ?? (_adminOperationExecutor = new AdminOperationExecutor(this));
+                return _maintenanceOperationExecutor ?? (_maintenanceOperationExecutor = new MaintenanceOperationExecutor(this));
             }
         }
 

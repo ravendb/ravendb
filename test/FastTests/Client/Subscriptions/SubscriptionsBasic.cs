@@ -423,7 +423,7 @@ namespace FastTests.Client.Subscriptions
                 }.Initialize();
 
                 var doc = new DatabaseRecord(store.Database);
-                var result = store.Admin.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
+                var result = store.Maintenance.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
                 await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, _reasonableWaitTime);
 
                 using (var session = store.OpenSession())

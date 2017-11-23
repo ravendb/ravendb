@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Linq
 
                     session.SaveChanges();
 
-                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                     {
                         Name = "Foos/TestDynamicQueries",
                         Maps =

@@ -77,7 +77,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 IndexInformation[] indexes = null;
 
-                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Admin.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
+                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
 
                 Assert.Equal(1, indexes.Length);
                 Assert.Equal("Auto/Items/BynameAndName", indexes[0].Name);

@@ -14,9 +14,9 @@ namespace FastTests.Issues
             {
                 var doc = new DatabaseRecord("test");
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
-                Assert.Throws<ConcurrencyException>(() => store.Admin.Server.Send(new CreateDatabaseOperation(doc)));
+                Assert.Throws<ConcurrencyException>(() => store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)));
             }
         }
     }

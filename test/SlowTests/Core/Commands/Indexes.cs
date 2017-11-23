@@ -36,20 +36,20 @@ namespace SlowTests.Core.Commands
                     await commands.PutAsync("users/1", null, new User { Name = "testname" }, null);
                 }
 
-                await store.Admin.SendAsync(new PutIndexesOperation(new[] {new IndexDefinition
+                await store.Maintenance.SendAsync(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Name = usersByname
                 }}));
 
-                var index = await store.Admin.SendAsync(new GetIndexOperation(usersByname));
+                var index = await store.Maintenance.SendAsync(new GetIndexOperation(usersByname));
                 Assert.Equal(usersByname, index.Name);
 
-                var indexes = await store.Admin.SendAsync(new GetIndexesOperation(0, 5));
+                var indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 5));
                 Assert.Equal(1, indexes.Length);
 
-                await store.Admin.SendAsync(new DeleteIndexOperation(usersByname));
-                Assert.Null(await store.Admin.SendAsync(new GetIndexOperation(usersByname)));
+                await store.Maintenance.SendAsync(new DeleteIndexOperation(usersByname));
+                Assert.Null(await store.Maintenance.SendAsync(new GetIndexOperation(usersByname)));
             }
         }
 
@@ -67,7 +67,7 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs.Users select new { doc.Name }" },
@@ -76,7 +76,7 @@ namespace SlowTests.Core.Commands
 
                 WaitForIndexing(store);
 
-                var terms = store.Admin.Send(new GetTermsOperation("test", "Name", null, 10))
+                var terms = store.Maintenance.Send(new GetTermsOperation("test", "Name", null, 10))
                     .OrderBy(x => x)
                     .ToArray();
 
@@ -103,7 +103,7 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs.Users select new { doc.Name }" },
@@ -112,7 +112,7 @@ namespace SlowTests.Core.Commands
 
                 WaitForIndexing(store);
 
-                var terms = store.Admin.Send(new GetTermsOperation("test", "Name", "user009", 10))
+                var terms = store.Maintenance.Send(new GetTermsOperation("test", "Name", "user009", 10))
                     .OrderBy(x => x)
                     .ToArray();
 
@@ -139,7 +139,7 @@ namespace SlowTests.Core.Commands
                     s.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { "from doc in docs.Users select new { doc.Name }" },
@@ -193,7 +193,7 @@ namespace SlowTests.Core.Commands
                 index1.Execute(store);
                 index2.Execute(store);
 
-                var indexes = await store.Admin.SendAsync(new GetIndexNamesOperation(0, 10));
+                var indexes = await store.Maintenance.SendAsync(new GetIndexNamesOperation(0, 10));
                 Assert.Equal(2, indexes.Length);
                 Assert.Equal(index1.IndexName, indexes[1]);
                 Assert.Equal(index2.IndexName, indexes[0]);
@@ -219,13 +219,13 @@ namespace SlowTests.Core.Commands
 
                 WaitForIndexing(store);
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(0, stats.StaleIndexes.Length);
 
-                await store.Admin.SendAsync(new StopIndexingOperation());
-                await store.Admin.SendAsync(new ResetIndexOperation(index.IndexName));
+                await store.Maintenance.SendAsync(new StopIndexingOperation());
+                await store.Maintenance.SendAsync(new ResetIndexOperation(index.IndexName));
 
-                stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.StaleIndexes.Length);
                 Assert.Equal(index.IndexName, stats.StaleIndexes[0]);
             }

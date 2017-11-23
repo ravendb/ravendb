@@ -48,7 +48,7 @@ loadToOrders(orderData);
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -82,9 +82,9 @@ loadToOrders(orderData);
                     Disabled = true
                 };
 
-                updateBackupResult = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
+                updateBackupResult = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
 
-                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
                     TopologyDiscoveryUrls = new []{"http://127.0.0.1:8080" },
@@ -106,14 +106,14 @@ loadToOrders(orderData);
                     }
                 };
 
-                addRavenEtlResult = store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
+                addRavenEtlResult = store.Maintenance.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
 
                 sqlConnectionString = new SqlConnectionString
                 {
                     Name = "abc",
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};"
                 };
-                store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
+                store.Maintenance.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
 
 
                 sqlConfiguration = new SqlEtlConfiguration()
@@ -136,7 +136,7 @@ loadToOrders(orderData);
                         }
                     }
                 };
-                addSqlEtlResult = store.Admin.Server.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration, store.Database));
+                addSqlEtlResult = store.Maintenance.Server.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration, store.Database));
             }
 
             using (var store = new DocumentStore
@@ -203,7 +203,7 @@ loadToOrders(orderData);
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -229,7 +229,7 @@ loadToOrders(orderData);
                     Disabled = true
                 };
 
-                updateBackupResult = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
+                updateBackupResult = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
             }
 
             using (var store = new DocumentStore
@@ -244,14 +244,14 @@ loadToOrders(orderData);
             {
                 var taskId = addWatcherRes.TaskId;
                 var op = new ToggleTaskStateOperation(store.Database, taskId, OngoingTaskType.Replication, true);
-                await store.Admin.Server.SendAsync(op);
+                await store.Maintenance.Server.SendAsync(op);
 
                 var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 taskId = updateBackupResult.TaskId;
                 op = new ToggleTaskStateOperation(store.Database, taskId, OngoingTaskType.Backup, false);
-                await store.Admin.Server.SendAsync(op);
+                await store.Maintenance.Server.SendAsync(op);
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
                 Assert.Equal(OngoingTaskState.Enabled, result.TaskState);

@@ -82,7 +82,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 store
-                    .Admin
+                    .Maintenance
                     .Server
                     .Send(new CreateDatabaseOperation(new DatabaseRecord("DB1")
                     {

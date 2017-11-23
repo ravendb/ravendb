@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Indexes
 {
-    public class SetIndexesPriorityOperation : IAdminOperation
+    public class SetIndexesPriorityOperation : IMaintenanceOperation
     {
         private readonly Parameters _parameters;
 

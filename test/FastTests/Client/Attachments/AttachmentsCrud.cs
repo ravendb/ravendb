@@ -341,7 +341,7 @@ namespace FastTests.Client.Attachments
 
         public static void AssertAttachmentCount(DocumentStore store, long uniqueAttachmentCount, long? attachmentCount = null, long documentsCount = 1)
         {
-            var statistics = store.Admin.Send(new GetStatisticsOperation());
+            var statistics = store.Maintenance.Send(new GetStatisticsOperation());
             Assert.Equal(documentsCount, statistics.CountOfDocuments);
             Assert.Equal(0, statistics.CountOfRevisionDocuments);
             Assert.Equal(attachmentCount ?? uniqueAttachmentCount, statistics.CountOfAttachments);

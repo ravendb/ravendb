@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 store
-                    .Admin
+                    .Maintenance
                     .Send(new StopIndexingOperation());
 
                 new People_ByName().Execute(store);

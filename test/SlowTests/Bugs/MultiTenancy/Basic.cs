@@ -22,7 +22,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("Northwind");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                 string userId;
 
@@ -56,7 +56,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("Northwind");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var s = store.OpenSession("Northwind"))
                 {
@@ -83,7 +83,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("Northwind");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var s = store.OpenSession("Northwind"))
                 {
@@ -111,7 +111,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("Northwind");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
                 store.Database = "Northwind";
 
                 string userId;
@@ -141,7 +141,7 @@ namespace SlowTests.Bugs.MultiTenancy
             using (var store = GetDocumentStore())
             {
                 var doc = new DatabaseRecord("Northwind");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                 string userId;
 

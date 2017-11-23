@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
 
                 }.ToIndexDefinition(store.Conventions);
                 indexDefinition.Name = "someIndex";
-                store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
+                store.Maintenance.Send(new PutIndexesOperation(new[] {indexDefinition}));
 
 
                 var prodOne = new Product

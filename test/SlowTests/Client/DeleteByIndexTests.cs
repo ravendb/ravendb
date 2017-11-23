@@ -42,7 +42,7 @@ namespace SlowTests.Client
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
-                var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
+                var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(1, databaseStatistics.CountOfDocuments);
             }
@@ -76,7 +76,7 @@ namespace SlowTests.Client
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
-                var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
+                var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 //TODO - after we have hilo need to be 1
                 Assert.Equal(0, databaseStatistics.CountOfDocuments);

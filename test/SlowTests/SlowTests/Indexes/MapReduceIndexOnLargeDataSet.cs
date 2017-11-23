@@ -17,7 +17,7 @@ namespace SlowTests.SlowTests.Indexes
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Name = "test",
                     Maps = { "from x in docs.Users select new { x.Name, Count = 1}" },
@@ -50,7 +50,7 @@ namespace SlowTests.SlowTests.Indexes
                         }
                         catch (Exception)
                         {
-                            PrintServerErrors(store.Admin.Send(new GetIndexErrorsOperation()));
+                            PrintServerErrors(store.Maintenance.Send(new GetIndexErrorsOperation()));
 
                             var missed = ret.Where(item => item.Count != 200)
                                 .Select(item => "Name: " + item.Name + ". Count: " + item.Count)

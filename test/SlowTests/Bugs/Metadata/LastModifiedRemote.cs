@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Metadata
             DoNotReuseServer();
             using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrl), Database = name }.Initialize())
             {
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
                 DateTime before;
                 DateTime after;
 

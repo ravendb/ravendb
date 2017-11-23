@@ -32,11 +32,11 @@ namespace FastTests.Client.Indexing
                 };
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 var output = await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
                 Assert.True(output.Etag > 0);
@@ -78,24 +78,24 @@ namespace FastTests.Client.Indexing
                 };
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 var output1 = await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
                 Assert.True(output1.Etag > 0);
                 Assert.True(input.Equals(output1, compareIndexEtags: false, ignoreFormatting: false));
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input2 }));
 
                 WaitForIndexing(store);
 
                 var output2 = await store
-                     .Admin
+                     .Maintenance
                      .SendAsync(new GetIndexOperation("Users_ByName"));
 
                 Assert.True(output2.Etag > output1.Etag, $"{output2.Etag} > {output1.Etag}");
@@ -133,36 +133,36 @@ namespace FastTests.Client.Indexing
                 };
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 var output1 = await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
                 Assert.True(output1.Etag > 0);
                 Assert.True(input.Equals(output1, compareIndexEtags: false, ignoreFormatting: false));
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input2 }));
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new StopIndexingOperation());
 
                 await store
-                   .Admin
+                   .Maintenance
                    .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
                 var output2 = await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
                 Assert.True(output2.Etag >= output1.Etag);
@@ -192,20 +192,20 @@ namespace FastTests.Client.Indexing
                 };
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new StopIndexingOperation());
 
                 await store
-                    .Admin
+                    .Maintenance
                     .SendAsync(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
-                var errors = store.Admin.Send(new GetIndexErrorsOperation());
+                var errors = store.Maintenance.Send(new GetIndexErrorsOperation());
 
                 Assert.Equal(0, errors[0].Errors.Length);
             }

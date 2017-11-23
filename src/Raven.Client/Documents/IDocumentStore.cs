@@ -163,7 +163,7 @@ namespace Raven.Client.Documents
 
         RequestExecutor GetRequestExecutor(string database = null);
 
-        AdminOperationExecutor Admin { get; }
+        MaintenanceOperationExecutor Maintenance { get; }
 
         OperationExecutor Operations { get; }
 

@@ -701,7 +701,7 @@ this.Value = another.Value;
                     Script = @"put('    ', { 'Property': 'Value'});",
                 }));
 
-                var stats = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.Equal(3, stats.CountOfDocuments);
             }
@@ -820,7 +820,7 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { @"from doc in docs.CustomTypes 
                             select new { doc.Value }" },
@@ -950,7 +950,7 @@ this.Else = a;
                     await session.SaveChangesAsync();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Maps = { @"from doc in docs.CustomTypes 

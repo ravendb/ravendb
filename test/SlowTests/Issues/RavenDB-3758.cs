@@ -78,16 +78,16 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(1, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 new Orders_All_Changed().Execute(store);
                 new Orders_All_Changed2().Execute(store);
 
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(2, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
-                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
                 var index = indexes.Single(x => x.Name == $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{new Orders_All().IndexName}");
 
                 Assert.Contains("Three-123", index.Maps.First());
@@ -115,16 +115,16 @@ namespace SlowTests.Issues
                 }
                 WaitForIndexing(store);
 
-                Assert.Equal(1, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(1, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 await new Orders_All_Changed().ExecuteAsync(store);
                 await new Orders_All_Changed2().ExecuteAsync(store);
 
-                Assert.Equal(2, store.Admin.Send(new GetStatisticsOperation()).CountOfIndexes);
+                Assert.Equal(2, store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes);
 
-                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
                 var index = indexes.Single(x => x.Name == $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{new Orders_All().IndexName}");
 
                 Assert.Contains("Three-123", index.Maps.First());

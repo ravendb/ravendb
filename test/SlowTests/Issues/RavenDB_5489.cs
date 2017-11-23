@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Equal(IndexState.Normal, store.Admin.Send(new GetStatisticsOperation()).Indexes[0].State);
+                Assert.Equal(IndexState.Normal, store.Maintenance.Send(new GetStatisticsOperation()).Indexes[0].State);
 
                 var database = await GetDatabase(store.Database);
                 var index = database.IndexStore.GetIndex("Users/ByName");
@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var result = SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
+                var result = SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes[0].State == IndexState.Error, TimeSpan.FromSeconds(5));
                 Assert.True(result);
 
                 using (var commands = store.Commands())
@@ -58,10 +58,10 @@ namespace SlowTests.Issues
                     Assert.Contains("Simulated corruption", e.InnerException.Message);
                 }
 
-                result = SpinWait.SpinUntil(() => store.Admin.Send(new GetIndexErrorsOperation())[0].Errors.Length != 0 , TimeSpan.FromSeconds(5));
+                result = SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexErrorsOperation())[0].Errors.Length != 0 , TimeSpan.FromSeconds(5));
                 Assert.True(result);
 
-                var errors = store.Admin.Send(new GetIndexErrorsOperation(new[] { new Users_ByName().IndexName }));
+                var errors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { new Users_ByName().IndexName }));
                 Assert.Equal(1, errors[0].Errors.Length);
                 Assert.Contains("Simulated corruption", errors[0].Errors[0].Error);
             }

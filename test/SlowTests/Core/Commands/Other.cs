@@ -20,7 +20,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var buildNumber = await store.Admin.Server.SendAsync(new GetBuildNumberOperation());
+                var buildNumber = await store.Maintenance.Server.SendAsync(new GetBuildNumberOperation());
 
                 Assert.NotNull(buildNumber);
             }
@@ -31,7 +31,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var databaseStatistics = await store.Admin.SendAsync(new GetStatisticsOperation());
+                var databaseStatistics = await store.Maintenance.SendAsync(new GetStatisticsOperation());
 
                 Assert.NotNull(databaseStatistics);
 
@@ -44,7 +44,7 @@ namespace SlowTests.Core.Commands
         {
             using (var store = GetDocumentStore())
             {
-                var names = await store.Admin.Server.SendAsync(new GetDatabaseNamesOperation(0, 25));
+                var names = await store.Maintenance.Server.SendAsync(new GetDatabaseNamesOperation(0, 25));
                 Assert.Contains(store.Database, names);
             }
         }

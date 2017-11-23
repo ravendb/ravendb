@@ -18,13 +18,13 @@ namespace SlowTests.Issues
                 var dbName1 = $"{store.Database}_1";
                 var dbName2 = $"{store.Database}_2";
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName1)));
-                store.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName2)));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName1)));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName2)));
 
-                Assert.Equal(0, store.Admin.ForDatabase(dbName1).Send(new GetStatisticsOperation()).CountOfDocuments);
-                Assert.Equal(0, store.Admin.ForDatabase(dbName2).Send(new GetStatisticsOperation()).CountOfDocuments);
+                Assert.Equal(0, store.Maintenance.ForDatabase(dbName1).Send(new GetStatisticsOperation()).CountOfDocuments);
+                Assert.Equal(0, store.Maintenance.ForDatabase(dbName2).Send(new GetStatisticsOperation()).CountOfDocuments);
 
-                store.Admin.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(new DeleteDatabasesOperation.Parameters
                 {
                     DatabaseNames = new[] { dbName1, dbName2 },
                     HardDelete = true,
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
 
                 try
                 {
-                    store.Admin.ForDatabase(dbName1).Send(new GetStatisticsOperation());
+                    store.Maintenance.ForDatabase(dbName1).Send(new GetStatisticsOperation());
                 }
                 catch (DatabaseDoesNotExistException)
                 {
@@ -44,7 +44,7 @@ namespace SlowTests.Issues
 
                 try
                 {
-                    store.Admin.ForDatabase(dbName2).Send(new GetStatisticsOperation());
+                    store.Maintenance.ForDatabase(dbName2).Send(new GetStatisticsOperation());
                 }
                 catch (DatabaseDoesNotExistException)
                 {

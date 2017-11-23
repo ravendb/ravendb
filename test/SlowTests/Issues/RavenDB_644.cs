@@ -166,7 +166,7 @@ namespace SlowTests.Issues
                     {
                         var indexDefinition = new Index().CreateIndexDefinition();
                         indexDefinition.Name = "test";
-                        store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                        store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
                        
                     }
                 });
@@ -191,7 +191,7 @@ namespace SlowTests.Issues
                     {
                         var indexDefinition = new FancyIndex().CreateIndexDefinition();
                         indexDefinition.Name = "test";
-                        store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                        store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
                         
                     }
                 });
@@ -207,7 +207,7 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.Admin.Send(new PutIndexesOperation(new[] {
+                        store.Maintenance.Send(new PutIndexesOperation(new[] {
                             new IndexDefinition
                             {
                                 Name = "Index1",
@@ -225,7 +225,7 @@ namespace SlowTests.Issues
                 {
                     using (var store = GetDocumentStore())
                     {
-                        store.Admin.Send(new PutIndexesOperation(new[] {
+                        store.Maintenance.Send(new PutIndexesOperation(new[] {
                             new IndexDefinition
                             {
                                 Name = "Index1",
@@ -250,7 +250,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 index.Name = "test";
-                store.Admin.Send(new PutIndexesOperation(new[] { index}));
+                store.Maintenance.Send(new PutIndexesOperation(new[] { index}));
             }
         }
     }

@@ -81,7 +81,7 @@ namespace SlowTests.Tests.Spatial
                     }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(indexDefinition));
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 
                 // Wait until the index is built
                 session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
@@ -132,7 +132,7 @@ namespace SlowTests.Tests.Spatial
                     }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(indexDefinition));
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 
                 // Wait until the index is built
                 session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")

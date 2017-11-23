@@ -21,14 +21,14 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
 
                 var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Companies" }));
 
                 operation.WaitForCompletion();
 
-                stats = store.Admin.Send(new GetStatisticsOperation());
+                stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
 
                 using (var session = store.OpenSession())

@@ -195,7 +195,7 @@ namespace SlowTests.Issues
                 Active = true,
                 DeleteFrequencyInSec = 100,
             };
-            await store.Admin.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
+            await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
         }
 
         private static void WaitForConflict(IDocumentStore store, string id)

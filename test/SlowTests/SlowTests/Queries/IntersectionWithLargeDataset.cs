@@ -57,7 +57,7 @@ namespace SlowTests.SlowTests.Queries
         {
             using (var s = store.OpenSession())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "TestAttributesByAttributes",

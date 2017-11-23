@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
             using (var store = GetDocumentStore())
             {
                 store.Initialize();
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { @"
 docs.Casinos

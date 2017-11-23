@@ -94,7 +94,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -106,7 +106,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var databaseStatistics = store.Admin.Send(new GetStatisticsOperation());
+                var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(2, databaseStatistics.StaleIndexes.Length);
                 Assert.Contains(companiesIndex.IndexName, databaseStatistics.StaleIndexes);

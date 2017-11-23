@@ -62,8 +62,8 @@ namespace SlowTests.MailingList.spokeypokey
 
                 using (var session = documentStore.OpenSession())
                 {
-                    documentStore.Admin.Send(new DeleteIndexOperation("ProviderSearchIndex1"));
-                    documentStore.Admin.Send(new DeleteIndexOperation("ProviderSearchIndex2"));
+                    documentStore.Maintenance.Send(new DeleteIndexOperation("ProviderSearchIndex1"));
+                    documentStore.Maintenance.Send(new DeleteIndexOperation("ProviderSearchIndex2"));
                     session.Store(provider1);
                     session.Store(provider2);
                     session.Store(provider3);

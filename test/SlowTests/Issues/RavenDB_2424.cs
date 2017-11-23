@@ -19,25 +19,25 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore())
             {
                 const string initialIndexDef = "from doc in docs select new { doc.Date}";
-                Assert.True(store.Admin.Send(new IndexHasChangedOperation(new IndexDefinition
+                Assert.True(store.Maintenance.Send(new IndexHasChangedOperation(new IndexDefinition
                 {
                     Name = "Index1",
                     Maps = { initialIndexDef }
                 })));
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "Index1",
                     Maps = { initialIndexDef }
                 }));
 
-                Assert.False(store.Admin.Send(new IndexHasChangedOperation(new IndexDefinition
+                Assert.False(store.Maintenance.Send(new IndexHasChangedOperation(new IndexDefinition
                 {
                     Name = "Index1",
                     Maps = { initialIndexDef }
                 })));
 
-                Assert.True(store.Admin.Send(new IndexHasChangedOperation(new IndexDefinition
+                Assert.True(store.Maintenance.Send(new IndexHasChangedOperation(new IndexDefinition
                 {
                     Name = "Index1",
                     Maps = { "from doc1 in docs select new { doc1.Date }" }

@@ -77,7 +77,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
 
@@ -108,7 +108,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(5, stats.CountOfDocuments); // 3 docs and 2 HiLo 
 
@@ -133,7 +133,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(4, stats.CountOfDocuments); // 2 docs and 2 HiLo 
 
@@ -182,7 +182,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(3, stats.CountOfDocuments);
 
@@ -215,7 +215,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(3, stats.CountOfDocuments);
                 }
@@ -237,7 +237,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(2, stats.CountOfDocuments);
                 }
@@ -281,7 +281,7 @@ if (this['@metadata']['@collection'] != 'Orders')
 
                 using (var session = dest.OpenSession())
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(2, stats.CountOfDocuments);
 
@@ -308,7 +308,7 @@ if (this['@metadata']['@collection'] != 'Orders')
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(2, stats.CountOfDocuments);
                 }
@@ -329,7 +329,7 @@ if (this['@metadata']['@collection'] != 'Orders')
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 {
-                    var stats = dest.Admin.Send(new GetStatisticsOperation());
+                    var stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                     Assert.Equal(1, stats.CountOfDocuments);
                 }

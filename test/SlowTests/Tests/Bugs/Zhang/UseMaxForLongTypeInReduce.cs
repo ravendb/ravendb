@@ -54,7 +54,7 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "test",

@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
                     commands.Put("test/2", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Name = "test",
@@ -120,7 +120,7 @@ namespace SlowTests.MailingList
                     commands.Put("test/2", null, json, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "ClickAllocations" } });
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {
+                store.Maintenance.Send(new PutIndexesOperation(new[] {
                                                 new IndexDefinition
                                                 {
                                                     Name = "test",

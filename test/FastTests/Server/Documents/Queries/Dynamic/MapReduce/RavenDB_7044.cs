@@ -68,7 +68,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Assert.Equal(2, tasksPerDay[1].TasksPerDate);
                 }
 
-                var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
                 Assert.Equal("Auto/ToDoTasks/ByCountReducedByCompletedAndDueDate", indexDefinitions[0].Name);

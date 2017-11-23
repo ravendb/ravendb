@@ -36,7 +36,7 @@ namespace SlowTests.Bugs.Indexing
 
                 foreach (var expected in new[] { IndexPriority.Normal, IndexPriority.High, IndexPriority.Low })
                 {
-                    store.Admin.Send(new SetIndexesPriorityOperation("FakeIndex", expected));
+                    store.Maintenance.Send(new SetIndexesPriorityOperation("FakeIndex", expected));
 
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
                     var indexInstance = db.IndexStore.GetIndex("FakeIndex");
@@ -65,16 +65,16 @@ namespace SlowTests.Bugs.Indexing
                     session.Query<Person>().Customize(x => x.WaitForNonStaleResults()).Statistics(out statistics).Where(x=>x.Name == "Vasia").ToList();
                 }
                 
-                store.Admin.Send(new SetIndexesPriorityOperation(statistics.IndexName,IndexPriority.Low));
-                var index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
+                store.Maintenance.Send(new SetIndexesPriorityOperation(statistics.IndexName,IndexPriority.Low));
+                var index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexPriority.Low, index.Priority);
 
-                store.Admin.Send(new SetIndexesPriorityOperation(statistics.IndexName, IndexPriority.High));
-                index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
+                store.Maintenance.Send(new SetIndexesPriorityOperation(statistics.IndexName, IndexPriority.High));
+                index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexPriority.High, index.Priority);
 
-                store.Admin.Send(new SetIndexesPriorityOperation(statistics.IndexName, IndexPriority.Normal));
-                index = store.Admin.Send(new GetIndexOperation(statistics.IndexName));
+                store.Maintenance.Send(new SetIndexesPriorityOperation(statistics.IndexName, IndexPriority.Normal));
+                index = store.Maintenance.Send(new GetIndexOperation(statistics.IndexName));
                 Assert.Equal(IndexPriority.Normal, index.Priority);
             }
         }

@@ -19,7 +19,7 @@ namespace SlowTests.Issues
 
                 var dbName = $"get_statistics_for_database_command-{Guid.NewGuid()}";
                 store
-                    .Admin
+                    .Maintenance
                     .Server
                     .Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
 
@@ -32,9 +32,9 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
 
-                    var sysStats = store.Admin.Send(new GetStatisticsOperation());
-                    var dbStats = store.Admin.ForDatabase(dbName).Send(new GetStatisticsOperation());
-                    var dbStats2 = store.Admin.ForDatabase(dbName).ForDatabase(dbName).Send(new GetStatisticsOperation());
+                    var sysStats = store.Maintenance.Send(new GetStatisticsOperation());
+                    var dbStats = store.Maintenance.ForDatabase(dbName).Send(new GetStatisticsOperation());
+                    var dbStats2 = store.Maintenance.ForDatabase(dbName).ForDatabase(dbName).Send(new GetStatisticsOperation());
                     Assert.Equal(dbStats.DatabaseId, dbStats2.DatabaseId);
                     Assert.NotEqual(dbStats2.DatabaseId, sysStats.DatabaseId);
                     Assert.NotEqual(dbStats.DatabaseId, sysStats.DatabaseId);

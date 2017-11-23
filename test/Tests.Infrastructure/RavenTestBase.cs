@@ -162,12 +162,12 @@ namespace FastTests
                                 Certificate = options.AdminCertificate
                             }.Initialize())
                             {
-                                result = adminStore.Admin.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
+                                result = adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
                             }
                         }
                         else
                         {
-                            result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
+                            result = store.Maintenance.Server.Send(new CreateDatabaseOperation(doc, options.ReplicationFactor));
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
@@ -216,12 +216,12 @@ namespace FastTests
                                             Certificate = options.AdminCertificate
                                         }.Initialize())
                                         {
-                                            result = adminStore.Admin.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
+                                            result = adminStore.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                                         }
                                     }
                                     else
                                     {
-                                        result = store.Admin.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
+                                        result = store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, hardDelete));
                                     }
                                 }
                                 catch (DatabaseDoesNotExistException)
@@ -263,7 +263,7 @@ namespace FastTests
 
         public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
         {
-            var admin = store.Admin.ForDatabase(dbName);
+            var admin = store.Maintenance.ForDatabase(dbName);
 
             timeout = timeout ?? (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
@@ -329,7 +329,7 @@ namespace FastTests
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                var indexes = store.Admin.Send(new GetIndexErrorsOperation());
+                var indexes = store.Maintenance.Send(new GetIndexErrorsOperation());
                 foreach (var index in indexes)
                 {
                     if (index.Errors.Any())

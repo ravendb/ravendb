@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "test",
                     Maps = { "from doc in docs select new { doc.Amount }" }

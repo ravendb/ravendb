@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new TagsIndex().CreateIndexDefinition()));
+                store.Maintenance.Send(new PutIndexesOperation(new TagsIndex().CreateIndexDefinition()));
 
                 using (var session = store.OpenSession())
                 {

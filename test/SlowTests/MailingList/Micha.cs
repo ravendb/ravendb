@@ -39,10 +39,10 @@ this.EntityTypeId = this.EntityType;
 delete this.EntityType
 }" }));
 
-                var id = store.Admin.Send(new GetIndexOperation("EntityEntityIdPatch")).Etag;
-                store.Admin.Send(new DeleteIndexOperation("EntityEntityIdPatch"));
+                var id = store.Maintenance.Send(new GetIndexOperation("EntityEntityIdPatch")).Etag;
+                store.Maintenance.Send(new DeleteIndexOperation("EntityEntityIdPatch"));
 
-                Assert.False(store.Admin.Send(new GetStatisticsOperation()).Indexes.Any(x => x.Etag == id));
+                Assert.False(store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Any(x => x.Etag == id));
             }
         }
     }

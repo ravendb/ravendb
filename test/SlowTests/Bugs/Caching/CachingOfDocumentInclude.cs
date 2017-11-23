@@ -223,7 +223,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     s.Store(new User { Name = "Ayende", Email = "same.email@example.com" });
 
-                    store.Admin.Send(new PutIndexesOperation(new[] {
+                    store.Maintenance.Send(new PutIndexesOperation(new[] {
                         new IndexDefinition
                         {
                             Maps = { "from user in docs.Users select new {Email=user.Email}" },
@@ -233,7 +233,7 @@ namespace SlowTests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                var latestEtag1 = store.Admin.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
+                var latestEtag1 = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
 
                 using (var s = store.OpenSession())
                 {
@@ -254,7 +254,7 @@ namespace SlowTests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                var latestEtag2 = store.Admin.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
+                var latestEtag2 = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
 
                 using (var s = store.OpenSession())
                 {

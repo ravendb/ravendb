@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
                 var usersByname = "users/byname";
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition()
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition()
                 {
                     Name = usersByname,
                     Maps =

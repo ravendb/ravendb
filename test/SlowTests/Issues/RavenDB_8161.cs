@@ -19,7 +19,7 @@ namespace SlowTests.Issues
                 Path = path
             }))
             {
-                store.Admin.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation());
 
                 for (int i = 0; i < 3; i++)
                 {
@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var indexStats = store.Admin.Send(new GetIndexesStatisticsOperation());
+                var indexStats = store.Maintenance.Send(new GetIndexesStatisticsOperation());
 
                 foreach (var stats in indexStats)
                 {

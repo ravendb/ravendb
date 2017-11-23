@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
                     {Constants.Documents.Metadata.Collection, "Houses" }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from doc in docs.Houses select new { Rent=doc.ContainsKey(\"Rent\")?doc.Rent:null}" },
 

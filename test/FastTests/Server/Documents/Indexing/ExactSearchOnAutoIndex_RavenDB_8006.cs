@@ -70,7 +70,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 IndexInformation[] indexes = null;
 
-                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Admin.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
+                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
 
                 Assert.Equal(1, indexes.Length);
                 Assert.Equal("Auto/Users/ByExact(Name)AndSearch(LastName)", indexes[0].Name);
@@ -187,7 +187,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 IndexInformation[] indexes = null;
 
-                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Admin.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
+                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
 
                 Assert.Equal(1, indexes.Length);
                 Assert.Equal("Auto/Users/BySearch(Name)AndExact(Name)", indexes[0].Name);
@@ -264,7 +264,7 @@ namespace FastTests.Server.Documents.Indexing
 
                 IndexInformation[] indexes = null;
 
-                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Admin.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
+                Assert.True(SpinWait.SpinUntil(() => (indexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes).Length == 1, 1000));
 
                 Assert.Equal(1, indexes.Length);
                 Assert.Equal("Auto/Users/ByCountReducedByExact(Name)AndSearch(LastName)", indexes[0].Name);

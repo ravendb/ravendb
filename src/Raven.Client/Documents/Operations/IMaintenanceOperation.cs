@@ -4,12 +4,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public interface IAdminOperation<T>
+    public interface IMaintenanceOperation<T>
     {
         RavenCommand<T> GetCommand(DocumentConventions conventions, JsonOperationContext context);
     }
 
-    public interface IAdminOperation
+    public interface IMaintenanceOperation
     {
         RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context);
     }

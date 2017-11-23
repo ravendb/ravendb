@@ -97,7 +97,7 @@ namespace SlowTests.Authentication
             }))
             {
                 var doc = new DatabaseRecord("WhateverDB");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
             }
         }
 
@@ -122,7 +122,7 @@ namespace SlowTests.Authentication
                 var doc = new DatabaseRecord("WhateverDB");
                 Assert.Throws<AuthorizationException>(() =>
                 {
-                    store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
                 });
             }
         }
@@ -152,8 +152,8 @@ namespace SlowTests.Authentication
                     Database = dbName,
                 };
 
-                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
-                var result = store.Admin.Server.Send(new GetConnectionStringsOperation(store.Database));
+                store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
+                var result = store.Maintenance.Server.Send(new GetConnectionStringsOperation(store.Database));
                 Assert.NotNull(result.RavenConnectionStrings);
             }
         }
@@ -185,7 +185,7 @@ namespace SlowTests.Authentication
 
                 Assert.Throws<AuthorizationException>(() =>
                 {
-                    store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
+                    store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
                 });
             }
         }
@@ -224,7 +224,7 @@ namespace SlowTests.Authentication
                 ModifyDatabaseName = s => dbName2
             }))
             {
-                var names = store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 25));
+                var names = store.Maintenance.Server.Send(new GetDatabaseNamesOperation(0, 25));
                 Assert.True(names.Length == 2);
                 Assert.True(names.Contains(dbName));
                 Assert.True(names.Contains(dbName1));

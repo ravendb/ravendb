@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                         Assert.Equal(1000, list.Count);
                     }
 
-                    var stats = store.Admin.Send(new GetStatisticsOperation());
+                    var stats = store.Maintenance.Send(new GetStatisticsOperation());
                     Assert.Equal(1000, stats.CountOfDocuments);
                 }
             }

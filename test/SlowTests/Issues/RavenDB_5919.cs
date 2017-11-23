@@ -49,23 +49,23 @@ namespace SlowTests.Issues
             {
                 new Entity_ById_V1().Execute(documentStore);
 
-                documentStore.Admin.Send(new StopIndexingOperation());
+                documentStore.Maintenance.Send(new StopIndexingOperation());
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                documentStore.Admin.Send(new SetIndexesLockOperation("Entity/ById", IndexLockMode.LockedIgnore));
+                documentStore.Maintenance.Send(new SetIndexesLockOperation("Entity/ById", IndexLockMode.LockedIgnore));
 
-                var index1 = documentStore.Admin.Send(new GetIndexOperation("Entity/ById"));
-                var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+                var index1 = documentStore.Maintenance.Send(new GetIndexOperation("Entity/ById"));
+                var index2 = documentStore.Maintenance.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
 
                 Assert.Equal(IndexLockMode.LockedIgnore, index1.LockMode);
                 Assert.Equal(IndexLockMode.LockedIgnore, index2.LockMode);
 
-                documentStore.Admin.Send(new StartIndexingOperation());
+                documentStore.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(documentStore);
 
-                var stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                var stats = documentStore.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(1, stats.CountOfIndexes);
                 Assert.Equal(IndexLockMode.LockedIgnore, stats.Indexes[0].LockMode);
@@ -80,23 +80,23 @@ namespace SlowTests.Issues
             {
                 new Entity_ById_V1().Execute(documentStore);
 
-                documentStore.Admin.Send(new StopIndexingOperation());
+                documentStore.Maintenance.Send(new StopIndexingOperation());
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                documentStore.Admin.Send(new SetIndexesPriorityOperation("Entity/ById", IndexPriority.High));
+                documentStore.Maintenance.Send(new SetIndexesPriorityOperation("Entity/ById", IndexPriority.High));
 
-                var index1 = documentStore.Admin.Send(new GetIndexOperation("Entity/ById"));
-                var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+                var index1 = documentStore.Maintenance.Send(new GetIndexOperation("Entity/ById"));
+                var index2 = documentStore.Maintenance.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
 
                 Assert.Equal(IndexPriority.High, index1.Priority);
                 Assert.Equal(IndexPriority.High, index2.Priority);
 
-                documentStore.Admin.Send(new StartIndexingOperation());
+                documentStore.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(documentStore);
 
-                var stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                var stats = documentStore.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(1, stats.CountOfIndexes);
                 Assert.Equal(IndexPriority.High, stats.Indexes[0].Priority);
@@ -110,15 +110,15 @@ namespace SlowTests.Issues
             {
                 new Entity_ById_V1().Execute(documentStore);
 
-                documentStore.Admin.Send(new StopIndexingOperation());
+                documentStore.Maintenance.Send(new StopIndexingOperation());
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var index1 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+                var index1 = documentStore.Maintenance.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var index2 = documentStore.Admin.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+                var index2 = documentStore.Maintenance.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
 
                 Assert.Equal(index1.Etag, index2.Etag);
             }
@@ -131,11 +131,11 @@ namespace SlowTests.Issues
             {
                 new Entity_ById_V1().Execute(documentStore);
 
-                documentStore.Admin.Send(new StopIndexingOperation());
+                documentStore.Maintenance.Send(new StopIndexingOperation());
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                var stats = documentStore.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfIndexes);
 
                 using (var commands = documentStore.Commands())
@@ -143,7 +143,7 @@ namespace SlowTests.Issues
                     commands.ExecuteJson($"indexes/replace?name={new Entity_ById_V2().IndexName}", HttpMethod.Post, null);
                 }
 
-                stats = documentStore.Admin.Send(new GetStatisticsOperation());
+                stats = documentStore.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfIndexes);
             }
         }
@@ -159,16 +159,16 @@ namespace SlowTests.Issues
                     Maps = { "from doc in docs select new { doc.Name }" }
                 };
 
-                var result1 = store.Admin.Send(new PutIndexesOperation(definition))[0];
+                var result1 = store.Maintenance.Send(new PutIndexesOperation(definition))[0];
 
                 Assert.Equal(definition.Name, result1.Index);
 
                 definition.LockMode = IndexLockMode.LockedError;
                 definition.Priority = IndexPriority.High;
 
-                store.Admin.Send(new PutIndexesOperation(definition));
+                store.Maintenance.Send(new PutIndexesOperation(definition));
                 
-                var serverDefinition = store.Admin.Send(new GetIndexOperation(definition.Name));
+                var serverDefinition = store.Maintenance.Send(new GetIndexOperation(definition.Name));
                 Assert.Equal(serverDefinition.Priority, definition.Priority);
                 Assert.Equal(serverDefinition.LockMode, definition.LockMode);
             }

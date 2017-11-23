@@ -21,20 +21,20 @@ namespace SlowTests.Issues
                 };
                 index.Execute(store);
 
-                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.Unlock));
-                var indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
+                store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.Unlock));
+                var indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.Unlock, indexDefinition.LockMode);
 
-                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedError));
-                indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
+                store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedError));
+                indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedError, indexDefinition.LockMode);
 
-                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
-                indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
+                store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
+                indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode);
 
-                store.Admin.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
-                indexDefinition = store.Admin.Send(new GetIndexOperation("IndexEmployee"));
+                store.Maintenance.Send(new SetIndexesLockOperation("IndexEmployee", IndexLockMode.LockedIgnore));
+                indexDefinition = store.Maintenance.Send(new GetIndexOperation("IndexEmployee"));
                 Assert.Equal(IndexLockMode.LockedIgnore, indexDefinition.LockMode);
             }
         }

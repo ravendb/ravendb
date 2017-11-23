@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Tests.Infrastructure
 {
-    public class CreateSampleDataOperation : IAdminOperation
+    public class CreateSampleDataOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {

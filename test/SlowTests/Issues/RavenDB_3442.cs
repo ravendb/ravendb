@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                         .ToList();
                 }
 
-                var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
+                var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10));
                 var index = indexes.Single(x => x.Name.StartsWith("Auto/"));
 
                 Assert.Equal(1, index.Fields.Count);

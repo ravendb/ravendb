@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
-    public class PutClientConfigurationOperation : IAdminOperation
+    public class PutClientConfigurationOperation : IMaintenanceOperation
     {
         private readonly ClientConfiguration _configuration;
 

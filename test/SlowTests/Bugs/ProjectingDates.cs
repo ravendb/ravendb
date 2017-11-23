@@ -27,7 +27,7 @@ namespace SlowTests.Bugs
                         select new {reg.RegisteredAt},
                     Stores = {{x => x.RegisteredAt, FieldStorage.Yes}}
                 }.ToIndexDefinition(new DocumentConventions());
-                store.Admin.Send(new PutIndexesOperation( index ));
+                store.Maintenance.Send(new PutIndexesOperation( index ));
                
                 using(var session = store.OpenSession())
                 {

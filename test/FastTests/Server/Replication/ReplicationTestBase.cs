@@ -172,7 +172,7 @@ namespace FastTests.Server.Replication
             ExternalReplication watcher,
             string[] urls = null)
         {
-            await store.Admin.Server.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            await store.Maintenance.Server.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Name = watcher.ConnectionStringName,
                 Database = watcher.Database,
@@ -180,7 +180,7 @@ namespace FastTests.Server.Replication
             }, store.Database));
 
             var op = new UpdateExternalReplicationOperation(store.Database, watcher);
-            return await store.Admin.Server.SendAsync(op);
+            return await store.Maintenance.Server.SendAsync(op);
         }
 
         protected static async Task<ModifyOngoingTaskResult> DeleteOngoingTask(
@@ -189,7 +189,7 @@ namespace FastTests.Server.Replication
             OngoingTaskType taskType)
         {
             var op = new DeleteOngoingTaskOperation(store.Database, taskId, taskType);
-            return await store.Admin.Server.SendAsync(op);
+            return await store.Maintenance.Server.SendAsync(op);
         }
 
         protected static async Task<OngoingTask> GetTaskInfo(
@@ -197,13 +197,13 @@ namespace FastTests.Server.Replication
             long taskId, OngoingTaskType type)
         {
             var op = new GetOngoingTaskInfoOperation(store.Database, taskId, type);
-            return await store.Admin.Server.SendAsync(op);
+            return await store.Maintenance.Server.SendAsync(op);
         }
 
         protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
             var op = new ModifyConflictSolverOperation(store.Database, collectionByScript, resolveToLatest);
-            return await store.Admin.Server.SendAsync(op);
+            return await store.Maintenance.Server.SendAsync(op);
         }
 
         public async Task<List<ModifyOngoingTaskResult>> SetupReplicationAsync(DocumentStore fromStore, params DocumentStore[] toStores)

@@ -37,7 +37,7 @@ namespace SlowTests.Tests.Indexes
                 var index = new Users_ByName();
                 index.Execute(store);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {

@@ -160,7 +160,7 @@ namespace SlowTests.Server.Documents.ETL
                 var notifications = new AsyncQueue<DynamicJsonValue>();
                 using (database.NotificationCenter.TrackActions(notifications, null))
                 {
-                    store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
+                    store.Maintenance.Server.Send(new AddEtlOperation<RavenConnectionString>(new RavenEtlConfiguration()
                     {
                         ConnectionStringName = "test",
                         Name = "myEtl",

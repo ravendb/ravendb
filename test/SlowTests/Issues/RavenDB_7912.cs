@@ -33,12 +33,12 @@ namespace SlowTests.Issues
                 {
                     leaderStore.Initialize();
 
-                    var stats = leaderStore.Admin.Send(new GetStatisticsOperation());
+                    var stats = leaderStore.Maintenance.Send(new GetStatisticsOperation());
                     Assert.NotNull(stats);
 
                     DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
 
-                    leaderStore.Admin.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true));
+                    leaderStore.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true));
 
                     var url = Servers[1].WebUrl;
                     var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
                 {
                     try
                     {
-                        store.Admin.Send(new GetStatisticsOperation());
+                        store.Maintenance.Send(new GetStatisticsOperation());
                     }
                     catch (DatabaseDoesNotExistException)
                     {

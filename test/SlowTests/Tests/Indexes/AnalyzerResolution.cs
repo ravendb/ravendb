@@ -21,7 +21,7 @@ namespace SlowTests.Tests.Indexes
                     Analyzers = { { x => x.Id, "SimpleAnalyzer" } }
                 }.ToIndexDefinition(store.Conventions);
                 indexDefinition.Name = "test";
-                store.Admin.Send(new PutIndexesOperation(new[] { indexDefinition }));
+                store.Maintenance.Send(new PutIndexesOperation(new[] { indexDefinition }));
 
             }
         }

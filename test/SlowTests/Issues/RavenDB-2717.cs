@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 var usersByNameIndex = new Users_ByName();
                 usersByNameIndex.Execute(store);

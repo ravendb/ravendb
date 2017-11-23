@@ -26,7 +26,7 @@ namespace SlowTests.Tests.Spatial
                     }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(indexDefinition));
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 
                 using (var commands = store.Commands())
                 {
@@ -71,7 +71,7 @@ namespace SlowTests.Tests.Spatial
                     }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(indexDefinition));
+                store.Maintenance.Send(new PutIndexesOperation(indexDefinition));
 
                 using (var commands = store.Commands())
                 {

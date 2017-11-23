@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
         {
             using (var ds = GetDocumentStore())
             {
-                ds.Admin.Send(new PutIndexesOperation(new[] {
+                ds.Maintenance.Send(new PutIndexesOperation(new[] {
                     new IndexDefinition
                     {
                         Name = "TagsCount",

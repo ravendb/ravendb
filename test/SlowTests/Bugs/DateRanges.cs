@@ -31,7 +31,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition{ Maps = {"from doc in docs select new { doc.Date}"},
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition{ Maps = {"from doc in docs select new { doc.Date}"},
                     Name = "Date"}}));
 
                 using (var session = store.OpenSession())
@@ -61,7 +61,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition { Maps = {"from doc in docs select new { doc.Date}"},
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition { Maps = {"from doc in docs select new { doc.Date}"},
                     Name = "Date"}}));
 
                 using (var session = store.OpenSession())
@@ -91,7 +91,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition { Maps = { "from doc in docs select new { doc.Date}" } ,
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition { Maps = { "from doc in docs select new { doc.Date}" } ,
                     Name = "Date"}}));
 
                 using (var session = store.OpenSession())

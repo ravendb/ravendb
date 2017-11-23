@@ -16,7 +16,7 @@ namespace SlowTests
         {
             var index = new CameraCostIndex();
 
-            store.Admin.Send(new PutIndexesOperation(new[] { index.CreateIndexDefinition() }));
+            store.Maintenance.Send(new PutIndexesOperation(new[] { index.CreateIndexDefinition() }));
         }
 
         public class CameraCostIndex : AbstractIndexCreationTask

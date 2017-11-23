@@ -45,7 +45,7 @@ namespace RachisTests.DatabaseCluster
                         "B"
                     }
                 };
-                var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                 Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
 
                 using (var session = store.OpenAsyncSession())
@@ -90,7 +90,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
             }
             Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
             foreach (var server in Servers)
@@ -159,7 +159,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -185,7 +185,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     var dbName = $"Watcher{i}";
                     doc = new DatabaseRecord(dbName);
-                    var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                    var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                     watcherUrls.Add(dbName,res.NodesAddedTo.ToArray());
                     var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
@@ -266,7 +266,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -292,7 +292,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     var dbName = $"Watcher{i}";
                     doc = new DatabaseRecord(dbName);
-                    var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                    var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                     var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
@@ -344,7 +344,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -368,7 +368,7 @@ namespace RachisTests.DatabaseCluster
 
 
                 doc = new DatabaseRecord("Watcher");
-                var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                 watcherUrls = res.NodesAddedTo.ToArray();
                 watcherNode = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                 await watcherNode.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
@@ -416,7 +416,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord("Watcher2");
-                var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                 watcherNode = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                 await watcherNode.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await watcherNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher2");
@@ -493,7 +493,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 var topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
 
@@ -562,7 +562,7 @@ namespace RachisTests.DatabaseCluster
                 }
             }.Initialize())
             {
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
                 foreach (var server in Servers)

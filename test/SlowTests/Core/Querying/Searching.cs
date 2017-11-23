@@ -32,7 +32,7 @@ namespace SlowTests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title }" },
                     Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Search } } },
@@ -87,7 +87,7 @@ namespace SlowTests.Core.Querying
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title, post.Desc }" },
                     Fields =

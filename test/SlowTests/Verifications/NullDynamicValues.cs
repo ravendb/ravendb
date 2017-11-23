@@ -48,7 +48,7 @@ namespace SlowTests.Verifications
                     }
                 };
 
-                store.Admin.Send(new PutIndexesOperation(transformerDefinition));
+                store.Maintenance.Send(new PutIndexesOperation(transformerDefinition));
 
                 WaitForIndexing(store);
 

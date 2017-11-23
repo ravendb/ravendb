@@ -18,8 +18,8 @@ namespace SlowTests.Server.Documents.ETL
     {
         protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
-            src.Admin.Server.Send(new PutConnectionStringOperation<T>(connectionString, src.Database));
-            return src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
+            src.Maintenance.Server.Send(new PutConnectionStringOperation<T>(connectionString, src.Database));
+            return src.Maintenance.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
         }
 
         protected static AddEtlOperationResult AddEtl(DocumentStore src, DocumentStore dst, string collection, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null)

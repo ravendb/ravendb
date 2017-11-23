@@ -26,11 +26,11 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put("companies/1", null, new { Name = "HR" }, null);
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
-                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
                     WaitForIndexing(store);
-                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+                    Assert.Equal(1, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
                     //{
@@ -41,9 +41,9 @@ namespace SlowTests.Issues
                     //    }
                     //});
 
-                    SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes.Length == 2);
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                    SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length == 2);
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
                 }
             }
         }
@@ -56,11 +56,11 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put("companies/1", null, new { Name = "HR" }, null);
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
-                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName, Maps = { "from doc in docs let x = 0 select new { Total = 3/x };" } }}));
                     WaitForIndexing(store);
-                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+                    Assert.Equal(1, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
                     //{
@@ -71,9 +71,9 @@ namespace SlowTests.Issues
                     //    }
                     //});
 
-                    SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes.Length == 2);
-                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                    SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length == 2);
+                    Assert.Equal(1, store.Maintenance.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
                 }
             }
         }
@@ -86,12 +86,12 @@ namespace SlowTests.Issues
                 using (var commands = store.Commands())
                 {
                     commands.Put("companies/1", null, new { Name = "HR" }, null);
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
-                    store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName,
+                    store.Maintenance.Send(new PutIndexesOperation(new[] { new IndexDefinition { Name = IndexName,
                         Maps = { "from doc in docs select new { Total = 3/1 };" }} }));
                     WaitForIndexing(store);
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { IndexName }))[0].Errors.Length);
 
                     //store.DatabaseCommands.PutSideBySideIndexes(new[]
                     //{
@@ -102,9 +102,9 @@ namespace SlowTests.Issues
                     //    }
                     //});
 
-                    SpinWait.SpinUntil(() => store.Admin.Send(new GetStatisticsOperation()).Indexes.Length == 2);
-                    Assert.Equal(1, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
-                    Assert.Equal(0, store.Admin.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
+                    SpinWait.SpinUntil(() => store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length == 2);
+                    Assert.Equal(1, store.Maintenance.Send(new GetIndexErrorsOperation()).Where(x => x.Name == IndexName).Sum(x => x.Errors.Length));
+                    Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation()).Where(x => x.Name != IndexName).Sum(x => x.Errors.Length));
                 }
             }
         }

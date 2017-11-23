@@ -22,7 +22,7 @@ namespace SlowTests.Issues
             {
                 var doc = new DatabaseRecord(name);
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc));
+                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
                 try
                 {
@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                 }
                 finally
                 {
-                    store.Admin.Server.Send(new DeleteDatabasesOperation(name, true));
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, true));
                 }
             }
         }

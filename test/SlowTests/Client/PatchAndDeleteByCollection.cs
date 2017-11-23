@@ -27,7 +27,7 @@ namespace SlowTests.Client
                 var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM users" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(0, stats.CountOfDocuments);
             }
@@ -50,7 +50,7 @@ namespace SlowTests.Client
                 var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users UPDATE { this.Name = id(this); }" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(100, stats.CountOfDocuments);
                 using (var x = store.OpenSession())

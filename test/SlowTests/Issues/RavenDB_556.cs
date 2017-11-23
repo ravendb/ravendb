@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     var oldIndexes = session
                         .Advanced
                         .DocumentStore
-                        .Admin
+                        .Maintenance
                         .Send(new GetIndexNamesOperation(0, 100));
 
                     session.Query<Person>()
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                     var newIndexes = session
                         .Advanced
                         .DocumentStore
-                        .Admin
+                        .Maintenance
                         .Send(new GetIndexNamesOperation(0, 100));
 
                     var newIndex = newIndexes.Except(oldIndexes).Single();

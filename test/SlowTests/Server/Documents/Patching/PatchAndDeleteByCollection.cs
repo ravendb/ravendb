@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.Patching
                 var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM users" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.Equal(0, stats.CountOfDocuments);
             }
         }
@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents.Patching
                 var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users UPDATE { this.Name = id(this) } " }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
-                var stats = store.Admin.Send(new GetStatisticsOperation());
+                var stats = store.Maintenance.Send(new GetStatisticsOperation());
                 Assert.True(stats.LastDocEtag >= 2 * count);
                 Assert.Equal(count, stats.CountOfDocuments);
 

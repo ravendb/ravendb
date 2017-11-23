@@ -22,8 +22,8 @@ namespace SlowTests.Server.Documents.Replication
             CreateSampleDatabase(out store2);
 
             await SetupReplicationAsync(store1, store2);
-            Assert.Equal(1, WaitForValue(() => store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation()).Incoming.Length, 1));
-            var stats = store2.Admin.Send(new GetReplicationPerformanceStatisticsOperation());
+            Assert.Equal(1, WaitForValue(() => store2.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation()).Incoming.Length, 1));
+            var stats = store2.Maintenance.Send(new GetReplicationPerformanceStatisticsOperation());
             var errors = stats.Incoming
                 .SelectMany(x => x.Performance.Where(y => y.Errors != null).SelectMany(z => z.Errors)).ToList();
             Assert.Empty(errors);
@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents.Replication
 
         public void CallCreateSampleDatabaseEndpoint(DocumentStore store)
         {
-            store.Admin.Send(new CreateSampleDataOperation());
+            store.Maintenance.Send(new CreateSampleDataOperation());
         }
     }
 }

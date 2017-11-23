@@ -41,7 +41,7 @@ namespace SlowTests.Server.Replication
                 var doc = new DatabaseRecord(databaseName);
 
                 //since we have only Raft clusters, it is enough to create database only on one server
-                var databaseResult = master.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));
+                var databaseResult = master.Maintenance.Server.Send(new CreateDatabaseOperation(doc, 2));
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
 
                 var requestExecutor = master.GetRequestExecutor();
@@ -66,7 +66,7 @@ namespace SlowTests.Server.Replication
                     Assert.Equal("Shalom", user2.Name);
                 }
 
-                var result = master.Admin.Server.Send(new ToggleDatabasesStateOperation(master.Database, true));
+                var result = master.Maintenance.Server.Send(new ToggleDatabasesStateOperation(master.Database, true));
 
                 Assert.True(result.Success);
                 Assert.True(result.Disabled);
@@ -91,7 +91,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 //now we enable all databases, so it should propagate as well and make them available for requests
-                result = master.Admin.Server.Send(new ToggleDatabasesStateOperation(master.Database, false));
+                result = master.Maintenance.Server.Send(new ToggleDatabasesStateOperation(master.Database, false));
                 
                 Assert.True(result.Success);
                 Assert.False(result.Disabled);

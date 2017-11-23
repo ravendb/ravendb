@@ -39,11 +39,11 @@ namespace SlowTests.Issues
 
                 Assert.True(
                     SpinWait.SpinUntil(() =>
-                            store.Admin.Send(new GetStatisticsOperation()).Indexes.Count(x => x.Name.StartsWith("Auto/")) == 1,
+                            store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Count(x => x.Name.StartsWith("Auto/")) == 1,
                         1000)
                 );
 
-                var autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                var autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
                 Assert.Equal(1, autoIndexes.Count);
                 Assert.Equal("Auto/People/ByAddressIdAndName", autoIndexes[0].Name);
@@ -60,17 +60,17 @@ namespace SlowTests.Issues
                     session.Query<Person>().Where(x => x.Name == "a").ToList();
                 }
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "People/ByName",
                     Maps = { "from doc in docs.People select new { doc.Name, doc.AddressId }" }
                 }));
 
-                var autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                var autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
                 Assert.Equal(1, autoIndexes.Count);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
                 {
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.IndexStore.RunIdleOperations();
 
-                autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
                 Assert.Equal(1, autoIndexes.Count);
             }
@@ -93,24 +93,24 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "People/ByName",
                     Maps = { "from doc in docs.People select new { doc.Name }" }
                 }));
 
-                store.Admin.Send(new PutIndexesOperation(new IndexDefinition
+                store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
                 {
                     Name = "People/ByName2",
                     Maps = { "from doc in docs.People select new { doc.Name, doc.AddressId }" }
                 }));
 
-                var indexCount = store.Admin.Send(new GetStatisticsOperation()).Indexes.Length;
+                var indexCount = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length;
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.IndexStore.RunIdleOperations();
 
-                Assert.Equal(indexCount, store.Admin.Send(new GetStatisticsOperation()).Indexes.Length);
+                Assert.Equal(indexCount, store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Length);
             }
         }
 
@@ -126,14 +126,14 @@ namespace SlowTests.Issues
                     session.Query<User>().Where(x => x.Name == "a").ToList();
                 }
 
-                var autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                var autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
                 Assert.Equal(2, autoIndexes.Count);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 database.IndexStore.RunIdleOperations();
 
-                autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
                 Assert.Equal(2, autoIndexes.Count);
             }
@@ -160,11 +160,11 @@ namespace SlowTests.Issues
                         .Where(x => x.Name == "John" && x.LastName == "Doe" && x.Age > 10).ToList();
                 }
 
-                var autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                var autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
                 for (int i = 0; i < 50 && autoIndexes.Count != 1; i++)
                 {
                     Thread.Sleep(10);
-                    autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
+                    autoIndexes = store.Maintenance.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
                 }
 

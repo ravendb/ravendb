@@ -79,16 +79,16 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
+                var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.False(stats.IsStale);
 
-                store.Admin.Send(new StopIndexingOperation());
+                store.Maintenance.Send(new StopIndexingOperation());
 
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.False(stats.IsStale);
 
                 using (var session = store.OpenSession())
@@ -99,18 +99,18 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.True(stats.IsStale);
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.True(stats.IsStale);
 
-                store.Admin.Send(new StartIndexingOperation());
+                store.Maintenance.Send(new StartIndexingOperation());
 
                 WaitForIndexing(store);
 
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index1.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index1.IndexName));
                 Assert.False(stats.IsStale);
-                stats = store.Admin.Send(new GetIndexStatisticsOperation(index2.IndexName));
+                stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index2.IndexName));
                 Assert.False(stats.IsStale);
             }
         }
