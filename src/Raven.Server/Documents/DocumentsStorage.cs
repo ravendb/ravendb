@@ -557,6 +557,37 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids,string collection, int start, int take, Reference<int> totalCount)
+        {
+            foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
+            {
+                if (collection == Client.Constants.Documents.Collections.AllDocumentsCollection)
+                {
+                    yield return doc;
+                    continue;
+                }
+
+                if (doc.TryGetMetadata(out var metadata) == false)
+                {
+                    totalCount.Value--;
+                    continue;
+                }
+                if (metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string c) == false)
+                {
+                    totalCount.Value--;
+                    continue;
+                }
+                if (string.Equals(c, collection, StringComparison.Ordinal) == false)
+                {                    
+                    totalCount.Value--;
+                    continue;
+                }
+
+                yield return doc;
+
+            }
+        }
+
         public IEnumerable<Document> GetDocumentsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
