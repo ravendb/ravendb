@@ -129,6 +129,8 @@ namespace Raven.Server.Commercial
 
         public bool HasSqlEtl => GetValue<bool>("sqlEtl");
 
+        public bool HasSnmpMonitoring => GetValue<bool>("snmp");
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

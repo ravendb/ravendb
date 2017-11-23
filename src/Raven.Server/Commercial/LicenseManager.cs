@@ -1322,6 +1322,20 @@ namespace Raven.Server.Commercial
             return true;
         }
 
+        public bool CanUseSnmpMonitoring()
+        {
+            if (IsValid(out var _) == false)
+                return false;
+
+            if (_licenseStatus.HasSnmpMonitoring)
+                return true;
+
+            const string details = "Your current license doesn't include " +
+                                   "the SNMP monitoring feature";
+            GenerateLicenseLimit(LimitType.Snmp, details, addNotification: true);
+            return false;
+        }
+
         public bool CanDynamicallyDistributeNodes(out LicenseLimit licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)

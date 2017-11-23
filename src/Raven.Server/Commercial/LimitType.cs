@@ -15,6 +15,7 @@
         SqlEtl,
         Cores,
         Memory,
-        Downgrade
+        Downgrade,
+        Snmp
     }
 }

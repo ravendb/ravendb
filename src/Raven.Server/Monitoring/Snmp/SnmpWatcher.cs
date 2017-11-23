@@ -47,7 +47,8 @@ namespace Raven.Server.Monitoring.Snmp
             if (_server.Configuration.Monitoring.Snmp.Enabled == false)
                 return;
 
-            // validate license here
+            if (_server.ServerStore.LicenseManager.CanUseSnmpMonitoring() == false)
+                return;
 
             _objectStore = CreateStore(_server);
 
