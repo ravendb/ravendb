@@ -79,6 +79,9 @@ namespace Raven.Client.Documents.Session
         
         private void RegisterMissingProperties(object o, string id, object value)
         {
+            if (_session.Conventions.PreserveDocumentPropertiesNotFoundOnModel == false)
+                return;
+            
             if (MissingDictionary.TryGetValue(o, out var dictionary) == false)
             {
                 MissingDictionary[o] = dictionary = new Dictionary<object, object>();

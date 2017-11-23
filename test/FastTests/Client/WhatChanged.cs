@@ -33,11 +33,17 @@ namespace FastTests.Client
                 }
             }
         }
-
+        
         [Fact]
         public void What_Changed_Removed_Field()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = documentStore =>
+                {
+                    documentStore.Conventions.PreserveDocumentPropertiesNotFoundOnModel = false;
+                } 
+            }))
             {
                 using (var newSession = store.OpenSession())
                 {
@@ -66,7 +72,13 @@ namespace FastTests.Client
         [Fact]
         public void What_Changed_Change_Field()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = documentStore =>
+                {
+                    documentStore.Conventions.PreserveDocumentPropertiesNotFoundOnModel = false;
+                } 
+            }))
             {
                 using (var newSession = store.OpenSession())
                 {
