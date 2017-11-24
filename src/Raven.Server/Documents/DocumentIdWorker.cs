@@ -148,22 +148,22 @@ namespace Raven.Server.Documents
             _jsonParserState.Reset();
 
             int strLength = str.Length;
+            int maxStrSize = Encoding.GetMaxByteCount(strLength);
 
             int idSize = JsonParserState.VariableSizeIntSize(strLength);
 
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
-            var scope = context.Allocator.Allocate(strLength // lower key
+            var scope = context.Allocator.Allocate(maxStrSize // lower key
                                        + idSize // the size of var int for the len of the key
-                                       + strLength // actual key
+                                       + maxStrSize // actual key
                                        + escapePositionsSize, out ByteString buffer);
 
 
             byte* ptr = buffer.Ptr;
             fixed (char* pChars = str)
             {
-                int size = Encoding.GetMaxByteCount(strLength);
-                var strSize = Encoding.GetBytes(pChars, strLength, ptr, size);
+                var strSize = Encoding.GetBytes(pChars, strLength, ptr, maxStrSize);
                 _jsonParserState.FindEscapePositionsIn(ptr, strSize, escapePositionsSize);
             }
 
@@ -183,20 +183,21 @@ namespace Raven.Server.Documents
                 }
 
 
-                ptr[i + idSize + strLength] = (byte)ch;
+                ptr[i + idSize + maxStrSize] = (byte)ch;
             }
 
-            var writePos = ptr + strLength;
+            var writePos = ptr + maxStrSize;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
             escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
             idSize = escapePositionsSize + strLength + idSize;
 
-            Slice.External(context.Allocator, ptr + strLength, idSize, out idSlice);
+            Slice.External(context.Allocator, ptr + maxStrSize, idSize, out idSlice);
             Slice.External(context.Allocator, ptr, str.Length, out lowerIdSlice);
             return scope;
 
             UnlikelyUnicode:
+            scope.Dispose();
             return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice);
         }
 
