@@ -690,11 +690,11 @@ namespace Raven.Database.FileSystem.Synchronization
                 }
             }
 
-            Queue.SynchronizationFinished(work, destinationUrl);
-
             if (synchronizationCancelled == false)
                 CreateSyncingConfiguration(fileName, work.FileETag, destinationUrl, work.SynchronizationType);
 
+            Queue.SynchronizationFinished(work, destinationUrl);
+            
             publisher.Publish(new SynchronizationUpdateNotification
             {
                 FileName = work.FileName,
