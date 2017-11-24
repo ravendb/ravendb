@@ -294,7 +294,7 @@ namespace Raven.Database.Config
             FileSystem.DataDir = new StringSetting(settings[Constants.FileSystem.DataDirectory], @"~\FileSystems");
             FileSystem.DefaultStorageTypeName = new StringSetting(settings[Constants.FileSystem.Storage], string.Empty);
             FileSystem.PreventSchemaUpdate = new BooleanSetting(settings[Constants.FileSystem.PreventSchemaUpdate], false);
-            FileSystem.DisableRDC = new BooleanSetting(settings[Constants.FileSystem.DisableRDC], false); // TODO arek - for testing only
+            FileSystem.DisableRDC = new BooleanSetting(settings[Constants.FileSystem.DisableRDC], false);
 
             Studio.AllowNonAdminUsersToSetupPeriodicExport = new BooleanSetting(settings[Constants.AllowNonAdminUsersToSetupPeriodicExport], false);
 
