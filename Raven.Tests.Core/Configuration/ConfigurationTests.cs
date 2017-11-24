@@ -331,6 +331,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Cluster.MaxLogLengthBeforeCompaction.Value, actual => actual.Cluster.MaxLogLengthBeforeCompaction);
             configurationComparer.Assert(expected => expected.TempPath.Value, actual => actual.TempPath);
             configurationComparer.Assert(expected => expected.Cluster.MaxReplicationLatency.Value, actual => actual.Cluster.MaxReplicationLatency);
+            configurationComparer.Assert(expected => expected.FileSystem.DisableRDC.Value, actual => actual.FileSystem.DisableRDC);
 
             configurationComparer.Ignore(x => x.Storage.Esent.JournalsStoragePath);
             configurationComparer.Ignore(x => x.Storage.Voron.JournalsStoragePath);
