@@ -475,7 +475,11 @@ namespace Raven.Database.FileSystem
                 ActiveSyncs = SynchronizationTask.Queue.Active.ToList(),
                 PendingSyncs = SynchronizationTask.Queue.Pending.ToList(),
             };
-            Storage.Batch(accessor => { fsStats.FileCount = accessor.GetFileCount(); });
+            Storage.Batch(accessor =>
+            {
+                fsStats.FileCount = accessor.GetFileCount();
+                fsStats.LastFileEtag = accessor.GetLastEtag();
+            });
             return fsStats;
         }
 

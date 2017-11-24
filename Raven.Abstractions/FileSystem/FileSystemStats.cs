@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Abstractions.Data;
 
 namespace Raven.Abstractions.FileSystem
 {
@@ -18,5 +19,7 @@ namespace Raven.Abstractions.FileSystem
         public IList<SynchronizationDetails> ActiveSyncs { get; set; }
 
         public IList<SynchronizationDetails> PendingSyncs { get; set; }
+
+        public Etag LastFileEtag { get; set; }
     }
 }
