@@ -15,9 +15,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         
         public readonly Dictionary<string, AutoIndexField> MapAndGroupByFields;
 
+        public readonly AutoIndexField[] OrderedGroupByFields;
+
         public AutoMapReduceIndexDefinition(string collection, AutoIndexField[] mapFields, AutoIndexField[] groupByFields)
             : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), collection, mapFields)
         {
+            OrderedGroupByFields = groupByFields.OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
+
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
             
             MapAndGroupByFields = new Dictionary<string, AutoIndexField>(MapFields.Count + GroupByFields.Count);

@@ -94,31 +94,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 DynamicJsonValue singleResult = null;
 
-                foreach (var groupByField in Definition.GroupByFields)
+                foreach (var groupByField in Definition.OrderedGroupByFields)
                 {
-                    BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, groupByField.Key, out object result);
+                    BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, groupByField.Name, out object result);
 
                     if (_isFanout == false)
                     {
                         if (singleResult == null)
                             singleResult = new DynamicJsonValue();
 
-                        singleResult[groupByField.Key] = result;
+                        singleResult[groupByField.Name] = result;
                         _reduceKeyProcessor.Process(indexContext.Allocator, result);
                     }
                     else
                     {
-                        if (result is IEnumerable array && groupByField.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues)
+                        if (result is IEnumerable array && groupByField.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues)
                         {
                             // fanout
                             foreach (var item in array)
                             {
-                                _output.AddGroupByValue(groupByField.Key, item);
+                                _output.AddGroupByValue(groupByField.Name, item);
                             }
                         }
                         else
                         {
-                            _output.AddGroupByValue(groupByField.Key, result);
+                            _output.AddGroupByValue(groupByField.Name, result);
                         }
                     }
                 }
