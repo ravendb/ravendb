@@ -130,16 +130,16 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Executes the index creation.
         /// </summary>
-        void ExecuteIndex(AbstractIndexCreationTask task);
+        void ExecuteIndex(AbstractIndexCreationTask task, string database = null);
 
-        void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks);
+        void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks, string database = null);
 
         /// <summary>
         /// Executes the index creation.
         /// </summary>
-        Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken));
+        Task ExecuteIndexAsync(AbstractIndexCreationTask task, string database = null, CancellationToken token = default(CancellationToken));
 
-        Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken));
+        Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Gets the conventions.

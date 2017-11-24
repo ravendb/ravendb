@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Indexes
         private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
         private readonly StringBuilder _out = new StringBuilder();
-        private readonly DocumentConventions _convention;
+        private readonly DocumentConventions _conventions;
         private readonly Type _queryRoot;
         private readonly string _queryRootName;
         private readonly bool _translateIdentityProperty;
@@ -38,10 +38,10 @@ namespace Raven.Client.Documents.Indexes
         private bool _castLambdas;
 
         // Methods
-        private ExpressionStringBuilder(DocumentConventions convention, bool translateIdentityProperty, Type queryRoot,
+        private ExpressionStringBuilder(DocumentConventions conventions, bool translateIdentityProperty, Type queryRoot,
                                         string queryRootName)
         {
-            _convention = convention;
+            _conventions = conventions;
             _translateIdentityProperty = translateIdentityProperty;
             _queryRoot = queryRoot;
             _queryRootName = queryRootName;
@@ -88,10 +88,10 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         ///   Convert the expression to a string
         /// </summary>
-        public static string ExpressionToString(DocumentConventions convention, bool translateIdentityProperty, Type queryRoot,
+        public static string ExpressionToString(DocumentConventions conventions, bool translateIdentityProperty, Type queryRoot,
                                                 string queryRootName, Expression node)
         {
-            var builder = new ExpressionStringBuilder(convention, translateIdentityProperty, queryRoot, queryRootName);
+            var builder = new ExpressionStringBuilder(conventions, translateIdentityProperty, queryRoot, queryRootName);
             builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
             return builder.ToString();
         }
@@ -182,7 +182,7 @@ namespace Raven.Client.Documents.Indexes
             if (_translateIdentityProperty == false)
                 return false;
 
-            if (_convention.GetIdentityProperty(member.DeclaringType) != member)
+            if (_conventions.GetIdentityProperty(member.DeclaringType) != member)
                 return false;
 
             // only translate from the root type or derivatives
@@ -606,7 +606,7 @@ namespace Raven.Client.Documents.Indexes
                     }
                     else
                     {
-                        right = _convention.SaveEnumsAsIntegers
+                        right = _conventions.SaveEnumsAsIntegers
                                     ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
                                     : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
 
@@ -754,7 +754,7 @@ namespace Raven.Client.Documents.Indexes
                     Out(s);
                     return node;
                 }
-                if (_convention.SaveEnumsAsIntegers)
+                if (_conventions.SaveEnumsAsIntegers)
                     Out((Convert.ToInt32(node.Value)).ToString());
                 else
                 {
@@ -1394,7 +1394,7 @@ namespace Raven.Client.Documents.Indexes
                     if (methodInfo.Name == nameof(AbstractIndexCreationTask.LoadDocument))
                     {
                         var type = methodInfo.GetGenericArguments()[0];
-                        var collection = _convention.GetCollectionName(type);
+                        var collection = _conventions.GetCollectionName(type);
 
                         Out($"k1 => {methodInfo.Name}(k1, \"{collection}\")");
                     }
@@ -1543,7 +1543,7 @@ namespace Raven.Client.Documents.Indexes
             if (node.Method.Name == nameof(AbstractIndexCreationTask.LoadDocument))
             {
                 var type = node.Method.GetGenericArguments()[0];
-                var collection = _convention.GetCollectionName(type);
+                var collection = _conventions.GetCollectionName(type);
                 Out($", \"{collection}\"");
             }
 

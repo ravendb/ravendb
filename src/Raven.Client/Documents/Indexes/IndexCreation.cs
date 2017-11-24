@@ -23,32 +23,32 @@ namespace Raven.Client.Documents.Indexes
     /// </summary>
     public static class IndexCreation
     {
-        private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(IndexCreation).FullName);
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Client", typeof(IndexCreation).FullName);
 
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static void CreateIndexes(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null)
+        public static void CreateIndexes(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, string database = null)
         {
-            AsyncHelpers.RunSync(() => CreateIndexesAsync(assemblyToScan, store, conventions));
+            AsyncHelpers.RunSync(() => CreateIndexesAsync(assemblyToScan, store, conventions, database));
         }
 
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, CancellationToken token = default(CancellationToken))
+        public static Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
         {
             var indexes = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan);
 
-            return CreateIndexesAsync(indexes, store, conventions, token);
+            return CreateIndexesAsync(indexes, store, conventions, database, token);
         }
 
-        public static void CreateIndexes(IEnumerable<AbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null)
+        public static void CreateIndexes(IEnumerable<AbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null)
         {
-            AsyncHelpers.RunSync(() => CreateIndexesAsync(indexes, store, conventions));
+            AsyncHelpers.RunSync(() => CreateIndexesAsync(indexes, store, conventions, database));
         }
 
-        public static async Task CreateIndexesAsync(IEnumerable<AbstractIndexCreationTask> indexes,IDocumentStore store, DocumentConventions conventions = null, CancellationToken token = default(CancellationToken))
+        public static async Task CreateIndexesAsync(IEnumerable<AbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
         {
             var indexesList = indexes?.ToList() ?? new List<AbstractIndexCreationTask>();
 
@@ -59,21 +59,21 @@ namespace Raven.Client.Documents.Indexes
             try
             {
                 var indexesToAdd = CreateIndexesToAdd(indexesList, conventions);
-                await store.Maintenance.SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
+                await store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new PutIndexesOperation(indexesToAdd), token).ConfigureAwait(false);
             }
             // For old servers that don't have the new endpoint for executing multiple indexes
             catch (Exception ex)
             {
-                if (_logger.IsInfoEnabled)
+                if (Logger.IsInfoEnabled)
                 {
-                    _logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
+                    Logger.Info("Could not create indexes in one shot (maybe using older version of RavenDB ?)", ex);
                 }
 
                 foreach (var task in indexesList)
                 {
                     try
                     {
-                        await task.ExecuteAsync(store, conventions, token).ConfigureAwait(false);
+                        await task.ExecuteAsync(store, conventions, database, token).ConfigureAwait(false);
                     }
                     catch (IndexCompilationException e)
                     {

@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Toes the index definition.
         /// </summary>
-        public IndexDefinition ToIndexDefinition(DocumentConventions convention, bool validateMap = true)
+        public IndexDefinition ToIndexDefinition(DocumentConventions conventions, bool validateMap = true)
         {
             if (Map == null && validateMap)
                 throw new InvalidOperationException(
@@ -146,11 +146,11 @@ namespace Raven.Client.Documents.Indexes
                 if (Reduce != null)
                     IndexDefinitionHelper.ValidateReduce(Reduce);
 
-                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + convention.GetCollectionName(typeof(TDocument));
+                string querySource = (typeof(TDocument) == typeof(object) || ContainsWhereEntityIs()) ? "docs" : "docs." + conventions.GetCollectionName(typeof(TDocument));
                 var indexDefinition = new IndexDefinition
                 {
                     Name = _indexName,
-                    Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, convention, "results", translateIdentityProperty: false),
+                    Reduce = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(Reduce, conventions, "results", translateIdentityProperty: false),
                     LockMode = LockMode,
                     Priority = Priority,
                     OutputReduceToCollection = OutputReduceToCollection
@@ -163,7 +163,7 @@ namespace Raven.Client.Documents.Indexes
                 var termVectors = ConvertToStringDictionary(TermVectors);
                 var spatialOptions = ConvertToStringDictionary(SpatialIndexes);
 
-                if (convention.PrettifyGeneratedLinqExpressions)
+                if (conventions.PrettifyGeneratedLinqExpressions)
                     indexDefinition.Reduce = IndexPrettyPrinter.TryFormat(indexDefinition.Reduce);
 
                 foreach (var indexesString in IndexesStrings)
@@ -214,11 +214,11 @@ namespace Raven.Client.Documents.Indexes
                 {
                     var map = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TDocument, TReduceResult>(
                             Map,
-                            convention,
+                            conventions,
                             querySource,
                             translateIdentityProperty: true);
 
-                    indexDefinition.Maps.Add(convention.PrettifyGeneratedLinqExpressions ? IndexPrettyPrinter.TryFormat(map) : map);
+                    indexDefinition.Maps.Add(conventions.PrettifyGeneratedLinqExpressions ? IndexPrettyPrinter.TryFormat(map) : map);
                 }
 
                 indexDefinition.AdditionalSources = AdditionalSources;
