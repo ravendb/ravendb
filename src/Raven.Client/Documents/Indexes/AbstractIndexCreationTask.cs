@@ -95,27 +95,17 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
-        /// Executes the index creation against the specified document store.
+        /// Executes the index creation against the specified document database using the specified conventions
         /// </summary>
-        public void Execute(IDocumentStore store)
+        public virtual void Execute(IDocumentStore store, DocumentConventions conventions = null, string database = null)
         {
-            store.ExecuteIndex(this);
+            AsyncHelpers.RunSync(() => ExecuteAsync(store, conventions, database));
         }
 
         /// <summary>
-        /// Executes the index creation against the specified document database using the specified conventions
+        /// Executes the index creation against the specified document store.
         /// </summary>
-        public virtual void Execute(IDocumentStore store, DocumentConventions conventions)
-        {
-            PutIndex(store, conventions);
-        }
-
-        private void PutIndex(IDocumentStore store, DocumentConventions conventions)
-        {
-            AsyncHelpers.RunSync(() => PutIndexAsync(store, conventions));
-        }
-
-        private Task PutIndexAsync(IDocumentStore store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
+        public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
         {
             Conventions = conventions;
 
@@ -128,23 +118,7 @@ namespace Raven.Client.Documents.Indexes
             if (Priority.HasValue)
                 indexDefinition.Priority = Priority.Value;
 
-            return store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition), token);
-        }
-
-        /// <summary>
-        /// Executes the index creation against the specified document store.
-        /// </summary>
-        public Task ExecuteAsync(IDocumentStore store)
-        {
-            return store.ExecuteIndexAsync(this);
-        }
-
-        /// <summary>
-        /// Executes the index creation against the specified document store.
-        /// </summary>
-        public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions, CancellationToken token = default(CancellationToken))
-        {
-            return PutIndexAsync(store, conventions, token: token);
+            return store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new PutIndexesOperation(indexDefinition), token);
         }
     }
 

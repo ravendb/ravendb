@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public static string PruneToFailureLinqQueryAsStringToWorkableCode<TQueryRoot, TReduceResult>(
             LambdaExpression expr,
-            DocumentConventions convention,
+            DocumentConventions conventions,
             string querySource, bool translateIdentityProperty)
         {
             if (expr == null)
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Indexes
                     break;
             }
 
-            var linqQuery = ExpressionStringBuilder.ExpressionToString(convention, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
+            var linqQuery = ExpressionStringBuilder.ExpressionToString(conventions, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
 
             return FormatLinqQuery(expr, querySource, linqQuery);
         }

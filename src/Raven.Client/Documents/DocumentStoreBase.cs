@@ -60,40 +60,32 @@ namespace Raven.Client.Documents
         public abstract IDocumentSession OpenSession(string database);
         public abstract IDocumentSession OpenSession(SessionOptions sessionOptions);
 
-        /// <summary>
-        /// Executes index creation.
-        /// </summary>
-        public virtual void ExecuteIndex(AbstractIndexCreationTask task)
+        /// <inheritdoc />
+        public virtual void ExecuteIndex(AbstractIndexCreationTask task, string database = null)
         {
-            AsyncHelpers.RunSync(() => ExecuteIndexAsync(task));
+            AsyncHelpers.RunSync(() => ExecuteIndexAsync(task, database));
         }
 
-        /// <summary>
-        /// Executes index creation.
-        /// </summary>
-        public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken))
+        /// <inheritdoc />
+        public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask task, string database = null, CancellationToken token = default(CancellationToken))
         {
             AssertInitialized();
-            return task.ExecuteAsync(this, Conventions, token);
+            return task.ExecuteAsync(this, Conventions, database, token);
         }
 
-        /// <summary>
-        /// Executes indexes creation.
-        /// </summary>
-        public virtual void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks)
+        /// <inheritdoc />
+        public virtual void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks, string database = null)
         {
-            AsyncHelpers.RunSync(() => ExecuteIndexesAsync(tasks));
+            AsyncHelpers.RunSync(() => ExecuteIndexesAsync(tasks, database));
         }
 
-        /// <summary>
-        /// Executes indexes creation.
-        /// </summary>
-        public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken))
+        /// <inheritdoc />
+        public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default(CancellationToken))
         {
             AssertInitialized();
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
 
-            return Maintenance.SendAsync(new PutIndexesOperation(indexesToAdd), token);
+            return Maintenance.ForDatabase(database ?? Database).SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }
 
         private DocumentConventions _conventions;
