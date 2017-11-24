@@ -94,8 +94,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 DynamicJsonValue singleResult = null;
 
-                foreach (var groupByField in Definition.OrderedGroupByFields)
+                var groupByFieldsCount = Definition.OrderedGroupByFields.Length;
+
+                for (var i = 0; i < groupByFieldsCount; i++)
                 {
+                    var groupByField = Definition.OrderedGroupByFields[i];
+
                     BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, groupByField.Name, out object result);
 
                     if (_isFanout == false)
