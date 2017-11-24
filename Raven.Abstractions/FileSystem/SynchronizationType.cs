@@ -7,5 +7,6 @@ namespace Raven.Abstractions.FileSystem
         MetadataUpdate = 2,
         Rename = 3,
         Delete = 4,
+        ContentUpdateNoRDC = 5
     }
 }

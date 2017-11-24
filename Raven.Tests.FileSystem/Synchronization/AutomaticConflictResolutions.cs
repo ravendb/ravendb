@@ -98,7 +98,7 @@ namespace Raven.Tests.FileSystem.Synchronization
                     BlockType = RdcNeedType.Source,
                     FileOffset = 0
                 }
-            });
+            }, SynchronizationType.ContentUpdate);
 
             var synchronizationReport = await request.PushChangesAsync(CancellationToken.None);
 

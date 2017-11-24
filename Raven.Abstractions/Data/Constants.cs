@@ -338,6 +338,8 @@ namespace Raven.Abstractions.Data
             public const string PreventSchemaUpdate = "Raven/PreventSchemaUpdate";
             public const string FsResourceMarker = ResourceMarkerPrefix + "file-system";
 
+            public const string DisableRDC = "Raven/FileSystem/DisableRDC";
+
             public static class Versioning
             {
                 public const string ChangesToRevisionsAllowed = "Raven/FileSystem/Versioning/ChangesToRevisionsAllowed";

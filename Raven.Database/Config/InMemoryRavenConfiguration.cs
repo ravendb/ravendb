@@ -371,6 +371,7 @@ namespace Raven.Database.Config
             FileSystem.IndexStoragePath = ravenSettings.FileSystem.IndexStoragePath.Value;
             if (string.IsNullOrEmpty(FileSystem.DefaultStorageTypeName))
                 FileSystem.DefaultStorageTypeName = ravenSettings.FileSystem.DefaultStorageTypeName.Value;
+            FileSystem.DisableRDC = ravenSettings.FileSystem.DisableRDC.Value;
 
             Studio.AllowNonAdminUsersToSetupPeriodicExport = ravenSettings.Studio.AllowNonAdminUsersToSetupPeriodicExport.Value;
 
@@ -1672,6 +1673,9 @@ namespace Raven.Database.Config
 
                 return EsentTypeName; // We choose esent by default
             }
+
+
+            public bool DisableRDC { get; set; }
         }
 
         public class StudioConfiguration

@@ -9,6 +9,7 @@ using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Synchronization
 {
@@ -62,8 +63,10 @@ namespace Raven.Tests.FileSystem.Synchronization
             Assert.Equal("rename.bin", server3BrowseResult.First().Name);
         }
 
-        [Fact]
-        public async Task File_content_change_should_be_propagated()        
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task File_content_change_should_be_propagated(bool disableRDC)        
         {
             this.SynchronizationInterval = TimeSpan.FromSeconds(10);
 
@@ -82,6 +85,10 @@ namespace Raven.Tests.FileSystem.Synchronization
             var store1 = NewStore(0, fiddler: true);
             var store2 = NewStore(1, fiddler: true);
             var store3 = NewStore(2, fiddler: true);
+
+            GetFileSystem(0).Configuration.FileSystem.DisableRDC = disableRDC;
+            GetFileSystem(1).Configuration.FileSystem.DisableRDC = disableRDC;
+            GetFileSystem(2).Configuration.FileSystem.DisableRDC = disableRDC;
 
             var server1 = store1.AsyncFilesCommands;
             var server2 = store2.AsyncFilesCommands;
@@ -126,7 +133,7 @@ namespace Raven.Tests.FileSystem.Synchronization
 
             var secondServer1Synchronization = await server1.Synchronization.StartAsync();
             Assert.Null(secondServer1Synchronization[0].Exception);
-            Assert.Equal(SynchronizationType.ContentUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
+            Assert.Equal(disableRDC ? SynchronizationType.ContentUpdateNoRDC : SynchronizationType.ContentUpdate, secondServer1Synchronization[0].Reports.ToArray()[0].Type);
 
             await syncTaskServer2;
             await syncTaskServer3;
