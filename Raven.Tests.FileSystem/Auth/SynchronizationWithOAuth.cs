@@ -14,6 +14,7 @@ using Raven.Server;
 using Raven.Tests.FileSystem.Synchronization;
 using Raven.Tests.FileSystem.Synchronization.IO;
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.FileSystem.Auth
 {
@@ -41,10 +42,14 @@ namespace Raven.Tests.FileSystem.Auth
             }
         }
 
-        [Fact]
-        public async Task CanSynchronizeFileContent()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(false)]
+        public async Task CanSynchronizeFileContent(bool disableRdc)
         {
             var sourceClient = (IAsyncFilesCommandsImpl)NewAsyncClient(0);
+            GetFileSystem(0).Configuration.FileSystem.DisableRDC = disableRdc;
+
             var destination = NewAsyncClient(1, enableAuthentication: true, apiKey: ApiKey);
 
             var ms = new MemoryStream(new byte[] {3, 2, 1});
@@ -54,7 +59,7 @@ namespace Raven.Tests.FileSystem.Auth
             var result = await sourceClient.Synchronization.StartAsync("ms.bin", destination);
 
             Assert.Null(result.Exception);
-            Assert.Equal(SynchronizationType.ContentUpdate, result.Type);
+            Assert.Equal(disableRdc ? SynchronizationType.ContentUpdateNoRDC : SynchronizationType.ContentUpdate, result.Type);
         }
 
         [Fact]
