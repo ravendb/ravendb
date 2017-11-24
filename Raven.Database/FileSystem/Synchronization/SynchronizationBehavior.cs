@@ -75,7 +75,19 @@ namespace Raven.Database.FileSystem.Synchronization
                     case SynchronizationType.MetadataUpdate:
                         ExecuteMetadataUpdate();
                         break;
+                    case SynchronizationType.ContentUpdateNoRDC:
                     case SynchronizationType.ContentUpdate:
+
+                        if (type == SynchronizationType.ContentUpdateNoRDC)
+                        {
+                            using (fs.DisableAllTriggersForCurrentThread())
+                            {
+                                fs.Files.IndicateFileToDelete(fileName, null);
+                            }
+
+                            localMetadata = null;
+                        }
+
                         await ExecuteContentUpdate(localMetadata, report).ConfigureAwait(false);
                         
                         afterSynchronizationTriggerData = new

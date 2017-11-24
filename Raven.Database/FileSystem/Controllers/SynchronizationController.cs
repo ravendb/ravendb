@@ -71,6 +71,9 @@ namespace Raven.Database.FileSystem.Controllers
         [RavenRoute("fs/{fileSystemName}/synchronization/MultipartProceed")]
         public async Task<HttpResponseMessage> MultipartProceed()
         {
+            bool skipRdc;
+            bool.TryParse(QueryString["skip-rdc"], out skipRdc);
+
             if (!Request.Content.IsMimeMultipartContent())
                 throw new HttpResponseException(HttpStatusCode.UnsupportedMediaType);
 
@@ -82,7 +85,7 @@ namespace Raven.Database.FileSystem.Controllers
             if (Log.IsDebugEnabled)
             Log.Debug("Starting to process multipart synchronization request of a file '{0}' with ETag {1} from {2}", fileName, sourceFileETag, sourceInfo);
 
-            var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, SynchronizationType.ContentUpdate, FileSystem)
+            var report = await new SynchronizationBehavior(fileName, sourceFileETag, sourceMetadata, sourceInfo, skipRdc ? SynchronizationType.ContentUpdateNoRDC : SynchronizationType.ContentUpdate, FileSystem)
                             {
                                 MultipartContent = Request.Content
             }.Execute().ConfigureAwait(false);

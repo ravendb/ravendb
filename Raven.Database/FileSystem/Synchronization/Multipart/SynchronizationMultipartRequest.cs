@@ -26,13 +26,13 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
         private readonly ISynchronizationServerClient synchronizationServerClient;
         private readonly string fileName;
         private readonly IList<RdcNeed> needList;
+        private readonly SynchronizationType synchronizationType;
         private readonly FileSystemInfo fileSystemInfo;
         private readonly RavenJObject sourceMetadata;
         private readonly Stream sourceStream;
         private readonly string syncingBoundary;
 
-        public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName,
-                                               RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList)
+        public SynchronizationMultipartRequest(ISynchronizationServerClient synchronizationServerClient, FileSystemInfo fileSystemInfo, string fileName, RavenJObject sourceMetadata, Stream sourceStream, IList<RdcNeed> needList, SynchronizationType synchronizationType)
         {
             this.synchronizationServerClient = synchronizationServerClient;
             this.fileSystemInfo = fileSystemInfo;
@@ -40,6 +40,7 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
             this.sourceMetadata = sourceMetadata;
             this.sourceStream = sourceStream;
             this.needList = needList;
+            this.synchronizationType = synchronizationType;
             syncingBoundary = "syncing";
         }
 
@@ -56,7 +57,12 @@ namespace Raven.Database.FileSystem.Synchronization.Multipart
             var credentials = synchronizationServerClient.Credentials;
             var conventions = synchronizationServerClient.Conventions;
 
-            var requestParams = new CreateHttpJsonRequestParams(this, baseUrl + "/synchronization/MultipartProceed", HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
+            var url = baseUrl + "/synchronization/MultipartProceed";
+
+            if (synchronizationType == SynchronizationType.ContentUpdateNoRDC)
+                url += "?skip-rdc=true";
+
+            var requestParams = new CreateHttpJsonRequestParams(this, url, HttpMethod.Post, credentials, conventions, timeout: TimeSpan.FromHours(12))
             {
                 DisableRequestCompression = true
             };

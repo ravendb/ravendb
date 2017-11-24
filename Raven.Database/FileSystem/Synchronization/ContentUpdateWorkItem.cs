@@ -36,7 +36,7 @@ namespace Raven.Database.FileSystem.Synchronization
 
         public override SynchronizationType SynchronizationType
         {
-            get { return SynchronizationType.ContentUpdate; }
+            get { return configuration.FileSystem.DisableRDC == false ? SynchronizationType.ContentUpdate : SynchronizationType.ContentUpdateNoRDC; }
         }
 
         private DataInfo FileDataInfo
@@ -52,6 +52,9 @@ namespace Raven.Database.FileSystem.Synchronization
         public override async Task<SynchronizationReport> PerformAsync(ISynchronizationServerClient synchronizationServerClient)
         {
             AssertLocalFileExistsAndIsNotConflicted(FileMetadata);
+
+            if (configuration.FileSystem.DisableRDC)
+                return await UploadToAsync(synchronizationServerClient).ConfigureAwait(false);
 
             var destinationMetadata = await synchronizationServerClient.GetMetadataForAsync(FileName).ConfigureAwait(false);
             if (destinationMetadata == null)
@@ -156,7 +159,7 @@ namespace Raven.Database.FileSystem.Synchronization
         {
             Cts.Token.ThrowIfCancellationRequested();
 
-            multipartRequest = new SynchronizationMultipartRequest(synchronizationServerClient, FileSystemInfo, FileName, FileMetadata, sourceFileStream, needList);
+            multipartRequest = new SynchronizationMultipartRequest(synchronizationServerClient, FileSystemInfo, FileName, FileMetadata, sourceFileStream, needList, SynchronizationType);
 
             var bytesToTransferCount = needList.Where(x => x.BlockType == RdcNeedType.Source).Sum(x => (double)x.BlockLength);
             if (log.IsDebugEnabled)
