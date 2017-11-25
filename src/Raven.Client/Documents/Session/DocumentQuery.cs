@@ -131,6 +131,7 @@ namespace Raven.Client.Documents.Session
         {
             AfterStreamExecuted(action);
         }
+
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.OpenSubclause()
         {
@@ -506,6 +507,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereRegex<TValue>(Expression<Func<T, TValue>> propertySelector, string pattern)
+        {
+            WhereRegex(GetMemberQueryPath(propertySelector.Body), pattern);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereRegex(string fieldName, string pattern)        {
+            WhereRegex(fieldName, pattern);
+            return this;        }        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
             AndAlso();

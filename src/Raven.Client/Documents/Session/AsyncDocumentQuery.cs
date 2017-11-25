@@ -256,9 +256,25 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IAsyncDocumentQuery<T> CmpXchg(string key, T value)
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereRegex<TValue>(Expression<Func<T, TValue>> propertySelector, string pattern)
         {
-            return CmpXchg(key, value);
+            WhereRegex(GetMemberQueryPath(propertySelector.Body), pattern);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereRegex(string fieldName, string pattern)
+        {
+            WhereRegex(fieldName, pattern);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CmpXchg(string key, T value)
+        {
+            CmpXchg(key, value);
+            return this;
         }
 
         /// <inheritdoc />
