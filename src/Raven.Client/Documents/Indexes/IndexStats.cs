@@ -118,10 +118,12 @@ namespace Raven.Client.Documents.Indexes
 
         public int ErrorsCount { get; set; }
 
+#if FEATURE_TEST_INDEX
         /// <summary>
         /// Indicates if this is a test index (works on a limited data set - for testing purposes only)
         /// </summary>
         public bool IsTestIndex { get; set; }
+#endif
 
         /// <summary>
         /// Determines if index is invalid. If more than 15% of attempts (map or reduce) are errors then value will be <c>true</c>.
