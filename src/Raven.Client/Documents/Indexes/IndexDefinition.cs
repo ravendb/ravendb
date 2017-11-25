@@ -346,10 +346,12 @@ namespace Raven.Client.Documents.Indexes
             return IndexType.MapReduce;
         }
 
+#if FEATURE_TEST_INDEX
         /// <summary>
         /// Whether this is a temporary test only index
         /// </summary>
         public bool IsTestIndex { get; set; }
+#endif
 
         /// <summary>
         /// If not null than each reduce result will be created as a document in the specified collection name.
@@ -397,7 +399,9 @@ namespace Raven.Client.Documents.Indexes
                 Reduce = Reduce,
                 Maps = new HashSet<string>(Maps),
                 Configuration = new IndexConfiguration(),
+#if FEATURE_TEST_INDEX
                 IsTestIndex = IsTestIndex,
+#endif
                 OutputReduceToCollection = OutputReduceToCollection
             };
 

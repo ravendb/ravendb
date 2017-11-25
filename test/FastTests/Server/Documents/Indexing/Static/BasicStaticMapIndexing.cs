@@ -194,7 +194,9 @@ namespace FastTests.Server.Documents.Indexing.Static
         public void IndexDefinitionSerialization()
         {
             var indexDefinition = new IndexDefinition();
+#if FEATURE_TEST_INDEX
             indexDefinition.IsTestIndex = true;
+#endif
             indexDefinition.LockMode = IndexLockMode.LockedIgnore;
             indexDefinition.Maps = new HashSet<string>
             {

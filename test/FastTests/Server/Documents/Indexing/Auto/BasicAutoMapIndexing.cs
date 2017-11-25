@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 var index2 = database.IndexStore.GetIndex(etag2);
 
-                var task =  Task.WhenAll(database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError), 
+                var task = Task.WhenAll(database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError),
                     database.IndexStore.SetPriority(index2.Name, IndexPriority.Low));
                 index2.SetState(IndexState.Disabled);
                 await task;
@@ -320,7 +320,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Etag, stats.Etag);
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
+#if FEATURE_TEST_INDEX
                         Assert.False(stats.IsTestIndex);
+#endif
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(2, stats.MapAttempts);
@@ -365,7 +367,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Etag, stats.Etag);
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
+#if FEATURE_TEST_INDEX
                         Assert.False(stats.IsTestIndex);
+#endif
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(3, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);
@@ -400,7 +404,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(index.Etag, stats.Etag);
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
+#if FEATURE_TEST_INDEX
                         Assert.False(stats.IsTestIndex);
+#endif
                         Assert.Equal(IndexType.AutoMap, stats.Type);
                         Assert.Equal(2, stats.EntriesCount);
                         Assert.Equal(3, stats.MapAttempts);

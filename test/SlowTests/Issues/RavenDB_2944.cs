@@ -47,7 +47,9 @@ namespace SlowTests.Issues
             public override IndexDefinition CreateIndexDefinition()
             {
                 var indexDefinition = base.CreateIndexDefinition();
+#if FEATURE_TEST_INDEX
                 indexDefinition.IsTestIndex = true;
+#endif
                 return indexDefinition;
             }
         }
@@ -64,7 +66,9 @@ namespace SlowTests.Issues
             public override IndexDefinition CreateIndexDefinition()
             {
                 var indexDefinition = base.CreateIndexDefinition();
+#if FEATURE_TEST_INDEX
                 indexDefinition.IsTestIndex = true;
+#endif
                 return indexDefinition;
             }
 
