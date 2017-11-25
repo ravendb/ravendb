@@ -514,9 +514,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereRegex(string fieldName, string pattern)        {
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereRegex(string fieldName, string pattern)
+        {
             WhereRegex(fieldName, pattern);
-            return this;        }        /// <inheritdoc />
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.AndAlso()
         {
             AndAlso();
