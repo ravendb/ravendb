@@ -133,14 +133,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                             DataDirectory = new PathSetting(_restoreConfiguration.DataDirectory),
                             RunInMemory = false
                         }
-                    }, _serverStore))
+                    }, _serverStore, initLogQueue: null))
                 {
                     // smuggler needs an existing document database to operate
                     var options = InitializeOptions.SkipLoadingDatabaseRecord;
                     if (snapshotRestore)
                         options |= InitializeOptions.GenerateNewDatabaseId;
 
-                    database.Initialize(options);
+                    database.Initialize(initLog: null, options: options);
 
                     if (snapshotRestore)
                     {
