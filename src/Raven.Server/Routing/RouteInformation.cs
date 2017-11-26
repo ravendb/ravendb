@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -8,7 +7,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Web;
 using Sparrow;
-using Voron;
 
 namespace Raven.Server.Routing
 {
@@ -83,7 +81,7 @@ namespace Raven.Server.Routing
                 if (context.Database == null)
                     DatabaseDoesNotExistException.Throw(databaseName);
 
-                return context.Database.DatabaseShutdown.IsCancellationRequested == false
+                return context.Database?.DatabaseShutdown.IsCancellationRequested == false
                     ? Task.CompletedTask
                     : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
             }

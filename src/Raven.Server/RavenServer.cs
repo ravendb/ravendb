@@ -39,7 +39,6 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;

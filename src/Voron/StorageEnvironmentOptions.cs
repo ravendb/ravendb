@@ -12,7 +12,6 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron.Exceptions;
 using Voron.Global;
-using Voron.Impl;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -534,6 +533,7 @@ namespace Voron
                         }
                         catch (Exception)
                         {
+                            // ignored
                         }
                     }
                 }

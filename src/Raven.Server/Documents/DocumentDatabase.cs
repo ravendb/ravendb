@@ -886,7 +886,7 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    var fullPath = environment?.Environment.Options.BasePath.FullPath;
+                    var fullPath = environment.Environment.Options.BasePath.FullPath;
                     if (fullPath == null)
                         continue;
 
