@@ -148,9 +148,9 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.CmpXchg:
                         case MethodType.Count:
                         case MethodType.Sum:
-                        case MethodType.Point:
-                        case MethodType.Wkt:
-                        case MethodType.Circle:
+                        case MethodType.Spatial_Point:
+                        case MethodType.Spatial_Wkt:
+                        case MethodType.Spatial_Circle:
                             ThrowInvalidMethod(parameters, me);
                             break;
                     }
@@ -421,13 +421,13 @@ namespace Raven.Server.Documents.Queries
 
                 switch (methodType)
                 {
-                    case MethodType.Circle:
+                    case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(expression.Arguments, QueryText, parameters);
                         break;
-                    case MethodType.Wkt:
+                    case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(expression.Arguments, QueryText, parameters);
                         break;
-                    case MethodType.Point:
+                    case MethodType.Spatial_Point:
                         QueryValidator.ValidatePoint(expression.Arguments, QueryText, parameters);
                         break;
                     default:
@@ -1247,10 +1247,10 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Sum:
                         HandleSum(arguments, parameters);
                         return;
-                    case MethodType.Within:
-                    case MethodType.Contains:
-                    case MethodType.Disjoint:
-                    case MethodType.Intersects:
+                    case MethodType.Spatial_Within:
+                    case MethodType.Spatial_Contains:
+                    case MethodType.Spatial_Disjoint:
+                    case MethodType.Spatial_Intersects:
                         HandleSpatial(methodName, arguments, parameters);
                         return;
                     case MethodType.MoreLikeThis:
@@ -1297,7 +1297,7 @@ namespace Raven.Server.Documents.Queries
                     var spatialType = QueryMethod.GetMethodType(spatialExpression.Name);
                     switch (spatialType)
                     {
-                        case MethodType.Wkt:
+                        case MethodType.Spatial_Wkt:
                             if (spatialExpression.Arguments.Count != 1)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
 
@@ -1308,7 +1308,7 @@ namespace Raven.Server.Documents.Queries
                                 wkt
                             });
                             break;
-                        case MethodType.Point:
+                        case MethodType.Spatial_Point:
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
@@ -1349,10 +1349,10 @@ namespace Raven.Server.Documents.Queries
                 var methodType = QueryMethod.GetMethodType(methodName);
                 switch (methodType)
                 {
-                    case MethodType.Circle:
+                    case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(shapeExpression.Arguments, QueryText, parameters);
                         break;
-                    case MethodType.Wkt:
+                    case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
                         break;
                     default:

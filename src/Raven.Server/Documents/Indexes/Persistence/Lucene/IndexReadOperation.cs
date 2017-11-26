@@ -327,13 +327,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     Point point;
                     switch (field.Method)
                     {
-                        case MethodType.Circle:
+                        case MethodType.Spatial_Circle:
                             var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
                             var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
 
                             point = spatialField.ReadPoint(cLatitude, cLongitude).GetCenter();
                             break;
-                        case MethodType.Wkt:
+                        case MethodType.Spatial_Wkt:
                             var wkt = field.Arguments[0].GetString(query.QueryParameters);
                             SpatialUnits? spatialUnits = null;
                             if (field.Arguments.Length == 2)
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                             point = spatialField.ReadShape(wkt, spatialUnits).GetCenter();
                             break;
-                        case MethodType.Point:
+                        case MethodType.Spatial_Point:
                             var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
                             var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
 

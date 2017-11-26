@@ -198,7 +198,7 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 FieldName = fieldName,
                 ParameterName = null,
-                WhereOperator = WhereOperator.Within,
+                WhereOperator = WhereOperator.Spatial_Within,
                 WhereShape = shape,
                 DistanceErrorPct = distanceErrorPct
             };
@@ -210,7 +210,7 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 FieldName = fieldName,
                 ParameterName = null,
-                WhereOperator = WhereOperator.Contains,
+                WhereOperator = WhereOperator.Spatial_Contains,
                 WhereShape = shape,
                 DistanceErrorPct = distanceErrorPct
             };
@@ -222,7 +222,7 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 FieldName = fieldName,
                 ParameterName = null,
-                WhereOperator = WhereOperator.Disjoint,
+                WhereOperator = WhereOperator.Spatial_Disjoint,
                 WhereShape = shape,
                 DistanceErrorPct = distanceErrorPct
             };
@@ -234,7 +234,7 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 FieldName = fieldName,
                 ParameterName = null,
-                WhereOperator = WhereOperator.Intersects,
+                WhereOperator = WhereOperator.Spatial_Intersects,
                 WhereShape = shape,
                 DistanceErrorPct = distanceErrorPct
             };
@@ -289,17 +289,17 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Exists:
                     writer.Append("exists(");
                     break;
-                case WhereOperator.Within:
-                    writer.Append("within(");
+                case WhereOperator.Spatial_Within:
+                    writer.Append("spatial.within(");
                     break;
-                case WhereOperator.Contains:
-                    writer.Append("contains(");
+                case WhereOperator.Spatial_Contains:
+                    writer.Append("spatial.contains(");
                     break;
-                case WhereOperator.Disjoint:
-                    writer.Append("disjoint(");
+                case WhereOperator.Spatial_Disjoint:
+                    writer.Append("spatial.disjoint(");
                     break;
-                case WhereOperator.Intersects:
-                    writer.Append("intersects(");
+                case WhereOperator.Spatial_Intersects:
+                    writer.Append("spatial.intersects(");
                     break;
                 case WhereOperator.Regex:
                     writer.Append("regex(");
@@ -391,10 +391,10 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer
                         .Append(")");
                     break;
-                case WhereOperator.Within:
-                case WhereOperator.Contains:
-                case WhereOperator.Disjoint:
-                case WhereOperator.Intersects:
+                case WhereOperator.Spatial_Within:
+                case WhereOperator.Spatial_Contains:
+                case WhereOperator.Spatial_Disjoint:
+                case WhereOperator.Spatial_Intersects:
                     writer
                         .Append(", ");
 

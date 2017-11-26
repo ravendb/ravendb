@@ -21,13 +21,13 @@
 
         CmpXchg,
         
-        Circle,
-        Wkt,
-        Point,
-        Within,
-        Contains,
-        Disjoint,
-        Intersects,
+        Spatial_Circle,
+        Spatial_Wkt,
+        Spatial_Point,
+        Spatial_Within,
+        Spatial_Contains,
+        Spatial_Disjoint,
+        Spatial_Intersects,
 
         MoreLikeThis,
 

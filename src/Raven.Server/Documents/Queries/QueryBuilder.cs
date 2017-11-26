@@ -346,10 +346,10 @@ namespace Raven.Server.Documents.Queries
                     //                    case MethodType.CmpXchg:
                     //                        var fieldName = ExtractIndexFieldName(query, parameters, me.Arguments[1], metadata);
                     //                        return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard, exact: true);
-                    case MethodType.Within:
-                    case MethodType.Contains:
-                    case MethodType.Disjoint:
-                    case MethodType.Intersects:
+                    case MethodType.Spatial_Within:
+                    case MethodType.Spatial_Contains:
+                    case MethodType.Spatial_Disjoint:
+                    case MethodType.Spatial_Intersects:
                         return HandleSpatial(query, me, metadata, parameters, methodType, factories.GetSpatialFieldFactory);
                     case MethodType.MoreLikeThis:
                         return new MatchAllDocsQuery();
@@ -654,10 +654,10 @@ namespace Raven.Server.Documents.Queries
             Shape shape = null;
             switch (methodType)
             {
-                case MethodType.Circle:
+                case MethodType.Spatial_Circle:
                     shape = HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField);
                     break;
-                case MethodType.Wkt:
+                case MethodType.Spatial_Wkt:
                     shape = HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField);
                     break;
                 default:
@@ -670,16 +670,16 @@ namespace Raven.Server.Documents.Queries
             SpatialOperation operation = null;
             switch (spatialMethod)
             {
-                case MethodType.Within:
+                case MethodType.Spatial_Within:
                     operation = SpatialOperation.IsWithin;
                     break;
-                case MethodType.Contains:
+                case MethodType.Spatial_Contains:
                     operation = SpatialOperation.Contains;
                     break;
-                case MethodType.Disjoint:
+                case MethodType.Spatial_Disjoint:
                     operation = SpatialOperation.IsDisjointTo;
                     break;
-                case MethodType.Intersects:
+                case MethodType.Spatial_Intersects:
                     operation = SpatialOperation.Intersects;
                     break;
                 default:

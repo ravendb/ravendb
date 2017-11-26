@@ -16,10 +16,10 @@ namespace Raven.Client.Documents.Session.Tokens
         StartsWith,
         EndsWith,
         Exists,
-        Within,
-        Contains,
-        Disjoint,
-        Intersects,
+        Spatial_Within,
+        Spatial_Contains,
+        Spatial_Disjoint,
+        Spatial_Intersects,
         Regex,
         CmpXchgMatch
     }
