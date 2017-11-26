@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Queries.Spatial
 
         public override string ToField(Func<string, bool, string> ensureValidFieldName)
         {
-            return $"point({ensureValidFieldName(Latitude, false)}, {ensureValidFieldName(Longitude, false)})";
+            return $"spatial.point({ensureValidFieldName(Latitude, false)}, {ensureValidFieldName(Longitude, false)})";
         }
     }
 
@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Queries.Spatial
 
         public override string ToField(Func<string, bool, string> ensureValidFieldName)
         {
-            return $"wkt({ensureValidFieldName(Wkt, false)})";
+            return $"spatial.wkt({ensureValidFieldName(Wkt, false)})";
         }
     }
 
