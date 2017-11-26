@@ -481,6 +481,10 @@ namespace Raven.Server.Documents
                     initLogQueue = new ConcurrentQueue<string>();
                     InitLog[databaseName] = initLogQueue;
                 }
+                else
+                {
+                    initLogQueue.Clear();
+                }
 
                 AddToInitLog(initLogQueue, "Starting database initialization");
 
