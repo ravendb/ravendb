@@ -15,7 +15,7 @@ class index {
     etag: number;
     isStale = ko.observable<boolean>(false);
     isInvalidIndex: boolean;
-    isTestIndex: boolean;
+    //isTestIndex: boolean;
     lastIndexingTime?: string;
     lastQueryingTime?: string;
     lockMode = ko.observable<Raven.Client.Documents.Indexes.IndexLockMode>();
@@ -69,7 +69,7 @@ class index {
         this.etag = dto.Etag;
         this.isStale(dto.IsStale);
         this.isInvalidIndex = dto.IsInvalidIndex;
-        this.isTestIndex = dto.IsTestIndex;
+        //this.isTestIndex = dto.IsTestIndex;
         this.lastIndexingTime = dto.LastIndexingTime;
         this.lastQueryingTime = dto.LastQueryingTime;
         this.lockMode(dto.LockMode);
