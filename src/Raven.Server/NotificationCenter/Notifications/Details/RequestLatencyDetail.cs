@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.AspNetCore.Http;
+using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -7,6 +10,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class RequestLatencyDetail : INotificationDetails
     {
+        private const int RequestLatencyDetailLimit = 50;
         public Dictionary<string, Queue<RequestLatencyInfo>> RequestLatencies { get; set; }
 
         public RequestLatencyDetail()
@@ -14,17 +18,26 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             RequestLatencies = new Dictionary<string, Queue<RequestLatencyInfo>>();
         }
         
-        public void Update(string queryString, long duration, string action)
+        public void Update(string queryString,  IQueryCollection requestQuery, long duration, string action)
         {
             if (RequestLatencies.TryGetValue(action, out var hintQueue) == false)
             {
                 var queue = new Queue<RequestLatencyInfo>();
-                queue.Enqueue(new RequestLatencyInfo(queryString, duration, action));
+                queue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault()), duration, action));
                 RequestLatencies.Add(action, queue);
             }
             else
             {
-                hintQueue.Enqueue(new RequestLatencyInfo(queryString, duration, action));
+                EnforceLimitOfQueueLength(hintQueue);
+                hintQueue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x=> x.Value.FirstOrDefault()), duration, action));
+            }
+        }
+
+        private static void EnforceLimitOfQueueLength(Queue<RequestLatencyInfo> hintQueue)
+        {
+            while (hintQueue.Count > RequestLatencyDetailLimit)
+            {
+                hintQueue.Dequeue();
             }
         }
 
@@ -56,14 +69,16 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
     public struct RequestLatencyInfo : IDynamicJsonValueConvertible
     {
-        public readonly string QueryString;
-        public readonly long Duration;
-        public readonly DateTime Date;
-        public readonly string Action;
+        public string QueryString;
+        public Dictionary<string, string> Parameters;
+        public long Duration;
+        public DateTime Date;
+        public string Action;
 
-        public RequestLatencyInfo(string queryString, long duration, string action)
+        public RequestLatencyInfo(string queryString, Dictionary<string, string> parameters, long duration, string action)
         {
             QueryString = queryString;
+            Parameters = parameters;
             Duration = duration;
             Action = action;
             Date = DateTime.UtcNow;
@@ -75,6 +90,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             {
                 [nameof(QueryString)] = QueryString,
                 [nameof(Duration)] = Duration,
+                [nameof(Parameters)] = Parameters.ToJson(),
                 [nameof(Date)] = Date,
                 [nameof(Action)] = Action
             };

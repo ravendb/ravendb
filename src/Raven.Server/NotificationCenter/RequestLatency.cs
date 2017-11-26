@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Server.NotificationCenter.Notifications;
@@ -13,7 +14,7 @@ namespace Raven.Server.NotificationCenter
     public class RequestLatency
     {
         private static readonly string RequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}";
-
+        private readonly object _addHintSyncObj = new object();
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
         
@@ -23,15 +24,25 @@ namespace Raven.Server.NotificationCenter
             _notificationsStorage = notificationsStorage;
         }
 
-        public void AddHint(string queryString, long duration, string action)
+        public void AddHint(string queryString, IQueryCollection requestQuery, long duration, string action)
         {
-            var requestLatencyPerformanceHint = GetOrCreatePerformanceLatencies(out var details);
-            details.Update(queryString, duration, action);
-            _notificationCenter.Add(requestLatencyPerformanceHint);
+            lock (_addHintSyncObj)
+            {
+                var requestLatencyPerformanceHint = GetOrCreatePerformanceLatencies(out var details);
+                details.Update(queryString, requestQuery, duration, action);
+                _notificationCenter.Add(requestLatencyPerformanceHint);
+            }
+        }
+
+        public RequestLatencyDetail GetRequestLatencyDetails()
+        {
+            GetOrCreatePerformanceLatencies(out var details);
+            return details;
         }
 
         private PerformanceHint GetOrCreatePerformanceLatencies(out RequestLatencyDetail details)
         {
+            //Read() is transactional, so this is thread-safe
             using (_notificationsStorage.Read(RequestLatenciesId, out var ntv))
             {
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
