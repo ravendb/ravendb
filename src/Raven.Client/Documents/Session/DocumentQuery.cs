@@ -800,7 +800,6 @@ namespace Raven.Client.Documents.Session
         {
             using (QueryOperation.EnterQueryContext())
             {
-                QueryOperation.LogQuery();
                 var command = QueryOperation.CreateRequest();
                 TheSession.RequestExecutor.Execute(command, TheSession.Context);
                 QueryOperation.SetResult(command.Result);
