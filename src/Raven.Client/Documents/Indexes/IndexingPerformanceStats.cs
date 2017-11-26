@@ -49,5 +49,6 @@ namespace Raven.Client.Documents.Indexes
 
         public Size AllocatedBytes { get; set; }
         
+        public long DocumentsSize { get; set; }
     }
 }
