@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Revisions
         private static readonly Slice RevisionsCountSlice;
         private static readonly Slice RevisionsTombstonesSlice;
         private static readonly Slice RevisionsPrefix;
+        public static Slice ResolvedFlagByEtagSlice;
 
         public static readonly string RevisionsTombstones = "Revisions.Tombstones";
 
@@ -64,6 +65,10 @@ namespace Raven.Server.Documents.Revisions
             DeletedEtag = 7,
             LastModified = 8,
             TransactionMarker = 9,
+
+            // Field for finding the resolved conflicts
+            Resolved = 10,
+            SwappedLastModified = 11, 
         }
 
         public const long NotDeletedRevisionMarker = 0;
@@ -103,6 +108,7 @@ namespace Raven.Server.Documents.Revisions
             Slice.From(StorageEnvironment.LabelsContext, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "CollectionRevisionsEtags", ByteStringType.Immutable, out CollectionRevisionsEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "RevisionsCount", ByteStringType.Immutable, out RevisionsCountSlice);
+            Slice.From(StorageEnvironment.LabelsContext, nameof(ResolvedFlagByEtagSlice), ByteStringType.Immutable, out ResolvedFlagByEtagSlice);
             Slice.From(StorageEnvironment.LabelsContext, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
 
@@ -136,6 +142,13 @@ namespace Raven.Server.Documents.Revisions
                 StartIndex = (int)Columns.DeletedEtag,
                 Count = 1,
                 Name = DeleteRevisionEtagSlice,
+                IsGlobal = true
+            });
+            RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)Columns.Resolved,
+                Count = 2,
+                Name = ResolvedFlagByEtagSlice,
                 IsGlobal = true
             });
         }
@@ -335,6 +348,15 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add(NotDeletedRevisionMarker);
                     tvb.Add(lastModifiedTicks);
                     tvb.Add(context.GetTransactionMarker());
+                    if (flags.Contain(DocumentFlags.Resolved))
+                    {
+                        tvb.Add((int)DocumentFlags.Resolved);
+                    }
+                    else
+                    {
+                        tvb.Add(0);
+                    }
+                    tvb.Add(Bits.SwapBytes(lastModifiedTicks));
                     var isNew = table.Set(tvb);
                     if (isNew == false)
                         // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
@@ -642,7 +664,15 @@ namespace Raven.Server.Documents.Revisions
                 tvb.Add(newEtagSwapBytes);
                 tvb.Add(lastModifiedTicks);
                 tvb.Add(context.GetTransactionMarker());
-
+                if (flags.Contain(DocumentFlags.Resolved))
+                {
+                    tvb.Add((int)DocumentFlags.Resolved);
+                }
+                else
+                {
+                    tvb.Add(0);
+                }
+                tvb.Add(Bits.SwapBytes(lastModifiedTicks));
                 var isNew = table.Set(tvb);
                 if (isNew == false)
                     // It might be just an update from replication as we call this twice, both for the doc delete and for deleteRevision.
@@ -878,6 +908,35 @@ namespace Raven.Server.Documents.Revisions
                 throw new ArgumentException("TransactionMarker size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
             return result;
+        }
+
+
+        private ByteStringContext.ExternalScope GetResolvedSlice(DocumentsOperationContext context, DateTime date, out Slice slice)
+        {
+            var size = sizeof(int) + sizeof(long);
+            var mem = context.GetMemory(size);
+            var flag = (int)DocumentFlags.Resolved;
+            Memory.Copy(mem.Address, (byte*)&flag, sizeof(int));
+            var ticks = Bits.SwapBytes(date.Ticks);
+            Memory.Copy(mem.Address + sizeof(int), (byte*)&ticks, sizeof(long));
+            return Slice.External(context.Allocator, mem.Address, size, out slice);
+        }
+
+        public IEnumerable<Document> GetResovledDocumentsSince(DocumentsOperationContext context, DateTime since, int take = 1024)
+        {
+            var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+            using (GetResolvedSlice(context, since, out var slice))
+            {
+                foreach (var item in table.SeekForwardFrom(RevisionsSchema.Indexes[ResolvedFlagByEtagSlice], slice, 0))
+                {
+                    if (take == 0)
+                    {
+                        yield break;    
+                    }
+                    take--;
+                    yield return TableValueToRevision(context, ref item.Result.Reader);
+                }
+            }
         }
 
         public long GetNumberOfRevisionDocuments(DocumentsOperationContext context)
