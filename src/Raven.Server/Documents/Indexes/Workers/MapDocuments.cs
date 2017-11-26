@@ -100,6 +100,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             $"Executing map for '{_index.Name} ({_index.Etag})'. Processing document: {current.Id}.");
 
                                     collectionStats.RecordMapAttempt();
+                                    stats.RecordDocumentSize(current.Data.Size);
 
                                     count++;
                                     lastEtag = current.Etag;
