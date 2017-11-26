@@ -52,8 +52,6 @@ using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
-using static Raven.Server.Documents.Handlers.BatchRequestParser;
-using Raven.Server.Extensions;
 
 namespace Raven.Server.ServerWide
 {

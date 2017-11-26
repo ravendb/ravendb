@@ -9,7 +9,6 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix;
 using Sparrow.Threading;
@@ -135,7 +134,7 @@ namespace Voron
                 if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
-                    LoadExistingDatabase(options.DocumentDatabaseName);
+                    LoadExistingDatabase();
 
                 if (_options.ManualFlushing == false)
                     Task.Run(IdleFlushTimer);
@@ -252,7 +251,7 @@ namespace Voron
 
         public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
 
-        private unsafe void LoadExistingDatabase(string databaseName)
+        private unsafe void LoadExistingDatabase()
         {
             var header = stackalloc TransactionHeader[1];
             bool hadIntegrityIssues;
@@ -290,13 +289,13 @@ namespace Voron
                     VoronUnrecoverableErrorException.Raise(this,
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
-                var dbId = metadataTree.Read("db-id");
+                var dbId = metadataTree?.Read("db-id");
                 if (dbId == null)
                     VoronUnrecoverableErrorException.Raise(this,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
-                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
+                var dbIdBytes = dbId?.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
                     VoronUnrecoverableErrorException.Raise(this,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
@@ -309,7 +308,7 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId)
                 {
                     // save the new database id
-                    metadataTree.Add("db-id", DbId.ToByteArray());
+                    metadataTree?.Add("db-id", DbId.ToByteArray());
                 }
 
                 tx.Commit();
