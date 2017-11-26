@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -12,6 +13,182 @@ namespace FastTests.Client
     public class Query : RavenTestBase
     {
 
+        public class Order
+        {
+            public string Id { get; set; }
+            public string Company { get; set; }
+            public string Employee { get; set; }
+            public DateTime OrderedAt { get; set; }
+            public DateTime RequireAt { get; set; }
+            public DateTime? ShippedAt { get; set; }
+            public Address ShipTo { get; set; }
+            public string ShipVia { get; set; }
+            public decimal Freight { get; set; }
+            public List<OrderLine> Lines { get; set; }
+        }
+
+        /*
+  
+         */
+        
+        [Fact]
+        public void RawQuery_with_transformation_function_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Name = "Acme Inc."
+                    },"Companies/1");
+                    
+                    session.Store(new Company
+                    {
+                        Name = "Evil Corp"
+                    },"Companies/2");            
+                    
+                    session.Store(new Order
+                    {
+                        Company = "companies/1",
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 3 },
+                            new OrderLine{ PricePerUnit = (decimal)1.5, Quantity = 3 }
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Company = "companies/1",
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 5 },
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Company = "companies/2",
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine{ PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
+                            new OrderLine{ PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
+                            new OrderLine{ PricePerUnit = (decimal)1.8, Quantity = 2 }
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var rawQuery = session.Advanced.RawQuery<dynamic>(@"
+                        DECLARE function companyNameAndTotalSumSpent(o)
+                        {
+                          var totalSumInLines = 0;
+                          for(var i = 0; i < o.Lines.length; i++)
+                          {
+                              var l = o.Lines[i];
+                              totalSumInLines = l.PricePerUnit * l.Quantity - l.Discount;
+                          }
+                        
+                          var company = load(o.Company);   
+  
+                          return { OrderedAt: o.OrderedAt, CompanyName: company.Name, TotalSumSpent: totalSumInLines };
+                        }
+                        
+                        FROM Orders as o 
+                        SELECT companyNameAndTotalSumSpent(o)                           
+                    ").ToList();
+
+                    Assert.NotEmpty(rawQuery);
+                    Assert.Equal(3,rawQuery.Count);                    
+                    Assert.DoesNotContain(rawQuery,item => item == null);
+                    
+                    foreach (var item in rawQuery)
+                    {
+                        Assert.True((string)item.CompanyName == "Acme Inc." || (string)item.CompanyName == "Evil Corp");                       
+                    }
+                }
+            }
+        }
+        
+        [Fact]
+        public void LinqQuery_with_transformation_function_should_work()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company
+                    {
+                        Name = "Acme Inc."
+                    },"Companies/1");
+                    
+                    session.Store(new Company
+                    {
+                        Name = "Evil Corp"
+                    },"Companies/2");            
+                    
+                    session.Store(new Order
+                    {
+                        Company = "companies/1",
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 3 },
+                            new OrderLine{ PricePerUnit = (decimal)1.5, Quantity = 3 }
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Company = "companies/1",
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine{ PricePerUnit = (decimal)1.0, Quantity = 5 },
+                        }
+                    });
+                    session.Store(new Order
+                    {
+                        Company = "companies/2",
+                        Lines = new List<OrderLine>
+                        {
+                            new OrderLine{ PricePerUnit = (decimal)3.0, Quantity = 6, Discount = (decimal)3.5},
+                            new OrderLine{ PricePerUnit = (decimal)8.0, Quantity = 3, Discount = (decimal)3.5},
+                            new OrderLine{ PricePerUnit = (decimal)1.8, Quantity = 2 }
+                        }
+                    });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var complexLinqQuery =
+                        (from o in session.Query<Order>()
+                        let TotalSpentOnOrder =
+                            (Func<Order, decimal>)(order =>
+                                order.Lines.Sum(l => l.PricePerUnit * l.Quantity - l.Discount))
+                        select new
+                        {
+                            OrderId = o.Id,
+                            TotalMoneySpent = TotalSpentOnOrder(o),
+                            CompanyName = session.Load<Company>(o.Company).Name
+                        }).ToList();
+
+                    Assert.NotEmpty(complexLinqQuery);
+                    Assert.Equal(3,complexLinqQuery.Count);                    
+                    Assert.DoesNotContain(complexLinqQuery,item => item == null);
+                    
+                    foreach (var item in complexLinqQuery)
+                    {
+                        Assert.True((string)item.CompanyName == "Acme Inc." || (string)item.CompanyName == "Evil Corp");                       
+                    }
+                }
+            }
+        }
+
+        
         [Fact]
         public void Query_Simple()
         {
