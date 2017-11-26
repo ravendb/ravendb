@@ -9,6 +9,7 @@ using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix;
 using Sparrow.Threading;
@@ -134,7 +135,7 @@ namespace Voron
                 if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
-                    LoadExistingDatabase();
+                    LoadExistingDatabase(options.DocumentDatabaseName);
 
                 if (_options.ManualFlushing == false)
                     Task.Run(IdleFlushTimer);
@@ -251,10 +252,15 @@ namespace Voron
 
         public ScratchBufferPool ScratchBufferPool => _scratchBufferPool;
 
-        private unsafe void LoadExistingDatabase()
+        private unsafe void LoadExistingDatabase(string databaseName)
         {
             var header = stackalloc TransactionHeader[1];
-            bool hadIntegrityIssues = _journal.RecoverDatabase(header);
+            bool hadIntegrityIssues;
+
+            Options.InitLogQueue?.Enqueue($"{DateTime.UtcNow} :: Starting Recovery");
+            hadIntegrityIssues = _journal.RecoverDatabase(header, Options.InitLogQueue);
+            var successString = hadIntegrityIssues ? "(successfully)" : "(with intergrity issues)";
+            Options.InitLogQueue?.Enqueue($"{DateTime.UtcNow} :: Recovery Ended {successString}");
 
             if (hadIntegrityIssues)
             {

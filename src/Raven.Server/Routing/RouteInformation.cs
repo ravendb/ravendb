@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
 using Raven.Server.Web;
 using Sparrow;
+using Voron;
 
 namespace Raven.Server.Routing
 {
@@ -106,6 +109,21 @@ namespace Raven.Server.Routing
             await Task.WhenAny(database, Task.Delay(time));
             if (database.IsCompleted == false)
             {
+                if (databasesLandlord.InitLog.TryGetValue(databaseName, out var initLogQueue))
+                {
+                    // lets first check if database is in recovery process. if so - lets throw appropriate exception
+                    if (initLogQueue.TryDequeue(out var str))
+                    {
+                        if (str.Equals(DatabasesLandlord.DatabaseInitDoneString) == false) // database still loading
+                        {
+                            var sb = new StringBuilder();
+                            foreach (var logline in initLogQueue)
+                                sb.Insert(0, $"{logline}{Environment.NewLine}");
+
+                            ThrowDatabaseLoadTimeoutWithLog(databaseName, databasesLandlord.DatabaseLoadTimeout, sb.ToString());
+                        }
+                    }
+                }
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
             context.Database = await database;
@@ -121,6 +139,11 @@ namespace Raven.Server.Routing
         private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {databaseName} after {timeout}, try again later");
+        }
+
+        private static void ThrowDatabaseLoadTimeoutWithLog(StringSegment databaseName, TimeSpan timeout, string log)
+        {
+            throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. See log " + log);
         }
 
         public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)

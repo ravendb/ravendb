@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -168,11 +169,12 @@ namespace Raven.Server.Documents
 
         public DocumentsContextPool ContextPool;
 
-        public DocumentsStorage(DocumentDatabase documentDatabase)
+        public DocumentsStorage(DocumentDatabase documentDatabase, System.Collections.Concurrent.ConcurrentQueue<string> initLogQueue)
         {
             DocumentDatabase = documentDatabase;
             _name = DocumentDatabase.Name;
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
+            _initLogQueue = initLogQueue;
         }
 
         public StorageEnvironment Environment { get; private set; }
@@ -183,6 +185,7 @@ namespace Raven.Server.Documents
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
         public DocumentPutAction DocumentPut;
+        private readonly ConcurrentQueue<string> _initLogQueue;
 
         public void Dispose()
         {
@@ -203,8 +206,8 @@ namespace Raven.Server.Documents
             exceptionAggregator.ThrowIfNeeded();
         }
 
-        public void Initialize(bool generateNewDatabaseId = false)
-        {
+        public void Initialize(ConcurrentQueue<string> initLog, bool generateNewDatabaseId = false)
+        { 
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info
@@ -215,6 +218,7 @@ namespace Raven.Server.Documents
 
 
             var options = GetStorageEnvironmentOptionsFromConfiguration(DocumentDatabase.Configuration, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification);
+            options.DocumentDatabaseName = _name;
 
             options.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
             options.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
@@ -224,6 +228,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+            options.InitLogQueue = _initLogQueue;
             Sodium.CloneKey(out options.MasterKey, DocumentDatabase.MasterKey);
 
             try

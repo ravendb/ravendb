@@ -150,6 +150,9 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
+        public string DocumentDatabaseName { get; set; }
+        public ConcurrentQueue<string> InitLogQueue { get; set; }
+
         protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             SafePosixOpenFlags = SafePosixOpenFlags | DefaultPosixFlags;

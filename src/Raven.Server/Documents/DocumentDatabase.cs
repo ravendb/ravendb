@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -85,7 +86,7 @@ namespace Raven.Server.Documents
                 Name));
         }
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
+        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, ConcurrentQueue<string> initLogQueue)
         {
             Name = name;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
@@ -116,7 +117,7 @@ namespace Raven.Server.Documents
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-                DocumentsStorage = new DocumentsStorage(this);
+                DocumentsStorage = new DocumentsStorage(this, initLogQueue);
                 IndexStore = new IndexStore(this, serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
@@ -215,19 +216,24 @@ namespace Raven.Server.Documents
 
         public readonly QueryMetadataCache QueryMetadataCache;
 
-        public void Initialize(InitializeOptions options = InitializeOptions.None)
+        public void Initialize(ConcurrentQueue<string> initLog, InitializeOptions options = InitializeOptions.None)
         {
             try
             {
+                DatabasesLandlord.AddToInitLog(initLog, "Initializing NotificationCenter");
                 NotificationCenter.Initialize(this);
 
-                DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
+                DatabasesLandlord.AddToInitLog(initLog, "Initializing DocumentStorage");
+                DocumentsStorage.Initialize(initLog, (options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
+                DatabasesLandlord.AddToInitLog(initLog, "Starting Transaction Merger");
                 TxMerger.Start();
+                DatabasesLandlord.AddToInitLog(initLog, "Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
-
+                
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
+                DatabasesLandlord.AddToInitLog(initLog, "Loading Database");
                 long index;
                 DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -240,13 +246,16 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
                 _indexStoreTask = IndexStore.InitializeAsync(record);
+                DatabasesLandlord.AddToInitLog(initLog, "Initializing Replication");
                 ReplicationLoader?.Initialize(record);
+                DatabasesLandlord.AddToInitLog(initLog, "Initializing ETL");
                 EtlLoader.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
                 try
                 {
+                    DatabasesLandlord.AddToInitLog(initLog, "Initializing IndexStore");
                     _indexStoreTask.Wait(DatabaseShutdown);
                 }
                 finally
@@ -254,6 +263,7 @@ namespace Raven.Server.Documents
                     _indexStoreTask = null;
                 }
 
+                DatabasesLandlord.AddToInitLog(initLog, "Initializing SubscriptionStorage");
                 SubscriptionStorage.Initialize();
 
                 NotifyFeaturesAboutStateChange(record, index);
