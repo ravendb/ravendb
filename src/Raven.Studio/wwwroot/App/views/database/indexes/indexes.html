@@ -203,13 +203,6 @@
             <div class="col-xs-12 col-sm-6 col-xl-3 actions-container">
                 <div class="actions">
                     <div class="btn-toolbar pull-right-sm" role="toolbar">
-                        <div class="btn-group" role="group" data-bind="if: !isFaulty(), visible: isStale()">
-                            <button class="btn btn-default" 
-                                    data-bind="click: $root.showProgress, css: { 'btn-spinner': _.includes($root.spinners.indexingProgress(), name) }, disable: _.includes($root.spinners.indexingProgress(), name)">
-                                <i class="icon-percent"></i>
-                                <span>Progress</span>
-                            </button>
-                        </div>
                         <div class="btn-group" role="group" data-bind="if: !isFaulty()">
                             <a class="btn btn-default" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" >
@@ -237,8 +230,7 @@
             </div>
         </div>
         <div data-bind="with: $root.indexingProgresses.watchFor(name)">
-            <div data-bind="template: { name: 'indexing-progress-template' }">
-            </div>
+            <div data-bind="visible: isStale, template: { name: 'indexing-progress-template' }"></div>
         </div>
     </div>
 </script>

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -27,6 +28,19 @@ namespace Raven.Client.Documents.Indexes
             public long NumberOfTombstonesToProcess { get; set; }
 
             public long TotalNumberOfTombstones { get; set; }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal void UpdateLastEtag(long lastEtag, bool isTombsone)
+            {
+                if (isTombsone)
+                {
+                    LastProcessedTombstoneEtag = lastEtag;
+                }
+                else
+                {
+                    LastProcessedDocumentEtag = lastEtag;
+                }
+            }
         }
     }
 }

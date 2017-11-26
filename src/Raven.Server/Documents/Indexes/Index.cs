@@ -94,6 +94,9 @@ namespace Raven.Server.Documents.Indexes
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
 
+        private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
+            new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
+
         protected DocumentDatabase DocumentDatabase;
 
         private Thread _indexingThread;
@@ -145,6 +148,7 @@ namespace Raven.Server.Documents.Indexes
         protected PerformanceHintsConfiguration PerformanceHints;
 
         private bool _allocationCleanupNeeded;
+
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
         private bool _batchStopped;
 
@@ -849,6 +853,7 @@ namespace Raven.Server.Documents.Indexes
                                             DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Release();
                                         }
 
+                                        _inMemoryIndexProgress.Clear();
                                         TimeSpentIndexing.Stop();
                                     }
 
@@ -1243,16 +1248,16 @@ namespace Raven.Server.Documents.Indexes
 
                             tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
                             {
-                                if (writeOperation.IsValueCreated)
+                                if (writeOperation.IsValueCreated == false)
+                                    return;
+
+                                using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
                                 {
-                                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
-                                    {
-                                        // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                                        // also we need this to be called when new read transaction are prevented in order to ensure
-                                        // that queries won't get the searcher having 'old' state but see 'new' changes committed here
-                                        // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                        IndexPersistence.RecreateSearcher(tx.InnerTransaction);
-                                    }
+                                    // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                                    // also we need this to be called when new read transaction are prevented in order to ensure
+                                    // that queries won't get the searcher having 'old' state but see 'new' changes committed here
+                                    // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
+                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
                                 }
                             };
 
@@ -1472,7 +1477,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
-            if (_storageOperation.IsRunning)
+            if (_storageOperation.IsRunning || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposed)
             {
                 return new IndexProgress
                 {
@@ -1495,10 +1500,9 @@ namespace Raven.Server.Documents.Indexes
                 {
                     Etag = Etag,
                     Name = Name,
-                    Type = Type
+                    Type = Type,
+                    IsStale = IsStale(documentsContext, context)
                 };
-
-                progress.IsStale = IsStale(documentsContext, context);
 
                 var stats = _indexStorage.ReadStats(tx);
 
@@ -1506,25 +1510,52 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var collection in Collections)
                 {
                     var collectionStats = stats.Collections[collection];
+                    
+                    var lastEtags = GetLastEtags(collection, 
+                        collectionStats.LastProcessedDocumentEtag, 
+                        collectionStats.LastProcessedTombstoneEtag);
 
                     var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
                     {
-                        LastProcessedDocumentEtag = collectionStats.LastProcessedDocumentEtag,
-                        LastProcessedTombstoneEtag = collectionStats.LastProcessedTombstoneEtag
+                        LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
+                        LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
                     };
 
-                    progressStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext,
-                        collection, progressStats.LastProcessedDocumentEtag, out long totalCount);
+                    progressStats.NumberOfDocumentsToProcess =
+                        DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
+                            documentsContext, collection, progressStats.LastProcessedDocumentEtag + 1, out var totalCount);
                     progressStats.TotalNumberOfDocuments = totalCount;
 
                     progressStats.NumberOfTombstonesToProcess =
-                        DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(documentsContext, collection,
-                            progressStats.LastProcessedTombstoneEtag, out totalCount);
+                        DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
+                            documentsContext, collection, progressStats.LastProcessedTombstoneEtag + 1, out totalCount);
                     progressStats.TotalNumberOfTombstones = totalCount;
                 }
 
                 return progress;
             }
+        }
+
+        public IndexProgress.CollectionStats GetOrCreateStats(string collection)
+        {
+            if (_inMemoryIndexProgress.TryGetValue(collection, out var stats) == false)
+            {
+                stats = new IndexProgress.CollectionStats();
+                _inMemoryIndexProgress.TryAdd(collection, stats);
+            }
+
+            return stats;
+        }
+
+        private (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag) GetLastEtags(
+            string collection, long lastProcessedDocumentEtag, long lastProcessedTombstoneEtag)
+        {
+            if (_inMemoryIndexProgress.TryGetValue(collection, out var stats) == false)
+                return (lastProcessedDocumentEtag, lastProcessedTombstoneEtag);
+
+            var lastDocumentEtag = Math.Max(lastProcessedDocumentEtag, stats.LastProcessedDocumentEtag - 1);
+            var lastTombstoneEtag = Math.Max(lastProcessedTombstoneEtag, stats.LastProcessedTombstoneEtag - 1);
+            return (lastDocumentEtag, lastTombstoneEtag);
         }
 
         public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
@@ -2754,7 +2785,5 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
-
-
     }
 }
