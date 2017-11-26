@@ -472,35 +472,39 @@ namespace Raven.Server.Documents
 
         public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog = new ConcurrentDictionary<string, ConcurrentQueue<string>>();
 
+        public static void AddToInitLog(Logger logger, string databaseName, string txt, ConcurrentQueue<string> queue)
+        {
+            var msg = $"[Load Database] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
+            queue?.Enqueue(msg);
+            if (logger.IsInfoEnabled)
+                logger.Info(msg);
+        }
+
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config)
         {
             try
             {
-                if (InitLog.TryGetValue(databaseName, out var initLogQueue) == false)
-                {
-                    initLogQueue = new ConcurrentQueue<string>();
-                    InitLog[databaseName] = initLogQueue;
-                }
-                else
-                {
-                    initLogQueue.Clear();
-                }
+                var initLogQueue = InitLog.GetOrAdd(databaseName, new ConcurrentQueue<string>());
+                var addToInitLog = new Action<string>(txt => AddToInitLog(_logger, databaseName, txt, initLogQueue));
 
-                AddToInitLog(initLogQueue, "Starting database initialization");
+                addToInitLog("Starting database initialization");
 
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, initLogQueue);
-                documentDatabase.Initialize(initLog: initLogQueue);
+                var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, addToInitLog);
+                documentDatabase.Initialize(addToInitLog);
                 DeleteDatabaseCachedInfo(documentDatabase, _serverStore);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
-                AddToInitLog(initLogQueue, DatabaseInitDoneString);
+                addToInitLog(DatabaseInitDoneString);
 
                 OnDatabaseLoaded(config.ResourceName);
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+
+                InitLog.TryRemove(databaseName, out var _);
+
                 return documentDatabase;
             }
             catch (Exception e)
@@ -513,11 +517,7 @@ namespace Raven.Server.Documents
         }
 
         internal const string DatabaseInitDoneString = "Database Initialization Done.";
-
-        internal static void AddToInitLog(ConcurrentQueue<string> queue, string txtLog)
-        {
-            queue?.Enqueue($"{DateTime.UtcNow} :: {txtLog}");
-        }
+        
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void DeleteDatabaseCachedInfo(DocumentDatabase database, ServerStore serverStore)

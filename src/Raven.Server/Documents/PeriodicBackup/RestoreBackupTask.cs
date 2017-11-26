@@ -125,6 +125,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                         databaseName, overwrite: false);
                 }
 
+                var addToInitLog = new Action<string>(txt => // init log is not save in mem during RestoreBackup
+                {
+                    var msg = $"[RestoreBackup] {DateTime.UtcNow} :: Database '{databaseName}' : {txt}";
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info(msg);
+                });
+
                 using (var database = new DocumentDatabase(databaseName,
                     new RavenConfiguration(databaseName, ResourceType.Database)
                     {
@@ -133,14 +140,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                             DataDirectory = new PathSetting(_restoreConfiguration.DataDirectory),
                             RunInMemory = false
                         }
-                    }, _serverStore, initLogQueue: null))
+                    }, _serverStore, addToInitLog))
                 {
                     // smuggler needs an existing document database to operate
                     var options = InitializeOptions.SkipLoadingDatabaseRecord;
                     if (snapshotRestore)
                         options |= InitializeOptions.GenerateNewDatabaseId;
 
-                    database.Initialize(initLog: null, options: options);
+                    database.Initialize(addToInitLog, options: options);
 
                     if (snapshotRestore)
                     {
