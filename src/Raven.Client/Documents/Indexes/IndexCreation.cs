@@ -91,11 +91,20 @@ namespace Raven.Client.Documents.Indexes
             var indexesToAdd = indexCreationTasks
                 .Select(x =>
                 {
-                    x.Conventions = conventions;
-                    var definition = x.CreateIndexDefinition();
-                    definition.Name = x.IndexName;
-                    definition.Priority = x.Priority ?? IndexPriority.Normal;
-                    return definition;
+                    var oldConventions = x.Conventions;
+
+                    try
+                    {
+                        x.Conventions = conventions;
+                        var definition = x.CreateIndexDefinition();
+                        definition.Name = x.IndexName;
+                        definition.Priority = x.Priority ?? IndexPriority.Normal;
+                        return definition;
+                    }
+                    finally
+                    {
+                        x.Conventions = oldConventions;
+                    }
                 })
                 .ToArray();
 
