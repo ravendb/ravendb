@@ -270,6 +270,20 @@ namespace Sparrow.Json
             {
                 obj = (T)result;
             }
+            //just in case -> have better exception in this use-case
+            else if (typeof(T) == typeof(BlittableJsonReaderObject) &&
+                     result.GetType() == typeof(BlittableJsonReaderArray))
+            {
+                obj = default(T);
+                ThrowFormatException(result, result.GetType().FullName, nameof(BlittableJsonReaderObject));
+            }
+            //just in case -> have better exception in this use-case
+            else if (typeof(T) == typeof(BlittableJsonReaderArray) &&
+                     result.GetType() == typeof(BlittableJsonReaderObject))
+            {
+                obj = default(T);
+                ThrowFormatException(result, result.GetType().FullName, nameof(BlittableJsonReaderArray));
+            }
             else
             {
                 obj = default(T);
@@ -284,7 +298,8 @@ namespace Sparrow.Json
                     {
                         if (ChangeTypeToString(result, out string dateTimeString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (DateTime.TryParseExact(dateTimeString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time) == false)
+                        if (DateTime.TryParseExact(dateTimeString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
+                                out DateTime time) == false)
                             ThrowFormatException(result, result.GetType().FullName, "DateTime");
                         obj = (T)(object)time;
                     }
@@ -292,7 +307,8 @@ namespace Sparrow.Json
                     {
                         if (ChangeTypeToString(result, out string dateTimeOffsetString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (DateTimeOffset.TryParseExact(dateTimeOffsetString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time) == false)
+                        if (DateTimeOffset.TryParseExact(dateTimeOffsetString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                                DateTimeStyles.RoundtripKind, out DateTimeOffset time) == false)
                             ThrowFormatException(result, result.GetType().FullName, "DateTimeOffset");
                         obj = (T)(object)time;
                     }
@@ -300,7 +316,8 @@ namespace Sparrow.Json
                     {
                         if (ChangeTypeToString(result, out string timeSpanString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false) // todo: format might be problematic here
+                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false
+                        ) // todo: format might be problematic here
                             ThrowFormatException(result, result.GetType().FullName, "TimeSpan");
                         obj = (T)(object)timeSpan;
                     }

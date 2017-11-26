@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public string Source { get; private set; }
 
-        public override string Id => $"{Type}/{HintType}/{Source}";
+        public override string Id => $"{Type}/{HintType}";
 
         public INotificationDetails Details { get; protected set; }
 
