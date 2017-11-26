@@ -107,18 +107,27 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public virtual Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
         {
-            Conventions = conventions;
+            var oldConventions = Conventions;
 
-            var indexDefinition = CreateIndexDefinition();
-            indexDefinition.Name = IndexName;
+            try
+            {
+                Conventions = conventions ?? Conventions ?? store.Conventions;
 
-            if (LockMode.HasValue)
-                indexDefinition.LockMode = LockMode.Value;
+                var indexDefinition = CreateIndexDefinition();
+                indexDefinition.Name = IndexName;
 
-            if (Priority.HasValue)
-                indexDefinition.Priority = Priority.Value;
+                if (LockMode.HasValue)
+                    indexDefinition.LockMode = LockMode.Value;
 
-            return store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new PutIndexesOperation(indexDefinition), token);
+                if (Priority.HasValue)
+                    indexDefinition.Priority = Priority.Value;
+
+                return store.Maintenance.ForDatabase(database ?? store.Database).SendAsync(new PutIndexesOperation(indexDefinition), token);
+            }
+            finally
+            {
+                Conventions = oldConventions;
+            }
         }
     }
 
