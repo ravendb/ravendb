@@ -25,6 +25,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Constants = Voron.Global.Constants;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
+using Raven.Client.Exceptions.Cluster;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -256,8 +257,10 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
-        private static async Task ReportExceptionToClient(SubscriptionConnection connection, Exception ex)
+        private static async Task ReportExceptionToClient(SubscriptionConnection connection, Exception ex, int recursionDepth = 0)
         {
+            if (recursionDepth == 2)
+                return;
             try
             {
                 if (ex is SubscriptionDoesNotExistException)
@@ -330,6 +333,10 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
+                }
+                else if (ex is CommandExecutionException commandExecution && commandExecution.InnerException != null && commandExecution.InnerException is SubscriptionException)
+                {                    
+                    await ReportExceptionToClient(connection, commandExecution.InnerException, recursionDepth - 1);                    
                 }
                 else
                 {
