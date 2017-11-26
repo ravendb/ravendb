@@ -93,6 +93,7 @@ namespace Raven.Server.Documents.Indexes
         /// Cancelled if the database is in shutdown process.
         /// </summary>
         private CancellationTokenSource _indexingProcessCancellationTokenSource;
+        private bool _indexDisabled;
 
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
@@ -468,6 +469,7 @@ namespace Raven.Server.Documents.Indexes
                 SetState(IndexState.Normal);
 
                 _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
+                _indexDisabled = false;
 
                 _indexingThread = new Thread(() =>
                 {
@@ -493,7 +495,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual void Stop()
+        public virtual void Stop(bool disableIndex = false)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
@@ -506,12 +508,20 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread == null)
                     return;
 
-                _indexingProcessCancellationTokenSource.Cancel();
+                if (disableIndex)
+                {
+                    _indexDisabled = true;
+                }
+                else
+                {
+                    _indexingProcessCancellationTokenSource.Cancel();
+                }
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
-                //Cancellation was requested, the thread will exit the indexing loop and terminate.
-                //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+
+                // cancellation was requested, the thread will exit the indexing loop and terminate.
+                // if we invoke Thread.Join from the indexing thread itself it will cause a deadlock
                 if (Thread.CurrentThread != indexingThread)
                     indexingThread.Join();
             }
@@ -811,6 +821,9 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
+                        if (_indexDisabled)
+                            return;
+
                         ChangeIndexThreadPriorityIfNeeded();
 
                         if (_logger.IsInfoEnabled)
@@ -1465,7 +1478,7 @@ namespace Raven.Server.Documents.Indexes
                 if (State == IndexState.Disabled)
                     return;
 
-                Stop();
+                Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
             }
         }
@@ -2376,6 +2389,12 @@ namespace Raven.Server.Documents.Indexes
             int count)
         {
             stats.RecordMapAllocations(_threadAllocations.TotalAllocated);
+
+            if (_indexDisabled)
+            {
+                stats.RecordMapCompletedReason("Index was disabled");
+                return false;
+            }
 
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize && DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0))
             {

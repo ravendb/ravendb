@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             // no-op
         }
 
-        public override void Stop()
+        public override void Stop(bool disableIndex = false)
         {
             // no-op
         }
