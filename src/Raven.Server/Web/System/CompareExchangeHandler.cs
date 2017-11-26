@@ -59,12 +59,12 @@ namespace Raven.Server.Web.System
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var tuple = (ValueTuple<long,object>)res ;
+                        var tuple = ((long Index, object Value))res;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CmpXchgResult<object>.Index)] = tuple.Item1,
-                            [nameof(CmpXchgResult<object>.Value)] = tuple.Item2,
-                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Item1 == raftIndex
+                            [nameof(CmpXchgResult<object>.Index)] = tuple.Index,
+                            [nameof(CmpXchgResult<object>.Value)] = tuple.Value,
+                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Index == raftIndex
                         });
                     }
                     writer.Flush();
@@ -92,12 +92,12 @@ namespace Raven.Server.Web.System
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var tuple = (ValueTuple<long,object>)res ;
+                        var tuple = ((long Index, object Value))res;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CmpXchgResult<object>.Index)] = tuple.Item1,
-                            [nameof(CmpXchgResult<object>.Value)] = tuple.Item2,
-                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Item1 == raftIndex
+                            [nameof(CmpXchgResult<object>.Index)] = tuple.Index,
+                            [nameof(CmpXchgResult<object>.Value)] = tuple.Value,
+                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Index == raftIndex
                         });
                     }
                     writer.Flush();
