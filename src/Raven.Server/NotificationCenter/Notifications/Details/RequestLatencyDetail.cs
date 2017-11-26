@@ -3,41 +3,42 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Extensions;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-
+using Concurrent = System.Collections.Concurrent;
 namespace Raven.Server.NotificationCenter.Notifications.Details
 {
     public class RequestLatencyDetail : INotificationDetails
     {
         private const int RequestLatencyDetailLimit = 50;
-        public Dictionary<string, Queue<RequestLatencyInfo>> RequestLatencies { get; set; }
+        public ConcurrentDictionary<string, Concurrent.ConcurrentQueue<RequestLatencyInfo>> RequestLatencies { get; set; }
 
         public RequestLatencyDetail()
         {
-            RequestLatencies = new Dictionary<string, Queue<RequestLatencyInfo>>();
+            RequestLatencies = new ConcurrentDictionary<string, Concurrent.ConcurrentQueue<RequestLatencyInfo>>();
         }
         
         public void Update(string queryString,  IQueryCollection requestQuery, long duration, string action)
         {
             if (RequestLatencies.TryGetValue(action, out var hintQueue) == false)
             {
-                var queue = new Queue<RequestLatencyInfo>();
+                var queue = new Concurrent.ConcurrentQueue<RequestLatencyInfo>();
                 queue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault()), duration, action));
                 RequestLatencies.Add(action, queue);
             }
             else
             {
                 EnforceLimitOfQueueLength(hintQueue);
-                hintQueue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x=> x.Value.FirstOrDefault()), duration, action));
+                hintQueue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault()), duration, action));
             }
         }
 
-        private static void EnforceLimitOfQueueLength(Queue<RequestLatencyInfo> hintQueue)
+        private static void EnforceLimitOfQueueLength(Concurrent.ConcurrentQueue<RequestLatencyInfo> hintQueue)
         {
             while (hintQueue.Count > RequestLatencyDetailLimit)
             {
-                hintQueue.Dequeue();
+                hintQueue.TryDequeue(out _);
             }
         }
 
