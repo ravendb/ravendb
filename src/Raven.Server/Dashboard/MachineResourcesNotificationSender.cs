@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter;
+using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
@@ -68,6 +69,8 @@ namespace Raven.Server.Dashboard
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
             var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
             var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);
+            var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
+            var shared = mappedSharedMem.GetValue(SizeUnit.Bytes);
 
             var cpuInfo = CpuUsage.Calculate();
             var machineResources = new MachineResources
@@ -75,6 +78,7 @@ namespace Raven.Server.Dashboard
                 TotalMemory = installedMemory,
                 MachineMemoryUsage = installedMemory - availableMemory,
                 ProcessMemoryUsage = workingSet,
+                ProcessMemoryExcludingSharedUsage = Math.Max(workingSet - shared, 0),
                 MachineCpuUsage = cpuInfo.MachineCpuUsage,
                 ProcessCpuUsage = cpuInfo.ProcessCpuUsage
             };
