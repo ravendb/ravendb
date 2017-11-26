@@ -433,22 +433,26 @@ namespace Raven.Server.Utils.Cli
         private static bool CommandInfo(List<string> args, RavenCli cli)
         {
             new ClusterMessage(Console.Out, cli._server.ServerStore).Print();
-            var memoryInfo = MemoryInformation.GetMemoryInfo();
-            WriteText(
-                $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
-                Environment.NewLine +
-                $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
-                Environment.NewLine +
-                $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory" +
-                Environment.NewLine +
-                $" {RuntimeSettings.Describe()}",
-                ConsoleColor.Cyan, cli);
 
-            var bitsNum = IntPtr.Size * 8;
-            if (bitsNum == 64 && cli._server.Configuration.Storage.ForceUsing32BitsPager)
+            WriteText(GetInfoText(), ConsoleColor.Cyan, cli);
+
+            if (cli._server.Configuration.Storage.ForceUsing32BitsPager || IntPtr.Size == sizeof(int))
                 WriteText(" Running in 32 bits mode", ConsoleColor.DarkCyan, cli);
 
             return true;
+        }
+
+        public static string GetInfoText()
+        {
+            var memoryInfo = MemoryInformation.GetMemoryInfo();
+
+            return $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
+                  Environment.NewLine +
+                  $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
+                  Environment.NewLine +
+                  $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory" +
+                  Environment.NewLine +
+                  $" {RuntimeSettings.Describe()}";
         }
 
         private static bool CommandLogo(List<string> args, RavenCli cli)

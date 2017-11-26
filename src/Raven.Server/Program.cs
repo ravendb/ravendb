@@ -56,6 +56,9 @@ namespace Raven.Server
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to { configuration.Logs.Path } set to {configuration.Logs.Mode} level.");
 
+            if(Logger.IsOperationsEnabled)
+                Logger.Operations(RavenCli.GetInfoText());
+
             if (WindowsServiceRunner.ShouldRunAsWindowsService())
             {
                 try
