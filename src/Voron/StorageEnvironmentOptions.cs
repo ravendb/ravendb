@@ -149,8 +149,7 @@ namespace Voron
 
         public Func<string, bool> ShouldUseKeyPrefix { get; set; }
 
-        public string DocumentDatabaseName { get; set; }
-        public ConcurrentQueue<string> InitLogQueue { get; set; }
+        public Action<string> AddToInitLog;
 
         protected StorageEnvironmentOptions(VoronPathSetting tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {

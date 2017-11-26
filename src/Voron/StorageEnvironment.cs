@@ -256,10 +256,10 @@ namespace Voron
             var header = stackalloc TransactionHeader[1];
             bool hadIntegrityIssues;
 
-            Options.InitLogQueue?.Enqueue($"{DateTime.UtcNow} :: Starting Recovery");
-            hadIntegrityIssues = _journal.RecoverDatabase(header, Options.InitLogQueue);
+            Options.AddToInitLog?.Invoke("Starting Recovery");
+            hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
             var successString = hadIntegrityIssues ? "(successfully)" : "(with intergrity issues)";
-            Options.InitLogQueue?.Enqueue($"{DateTime.UtcNow} :: Recovery Ended {successString}");
+            Options.AddToInitLog?.Invoke($"Recovery Ended {successString}");
 
             if (hadIntegrityIssues)
             {
@@ -289,13 +289,17 @@ namespace Voron
                     VoronUnrecoverableErrorException.Raise(this,
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
-                var dbId = metadataTree?.Read("db-id");
+                Debug.Assert(metadataTree != null);
+                // ReSharper disable once PossibleNullReferenceException
+                var dbId = metadataTree.Read("db-id");
                 if (dbId == null)
                     VoronUnrecoverableErrorException.Raise(this,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
-                var dbIdBytes = dbId?.Reader.Read(buffer, 0, 16);
+                Debug.Assert(dbId != null);
+                // ReSharper disable once PossibleNullReferenceException
+                var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
                     VoronUnrecoverableErrorException.Raise(this,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");

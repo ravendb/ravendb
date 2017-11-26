@@ -110,7 +110,7 @@ namespace Raven.Server.Routing
                 if (databasesLandlord.InitLog.TryGetValue(databaseName, out var initLogQueue))
                 {
                     // lets first check if database is in recovery process. if so - lets throw appropriate exception
-                    if (initLogQueue.TryDequeue(out var str))
+                    if (initLogQueue.TryPeek(out var str))
                     {
                         if (str.Equals(DatabasesLandlord.DatabaseInitDoneString) == false) // database still loading
                         {
