@@ -15,7 +15,13 @@ class computeIndexingProgressCommand extends commandBase {
         };
         const url = endpoints.databases.index.indexesProgress;
         return this.query(url, args, this.db, dto => new indexProgress(dto))
-            .fail((response: JQueryXHR) => this.reportError("Failed to compute indexing progress!", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => {
+                if (response.statusText === "Not Found") {
+                    return;
+                }
+
+                this.reportError("Failed to compute indexing progress!", response.responseText, response.statusText);
+            });
     }
 } 
 
