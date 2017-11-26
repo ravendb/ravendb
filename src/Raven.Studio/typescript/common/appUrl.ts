@@ -199,16 +199,17 @@ class appUrl {
     }
 
     static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {
-        const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const docIdUrlPart = id ? "&id=" + encodeURIComponent(id) : "";
         const collectionPart = collection ? "&collection=" + encodeURIComponent(collection) : "";
-        return "#databases/edit?" + docIdUrlPart + collectionPart + databaseUrlPart;
+        const databaseUrlPart = appUrl.getEncodedDbPart(db);
+        const docIdUrlPart = id ? "&id=" + encodeURI(id) : "";
+        return "#databases/edit?" + collectionPart + databaseUrlPart + docIdUrlPart;
     }
 
     static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const docIdUrlPart = "&id=" + encodeURIComponent(id) + "&revision=" + encodeURIComponent(revisionChangeVector);
-        return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
+        const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);        
+        const docIdUrlPart = "&id=" + encodeURI(id);
+        return "#databases/edit?" + databaseUrlPart + revisionPart + docIdUrlPart;
     }
 
     static forEditItem(itemId: string, db: database | databaseInfo, itemIndex: number, collectionName?: string): string {
@@ -674,15 +675,22 @@ class appUrl {
 
     static urlEncodeArgs(args: any): string {
         const propNameAndValues: Array<string> = [];
-        for (let prop of Object.keys(args)) {
+        
+        for (let prop of Object.keys(args)) {                                
             const value = args[prop];
 
             if (value instanceof Array) {
                 for (let i = 0; i < value.length; i++) {
-                    propNameAndValues.push(prop + "=" + encodeURIComponent(value[i]));
+
+                    // we want : doc/76 (so use encodeURI)
+                    // encodeURI(doc/76) ==> "doc/76"
+                    // encodeURIComponent(doc/76) ==> "doc%2F76"     
+                    propNameAndValues.push(prop + "=" + (prop === 'id' ? encodeURI(value[i]) : encodeURIComponent(value[i]))); 
+                    
                 }
             } else if (value !== undefined) {
-                propNameAndValues.push(prop + "=" + encodeURIComponent(value));
+                propNameAndValues.push(prop + "=" + (prop === 'id' ? encodeURI(value) : encodeURIComponent(value)));
+                
             }
         }
 
