@@ -2515,7 +2515,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 throw new ArgumentException("Could not understand expression: " + expression, e);
             }
-            catch (NotSupportedException e)
+            catch (NotSupportedException e) 
+                // we filter this so we'll get better errors
+                when (e.HelpLink != "DoNotWrap")
             {
                 throw new NotSupportedException("Could not understand expression: " + expression, e);
             }

@@ -8,7 +8,9 @@ using System.Text;
 using System.Threading;
 using Jint;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -465,8 +467,27 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext();
 
-                if (args.Length != 1 || args[0].IsString() == false)
-                    throw new InvalidOperationException("load(id) must be called with a single string argument");
+                if (args.Length != 1)
+                    throw new InvalidOperationException("load(id | ids) must be called with a single string argument");
+
+                if (args[0].IsArray())
+                {
+                    var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                    var arrayInstance = args[0].AsArray();
+                    foreach (var kvp in arrayInstance.GetOwnProperties())
+                    {
+                        if (kvp.Key == "length")
+                            continue;
+                        if (kvp.Value.Value.IsString() == false)
+                            throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
+                        var result = LoadDocumentInternal(kvp.Value.Value.AsString());
+                        ScriptEngine.Array.PrototypeObject.Push(results, new[]{ result });
+                    }
+                    return results;
+                }
+
+                if (args[0].IsString() == false)
+                    throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
 
                 return LoadDocumentInternal(args[0].AsString());
             }
