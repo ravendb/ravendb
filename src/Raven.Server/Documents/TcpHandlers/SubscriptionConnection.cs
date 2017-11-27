@@ -469,6 +469,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 _logger.Info(
                                     $"Did not find any documents to send for subscription {Options.SubscriptionName}");
                             }
+                            
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
                                 Options.SubscriptionName,
                                 // if this is a new subscription that we sent anything in this iteration, 
@@ -476,6 +477,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 _lastChangeVector ?? 
                                     nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                                 subscriptionChangeVectorBeforeCurrentBatch);
+                            
+                            AssertCloseWhenNoDocsLeft();
+                            
                             subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
                             if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -502,8 +506,22 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)> WaitForClientAck(
-            Task<SubscriptionConnectionClientMessage> replyFromClientTask, 
+        private void AssertCloseWhenNoDocsLeft()
+        {
+            if (_options.CloseWhenNoDocsLeft)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(
+                        $"Closing subscription {Options.SubscriptionName} because did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+                }
+
+                throw new SubscriptionClosedException($"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+            }
+        }
+
+        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)> 
+            WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask, 
             string subscriptionChangeVectorBeforeCurrentBatch)
         {
             SubscriptionConnectionClientMessage clientReply;

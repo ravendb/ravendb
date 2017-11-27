@@ -244,7 +244,7 @@ namespace Raven.Client.Documents.Subscriptions
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it was closed.  " + connectionStatus.Exception);
+                        $"Subscription With Id '{_options.SubscriptionName}' was closed.  " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Invalid:
                     throw new SubscriptionInvalidStateException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it is in invalid state. " + connectionStatus.Exception);
