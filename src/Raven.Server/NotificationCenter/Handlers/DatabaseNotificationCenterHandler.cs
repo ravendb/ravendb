@@ -33,7 +33,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                         await writer.WriteToWebSocket(action.ToJson());
                     }
                     
-                    await writer.WriteNotifications();
+                    await writer.WriteNotifications(null);
                 }
             }
         }

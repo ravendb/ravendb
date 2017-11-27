@@ -45,7 +45,8 @@ namespace Raven.Server.NotificationCenter.Notifications
                 [nameof(Title)] = Title,
                 [nameof(Message)] = Message,
                 [nameof(Severity)] = Severity,
-                [nameof(IsPersistent)] = IsPersistent
+                [nameof(IsPersistent)] = IsPersistent,
+                [nameof(Database)] = Database
             };
         }
     }
