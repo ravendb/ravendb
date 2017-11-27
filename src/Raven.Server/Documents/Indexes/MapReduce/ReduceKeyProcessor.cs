@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private ulong _singleValueHash;
         private readonly int _numberOfReduceFields;
         private int _processedFields;
+        private bool _hadAnyNotNullValue;
 
         public ReduceKeyProcessor(int numberOfReduceFields, UnmanagedBuffersPoolWithLowMemoryHandling buffersPool)
         {
@@ -44,6 +45,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             _bufferPos = 0;
             _processedFields = 0;
+            _hadAnyNotNullValue = false;
         }
 
         public ulong Hash
@@ -52,6 +54,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             {
                 if (_processedFields != _numberOfReduceFields)
                     ThrowInvalidNumberOfFields();
+
+                if (_hadAnyNotNullValue == false)
+                    return 0;
 
                 switch (_mode)
                 {
@@ -85,6 +90,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             if (value == null || value is DynamicNullObject)
                 return;
+
+            _hadAnyNotNullValue = true;
 
             var lsv = value as LazyStringValue;
             if (lsv != null)
