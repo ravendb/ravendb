@@ -43,7 +43,7 @@ namespace Raven.Server.NotificationCenter.Handlers
         }
 
      
-        [RavenAction("/admin/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/server/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser)]
         public Task DismissPost()
         {
             var id = GetStringQueryString("id");
@@ -65,7 +65,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             return NoContent();
         }
 
-        [RavenAction("/admin/notification-center/postpone", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/server/notification-center/postpone", "POST", AuthorizationStatus.ValidUser)]
         public Task PostponePost()
         {
             var id = GetStringQueryString("id");
