@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
@@ -57,7 +56,58 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public async Task Bulk_Insert_Should_Throw_On_StoreAsync_Concurrent_Calls()
+        public async Task Simple_Bulk_Insert_Should_Work()
+        {
+            var fooBars = new[]
+            {
+                new FooBar { Name = "John Doe" },
+                new FooBar { Name = "Jane Doe" },
+                new FooBar { Name = "Mega John" },
+                new FooBar { Name = "Mega Jane" }
+            };
+            using (var store = GetDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    await bulkInsert.StoreAsync(fooBars[0]);
+                    await bulkInsert.StoreAsync(fooBars[1]);
+                    await bulkInsert.StoreAsync(fooBars[2]);
+                    await bulkInsert.StoreAsync(fooBars[3]);
+                }
+
+                store.GetRequestExecutor(store.Database).ContextPool.AllocateOperationContext(out JsonOperationContext context);
+
+                var getDocumentCommand = new GetDocumentCommand(new[] { "FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A" }, includes: null, metadataOnly: false);
+
+                store.GetRequestExecutor(store.Database).Execute(getDocumentCommand, context);
+
+                var results = getDocumentCommand.Result.Results;
+
+                Assert.Equal(4, results.Length);
+
+                var doc1 = results[0];
+                var doc2 = results[1];
+                var doc3 = results[2];
+                var doc4 = results[3];
+                Assert.NotNull(doc1);
+                Assert.NotNull(doc2);
+                Assert.NotNull(doc3);
+                Assert.NotNull(doc4);
+
+                object name;
+                ((BlittableJsonReaderObject)doc1).TryGetMember("Name", out name);
+                Assert.Equal("John Doe", name.ToString());
+                ((BlittableJsonReaderObject)doc2).TryGetMember("Name", out name);
+                Assert.Equal("Jane Doe", name.ToString());
+                ((BlittableJsonReaderObject)doc3).TryGetMember("Name", out name);
+                Assert.Equal("Mega John", name.ToString());
+                ((BlittableJsonReaderObject)doc4).TryGetMember("Name", out name);
+                Assert.Equal("Mega Jane", name.ToString());
+            }
+        }
+
+        [Fact]
+        public void Bulk_Insert_Should_Throw_On_StoreAsync_Concurrent_Calls()
         {
             using (var store = GetDocumentStore())
             {
@@ -89,7 +139,7 @@ namespace FastTests.Client
                         }
                     });
 
-                    SpinWait.SpinUntil(() => result.IsCompleted, TimeSpan.FromSeconds(30));
+
                     Assert.True(result.IsCompleted);
                     Assert.Contains("Store/StoreAsync in bulkInsert concurrently is forbidden", msg);
                 }
