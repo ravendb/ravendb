@@ -450,7 +450,7 @@ namespace Raven.Server.Documents
                 {
                     continue;
                 }
-                if (string.Equals(c, collection, StringComparison.Ordinal) == false)
+                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     continue;
                 }
@@ -599,7 +599,7 @@ namespace Raven.Server.Documents
                     totalCount.Value--;
                     continue;
                 }
-                if (string.Equals(c, collection, StringComparison.Ordinal) == false)
+                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
                 {                    
                     totalCount.Value--;
                     continue;
