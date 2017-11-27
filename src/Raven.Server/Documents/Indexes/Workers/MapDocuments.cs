@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing map for '{_index.Name} ({_index.Etag})'. LastMappedEtag: {lastMappedEtag}.");
 
-                    var inMemoryStats = _index.GetOrCreateStats(collection);
+                    var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
