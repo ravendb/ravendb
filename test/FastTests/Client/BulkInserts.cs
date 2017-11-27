@@ -122,25 +122,20 @@ namespace FastTests.Client
                         };
                     }
 
-                    // Assert catching cocuurency exception using string
-                    string msg = null;
 
-                    var result = Parallel.ForEach(localList, async element =>
+                    var ae = Assert.Throws<AggregateException>(() =>
                     {
-                        var localElement = element;
-                        try
+                        Parallel.ForEach(localList, element =>
                         {
-                            await bulkInsert.StoreAsync(localElement).ConfigureAwait(false);
-                        }
-                        catch (ConcurrencyException e)
-                        {
-                            if (msg == null)
-                                msg = e.Message;
-                        }
+                            bulkInsert.StoreAsync(element).Wait();
+                        });
                     });
 
 
-                    Assert.True(result.IsCompleted);
+                    var msg = ae.InnerExceptions
+                        .OfType<AggregateException>()
+                        .SelectMany(x=>x.InnerExceptions)
+                        .OfType<ConcurrencyException>().First().Message;
                     Assert.Contains("Store/StoreAsync in bulkInsert concurrently is forbidden", msg);
                 }
             }

@@ -361,9 +361,8 @@ namespace Raven.Client.Documents.BulkInsert
         {
             var stateRequest = new GetOperationStateCommand(_requestExecutor.Conventions, _operationId);
             await _requestExecutor.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
-            var error = stateRequest.Result.Result as OperationExceptionResult;
 
-            if (error == null)
+            if (!(stateRequest.Result.Result is OperationExceptionResult error))
                 return null;
             return new BulkInsertAbortedException(error.Error);
         }
