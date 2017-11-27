@@ -174,10 +174,12 @@ namespace Raven.Client.Util
                                 {
                                     writer.Write(".find");
                                     context.Visitor.Visit(methodCallExpression.Arguments[1]);
-
+                                    return;
                                 }
+                                
+                                writer.Write("[0]");
+                                return;
                             }
-                            return;
                         }
                     case "Last":
                     case "LastOrDefault":
