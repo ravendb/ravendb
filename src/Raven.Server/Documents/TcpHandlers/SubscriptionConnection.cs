@@ -823,7 +823,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             var collectionName = q.From.From.FieldValue;
-            if (q.Where == null && q.Select == null && q.SelectFunctionBody == null)
+            if (q.Where == null && q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 return (collectionName, (null, null), revisions);
 
             var writer = new StringWriter();
@@ -834,7 +834,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 writer.Write(q.From.Alias);
                 writer.WriteLine(" = this;");
             }
-            else if(q.Select != null || q.SelectFunctionBody != null || q.Load != null)
+            else if(q.Select != null || q.SelectFunctionBody.FunctionText != null || q.Load != null)
             {
                 throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
             }
@@ -864,10 +864,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 writer.WriteLine("{");
             }
 
-            if (q.SelectFunctionBody != null)
+            if (q.SelectFunctionBody.FunctionText != null)
             {
                 writer.Write(" return ");
-                writer.Write(q.SelectFunctionBody);
+                writer.Write(q.SelectFunctionBody.FunctionText);
                 writer.WriteLine(";");
             }
             else if (q.Select != null)
@@ -893,7 +893,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             new Esprima.JavaScriptParser(script).ParseProgram();
 
-            return (collectionName, (script, q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<string>()), revisions);
+            return (collectionName, (script, q.DeclaredFunctions?.Values?.Select(x => x.FunctionText).ToArray() ?? Array.Empty<string>()), revisions);
         }
     }
 

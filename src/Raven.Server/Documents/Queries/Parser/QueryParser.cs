@@ -97,10 +97,10 @@ namespace Raven.Server.Documents.Queries.Parser
             return q;
         }
 
-        private static void ValidateScript(string script)
+        private static Esprima.Ast.Program ValidateScript(string script)
         {
             var javaScriptParser = new JavaScriptParser(script);
-            javaScriptParser.ParseProgram();
+            return javaScriptParser.ParseProgram();
         }
 
         private static void ThrowUnknownQueryType(QueryType queryType)
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return includes;
         }
 
-        private (StringSegment Name, string FunctionText) DeclaredFunction()
+        private (StringSegment Name, (string FunctionText, Esprima.Ast.Program Program)) DeclaredFunction()
         {
             // becuase of how we are processing them, we don't actually care for
             // parsing the function directly. We have implemented a minimal parser
@@ -164,13 +164,13 @@ namespace Raven.Server.Documents.Queries.Parser
             // validate this function
             try
             {
-                ValidateScript(functionText);
+                var program = ValidateScript(functionText);
+                return (name, (functionText, program));
             }
             catch (Exception e)
             {
                 throw new InvalidQueryException("Invalid script inside function " + name, Scanner.Input, null, e);
             }
-            return (name, functionText);
         }
 
         private List<(QueryExpression Expression, StringSegment? Alias)> GroupBy()
@@ -280,13 +280,13 @@ namespace Raven.Server.Documents.Queries.Parser
             var functionStart = Scanner.Position;
             if (Scanner.FunctionBody())
             {
-                query.SelectFunctionBody =
-                    Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
+                var functionText = Scanner.Input.Substring(functionStart, Scanner.Position - functionStart);
 
                 // validate that this is valid JS code
                 try
                 {
-                    ValidateScript("return " + query.SelectFunctionBody);
+                    var program = ValidateScript("return " + functionText);
+                    query.SelectFunctionBody = (functionText, program);
                 }
                 catch (Exception e)
                 {

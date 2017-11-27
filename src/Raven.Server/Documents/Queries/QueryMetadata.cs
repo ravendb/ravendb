@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Esprima.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -16,6 +17,7 @@ using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow;
 using Sparrow.Json;
+using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -94,6 +96,8 @@ namespace Raven.Server.Documents.Queries
 
         public string[] Includes;
 
+        public bool HasIncludeOrLoad;
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -133,7 +137,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.Load != null)
                 HandleLoadClause(parameters);
 
-            if (Query.SelectFunctionBody != null)
+            if (Query.SelectFunctionBody.FunctionText != null)
                 HandleSelectFunctionBody(parameters);
             else if (Query.Select != null)
                 FillSelectFields(parameters);
@@ -185,6 +189,66 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.Include != null)
                 HandleQueryInclude(parameters);
+
+            if (Query.DeclaredFunctions != null)
+                HandleDeclaredFunctions();
+        }
+
+        private void HandleDeclaredFunctions()
+        {
+            foreach (var function in Query.DeclaredFunctions)
+            {
+                var body = function.Value.Program.Body;
+                HandleDeclaredFunctionBody(body);
+                if (HasIncludeOrLoad)
+                    return;
+            }
+        }
+
+        private void HandleDeclaredFunctionBody(IEnumerable<StatementListItem> body)
+        {
+            foreach (var statement in body)
+            {
+                if (statement is ReturnStatement returnStatement)
+                {
+                    if (returnStatement.Argument is ObjectExpression objectExpression)
+                    {
+                        foreach (var property in objectExpression.Properties)
+                        {
+                            if (property.Value is StaticMemberExpression staticMemberExpression)
+                            {
+                                HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
+                                if (HasIncludeOrLoad)
+                                    return;
+                            }
+                        }
+                    }
+                    else if (returnStatement.Argument is StaticMemberExpression staticMemberExpression)
+                    {
+                        HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
+                        if (HasIncludeOrLoad)
+                            return;
+                    }
+                }
+                else if (statement is FunctionDeclaration functionDeclaration)
+                {
+                    HandleDeclaredFunctionBody(functionDeclaration.Body.Body);
+                }
+            }
+        }
+
+        private void HandleDeclaredFunctionStaticMemberExpression(StaticMemberExpression staticMemberExpression)
+        {
+            if (staticMemberExpression.Object is CallExpression callExpression)
+            {
+                if (callExpression.Callee is Identifier identifier)
+                {
+                    if (identifier.Name == "load")
+                    {
+                        HasIncludeOrLoad = true;
+                    }
+                }
+            }
         }
 
         private void ThrowInvalidMethod(BlittableJsonReaderObject parameters, MethodExpression me)
@@ -194,6 +258,8 @@ namespace Raven.Server.Documents.Queries
 
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
         {
+            HasIncludeOrLoad = true;
+
             var includes = new List<string>();
             foreach (var include in Query.Include)
             {
@@ -258,13 +324,12 @@ namespace Raven.Server.Documents.Queries
             }
             sb.Append("    return ");
 
-            sb.Append(Query.SelectFunctionBody);
+            sb.Append(Query.SelectFunctionBody.FunctionText);
 
             sb.AppendLine(";").AppendLine("}");
 
-            if (Query.TryAddFunction(name, sb.ToString()) == false)
+            if (Query.TryAddFunction(name, (sb.ToString(), Query.SelectFunctionBody.Program)) == false)
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
-
 
             SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
         }
@@ -308,6 +373,7 @@ namespace Raven.Server.Documents.Queries
 
         private void HandleLoadClause(BlittableJsonReaderObject parameters)
         {
+            HasIncludeOrLoad = true;
             foreach (var load in Query.Load)
             {
                 if (load.Alias == null)
@@ -1393,7 +1459,7 @@ namespace Raven.Server.Documents.Queries
 
             public object EvaluateSingleMethod(QueryResultRetrieverBase revtriver, Document doc)
             {
-                _query.TryAddFunction(_expression.Name, _expression.Name);
+                _query.TryAddFunction(_expression.Name, (_expression.Name, null));
                 if (_expression.Arguments == null || _expression.Arguments.Count == 0)
                 {
                     return revtriver.InvokeFunction(_expression.Name, _query, new object[] { });

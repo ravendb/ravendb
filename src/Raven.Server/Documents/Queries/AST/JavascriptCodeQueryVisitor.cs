@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitDeclaredFunctions(Dictionary<StringSegment, string> declaredFunctions)
+        public override void VisitDeclaredFunctions(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> declaredFunctions)
         {
             throw new NotSupportedException();
         }
