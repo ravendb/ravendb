@@ -1096,15 +1096,15 @@ class indexPerformance extends viewModelBase {
                 countsDetails += `Output Count: ${parentStats.OutputCount.toLocaleString()}<br/>`;
                 countsDetails += `Failed Count: ${parentStats.FailedCount.toLocaleString()}<br/>`;
                 countsDetails += `Success Count: ${parentStats.SuccessCount.toLocaleString()}<br/>`;
-                countsDetails += `Documents Size: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize)}<br/>`;
+                countsDetails += `Documents Size: ${parentStats.DocumentsSize.HumaneSize}<br/>`;
 
                 if (parentStats.InputCount > 0) {
-                    countsDetails += `Average Document Size: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize / parentStats.InputCount)}<br/>`;
+                    countsDetails += `Average Document Size: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / parentStats.InputCount)}<br/>`;
                 }
 
                 if (element.DurationInMs > 0) {
                     const durationInSec = element.DurationInMs / 1000;
-                    countsDetails += `Processed Data Speed: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize / durationInSec)}/sec<br/>`;
+                    countsDetails += `Processed Data Speed: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / durationInSec)}/sec<br/>`;
                     countsDetails += `Document Processing Speed: ${Math.floor(parentStats.InputCount / durationInSec).toLocaleString()}/sec<br/>`;
                 }
 

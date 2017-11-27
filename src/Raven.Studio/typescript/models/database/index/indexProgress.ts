@@ -29,7 +29,7 @@ class progress {
     // .toFixed() of 99.9924 => 100.0
     // expected: 99.9
     private toFixed(number: number, fixed: number) {
-        var regExp = new RegExp(`^-?\\d+(?:\.\\d{0,${fixed || -1}})?`);
+        const regExp = new RegExp(`^-?\\d+(?:\.\\d{0,${fixed || -1}})?`);
         return number.toString().match(regExp)[0];
     }
 
