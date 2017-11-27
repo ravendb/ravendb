@@ -1536,12 +1536,12 @@ namespace Raven.Server.Documents.Indexes
 
                     progressStats.NumberOfDocumentsToProcess =
                         DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                            documentsContext, collection, progressStats.LastProcessedDocumentEtag + 1, out var totalCount);
+                            documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
                     progressStats.TotalNumberOfDocuments = totalCount;
 
                     progressStats.NumberOfTombstonesToProcess =
                         DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                            documentsContext, collection, progressStats.LastProcessedTombstoneEtag + 1, out totalCount);
+                            documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
                     progressStats.TotalNumberOfTombstones = totalCount;
                 }
 

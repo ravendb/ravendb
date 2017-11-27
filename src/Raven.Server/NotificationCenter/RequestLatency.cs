@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter
 {
     public class RequestLatency
     {
-        private static readonly string RequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}";
+        private static readonly string QueryRequestLatenciesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.RequestLatency}/Query";
         private readonly object _addHintSyncObj = new object();
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
@@ -45,7 +45,7 @@ namespace Raven.Server.NotificationCenter
         private PerformanceHint GetOrCreatePerformanceLatencies(out RequestLatencyDetail details)
         {
             //Read() is transactional, so this is thread-safe
-            using (_notificationsStorage.Read(RequestLatenciesId, out var ntv))
+            using (_notificationsStorage.Read(QueryRequestLatenciesId, out var ntv))
             {
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 {
@@ -55,7 +55,7 @@ namespace Raven.Server.NotificationCenter
                 {
                     details = (RequestLatencyDetail)EntityToBlittable.ConvertToEntity(
                         typeof(RequestLatencyDetail),
-                        RequestLatenciesId,
+                        QueryRequestLatenciesId,
                         detailsJson,
                         DocumentConventions.Default);
                 }
@@ -66,7 +66,7 @@ namespace Raven.Server.NotificationCenter
                     "We have detected that some query duration has surpassed the configured threshold",
                     PerformanceHintType.RequestLatency,
                     NotificationSeverity.Warning,
-                    "Query Latency",
+                    "Query",
                     details
                 );
             }

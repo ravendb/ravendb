@@ -79,7 +79,8 @@ namespace FastTests.Server.NotificationCenter
                     .AddHint("/databases/testDB2",
                         new TestRequestParams(queryParams2), 15, "TestDB2");                
                 
-                var storedRequestLatencyDetails = database.NotificationCenter.RequestLatency.GetRequestLatencyDetails();
+                var storedRequestLatencyDetails = database.NotificationCenter.RequestLatency
+                    .GetRequestLatencyDetails();
                 Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies.Count);
                 Assert.Equal(1, storedRequestLatencyDetails.RequestLatencies["TestDB"].Count);
 
