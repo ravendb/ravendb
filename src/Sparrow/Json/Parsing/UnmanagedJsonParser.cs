@@ -40,7 +40,9 @@ namespace Sparrow.Json.Parsing
         private string _expectedTokenString;
         private bool _zeroPrefix;
         private bool _isNegative;
-        private bool _isDouble;
+        private bool _isFractionedDouble;
+        private bool _isOverflow;
+
         private bool _isExponent;
         private bool _escapeMode;
         private bool _maybeBeforePreamble = true;
@@ -228,7 +230,7 @@ namespace Sparrow.Json.Parsing
                 state.Long = 0;
                 _zeroPrefix = b == '0';
                 _isNegative = false;
-                _isDouble = false;
+                _isFractionedDouble = false;
                 _isExponent = false;
 
                 // ParseNumber need to call _charPos++ & _pos++, so we'll reset them for the first char
@@ -454,7 +456,7 @@ namespace Sparrow.Json.Parsing
                     {
                         _zeroPrefix = false;
                         _isNegative = true;
-                        _isDouble = false;
+                        _isFractionedDouble = false;
                         _isExponent = false;
                         _state.Long = 0;
                         _state.EscapePositions.Clear();
@@ -571,7 +573,7 @@ namespace Sparrow.Json.Parsing
                     var next = (value * 10) + digit;
 
                     if (next < value) //overflow
-                        _isDouble = true;
+                        _isOverflow = true;
 
                     value = next; 
                     
@@ -588,7 +590,7 @@ namespace Sparrow.Json.Parsing
                         if (_isNegative)
                             value *= -1;
 
-                        state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
+                        state.CurrentTokenType = (_isFractionedDouble || _isOverflow)? JsonParserToken.Float : JsonParserToken.Integer;
 
                         pos--; _charPos--;// need to re-read this char
 
@@ -625,10 +627,10 @@ namespace Sparrow.Json.Parsing
             {
                 case (byte)'.':
                 {
-                    if (!_isDouble)
+                    if (!_isFractionedDouble)
                     {
                         _zeroPrefix = false; // 0.5, frex
-                        _isDouble = true;
+                        _isFractionedDouble = true;
                         break;
                     }
 
@@ -643,7 +645,7 @@ namespace Sparrow.Json.Parsing
                     if (_isExponent)
                         ThrowWhenMalformed("Already got 'e' in this number value");
                     _isExponent = true;
-                    _isDouble = true;
+                    _isFractionedDouble = true;
                     break;
                 }
                 case (byte)'-':
@@ -669,7 +671,7 @@ namespace Sparrow.Json.Parsing
                         if (_isNegative)
                             value *= -1;
 
-                        state.CurrentTokenType = _isDouble ? JsonParserToken.Float : JsonParserToken.Integer;
+                        state.CurrentTokenType = (_isFractionedDouble || _isOverflow) ? JsonParserToken.Float : JsonParserToken.Integer;
 
                         pos--;
                         _charPos--; // need to re-read this char
