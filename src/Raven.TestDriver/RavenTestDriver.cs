@@ -64,6 +64,8 @@ namespace Raven.TestDriver
                 Database = name
             };
 
+            PreInitialize(store);
+
             store.Initialize();
 
             store.AfterDispose += (sender, args) =>
@@ -93,6 +95,10 @@ namespace Raven.TestDriver
             _documentStores[store] = null;
 
             return store;
+        }
+
+        protected virtual void PreInitialize(IDocumentStore documentStore)
+        {
         }
 
         protected virtual void SetupDatabase(IDocumentStore documentStore)

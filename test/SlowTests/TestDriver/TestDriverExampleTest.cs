@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.Loader;
+using System.Threading.Tasks;
 using Lucene.Net.Util;
 using Raven.Client.Documents;
 using Raven.TestDriver;
@@ -55,6 +56,18 @@ namespace SlowTests.TestDriver
             public string Name { get; set; }
         }
 
+        private class TestDocConvention
+        {
+            public string Name { get; set; }
+            public string Email { get; set; }
+        }
+
+        private readonly TestDocConvention _testDocConvention = new TestDocConvention
+        {
+            Name = "Test",
+            Email = "test@local"
+        };
+        
         private readonly TestDoc _doc = new TestDoc
         {
             Name = "Test"
@@ -65,11 +78,17 @@ namespace SlowTests.TestDriver
             .Assembly
             .GetManifestResourceStream("SlowTests.Data.testing.ravendbdump");
 
+        protected override void PreInitialize(IDocumentStore documentStore)
+        {
+            documentStore.Conventions.RegisterAsyncIdConvention<TestDocConvention>((dbname, testDoc) => Task.FromResult(testDoc.Email));
+        }
+
         protected override void SetupDatabase(IDocumentStore documentStore)
         {
             using (var session = documentStore.OpenSession())
             {
                 session.Store(_doc, ExampleDocId);
+                session.Store(_testDocConvention);
                 session.SaveChanges();
             }
         }
@@ -102,6 +121,20 @@ namespace SlowTests.TestDriver
                     var docFromImport = session.Load<TestDoc>(DocFromDumpId);
                     Assert.NotNull(docFromImport);
                     Assert.Equal("This is a test", docFromImport.Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldLoadDocumentThatUsesIdConvention()
+        {
+            using (var documentStore = GetDocumentStore())
+            {
+                using (var session = documentStore.OpenSession())
+                {
+                    var docWithConvention = session.Load<TestDocConvention>("test@local");
+                    Assert.NotNull(docWithConvention);
+                    Assert.Equal("Test", docWithConvention.Name);
                 }
             }
         }
