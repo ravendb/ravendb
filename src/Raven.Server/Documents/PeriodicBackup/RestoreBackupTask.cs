@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (snapshotRestore)
                         options |= InitializeOptions.GenerateNewDatabaseId;
 
-                    database.Initialize(addToInitLog, options: options);
+                    database.Initialize(options);
 
                     if (snapshotRestore)
                     {
