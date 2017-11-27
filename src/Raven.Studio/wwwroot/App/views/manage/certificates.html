@@ -33,10 +33,9 @@
                             </div>
                         </div>
                         <div class="expiration">
-                            <!-- TODO
-                            <small class="text-danger"><i class="icon-danger"></i><span>Expired 2017-08-01</span></small>
-                            <small><i class="icon-clock"></i><span>Expiring 2022-05-10</span></small>
-                            <small class="text-warning"><i class="icon-warning"></i><span>Expiring 2017-09-10</span></small> -->
+                            <small data-bind="attr: { class: expirationClass }">
+                                <i data-bind="attr: { class: expirationIcon }"></i> <span data-bind="text: expirationText"></span>
+                            </small>
                         </div>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
