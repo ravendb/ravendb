@@ -53,6 +53,7 @@ namespace Raven.Client.Documents.Linq
         private DeclareToken _declareToken;
         private List<LoadToken> _loadTokens;
         private readonly Dictionary<string, string> _aliasesToIdPropery;
+        private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
         private int _insideLet = 0;
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -105,6 +106,7 @@ namespace Raven.Client.Documents.Linq
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
             _aliasesToIdPropery  = new Dictionary<string, string>();
+            _loadAliasesMovedToOutputFuction = new HashSet<string>();
         }
 
         /// <summary>
@@ -1917,22 +1919,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AddFromAlias(parameter?.Name);
             }
             
-            if (expression.Arguments[1] is MethodCallExpression mce
-                && mce.Method.DeclaringType == typeof(RavenQuery)
-                && mce.Method.Name == "Raw")
-            {
-                if (mce.Arguments.Count == 1)
-                {
-                    AppendLineToOutputFunction(name, (mce.Arguments[0] as ConstantExpression)?.Value.ToString());
-                }
-                else
-                {
-                    var path = ToJs(mce.Arguments[0]);
-                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
-                    AppendLineToOutputFunction(name, $"{path}.{raw}");
-                }
+            if (IsRaw(expression, name)) 
                 return;
-            }
             
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
@@ -1954,72 +1942,126 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
 
-            if (loadSupport.HasLoad)
+            if (loadSupport.HasLoad == false)
             {
-                string arg;
-                if (loadSupport.Arg is ConstantExpression constantExpression && constantExpression.Type == typeof(string))
-                {                    
-                    arg = _documentQuery.LoadParameter(constantExpression.Value);
-                }
-                else if (loadSupport.Arg is MemberExpression)
-                {
-                    arg = ToJs(loadSupport.Arg);
-                }
-                else
-                {
-                    //the argument is not a static string value nor a path, 
-                    //so we use js load() method (inside output function) instead of using a LoadToken
-                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
-                    return;
-                }
-
-                var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
-
-                if (_loadTokens == null)
-                {
-                    _loadTokens = new List<LoadToken>();
-                }
-
-                if (js == string.Empty)
-                {
-                    if (loadSupport.IsEnumerable)
-                    {
-                        _loadTokens.Add(LoadToken.Create(arg, $"{name}[]"));
-                    }
-                    else
-                    {
-                        _loadTokens.Add(LoadToken.Create(arg, name));
-                        _aliasesToIdPropery.Add(name, id);
-                    }
-                    return;
-                }
-
-                // here we have Load(id).member or Load(id).call, i.e : Load(u.Detail).Name, Load(u.Details).Select(x=>x.Name), etc.. 
-                // so we add 'LOAD id as _doc_i' to the query
-                // then inside the output function, we add 'var name = _doc_i.member;'
-
-                string doc;
-                if (loadSupport.IsEnumerable)
-                {
-                    doc = $"_docs_{_loadTokens.Count}";
-                    _loadTokens.Add(LoadToken.Create(arg, $"{doc}[]"));
-                }
-                else
-                {
-                    doc = $"_doc_{_loadTokens.Count}";
-                    _loadTokens.Add(LoadToken.Create(arg, doc));
-                    _aliasesToIdPropery.Add(name , id);
-                }
-
-                if (js.StartsWith(".") == false)
-                {
-                    js = "." + js;
-                }
-
-                js = doc + js;
+                AppendLineToOutputFunction(name, js);
             }
 
-            AppendLineToOutputFunction(name, js);
+            else
+            {
+                HandleLoad(expression, loadSupport, name, js);
+            }
+        }
+
+        private bool IsRaw(NewExpression expression, string name)
+        {
+            if (expression.Arguments[1] is MethodCallExpression mce
+                && mce.Method.DeclaringType == typeof(RavenQuery)
+                && mce.Method.Name == "Raw")
+            {
+                if (mce.Arguments.Count == 1)
+                {
+                    AppendLineToOutputFunction(name, (mce.Arguments[0] as ConstantExpression)?.Value.ToString());
+                }
+                else
+                {
+                    var path = ToJs(mce.Arguments[0]);
+                    var raw = (mce.Arguments[1] as ConstantExpression)?.Value.ToString();
+                    AppendLineToOutputFunction(name, $"{path}.{raw}");
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private void HandleLoad(NewExpression expression, JavascriptConversionExtensions.LoadSupport loadSupport, string name, string js)
+        {
+            string arg;
+            if (loadSupport.Arg is ConstantExpression constantExpression && constantExpression.Type == typeof(string))
+            {
+                arg = _documentQuery.LoadParameter(constantExpression.Value);
+            }
+            else if (loadSupport.Arg is MemberExpression)
+            {
+                arg = ToJs(loadSupport.Arg);
+            }
+            else
+            {
+                //the argument is not a static string value nor a path, 
+                //so we use js load() method (inside output function) instead of using a LoadToken
+                AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                return;
+            }
+
+            var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
+
+            if (_loadTokens == null)
+            {
+                _loadTokens = new List<LoadToken>();
+            }
+
+            var indexOf = arg.IndexOf('.');
+            if (indexOf != -1)
+            {
+                var loadFrom = arg.Substring(0, indexOf);
+                if (_loadAliasesMovedToOutputFuction.Contains(loadFrom))
+                {
+                    //edge case: earlier we had 'Load(x.SomeId).member as alias1'                   
+                    //so we did : load x.SomeId as _doc_i (LoadToken)
+                    //then inside the output function we added:
+                    //var alias1 = _doc_i.member;
+
+                    //now we have 'Load(alias1.SomeId2) as alias2'
+                    //since alias1 is defined only inside the output function,
+                    //we add to the output function:
+                    //var alias2 = load(alias1.SomeId2); (JS load() method)
+
+                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    _loadAliasesMovedToOutputFuction.Add(name);
+                    return;
+                }
+            }
+
+            if (js == string.Empty)
+            {
+                if (loadSupport.IsEnumerable)
+                {
+                    _loadTokens.Add(LoadToken.Create(arg, $"{name}[]"));
+                }
+                else
+                {
+                    _loadTokens.Add(LoadToken.Create(arg, name));
+                    _aliasesToIdPropery.Add(name, id);
+                }
+                return;
+            }
+
+            // here we have Load(id).member or Load(id).call, i.e : Load(u.Detail).Name, Load(u.Details).Select(x=>x.Name), etc.. 
+            // so we add 'LOAD id as _doc_i' to the query
+            // then inside the output function, we add 'var name = _doc_i.member;'
+
+            string doc;
+            if (loadSupport.IsEnumerable)
+            {
+                doc = $"_docs_{_loadTokens.Count}";
+                _loadTokens.Add(LoadToken.Create(arg, $"{doc}[]"));
+            }
+            else
+            {
+                doc = $"_doc_{_loadTokens.Count}";
+                _loadTokens.Add(LoadToken.Create(arg, doc));
+                _aliasesToIdPropery.Add(name, id);
+            }
+
+            //add name to the list of aliases that were moved to the output function
+            _loadAliasesMovedToOutputFuction.Add(name);
+
+            if (js.StartsWith(".") == false && js.StartsWith("[") == false)
+            {
+                js = "." + js;
+            }
+
+            AppendLineToOutputFunction(name, doc + js);
         }
 
         private void AppendLineToOutputFunction(string name, string js)
