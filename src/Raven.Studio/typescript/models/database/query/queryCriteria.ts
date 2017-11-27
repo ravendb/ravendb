@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import genUtils = require("common/generalUtils");
 import queryUtil = require("common/queryUtil");
 
@@ -51,30 +50,19 @@ class queryCriteria {
 
     updateUsing(storedQuery: storedQueryDto) {
         this.queryText(storedQuery.queryText);
-        this.showFields(storedQuery.showFields);
-        this.indexEntries(storedQuery.indexEntries);
         this.recentQuery(storedQuery.recentQuery);
     }
 
     toStorageDto(): storedQueryDto {
         const name = this.name();
-        const indexEntries = this.indexEntries();
         const queryText = this.queryText();
-        const showFields = this.showFields();
 
         return {
             name: name,
-            indexEntries: indexEntries,
             queryText: queryText,
             recentQuery: this.recentQuery(),
-            showFields: showFields,
             modificationDate: moment().format("YYYY-MM-DD HH:mm"),
-            hash: genUtils.hashCode(
-                name +
-                (queryText || "") +
-                showFields +
-                indexEntries)
-        } as storedQueryDto;
+            hash: genUtils.hashCode(name + (queryText || "")) } as storedQueryDto;
     }
 
     setSelectedIndex(indexName: string) {
@@ -91,8 +79,6 @@ class queryCriteria {
 
     copyFrom(incoming: queryDto) {
         this.name("");
-        this.showFields(incoming.showFields);
-        this.indexEntries(incoming.indexEntries);
         this.queryText(incoming.queryText);
         this.recentQuery(incoming.recentQuery);
     }

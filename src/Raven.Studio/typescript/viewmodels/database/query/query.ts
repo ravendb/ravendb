@@ -26,7 +26,6 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import endpoints = require("endpoints");
-import generalUtils = require("common/generalUtils");
 
 type queryResultTab = "results" | "includes";
 
@@ -646,6 +645,12 @@ class query extends viewModelBase {
     useQuery() {
         const queryDoc = this.criteria();
         queryDoc.copyFrom(this.previewItem());
+        
+        // Reset settings
+        this.cacheEnabled(true);
+        this.criteria().indexEntries(false);
+        this.criteria().showFields(false);
+        
         this.runQuery();
     }
 
