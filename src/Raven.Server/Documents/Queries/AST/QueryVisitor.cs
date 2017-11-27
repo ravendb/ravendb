@@ -41,9 +41,9 @@ namespace Raven.Server.Documents.Queries.AST
                 VisitSelect(q.Select, q.IsDistinct);
             }
 
-            if (q.SelectFunctionBody != null)
+            if (q.SelectFunctionBody.FunctionText != null)
             {
-                VisitSelectFunctionBody(q.SelectFunctionBody);
+                VisitSelectFunctionBody(q.SelectFunctionBody.FunctionText);
             }
 
             if (q.UpdateBody != null)
@@ -99,11 +99,11 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public virtual void VisitDeclaredFunctions(Dictionary<StringSegment, string> declaredFunctions)
+        public virtual void VisitDeclaredFunctions(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> declaredFunctions)
         {
             foreach (var kvp in declaredFunctions)
             {
-                VisitDeclaredFunction(kvp.Key, kvp.Value);
+                VisitDeclaredFunction(kvp.Key, kvp.Value.FunctionText);
             }
         }
 

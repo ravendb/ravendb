@@ -443,7 +443,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private class QueryKey : ScriptRunnerCache.Key
         {
-            private readonly Dictionary<StringSegment, string> _functions;
+            private readonly Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> _functions;
 
             private bool Equals(QueryKey other)
             {
@@ -453,7 +453,7 @@ namespace Raven.Server.Documents.Queries.Results
                 foreach (var function in _functions)
                 {
                     if (other._functions.TryGetValue(function.Key, out var otherVal) == false
-                        || function.Value != otherVal)
+                        || function.Value.FunctionText != otherVal.FunctionText)
                         return false;
                 }
 
@@ -484,7 +484,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            public QueryKey(Dictionary<StringSegment, string> functions)
+            public QueryKey(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> functions)
             {
                 _functions = functions;
             }
@@ -493,7 +493,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 foreach (var kvp in _functions)
                 {
-                    runner.AddScript(kvp.Value);
+                    runner.AddScript(kvp.Value.FunctionText);
                 }
             }
         }
