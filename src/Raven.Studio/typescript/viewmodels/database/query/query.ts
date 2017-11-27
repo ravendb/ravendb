@@ -106,6 +106,7 @@ class query extends viewModelBase {
     currentTab = ko.observable<queryResultTab>("results");
     includesCache = new Map<string, document>();
     totalResults: KnockoutComputed<number>;
+    hasMoreUnboundedResults = ko.observable<boolean>(false);
     totalIncludes = ko.observable<number>(0);
 
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
@@ -298,8 +299,10 @@ class query extends viewModelBase {
             if (!stats) {
                 return 0;
             }
+            
             return stats.TotalResults || 0;
-        })
+        });
+        
 
          /* TODO
         this.showSuggestions = ko.computed<boolean>(() => {
@@ -519,14 +522,14 @@ class query extends viewModelBase {
             this.csvUrl(queryCmd.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryCommand(database, skip, take, this.criteria(), !this.cacheEnabled());
+                const command = new queryCommand(database, skip, take + 1, this.criteria(), !this.cacheEnabled());
                 
                 const resultsTask = $.Deferred<pagedResultWithIncludes<document>>();
                 const queryForAllFields = this.criteria().showFields();
                                 
                 // Note: 
                 // When server resoponse is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
-                // If we ask browser to report the 304 state then 'reponse content' is empty 
+                // If we ask browser to report the 304 state then 'response content' is empty 
                 // This is why we need to measure the execution time here ourselves..
                 const startQueryTime = new Date().getTime();                             
                 
@@ -534,7 +537,22 @@ class query extends viewModelBase {
                     .always(() => {
                         this.isLoading(false);
                     })
-                    .done((queryResults: pagedResultWithIncludes<document>) => {                                        
+                    .done((queryResults: pagedResultWithIncludes<document>) => {
+                        this.hasMoreUnboundedResults(false);
+                    
+                        if (queryResults.totalResultCount === -1) {
+                            // unbounded result set
+                            if (queryResults.items.length === take + 1) {
+                                // returned all or have more
+                                this.hasMoreUnboundedResults(true);
+                                queryResults.totalResultCount = skip + take + 30;
+                            } else {
+                                queryResults.totalResultCount = skip + queryResults.items.length;
+                            }
+                            
+                            queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
+                        }
+                    
                         const endQueryTime = new Date().getTime();
                         queryResults.additionalResultInfo.DurationInMs = Math.min(endQueryTime-startQueryTime, queryResults.additionalResultInfo.DurationInMs);
                         

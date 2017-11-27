@@ -22,7 +22,7 @@ class revisionsBin extends viewModelBase {
 
     spinners = {
         delete: ko.observable<boolean>(false)
-    }
+    };
 
     private revisionsBinEntryNextChangeVector = undefined as string;
 

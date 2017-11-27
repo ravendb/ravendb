@@ -164,7 +164,7 @@
         <div class="flex-window-head">
             <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'results'}, click: goToResultsTab">
-                Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString(), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
+                Results &nbsp; <span class="label" data-bind="text: totalResults().toLocaleString() + (hasMoreUnboundedResults() ? '+' : ''), css: { 'label-primary': totalResults(), 'label-default': !totalResults() }"></span>
             </button>
             <button type="button" class="btn btn-sm" 
                     data-bind="css: { active: currentTab() === 'includes' }, click: goToIncludesTab">

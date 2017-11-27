@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             includeDocumentsCommand.Fill(resultToFill.Includes);
 
-            resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0)?-1: totalResults.Value;
+            resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0) ? -1 : totalResults.Value;
         }
 
         private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, QueryMetadata query, DocumentsOperationContext context)
