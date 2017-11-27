@@ -700,6 +700,7 @@ namespace Raven.Server.Documents.Indexes
                 var lastProcessedTombstoneEtag =
                     _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
+                _inMemoryIndexProgress.TryGetValue(collection, out var stats);
 
                 if (cutoff == null)
                 {
@@ -710,11 +711,15 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. " +
-                                             $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
-                                             $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
-                                             $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
-                                             $"but last processed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.");
+                        var message = $"There are still some documents to process from collection '{collection}'. " +
+                                   $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                   $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                   $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}'), " +
+                                   $"but last commited document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'";
+                        if (stats != null)
+                            message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
+
+                        stalenessReasons.Add(message);
                     }
 
                     var lastTombstoneEtag = GetLastTombstoneEtagInCollection(databaseContext, collection);
@@ -726,11 +731,15 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastTombstone = DocumentDatabase.DocumentsStorage.GetTombstoneByEtag(databaseContext, lastTombstoneEtag);
 
-                        stalenessReasons.Add($"There are still some tombstones to process from collection '{collection}'. " +
-                                             $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
-                                             $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
-                                             $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
-                                             $"but last processed tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.");
+                        var message = $"There are still some tombstones to process from collection '{collection}'. " +
+                                   $"The last tombstone etag in that collection is '{lastTombstoneEtag:#,#;;0}' " +
+                                   $"({Constants.Documents.Metadata.Id}: '{lastTombstone.LowerId}', " +
+                                   $"{Constants.Documents.Metadata.LastModified}: '{lastTombstone.LastModified}'), " +
+                                   $"but last commited tombstone etag for that collection is '{lastProcessedTombstoneEtag:#,#;;0}'.";
+                        if (stats != null)
+                            message += $" (last processed etag is: '{stats.LastProcessedTombstoneEtag:#,#;;0}')";
+
+                        stalenessReasons.Add(message);
                     }
                 }
                 else
@@ -743,12 +752,16 @@ namespace Raven.Server.Documents.Indexes
 
                         var lastDoc = DocumentDatabase.DocumentsStorage.GetByEtag(databaseContext, lastDocEtag);
 
-                        stalenessReasons.Add($"There are still some documents to process from collection '{collection}'. " +
-                                             $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
-                                             $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
-                                             $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
-                                             $"with cutoff set to '{cutoff.Value}', " +
-                                             $"but last processed document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.");
+                        var message = $"There are still some documents to process from collection '{collection}'. " +
+                                   $"The last document etag in that collection is '{lastDocEtag:#,#;;0}' " +
+                                   $"({Constants.Documents.Metadata.Id}: '{lastDoc.Id}', " +
+                                   $"{Constants.Documents.Metadata.LastModified}: '{lastDoc.LastModified}') " +
+                                   $"with cutoff set to '{cutoff.Value}', " +
+                                   $"but last commited document etag for that collection is '{lastProcessedDocEtag:#,#;;0}'.";
+                        if (stats != null)
+                            message += $" (last processed etag is: '{stats.LastProcessedDocumentEtag:#,#;;0}')";
+
+                        stalenessReasons.Add(message);
                     }
 
                     var hasTombstones = DocumentDatabase.DocumentsStorage.HasTombstonesWithDocumentEtagBetween(databaseContext,
@@ -760,7 +773,8 @@ namespace Raven.Server.Documents.Indexes
                         if (stalenessReasons == null)
                             return true;
 
-                        stalenessReasons.Add($"There are still tomstones tombstones to process from collection '{collection}' with etag range '{lastProcessedTombstoneEtag} - {cutoff.Value}'.");
+                        stalenessReasons.Add($"There are still tombstones to process from collection '{collection}' " +
+                                             $"with etag range '{lastProcessedTombstoneEtag} - {cutoff.Value}'.");
                     }
                 }
             }
@@ -1552,7 +1566,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexProgress.CollectionStats GetStats(string collection)
         {
-            return _inMemoryIndexProgress.GetOrAdd(collection, new IndexProgress.CollectionStats());
+            return _inMemoryIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
         }
 
         private (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag) GetLastEtags(
