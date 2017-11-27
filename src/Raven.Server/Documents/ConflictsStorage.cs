@@ -852,7 +852,7 @@ namespace Raven.Server.Documents
             return status;
         }
 
-        public long GetCountOfDocumentsConflicts(DocumentsOperationContext context)
+        public long GetNumberOfDocumentsConflicts(DocumentsOperationContext context)
         {
             if (ConflictsCount == 0)
                 return 0;

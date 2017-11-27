@@ -62,7 +62,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
                 current = new Stats
                 {
-                    CountOfConflicts = _database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
+                    CountOfConflicts = _database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
                     CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
                     CountOfIndexes = indexes.Count,
                     CountOfStaleIndexes = staleIndexes,

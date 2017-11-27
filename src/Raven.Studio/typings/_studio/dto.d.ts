@@ -13,7 +13,6 @@ interface valueAndLabelItem<V, L> {
     label: L;
 }
 
-
 interface queryResultDto<T> {
     Results: T[];
     Includes: any[];
@@ -35,11 +34,9 @@ interface resultsWithCountAndAvailableColumns<T> extends resultsWithTotalCountDt
     AvailableColumns: string[];
 }
 
-
 interface documentDto extends metadataAwareDto {
     [key: string]: any;
 }
-
 
 interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
@@ -205,8 +202,6 @@ interface workTimeUnit {
 interface queryDto {
     name: string;
     queryText: string;
-    showFields: boolean;
-    indexEntries: boolean;
     modificationDate: string;
     recentQuery: boolean;
 }

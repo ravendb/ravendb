@@ -14,6 +14,12 @@ import copyToClipboard = require("common/copyToClipboard");
 import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
 
+interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
+    expirationClass: string;
+    expirationText: string;
+    expirationIcon: string;
+}
+
 class certificates extends viewModelBase {
 
     spinners = {
@@ -231,7 +237,31 @@ class certificates extends viewModelBase {
                 });
                 
                 this.certificates(mergedCertificates);
+                this.updateCache();
             });
+    }
+    
+    private updateCache() {
+        this.certificates().forEach((cert: unifiedCertificateDefinitionWithCache) => {
+            const date = moment.utc(cert.NotAfter);
+            const dateFormatted = date.format("YYYY-MM-DD");
+            
+            const nowPlusMonth = moment.utc().add(1, 'months');
+            
+            if (date.isBefore()) {
+                cert.expirationText = 'Expired ' + dateFormatted;
+                cert.expirationIcon = "icon-danger";
+                cert.expirationClass = "text-danger"
+            } else if (date.isAfter(nowPlusMonth)) {
+                cert.expirationText = "Expiring " +  dateFormatted;
+                cert.expirationIcon =  "icon-clock";
+                cert.expirationClass = "";
+            } else {
+                cert.expirationText = "Expiring " + dateFormatted;
+                cert.expirationIcon =  "icon-warning";
+                cert.expirationClass = "text-warning";
+            }
+        });
     }
     
     onCloseEdit() {
@@ -293,6 +323,7 @@ class certificates extends viewModelBase {
     copyThumbprint(thumbprint: string) {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
+    
 }
 
 export = certificates;
