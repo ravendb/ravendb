@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, Document> _loadedDocuments;
+        private Dictionary<string, Document> _loadedDocumentsByAliasName;
         private HashSet<string> _loadedDocumentIds;
 
         protected readonly DocumentsStorage DocumentsStorage;
@@ -361,11 +362,11 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 _loadedDocumentIds = new HashSet<string>();
                 _loadedDocuments = new Dictionary<string, Document>();
+                _loadedDocumentsByAliasName = new Dictionary<string, Document>();
             }
             _loadedDocumentIds.Clear();
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cache this for the duration of the query
-
 
             _loadedDocuments[document.Id ?? string.Empty] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
@@ -386,6 +387,14 @@ namespace Raven.Server.Documents.Queries.Results
                     _loadedDocumentIds.Add(id.ToString());
                 }
 
+                else if (fieldToFetch.QueryField.LoadFromAlias != null)
+                {
+                    if (_loadedDocumentsByAliasName.TryGetValue(fieldToFetch.QueryField.LoadFromAlias, out var loadedDoc))
+                    {
+                        IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+                    }
+                }
+
                 else
                 {
                     IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
@@ -393,7 +402,10 @@ namespace Raven.Server.Documents.Queries.Results
 
             }
             else
+            {
                 _loadedDocumentIds.Add(document.Id ?? string.Empty); // null source alias is the root doc
+                _loadedDocumentsByAliasName.Clear();
+            }
 
             if (_loadedDocumentIds.Count == 0)
             {
@@ -414,6 +426,12 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 if (doc == null)
                     continue;
+
+                if (fieldToFetch.QueryField.Alias != null)
+                {
+                    _loadedDocumentsByAliasName[fieldToFetch.QueryField.Alias] = doc;
+                }
+                
                 if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
                 {
                     buffer.Add(doc);
