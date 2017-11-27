@@ -745,6 +745,13 @@ namespace Raven.Server.Documents
             return TableValueToTombstone(context, ref tvr);
         }
 
+        public long GetNumberOfTombstones(DocumentsOperationContext context)
+        {
+            var fstIndex = TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice];
+            var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
+            return fst.NumberOfEntries;
+        }
+
         public IEnumerable<LazyStringValue> GetAllIds(DocumentsOperationContext context)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);

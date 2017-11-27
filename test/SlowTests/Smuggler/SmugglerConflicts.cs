@@ -84,6 +84,7 @@ namespace SlowTests.Smuggler
                 Assert.Equal(7, stats.CountOfDocuments);
                 Assert.Equal(0, stats.CountOfDocumentsConflicts);
                 Assert.Equal(0, stats.CountOfConflicts);
+                Assert.Equal(0, stats.CountOfTombstones);
 
                 await AssertImport(store3);
             }
@@ -184,11 +185,13 @@ namespace SlowTests.Smuggler
             Assert.Equal(3, stats.CountOfDocuments);
             Assert.Equal(4, stats.CountOfDocumentsConflicts);
             Assert.Equal(8, stats.CountOfConflicts);
+            Assert.Equal(0, stats.CountOfTombstones);
 
             stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
             Assert.Equal(7, stats.CountOfDocuments);
             Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
+            Assert.Equal(0, stats.CountOfTombstones);
         }
 
         private async Task GenerateConflict2(DocumentStore store3, DocumentStore store4)
@@ -246,11 +249,13 @@ namespace SlowTests.Smuggler
             Assert.Equal(3, stats.CountOfDocuments);
             Assert.Equal(4, stats.CountOfDocumentsConflicts);
             Assert.Equal(8, stats.CountOfConflicts);
+            Assert.Equal(0, stats.CountOfTombstones);
 
             stats = await store4.Maintenance.SendAsync(new GetStatisticsOperation());
             Assert.Equal(7, stats.CountOfDocuments);
             Assert.Equal(0, stats.CountOfDocumentsConflicts);
             Assert.Equal(0, stats.CountOfConflicts);
+            Assert.Equal(0, stats.CountOfTombstones);
         }
 
         private async Task AssertImport(DocumentStore store)
@@ -263,6 +268,7 @@ namespace SlowTests.Smuggler
                 Assert.Equal(3, stats.CountOfDocuments);
                 Assert.Equal(4, stats.CountOfDocumentsConflicts);
                 Assert.Equal(8, stats.CountOfConflicts);
+                Assert.Equal(0, stats.CountOfTombstones);
 
                 var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
                 Assert.Equal(2, conflicts.Count);
@@ -287,6 +293,7 @@ namespace SlowTests.Smuggler
                 Assert.Equal(3, stats.CountOfDocuments);
                 Assert.Equal(4, stats.CountOfDocumentsConflicts);
                 Assert.Equal(13, stats.CountOfConflicts);
+                Assert.Equal(0, stats.CountOfTombstones);
 
                 var conflicts = (await store.Commands().GetConflictsForAsync("users/fitzchak")).ToList();
                 Assert.Equal(4, conflicts.Count);

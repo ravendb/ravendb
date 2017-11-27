@@ -125,7 +125,6 @@ namespace FastTests.Server.Replication
             return tombstones ?? new List<string>();
         }
 
-
         protected List<string> GetTombstones(IDocumentStore store)
         {
             using (var commands = store.Commands())

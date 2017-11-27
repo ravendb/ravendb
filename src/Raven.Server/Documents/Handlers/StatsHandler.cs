@@ -30,7 +30,8 @@ namespace Raven.Server.Documents.Handlers
                     LastDocEtag = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction),
                     CountOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context),
                     CountOfRevisionDocuments = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
-                    CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
+                    CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
+                    CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context),
                     CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
                     SizeOnDisk = new Size(sizeOnDiskInBytes)
                 };
