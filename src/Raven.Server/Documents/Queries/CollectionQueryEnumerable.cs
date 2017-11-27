@@ -342,10 +342,10 @@ namespace Raven.Server.Documents.Queries
 
                 public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
                 {
-                    VisitFieldToken(leftSide, rightSide, parameters);
+                    VisitFieldToken(leftSide, rightSide, parameters, operatorType);
                 }
 
-                public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
+                public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType)
                 {
                     if (fieldName is MethodExpression me)
                     {
@@ -401,7 +401,7 @@ namespace Raven.Server.Documents.Queries
                     var expression = arguments[arguments.Count - 1];
                     if (expression is BinaryExpression be && be.Operator == OperatorType.Equal)
                     {
-                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters);                        
+                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters, be.Operator);                        
                     }
                     else if (expression is InExpression ie)
                     {

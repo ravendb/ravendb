@@ -25,20 +25,20 @@ namespace Raven.Server.Documents.Queries
 
             if (expression is FieldExpression f)
             {
-                VisitFieldToken(f, null, parameters);
+                VisitFieldToken(f, null, parameters, null);
                 return;
             }
 
             if (expression is BetweenExpression between)
             {
-                VisitFieldToken(between.Source, null, parameters);
+                VisitFieldToken(between.Source, null, parameters,OperatorType.GreaterThanEqual);
                 VisitBetween(between.Source, between.Min, between.Max, parameters);
                 return;
             }
 
             if (expression is InExpression ie)
             {
-                VisitFieldToken(ie.Source, null, parameters);
+                VisitFieldToken(ie.Source, null, parameters, OperatorType.Equal);
                 VisitIn(ie.Source, ie.Values, parameters);
                 return;
             }
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Queries
 
         public abstract void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters);
         
-        public abstract void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters);
+        public abstract void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType);
 
         public abstract void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters);
 

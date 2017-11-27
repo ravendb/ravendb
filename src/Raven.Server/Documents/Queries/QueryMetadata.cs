@@ -1125,13 +1125,13 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case MethodType.Sum:
                         case MethodType.Count:
-                            VisitFieldToken(leftSide, rightSide, parameters);
+                            VisitFieldToken(leftSide, rightSide, parameters, null);
                             break;
                     }
                 }
             }
 
-            public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters)
+            public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType)
             {
                 if (fieldName is FieldExpression fe)
                     _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
@@ -1148,7 +1148,7 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case MethodType.Sum:
                             if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
-                                VisitFieldToken(f, value, parameters);
+                                VisitFieldToken(f, value, parameters, operatorType);
                             break;
                     }
                 }
