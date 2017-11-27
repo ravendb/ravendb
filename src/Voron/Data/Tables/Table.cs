@@ -355,6 +355,8 @@ namespace Voron.Data.Tables
             // if this is in the active candidate list, remove it so it cannot be reused if the current
             // active is full and need a new one
             ActiveCandidateSection.Delete(sectionPageNumber);
+            // need to remove it from the inactive tracking because it is going to be freed in a bit
+            InactiveSections.Delete(sectionPageNumber);
 
             var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
             foreach (var idToMove in idsInSection)
