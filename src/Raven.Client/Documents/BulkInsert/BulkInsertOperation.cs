@@ -247,14 +247,29 @@ namespace Raven.Client.Documents.BulkInsert
             return AsyncHelpers.RunSync(() => StoreAsync(entity, metadata));
         }
 
+        private long _concurrentCheck;
+
         public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
-            if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
+            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
             {
-                id = GetId(entity);
+                throw new ConcurrencyException("Store/StoreAsync in bulkInsert concurrently is forbidden");
             }
 
-            await StoreAsync(entity, id, metadata).ConfigureAwait(false);
+            string id;
+            try
+            {
+                if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out id) == false)
+                {
+                    id = GetId(entity);
+                }
+
+                await StoreAsync(entity, id, metadata).ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
+            }
             return id;
         }
 
@@ -346,9 +361,8 @@ namespace Raven.Client.Documents.BulkInsert
         {
             var stateRequest = new GetOperationStateCommand(_requestExecutor.Conventions, _operationId);
             await _requestExecutor.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
-            var error = stateRequest.Result.Result as OperationExceptionResult;
 
-            if (error == null)
+            if (!(stateRequest.Result.Result is OperationExceptionResult error))
                 return null;
             return new BulkInsertAbortedException(error.Error);
         }

@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Indexes
 
         public int IndexingOutputs;
         public Size AllocatedBytes;
+        public long DocumentsSize;
 
         public ReduceRunDetails ReduceDetails;
 

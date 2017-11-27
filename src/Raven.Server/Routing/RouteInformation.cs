@@ -1,6 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
@@ -80,7 +81,7 @@ namespace Raven.Server.Routing
                 if (context.Database == null)
                     DatabaseDoesNotExistException.Throw(databaseName);
 
-                return context.Database.DatabaseShutdown.IsCancellationRequested == false
+                return context.Database?.DatabaseShutdown.IsCancellationRequested == false
                     ? Task.CompletedTask
                     : UnlikelyWaitForDatabaseToUnload(context, context.Database, databasesLandlord, databaseName);
             }
@@ -106,6 +107,14 @@ namespace Raven.Server.Routing
             await Task.WhenAny(database, Task.Delay(time));
             if (database.IsCompleted == false)
             {
+                if (databasesLandlord.InitLog.TryGetValue(databaseName, out var initLogQueue))
+                {
+                    var sb = new StringBuilder();
+                    foreach (var logline in initLogQueue)
+                        sb.AppendLine(logline);
+
+                    ThrowDatabaseLoadTimeoutWithLog(databaseName, databasesLandlord.DatabaseLoadTimeout, sb.ToString());
+                }
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
             context.Database = await database;
@@ -121,6 +130,11 @@ namespace Raven.Server.Routing
         private static void ThrowDatabaseLoadTimeout(StringSegment databaseName, TimeSpan timeout)
         {
             throw new DatabaseLoadTimeoutException($"Timeout when loading database {databaseName} after {timeout}, try again later");
+        }
+
+        private static void ThrowDatabaseLoadTimeoutWithLog(StringSegment databaseName, TimeSpan timeout, string log)
+        {
+            throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. Database initialization log: " + Environment.NewLine + log);
         }
 
         public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)

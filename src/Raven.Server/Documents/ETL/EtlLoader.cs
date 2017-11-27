@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.ETL
             if (Logger.IsInfoEnabled)
                 Logger.Info(errorMessage);
 
-            var alert = AlertRaised.Create(AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
+            var alert = AlertRaised.Create(_database.Name,AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
 
             _database.NotificationCenter.Add(alert);
         }
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.ETL
             if (Logger.IsInfoEnabled)
                 Logger.Info(warnMessage);
 
-            var alert = AlertRaised.Create(AlertTitle, warnMessage, AlertType.Etl_Warning, NotificationSeverity.Warning);
+            var alert = AlertRaised.Create(_database.Name, AlertTitle, warnMessage, AlertType.Etl_Warning, NotificationSeverity.Warning);
 
             _database.NotificationCenter.Add(alert);
         }

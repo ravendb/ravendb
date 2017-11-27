@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -168,11 +169,12 @@ namespace Raven.Server.Documents
 
         public DocumentsContextPool ContextPool;
 
-        public DocumentsStorage(DocumentDatabase documentDatabase)
+        public DocumentsStorage(DocumentDatabase documentDatabase, Action<string> addToInitLog)
         {
             DocumentDatabase = documentDatabase;
             _name = DocumentDatabase.Name;
             _logger = LoggingSource.Instance.GetLogger<DocumentsStorage>(documentDatabase.Name);
+            _addToInitLog = addToInitLog;
         }
 
         public StorageEnvironment Environment { get; private set; }
@@ -183,6 +185,7 @@ namespace Raven.Server.Documents
         public AttachmentsStorage AttachmentsStorage;
         public IdentitiesStorage Identities;
         public DocumentPutAction DocumentPut;
+        private readonly Action<string> _addToInitLog;
 
         public void Dispose()
         {
@@ -204,7 +207,7 @@ namespace Raven.Server.Documents
         }
 
         public void Initialize(bool generateNewDatabaseId = false)
-        {
+        { 
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info
@@ -224,6 +227,7 @@ namespace Raven.Server.Documents
             options.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+            options.AddToInitLog = _addToInitLog;
             Sodium.CloneKey(out options.MasterKey, DocumentDatabase.MasterKey);
 
             try
@@ -428,6 +432,34 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
+            int start, int take, string collection)
+        {
+            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take))
+            {
+                if (collection == Client.Constants.Documents.Collections.AllDocumentsCollection)
+                {
+                    yield return doc;
+                    continue;
+                }
+
+                if (doc.TryGetMetadata(out var metadata) == false)
+                {
+                    continue;
+                }
+                if (metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string c) == false)
+                {
+                    continue;
+                }
+                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    continue;
+                }
+
+                yield return doc;
+
+            }
+        }
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
             int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
@@ -468,13 +500,8 @@ namespace Raven.Server.Documents
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice]))
+            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[AllDocsEtagsSlice], start))
             {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
                 if (take-- <= 0)
                     yield break;
                 yield return TableValueToDocument(context, ref result.Reader);
@@ -494,13 +521,8 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice]))
-            {
-                if (start > 0)
-                {
-                    start--;
-                    continue;
-                }
+            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice],start))
+            {               
                 if (take-- <= 0)
                     yield break;
                 yield return TableValueToDocument(context, ref result.Reader);
@@ -577,7 +599,7 @@ namespace Raven.Server.Documents
                     totalCount.Value--;
                     continue;
                 }
-                if (string.Equals(c, collection, StringComparison.Ordinal) == false)
+                if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
                 {                    
                     totalCount.Value--;
                     continue;

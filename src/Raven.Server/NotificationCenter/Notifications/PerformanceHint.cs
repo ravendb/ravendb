@@ -5,7 +5,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public class PerformanceHint : Notification
     {
-        private PerformanceHint() : base(NotificationType.PerformanceHint)
+        private PerformanceHint(string database) : base(NotificationType.PerformanceHint, database)
         {
         }
 
@@ -28,9 +28,9 @@ namespace Raven.Server.NotificationCenter.Notifications
             return json;
         }
 
-        public static PerformanceHint Create(string title, string msg, PerformanceHintType type, NotificationSeverity notificationSeverity, string source, INotificationDetails details = null)
+        public static PerformanceHint Create(string database, string title, string msg, PerformanceHintType type, NotificationSeverity notificationSeverity, string source, INotificationDetails details = null)
         {
-            return new PerformanceHint
+            return new PerformanceHint(database)
             {
                 IsPersistent = true,
                 Title = title,

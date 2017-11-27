@@ -1523,7 +1523,7 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
 
                     var exception = Assert.Throws<NotSupportedException>(() => query.ToList());
                     Assert.Equal("Using IDocumentSession.Load(IEnumerable<string> ids) inside a query is not supported. " +
-                                 "You should use RavenQuery.Load(IEnumerable<string> ids) instead", exception.InnerException?.Message);
+                                 "You should use RavenQuery.Load(IEnumerable<string> ids) instead", exception.Message);
 
                 }
             }

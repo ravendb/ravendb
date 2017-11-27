@@ -28,12 +28,12 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                     foreach (var operation in Database.Operations.GetActive().OrderBy(x => x.Description.StartTime))
                     {
-                        var action = OperationChanged.Create(operation.Id, operation.Description, operation.State, operation.Killable);
+                        var action = OperationChanged.Create(Database.Name,operation.Id, operation.Description, operation.State, operation.Killable);
 
                         await writer.WriteToWebSocket(action.ToJson());
                     }
                     
-                    await writer.WriteNotifications();
+                    await writer.WriteNotifications(null);
                 }
             }
         }

@@ -113,7 +113,7 @@ namespace Voron.Data.Fixed
             {
                 get
                 {
-                    if (_pos == _header->NumberOfEntries)
+                    if (_pos >= _header->NumberOfEntries)
                         throw new InvalidOperationException("Invalid position, cannot read past end of tree");
                     return FixedSizeTreePage.GetEntry(_dataStart, _pos, _fst._entrySize)->Key;
                 }
@@ -265,6 +265,115 @@ namespace Voron.Data.Fixed
                 return false;
             }
 
+            private bool MovePrev(int skip)
+            {
+                AssertNoChanges();
+
+                if (_currentPage == null || _currentPage.IsLeaf == false)
+                    throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
+
+                while (skip >= 0)
+                {
+                    var skipInPage = Math.Min(_currentPage.LastSearchPosition, skip);
+                    skip -= skipInPage;
+                    _currentPage.LastSearchPosition -= skipInPage;
+                    if (skip == 0)
+                    {
+                        return true;
+                    }
+                    
+                    while (true)
+                    {
+                        if (_parent._cursor.TryPeek(out var parent) == false)
+                            return false;
+                        
+                        parent.LastSearchPosition--;
+                        
+                        if (parent.LastSearchPosition < 0)
+                        {
+                            _parent._cursor.Pop();
+                            continue;
+                        }
+                        
+                        var nextChildPageNumber = parent.GetEntry(parent.LastSearchPosition)->PageNumber;
+                        var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+                        
+                        // we move one beyond the end of elements because in both cases
+                        // (branch and leaf) we first decrement and then run it
+                        childPage.LastSearchPosition = childPage.NumberOfEntries;
+                        if (childPage.IsBranch)
+                        {
+                            _parent._cursor.Push(childPage);
+                            continue;
+                        }
+
+                        _currentPage = childPage;
+                        break;
+                    }
+                }
+                _currentPage = null;
+
+                return false;
+            }
+            
+            private bool MoveNext(int skip)
+            {
+                AssertNoChanges();
+
+                if (_currentPage == null || _currentPage.IsLeaf == false)
+                    throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
+
+                while (skip >= 0)
+                {
+                    var skipInPage = Math.Min(_currentPage.NumberOfEntries - _currentPage.LastSearchPosition, skip);
+                    skip -= skipInPage;
+                    _currentPage.LastSearchPosition += skipInPage;
+                    if (skip == 0)
+                    {
+                        if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
+                            return MoveNext();
+                        return true;
+                    }
+                    
+                    while (true)
+                    {
+                        if (_parent._cursor.TryPeek(out var parent) == false)
+                            return false;
+                        
+                        parent.LastSearchPosition++;
+                        
+                        if (parent.LastSearchPosition >= parent.NumberOfEntries)
+                        {
+                            _parent._cursor.Pop();
+                            continue;
+                        }
+                        
+                        var nextChildPageNumber = parent.GetEntry(parent.LastSearchPosition)->PageNumber;
+                        var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+
+                        if (childPage.IsBranch)
+                        {
+                            // we set it to negative one so the first
+                            // call will increment that to zero
+                            childPage.LastSearchPosition = -1;
+                            _parent._cursor.Push(childPage);
+                            continue;
+                        }
+                        else
+                        {
+                            childPage.LastSearchPosition = 0;
+                        }
+                        
+                        _currentPage = childPage;
+                        break;
+                    }
+                }
+                _currentPage = null;
+
+                return false;
+            }
+
+
             public bool MovePrev()
             {
                 AssertNoChanges();
@@ -308,13 +417,15 @@ namespace Voron.Data.Fixed
 
             public bool Skip(int count)
             {
-                if (count != 0)
+                if (count > 0)
                 {
-                    for (int i = 0; i < Math.Abs(count); i++)
-                    {
-                        if (!MoveNext())
-                            break;
-                    }
+                    if (MoveNext(count) == false)
+                        return false;
+                }
+                else
+                {
+                    if (MovePrev(Math.Abs(count)) == false)
+                        return false;
                 }
 
                 var seek = _currentPage != null && _currentPage.LastSearchPosition != _currentPage.NumberOfEntries;

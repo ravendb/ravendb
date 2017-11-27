@@ -33,6 +33,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         public static void AddLicenseLimitNotification(ServerStore serverStore, LicenseLimit licenseLimit)
         {
             var alert = AlertRaised.Create(
+                null,
                 "You've reached your license limit",
                 licenseLimit.Message,
                 AlertType.LicenseManager_LicenseLimit,

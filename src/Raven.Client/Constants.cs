@@ -176,6 +176,8 @@ namespace Raven.Client
 
                     public const string DocumentIdFieldName = "id()";
 
+                    public const string DocumentIdMethodName = "id";
+
                     public const string ReduceKeyHashFieldName = "hash(key())";
 
                     public const string ReduceKeyValueFieldName = "key()";

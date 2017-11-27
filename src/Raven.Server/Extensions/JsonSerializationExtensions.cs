@@ -10,7 +10,9 @@ namespace Raven.Server.Extensions
         {
             var result = new DynamicJsonValue();
             result[nameof(IndexDefinition.Etag)] = definition.Etag;
+#if FEATURE_TEST_INDEX
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
+#endif
             result[nameof(IndexDefinition.LockMode)] = definition.LockMode?.ToString();
             result[nameof(IndexDefinition.Priority)] = definition.Priority?.ToString();
             result[nameof(IndexDefinition.OutputReduceToCollection)] = definition.OutputReduceToCollection;

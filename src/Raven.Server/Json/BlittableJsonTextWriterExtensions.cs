@@ -610,9 +610,11 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
             writer.WriteComma();
 
+#if FEATURE_TEST_INDEX
             writer.WritePropertyName(nameof(indexDefinition.IsTestIndex));
             writer.WriteBool(indexDefinition.IsTestIndex);
             writer.WriteComma();
+#endif
 
             writer.WritePropertyName(nameof(indexDefinition.Reduce));
             if (string.IsNullOrWhiteSpace(indexDefinition.Reduce) == false)

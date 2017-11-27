@@ -21,7 +21,7 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
     }
 
     protected webSocketUrlFactory() {
-        return endpoints.global.serverNotificationCenter.adminNotificationCenterWatch;
+        return endpoints.global.serverNotificationCenter.serverNotificationCenterWatch;
     }
 
     protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Notification) {

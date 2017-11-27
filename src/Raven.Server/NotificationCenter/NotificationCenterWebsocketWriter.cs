@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter
             _ms.Dispose();
         }
 
-        public async Task WriteNotifications()
+        public async Task WriteNotifications(Func<string, bool> shouldWriteByDb)
         {
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
@@ -57,6 +57,10 @@ namespace Raven.Server.NotificationCenter
                             await _webSocket.SendAsync(WebSocketHelper.Heartbeat, WebSocketMessageType.Text, true, _resourceShutdown);
                             continue;
                         }
+
+                        if(shouldWriteByDb != null && 
+                            shouldWriteByDb((string)tuple.Item2["Database"]) == false)
+                            continue;
 
                         await WriteToWebSocket(tuple.Item2);
                     }

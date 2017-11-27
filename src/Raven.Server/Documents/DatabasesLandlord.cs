@@ -102,6 +102,7 @@ namespace Raven.Server.Documents
                         {
                             // raise alert
                             _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                                t.DatabaseName,
                                 $"Database '{t.DatabaseName}' cannot be deleted in order to maintain the replication factor",
                                 "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
                                 "but it may contain documents that are not existing in the rest of the database-group.\n" +
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents
                 var title = $"Failed to digest change of type '{changeType}' for database '{t.DatabaseName}'";
                 if (_logger.IsInfoEnabled)
                     _logger.Info(title, e);
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(title, e.Message, AlertType.DeletionError, NotificationSeverity.Error));
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(t.DatabaseName,title, e.Message, AlertType.DeletionError, NotificationSeverity.Error));
             }
             finally
             {
@@ -470,12 +471,33 @@ namespace Raven.Server.Documents
             }
         }
 
+        public ConcurrentDictionary<string, ConcurrentQueue<string>> InitLog =
+            new ConcurrentDictionary<string, ConcurrentQueue<string>>(StringComparer.OrdinalIgnoreCase);
+
         private DocumentDatabase CreateDocumentsStorage(StringSegment databaseName, RavenConfiguration config)
         {
+            void AddToInitLog(string txt)
+            {
+                string msg = txt;
+                msg = $"[Load Database] {DateTime.UtcNow} :: Database '{(string)databaseName}' : {msg}";
+                if(InitLog.TryGetValue(databaseName, out var q))
+                    q.Enqueue(msg);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(msg);
+            }
+
             try
             {
+                // force this to have a new value if one already exists
+                InitLog.AddOrUpdate(databaseName,
+                    s => new ConcurrentQueue<string>(),
+                    (s, existing) => new ConcurrentQueue<string>());
+
+
+                AddToInitLog("Starting database initialization");
+
                 var sp = Stopwatch.StartNew();
-                var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore);
+                var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
                 documentDatabase.Initialize();
                 DeleteDatabaseCachedInfo(documentDatabase, _serverStore);
                 if (_logger.IsInfoEnabled)
@@ -485,6 +507,8 @@ namespace Raven.Server.Documents
 
                 // if we have a very long init process, make sure that we reset the last idle time for this db.
                 LastRecentlyUsed.AddOrUpdate(databaseName, SystemTime.UtcNow, (_, time) => SystemTime.UtcNow);
+
+
                 return documentDatabase;
             }
             catch (Exception e)
@@ -493,6 +517,10 @@ namespace Raven.Server.Documents
                     _logger.Info($"Failed to start database {config.ResourceName}", e);
                 throw new DatabaseLoadFailureException($"Failed to start database {config.ResourceName}" + Environment.NewLine +
                                                        $"At {config.Core.DataDirectory}", e);
+            }
+            finally
+            {
+                InitLog.TryRemove(databaseName, out var _);
             }
         }
 
@@ -596,6 +624,7 @@ namespace Raven.Server.Documents
                 try
                 {
                     _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        databaseName,
                         title,
                         message,
                         AlertType.CatastrophicDatabaseFailure,

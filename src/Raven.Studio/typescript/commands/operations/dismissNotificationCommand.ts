@@ -13,7 +13,7 @@ class dismissNotificationCommand extends commandBase {
             id: this.notificationId,
             forever: this.forever ? "true" : undefined
         };
-        const url = this.db ? endpoints.databases.databaseNotificationCenter.notificationCenterDismiss : endpoints.global.serverNotificationCenter.adminNotificationCenterDismiss;
+        const url = this.db ? endpoints.databases.databaseNotificationCenter.notificationCenterDismiss : endpoints.global.serverNotificationCenter.serverNotificationCenterDismiss;
 
         return this.post(url + this.urlEncodeArgs(args), null, this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to dismiss action", response.responseText, response.statusText));

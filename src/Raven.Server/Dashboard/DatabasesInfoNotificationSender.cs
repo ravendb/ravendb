@@ -53,7 +53,7 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var databasesInfo = FetchDatabasesInfo(_serverStore, Cts).ToList();
+                var databasesInfo = FetchDatabasesInfo(_serverStore, null, Cts).ToList();
                 foreach (var watcher in _watchers)
                 {
                     foreach (var info in databasesInfo)
@@ -70,7 +70,7 @@ namespace Raven.Server.Dashboard
             }
         }
 
-        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, CancellationTokenSource cts)
+        public static IEnumerable<AbstractDashboardNotification> FetchDatabasesInfo(ServerStore serverStore, Func<string, bool> isValidFor, CancellationTokenSource cts)
         {
             var databasesInfo = new DatabasesInfo();
             var indexingSpeed = new IndexingSpeed();
@@ -85,6 +85,9 @@ namespace Raven.Server.Dashboard
                     var databaseName = databaseTuple.ItemName.Substring(Constants.Documents.Prefix.Length);
                     if (cts.IsCancellationRequested)
                         yield break;
+
+                    if(isValidFor != null && isValidFor(databaseName) == false)
+                        continue;
 
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {

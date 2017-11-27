@@ -8,7 +8,7 @@ using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
-    public class ServerDashboardHandler : RequestHandler
+    public class ServerDashboardHandler : ServerNotificationHandlerBase
     {
         [RavenAction("/server-dashboard/watch", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task Get()
@@ -17,6 +17,8 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
+                    var isValidFor = GetDatabaseAccessValidationFunc();
+
                     var serverInfo = new ServerInfo
                     {
                         StartUpTime = ServerStore.Server.Statistics.StartUpTime
@@ -28,14 +30,14 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                     using (var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown))
                     {
-                        var databasesInfo = DatabasesInfoNotificationSender.FetchDatabasesInfo(ServerStore, cts);
+                        var databasesInfo = DatabasesInfoNotificationSender.FetchDatabasesInfo(ServerStore, isValidFor, cts);
                         foreach (var info in databasesInfo)
                         {
                             await writer.WriteToWebSocket(info.ToJson());
                         }
                     }
 
-                    await writer.WriteNotifications();
+                    await writer.WriteNotifications(isValidFor);
                 }
             }
         }

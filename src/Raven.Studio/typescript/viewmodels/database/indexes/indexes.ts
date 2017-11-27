@@ -43,13 +43,13 @@ class indexes extends viewModelBase {
         localPriority: ko.observableArray<string>([]),
         localLockChanges: ko.observableArray<string>([]),
         localState: ko.observableArray<string>([]),
-        swapNow: ko.observableArray<string>([]),
-        indexingProgress: ko.observableArray<string>([])
+        swapNow: ko.observableArray<string>([])
     };
 
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
+    indexProgressIntervals = new Set<number>();
 
     throttledRefresh: Function;
 
@@ -61,7 +61,7 @@ class indexes extends viewModelBase {
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
             "resetIndex", "deleteIndex",
-            "forceSideBySide", "showProgress",
+            "forceSideBySide",
             "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
             "enableIndex", "disableIndex", "disableSelectedIndexes", "enableSelectedIndexes",
@@ -135,6 +135,14 @@ class indexes extends viewModelBase {
         return this.fetchIndexes();
     }
 
+    deactivate() {
+        super.deactivate();
+
+        this.indexProgressIntervals.forEach(interval => {
+            clearInterval(interval);
+        });
+    }
+
     private fetchIndexes(): JQueryPromise<void> {
         const statsTask = new getIndexesStatsCommand(this.activeDatabase())
             .execute();
@@ -155,8 +163,35 @@ class indexes extends viewModelBase {
         stats
             .filter(i => !i.Name.startsWith(index.SideBySideIndexPrefix))
             .map(i => new index(i, this.globalIndexingStatus ))
-            .forEach(i => {
-                this.putIndexIntoGroups(i);
+            .forEach(idx => {
+                this.putIndexIntoGroups(idx);
+
+                const indexName = idx.name;
+                if (this.perIndexProgressRefreshThrottle.get(indexName)) {
+                    return;
+                }
+
+                this.perIndexProgressRefreshThrottle.set(indexName, _.throttle(() => {
+                    this.computeIndexingProgress(indexName);
+                }, 7000));
+
+                this.perIndexProgressRefreshThrottle.get(indexName)();
+
+                const interval = setInterval(() => {
+                    const indexes = this.findIndexesByName(indexName);
+                    if (indexes.length === 0) {
+                        return;
+                    }
+
+                    const index = indexes[0];
+                    if (!index.isStale() || index.isDisabledState()) {
+                        return;
+                    }
+
+                    this.perIndexProgressRefreshThrottle.get(indexName)();
+                }, 5000);
+
+                this.indexProgressIntervals.add(interval);
             });
 
         this.processReplacements(replacements);
@@ -220,34 +255,11 @@ class indexes extends viewModelBase {
             indexGroup.groupHidden(!hasAnyInGroup);
         });
     }
-
-    showProgress(idx: index) {
-        if (!idx.isStale()) {
-            return;
-        }
-
-        this.confirmationMessage("Are you sure?", "Computing indexing progress is resource intensive and may take a while.", ["Cancel", "Show indexing progress"])
-            .done(result => {
-                if (result.can) {
-                    this.spinners.indexingProgress.push(idx.name);
-                    this.indexingProgresses.delete(idx.name);
-                    
-                    if (!this.perIndexProgressRefreshThrottle.get(idx.name)) {
-                        this.perIndexProgressRefreshThrottle.set(idx.name, _.throttle(() => this.computeIndexingProgress(idx.name), 4000));
-                    }
-
-                    return this.computeIndexingProgress(idx.name)
-                        .always(() => this.spinners.indexingProgress.remove(idx.name));
-                }
-            });
-    }
     
     private computeIndexingProgress(indexName: string) {
         return new computeIndexingProgressCommand(indexName, this.activeDatabase())
             .execute()
-            .done(progress => {
-                this.indexingProgresses.set(indexName, progress);
-            });
+            .done(progress => this.indexingProgresses.set(indexName, progress));
     }
 
     resetIndex(indexToReset: index) {

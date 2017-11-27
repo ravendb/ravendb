@@ -254,7 +254,12 @@ namespace Voron
         private unsafe void LoadExistingDatabase()
         {
             var header = stackalloc TransactionHeader[1];
-            bool hadIntegrityIssues = _journal.RecoverDatabase(header);
+            bool hadIntegrityIssues;
+
+            Options.AddToInitLog?.Invoke("Starting Recovery");
+            hadIntegrityIssues = _journal.RecoverDatabase(header, Options.AddToInitLog);
+            var successString = hadIntegrityIssues ? "(successfully)" : "(with intergrity issues)";
+            Options.AddToInitLog?.Invoke($"Recovery Ended {successString}");
 
             if (hadIntegrityIssues)
             {
@@ -284,12 +289,16 @@ namespace Voron
                     VoronUnrecoverableErrorException.Raise(this,
                         "Could not find metadata tree in database, possible mismatch / corruption?");
 
+                Debug.Assert(metadataTree != null);
+                // ReSharper disable once PossibleNullReferenceException
                 var dbId = metadataTree.Read("db-id");
                 if (dbId == null)
                     VoronUnrecoverableErrorException.Raise(this,
                         "Could not find db id in metadata tree, possible mismatch / corruption?");
 
                 var buffer = new byte[16];
+                Debug.Assert(dbId != null);
+                // ReSharper disable once PossibleNullReferenceException
                 var dbIdBytes = dbId.Reader.Read(buffer, 0, 16);
                 if (dbIdBytes != 16)
                     VoronUnrecoverableErrorException.Raise(this,
@@ -303,7 +312,7 @@ namespace Voron
                 if (_options.GenerateNewDatabaseId)
                 {
                     // save the new database id
-                    metadataTree.Add("db-id", DbId.ToByteArray());
+                    metadataTree?.Add("db-id", DbId.ToByteArray());
                 }
 
                 tx.Commit();

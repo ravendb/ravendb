@@ -321,7 +321,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 var index = Database.IndexStore.GetIndex(name);
                 if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
 
                 var progress = index.GetProgress(context);
                 writer.WriteIndexProgress(context, progress);

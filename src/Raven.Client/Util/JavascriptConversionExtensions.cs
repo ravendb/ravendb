@@ -534,7 +534,10 @@ namespace Raven.Client.Util
                 if (IsEnumerable && methodCallExpression.Object?.Type == typeof(IDocumentSession))
                 {
                     throw new NotSupportedException("Using IDocumentSession.Load(IEnumerable<string> ids) inside a query is not supported. " +
-                                                    "You should use RavenQuery.Load(IEnumerable<string> ids) instead");                    
+                                                    "You should use RavenQuery.Load(IEnumerable<string> ids) instead")
+                    {
+                        HelpLink = "DoNotWrap"
+                    };                    
                 }
 
                 context.PreventDefault();

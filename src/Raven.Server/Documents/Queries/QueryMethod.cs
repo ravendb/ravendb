@@ -47,26 +47,26 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "sum", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Sum;
 
-            if (string.Equals(methodName, "within", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Within;
+            if (string.Equals(methodName, "spatial.within", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Within;
 
-            if (string.Equals(methodName, "contains", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Contains;
+            if (string.Equals(methodName, "spatial.contains", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Contains;
 
-            if (string.Equals(methodName, "disjoint", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Disjoint;
+            if (string.Equals(methodName, "spatial.disjoint", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Disjoint;
 
-            if (string.Equals(methodName, "intersects", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Intersects;
+            if (string.Equals(methodName, "spatial.intersects", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Intersects;
 
-            if (string.Equals(methodName, "circle", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Circle;
+            if (string.Equals(methodName, "spatial.circle", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Circle;
 
-            if (string.Equals(methodName, "wkt", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Wkt;
+            if (string.Equals(methodName, "spatial.wkt", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Wkt;
 
-            if (string.Equals(methodName, "point", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Point;
+            if (string.Equals(methodName, "spatial.point", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Spatial_Point;
 
             if (string.Equals(methodName, "moreLikeThis", StringComparison.OrdinalIgnoreCase))
                 return MethodType.MoreLikeThis;

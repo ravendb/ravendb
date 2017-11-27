@@ -4,8 +4,9 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
 {
     public class DatabaseChanged : Notification
     {
-        private DatabaseChanged() : base(NotificationType.DatabaseChanged)
+        private DatabaseChanged(string database) : base(NotificationType.DatabaseChanged, database)
         {
+            DatabaseName = database;
         }
 
         public override string Id => $"{Type}/{ChangeType}/{DatabaseName}";
@@ -26,9 +27,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
 
         public static DatabaseChanged Create(string databaseName, DatabaseChangeType change)
         {
-            return new DatabaseChanged
+            return new DatabaseChanged(databaseName)
             {
-                DatabaseName = databaseName,
                 ChangeType = change
             };
         }

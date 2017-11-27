@@ -130,7 +130,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (string.IsNullOrWhiteSpace(configuration.Name) == false)
                     message += $", backup name: {configuration.Name}";
 
-                _database.NotificationCenter.Add(AlertRaised.Create("Couldn't schedule next backup, this shouldn't happen",
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name, 
+                    "Couldn't schedule next backup, this shouldn't happen",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Warning));
@@ -316,7 +318,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(message, e);
 
-                _database.NotificationCenter.Add(AlertRaised.Create("Periodic Backup",
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name, 
+                    "Periodic Backup",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Error,
@@ -510,7 +514,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(message, e);
 
-                _database.NotificationCenter.Add(AlertRaised.Create("Periodic Backup",
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name,
+                    "Periodic Backup",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Error,
@@ -742,6 +748,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Info(message);
 
                     _database.NotificationCenter.Add(AlertRaised.Create(
+                        _database.Name,
                         "Backup frequency parsing error",
                         message,
                         AlertType.PeriodicBackup,
@@ -1045,6 +1052,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
                     _database.NotificationCenter.Add(AlertRaised.Create(
+                        _database.Name,
                         "Periodic Backup",
                         message,
                         AlertType.PeriodicBackup,

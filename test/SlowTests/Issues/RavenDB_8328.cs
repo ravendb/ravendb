@@ -42,19 +42,19 @@ namespace SlowTests.Issues
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20));
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("FROM Items WHERE within(point(Latitude, Longitude), circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("FROM Items WHERE spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p0, $p1, $p2))", iq.Query);
 
                     var dq = session.Advanced.DocumentQuery<Item>()
                         .Spatial(factory => factory.Point(x => x.Latitude, x => x.Longitude), factory => factory.WithinRadius(10, 10, 20));
 
                     iq = dq.GetIndexQuery();
-                    Assert.Equal("FROM Items WHERE within(point(Latitude, Longitude), circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("FROM Items WHERE spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p0, $p1, $p2))", iq.Query);
 
                     dq = session.Advanced.DocumentQuery<Item>()
                         .Spatial(factory => factory.Wkt(x => x.ShapeWkt), factory => factory.WithinRadius(10, 10, 20));
 
                     iq = dq.GetIndexQuery();
-                    Assert.Equal("FROM Items WHERE within(wkt(ShapeWkt), circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("FROM Items WHERE spatial.within(spatial.wkt(ShapeWkt), spatial.circle($p0, $p1, $p2))", iq.Query);
                 }
 
                 using (var session = store.OpenSession())
@@ -65,7 +65,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)", stats.IndexName);
+                    Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)", stats.IndexName);
                 }
             }
 
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
             {
                 var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)); // checking it index survived restart
                 Assert.Equal(1, indexes.Length);
-                Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)", indexes[0].Name);
+                Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)", indexes[0].Name);
 
                 using (var session = store.OpenSession()) // validating matching
                 {
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)", stats.IndexName);
+                    Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)", stats.IndexName);
                 }
 
                 using (var session = store.OpenSession()) // validating extending
@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)AndPoint(Latitude2|Longitude2)", stats.IndexName);
+                    Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)AndSpatial.point(Latitude2|Longitude2)", stats.IndexName);
 
                     results = session.Query<Item>()
                         .Statistics(out stats)
@@ -107,7 +107,7 @@ namespace SlowTests.Issues
                         .ToList();
 
                     Assert.Equal(1, results.Count);
-                    Assert.Equal("Auto/Items/ByPoint(Latitude|Longitude)AndPoint(Latitude2|Longitude2)AndWkt(ShapeWkt)", stats.IndexName);
+                    Assert.Equal("Auto/Items/BySpatial.point(Latitude|Longitude)AndSpatial.point(Latitude2|Longitude2)AndSpatial.wkt(ShapeWkt)", stats.IndexName);
                 }
             }
         }

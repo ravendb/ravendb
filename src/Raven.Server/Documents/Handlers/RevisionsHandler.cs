@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
@@ -131,6 +132,25 @@ namespace Raven.Server.Documents.Handlers
                 AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext, count, pageSize, sw.Elapsed);
             }
 
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetResolvedConflictsSince()
+        {
+            var since = GetStringQueryString("since", required: false);
+            var take = GetIntValueQueryString("take", required: false) ?? 1024;
+            var date = Convert.ToDateTime(since).ToUniversalTime();
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                var revisions = Database.DocumentsStorage.RevisionsStorage.GetResovledDocumentsSince(context, date, take);
+                writer.WriteDocuments(context, revisions, false, out _);
+                writer.WriteEndObject();
+            }
             return Task.CompletedTask;
         }
 

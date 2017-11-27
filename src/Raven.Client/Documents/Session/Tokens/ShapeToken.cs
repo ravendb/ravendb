@@ -15,17 +15,17 @@ namespace Raven.Client.Documents.Session.Tokens
         public static ShapeToken Circle(string radiusParameterName, string latituteParameterName, string longitudeParameterName, SpatialUnits? radiusUnits)
         {
             if (radiusUnits.HasValue == false)
-                return new ShapeToken($"circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName})");
+                return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName})");
 
             if (radiusUnits == SpatialUnits.Kilometers)
-                return new ShapeToken($"circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Kilometers)}')");
+                return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Kilometers)}')");
 
-            return new ShapeToken($"circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Miles)}')");
+            return new ShapeToken($"spatial.circle(${radiusParameterName}, ${latituteParameterName}, ${longitudeParameterName}, '{nameof(SpatialUnits.Miles)}')");
         }
 
         public static ShapeToken Wkt(string shapeWktParameterName)
         {
-            return new ShapeToken($"wkt(${shapeWktParameterName})");
+            return new ShapeToken($"spatial.wkt(${shapeWktParameterName})");
         }
 
         public override void WriteTo(StringBuilder writer)

@@ -25,6 +25,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Constants = Voron.Global.Constants;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
+using Raven.Client.Exceptions.Cluster;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -256,8 +257,10 @@ namespace Raven.Server.Documents.TcpHandlers
             });
         }
 
-        private static async Task ReportExceptionToClient(SubscriptionConnection connection, Exception ex)
+        private static async Task ReportExceptionToClient(SubscriptionConnection connection, Exception ex, int recursionDepth = 0)
         {
+            if (recursionDepth == 2)
+                return;
             try
             {
                 if (ex is SubscriptionDoesNotExistException)
@@ -330,6 +333,10 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
+                }
+                else if (ex is CommandExecutionException commandExecution && commandExecution.InnerException != null && commandExecution.InnerException is SubscriptionException)
+                {                    
+                    await ReportExceptionToClient(connection, commandExecution.InnerException, recursionDepth - 1);                    
                 }
                 else
                 {
@@ -462,6 +469,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 _logger.Info(
                                     $"Did not find any documents to send for subscription {Options.SubscriptionName}");
                             }
+                            
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,
                                 Options.SubscriptionName,
                                 // if this is a new subscription that we sent anything in this iteration, 
@@ -469,6 +477,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 _lastChangeVector ?? 
                                     nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                                 subscriptionChangeVectorBeforeCurrentBatch);
+                            
+                            
                             subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
                             if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -481,6 +491,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (globalEtag > _startEtag)
                                     continue;
                             }
+                            
+                            AssertCloseWhenNoDocsLeft();
 
                             if (await WaitForChangedDocuments(replyFromClientTask))
                                 continue;
@@ -495,8 +507,22 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)> WaitForClientAck(
-            Task<SubscriptionConnectionClientMessage> replyFromClientTask, 
+        private void AssertCloseWhenNoDocsLeft()
+        {
+            if (_options.CloseWhenNoDocsLeft)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(
+                        $"Closing subscription {Options.SubscriptionName} because did not find any documents to send and it's in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+                }
+
+                throw new SubscriptionClosedException($"Closing subscription {Options.SubscriptionName} because there were no documents left and client connected in '{nameof(SubscriptionWorkerOptions.CloseWhenNoDocsLeft)}' mode");
+            }
+        }
+
+        private async Task<(Task<SubscriptionConnectionClientMessage> ReplyFromClientTask, string SubscriptionChangeVectorBeforeCurrentBatch)> 
+            WaitForClientAck(Task<SubscriptionConnectionClientMessage> replyFromClientTask, 
             string subscriptionChangeVectorBeforeCurrentBatch)
         {
             SubscriptionConnectionClientMessage clientReply;
@@ -816,7 +842,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
 
             var collectionName = q.From.From.FieldValue;
-            if (q.Where == null && q.Select == null && q.SelectFunctionBody == null)
+            if (q.Where == null && q.Select == null && q.SelectFunctionBody.FunctionText == null)
                 return (collectionName, (null, null), revisions);
 
             var writer = new StringWriter();
@@ -827,7 +853,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 writer.Write(q.From.Alias);
                 writer.WriteLine(" = this;");
             }
-            else if(q.Select != null || q.SelectFunctionBody != null || q.Load != null)
+            else if(q.Select != null || q.SelectFunctionBody.FunctionText != null || q.Load != null)
             {
                 throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
             }
@@ -857,10 +883,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 writer.WriteLine("{");
             }
 
-            if (q.SelectFunctionBody != null)
+            if (q.SelectFunctionBody.FunctionText != null)
             {
                 writer.Write(" return ");
-                writer.Write(q.SelectFunctionBody);
+                writer.Write(q.SelectFunctionBody.FunctionText);
                 writer.WriteLine(";");
             }
             else if (q.Select != null)
@@ -886,7 +912,7 @@ namespace Raven.Server.Documents.TcpHandlers
             // verify that the JS code parses
             new Esprima.JavaScriptParser(script).ParseProgram();
 
-            return (collectionName, (script, q.DeclaredFunctions?.Values?.ToArray() ?? Array.Empty<string>()), revisions);
+            return (collectionName, (script, q.DeclaredFunctions?.Values?.Select(x => x.FunctionText).ToArray() ?? Array.Empty<string>()), revisions);
         }
     }
 

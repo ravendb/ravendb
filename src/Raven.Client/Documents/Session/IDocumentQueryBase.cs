@@ -380,6 +380,16 @@ namespace Raven.Client.Documents.Session
         TSelf WhereExists(string fieldName);
 
         /// <summary>
+        /// Checks value of a given field against supplied regular expression pattern
+        /// </summary>
+        TSelf WhereRegex<TValue>(Expression<Func<T, TValue>> propertySelector, string pattern);
+
+        /// <summary>
+        /// Checks value of a given field against supplied regular expression pattern
+        /// </summary>
+        TSelf WhereRegex(string fieldName, string pattern);
+
+        /// <summary>
         ///     Filter matches to be inside the specified radius
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>

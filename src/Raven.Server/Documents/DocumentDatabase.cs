@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -46,6 +47,7 @@ namespace Raven.Server.Documents
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
+        private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
@@ -68,7 +70,9 @@ namespace Raven.Server.Documents
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {
-            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {Name ?? "Unknown Database"}",
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
+                Name,
+                $"Non Durable File System - {Name ?? "Unknown Database"}",
                 e.Message,
                 AlertType.NonDurableFileSystem,
                 NotificationSeverity.Warning,
@@ -78,18 +82,21 @@ namespace Raven.Server.Documents
 
         internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
         {
-            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Database Recovery Error - {Name ?? "Unknown Database"}",
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
+                Name,
+                $"Database Recovery Error - {Name ?? "Unknown Database"}",
                 e.Message,
                 AlertType.RecoveryError,
                 NotificationSeverity.Error,
                 Name));
         }
 
-        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
+        public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore, Action<string> addToInitLog)
         {
             Name = name;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
+            _addToInitLog = addToInitLog;
             StartTime = SystemTime.UtcNow;
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
@@ -116,7 +123,7 @@ namespace Raven.Server.Documents
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
-                DocumentsStorage = new DocumentsStorage(this);
+                DocumentsStorage = new DocumentsStorage(this, addToInitLog);
                 IndexStore = new IndexStore(this, serverStore);
                 QueryRunner = new QueryRunner(this);
                 EtlLoader = new EtlLoader(this, serverStore);
@@ -219,15 +226,20 @@ namespace Raven.Server.Documents
         {
             try
             {
+                _addToInitLog("Initializing NotificationCenter");
                 NotificationCenter.Initialize(this);
 
+                _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
+                _addToInitLog("Starting Transaction Merger");
                 TxMerger.Start();
+                _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
-
+                
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
+                _addToInitLog("Loading Database");
                 long index;
                 DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -239,8 +251,11 @@ namespace Raven.Server.Documents
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
+                _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record);
+                _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record);
+                _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
@@ -251,9 +266,11 @@ namespace Raven.Server.Documents
                 }
                 finally
                 {
+                    _addToInitLog("Initializing IndexStore completed");
                     _indexStoreTask = null;
                 }
 
+                _addToInitLog("Initializing SubscriptionStorage");
                 SubscriptionStorage.Initialize();
 
                 NotifyFeaturesAboutStateChange(record, index);
@@ -785,7 +802,7 @@ namespace Raven.Server.Documents
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
         {
-            if (record == null)
+            if (record == null || DocumentsStorage == null)
                 return;
 
             ClientConfiguration = record.Client;
@@ -876,7 +893,7 @@ namespace Raven.Server.Documents
                         continue;
                     }
 
-                    var fullPath = environment?.Environment.Options.BasePath.FullPath;
+                    var fullPath = environment.Environment.Options.BasePath.FullPath;
                     if (fullPath == null)
                         continue;
 

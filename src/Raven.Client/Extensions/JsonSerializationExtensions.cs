@@ -7,8 +7,7 @@ namespace Raven.Client.Extensions
 {
     internal static class JsonSerializationExtensions
     {
-        public static DynamicJsonValue ToJson<TValue>(this Dictionary<string, TValue> dic)
-            where TValue : struct
+        public static DynamicJsonValue ToJson<TValue>(this Dictionary<string, TValue> dic)     
         {
             var jsonMap = new DynamicJsonValue();
             if (dic == null) //precaution, prevent NRE
@@ -24,7 +23,6 @@ namespace Raven.Client.Extensions
 
 
         public static DynamicJsonValue ToJson<TValue>(this Dictionary<StringSegment, TValue> dic)
-            where TValue : struct
         {
             var jsonMap = new DynamicJsonValue();
             if (dic == null) //precaution, prevent NRE

@@ -165,6 +165,7 @@ namespace Raven.Server.Commercial
                     Logger.Info("Could not validate license", e);
 
                 var alert = AlertRaised.Create(
+                     null,
                     "License manager initialization error",
                     "Could not initialize the license manager",
                     AlertType.LicenseManager_InitializationError,
@@ -628,6 +629,7 @@ namespace Raven.Server.Commercial
                         leasedLicense.NotificationSeverity == NotificationSeverity.None ?
                         NotificationSeverity.Info : leasedLicense.NotificationSeverity;
                     var alert = AlertRaised.Create(
+                        null,
                         leasedLicense.Title,
                         leasedLicense.Message,
                         AlertType.LicenseManager_LicenseUpdateMessage,
@@ -678,6 +680,7 @@ namespace Raven.Server.Commercial
                 await Activate(updatedLicense, skipLeaseLicense: true);
 
                 var alert = AlertRaised.Create(
+                    null,
                     "License was updated",
                     "Successfully leased license",
                     AlertType.LicenseManager_LeaseLicenseSuccess,
@@ -691,6 +694,7 @@ namespace Raven.Server.Commercial
                     Logger.Info("Failed to lease license", e);
 
                 var alert = AlertRaised.Create(
+                    null,
                     "Failed to lease license",
                     "Could not lease license",
                     AlertType.LicenseManager_LeaseLicenseError,
@@ -871,6 +875,7 @@ namespace Raven.Server.Commercial
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
             var alert = AlertRaised.Create(
+                null,
                 "Lease license failure",
                 "Could not lease license",
                 AlertType.LicenseManager_LeaseLicenseError,

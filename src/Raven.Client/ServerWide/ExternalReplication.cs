@@ -79,8 +79,7 @@ namespace Raven.Client.ServerWide
         {
             var externalReplication = (ExternalReplication)other;
             
-            return base.IsEqualTo(other) && 
-                   string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
+            return string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
                    TaskId == externalReplication.TaskId; 
         }
 

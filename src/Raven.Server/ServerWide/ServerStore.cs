@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
@@ -52,8 +53,6 @@ using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
-using static Raven.Server.Documents.Handlers.BatchRequestParser;
-using Raven.Server.Extensions;
 
 namespace Raven.Server.ServerWide
 {
@@ -110,13 +109,13 @@ namespace Raven.Server.ServerWide
 
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, ResourceName, ServerShutdown);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown);
 
             ServerDashboardNotifications = new ServerDashboardNotifications(this, ServerShutdown);
 
             _operationsStorage = new OperationsStorage();
 
-            Operations = new Operations(ResourceName, _operationsStorage, NotificationCenter, null);
+            Operations = new Operations(null, _operationsStorage, NotificationCenter, null);
 
             LicenseManager = new LicenseManager(this);
 
@@ -302,7 +301,9 @@ namespace Raven.Server.ServerWide
 
             options.OnNonDurableFileSystemError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Non Durable File System - System Storage",
+                var alert = AlertRaised.Create(
+                    null,
+                    "Non Durable File System - System Storage",
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
@@ -320,7 +321,9 @@ namespace Raven.Server.ServerWide
 
             options.OnRecoveryError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Recovery Error - System Storage",
+                var alert = AlertRaised.Create(
+                    null,
+                    "Recovery Error - System Storage",
                     e.Message,
                     AlertType.RecoveryError,
                     NotificationSeverity.Error,
@@ -339,7 +342,9 @@ namespace Raven.Server.ServerWide
             {
                 if (MemoryInformation.IsSwappingOnHddInsteadOfSsd())
                 {
-                    var alert = AlertRaised.Create("Swap Storage Type Warning",
+                    var alert = AlertRaised.Create(
+                        null,
+                        "Swap Storage Type Warning",
                         "OS swapping on at least one HDD drive while there is at least one SSD drive on this system. " +
                         "This can cause a slowdown, consider moving swap-partition/pagefile to SSD",
                         AlertType.SwappingHddInsteadOfSsd,
@@ -595,6 +600,7 @@ namespace Raven.Server.ServerWide
                         if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
                         {
                             NotificationCenter.Add(AlertRaised.Create(
+                                null,
                                 "Unable to refresh server certificate", 
                                 "Cluster wanted to install updated server certificate, but no path has been configured", 
                                 AlertType.ClusterTopologyWarning, 
@@ -859,8 +865,14 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, ExternalReplication watcher)
+        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, BlittableJsonReaderObject blittableJson, out ExternalReplication watcher)
         {
+            if (blittableJson.TryGet(nameof(UpdateExternalReplicationCommand.Watcher), out BlittableJsonReaderObject watcherBlittable) == false)
+            {
+                throw new InvalidDataException($"{nameof(UpdateExternalReplicationCommand.Watcher)} was not found.");
+            }
+
+            watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
             var addWatcherCommand = new UpdateExternalReplicationCommand(dbName)
             {
                 Watcher = watcher

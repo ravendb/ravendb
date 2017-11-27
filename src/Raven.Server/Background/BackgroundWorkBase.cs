@@ -17,7 +17,7 @@ namespace Raven.Server.Background
         protected BackgroundWorkBase(string resourceName, CancellationToken shutdown)
         {
             _shutdown = shutdown;
-            Logger = LoggingSource.Instance.GetLogger(resourceName, GetType().FullName);
+            Logger = LoggingSource.Instance.GetLogger(resourceName ?? "Server", GetType().FullName);
             Cts = CancellationTokenSource.CreateLinkedTokenSource(_shutdown);
         }
 

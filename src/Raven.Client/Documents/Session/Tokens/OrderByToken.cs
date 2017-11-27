@@ -24,22 +24,22 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public static OrderByToken CreateDistanceAscending(string fieldName, string latitudeParameterName, string longitudeParameterName)
         {
-            return new OrderByToken($"distance({fieldName}, point(${latitudeParameterName}, ${longitudeParameterName}))", false, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.point(${latitudeParameterName}, ${longitudeParameterName}))", false, OrderingType.String);
         }
 
         public static OrderByToken CreateDistanceAscending(string fieldName, string shapeWktParameterName)
         {
-            return new OrderByToken($"distance({fieldName}, wkt(${shapeWktParameterName}))", false, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.wkt(${shapeWktParameterName}))", false, OrderingType.String);
         }
 
         public static OrderByToken CreateDistanceDescending(string fieldName, string latitudeParameterName, string longitudeParameterName)
         {
-            return new OrderByToken($"distance({fieldName}, point(${latitudeParameterName}, ${longitudeParameterName}))", true, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.point(${latitudeParameterName}, ${longitudeParameterName}))", true, OrderingType.String);
         }
 
         public static OrderByToken CreateDistanceDescending(string fieldName, string shapeWktParameterName)
         {
-            return new OrderByToken($"distance({fieldName}, wkt(${shapeWktParameterName}))", true, OrderingType.String);
+            return new OrderByToken($"spatial.distance({fieldName}, spatial.wkt(${shapeWktParameterName}))", true, OrderingType.String);
         }
 
         public static OrderByToken CreateRandom(string seed)

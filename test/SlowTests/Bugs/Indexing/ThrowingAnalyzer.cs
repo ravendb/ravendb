@@ -9,6 +9,7 @@ using System.IO;
 using FastTests;
 using Xunit;
 using System.Linq;
+using System.Threading;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -63,6 +64,12 @@ namespace SlowTests.Bugs.Indexing
                 }
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
+                for (int i = 0; i < 10; i++)
+                {
+                    if (db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) > 0)
+                        break;
+                    Thread.Sleep(100);
+                }
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.NotEqual(errorsCount, 0);
@@ -100,6 +107,12 @@ namespace SlowTests.Bugs.Indexing
                 Assert.True(fooIndex.State == IndexState.Error);
 
                 var db = GetDocumentDatabaseInstanceFor(store).Result;
+                for (int i = 0; i < 10; i++)
+                {
+                    if (db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount()) > 0)
+                        break;
+                    Thread.Sleep(100);
+                }
                 var errorsCount = db.IndexStore.GetIndexes().Sum(index => index.GetErrorCount());
 
                 Assert.NotEqual(errorsCount, 0);

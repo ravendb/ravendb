@@ -355,6 +355,8 @@ namespace Voron.Data.Tables
             // if this is in the active candidate list, remove it so it cannot be reused if the current
             // active is full and need a new one
             ActiveCandidateSection.Delete(sectionPageNumber);
+            // need to remove it from the inactive tracking because it is going to be freed in a bit
+            InactiveSections.Delete(sectionPageNumber);
 
             var idsInSection = ActiveDataSmallSection.GetAllIdsInSectionContaining(id);
             foreach (var idToMove in idsInSection)
@@ -1205,12 +1207,15 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index)
+        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, int skip = 0)
         {
             var fst = GetFixedSizeTree(index);
             using (var it = fst.Iterate())
             {
                 if (it.SeekToLast() == false)
+                    yield break;
+                
+                if(it.Skip(-skip) == false)
                     yield break;
 
                 var result = new TableValueHolder();
@@ -1222,28 +1227,6 @@ namespace Voron.Data.Tables
             }
         }
 
-        public IEnumerable<TableValueHolder> SeekBackwardFromLast(TableSchema.FixedSizeSchemaIndexDef index, int skip)
-        {
-            var fst = GetFixedSizeTree(index);
-            using (var it = fst.Iterate())
-            {
-                if (it.SeekToLast() == false)
-                    yield break;
-
-                var result = new TableValueHolder();
-                do
-                {
-                    if (skip > 0)
-                    {
-                        skip--;
-                        continue;
-                    }
-
-                    GetTableValueReader(it, out result.Reader);
-                    yield return result;
-                } while (it.MovePrev());
-            }
-        }
 
         public IEnumerable<TableValueHolder> SeekBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long key)
         {

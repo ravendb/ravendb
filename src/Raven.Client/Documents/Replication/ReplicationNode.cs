@@ -44,8 +44,7 @@ namespace Raven.Client.Documents.Replication
 
         public virtual bool IsEqualTo(ReplicationNode other)
         {
-            return string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase) && 
-                   Disabled == other.Disabled;
+            return string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)

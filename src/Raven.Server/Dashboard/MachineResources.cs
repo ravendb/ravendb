@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Dashboard
 {
@@ -16,6 +17,8 @@ namespace Raven.Server.Dashboard
 
         public long ProcessMemoryUsage { get; set; } // in bytes
 
+        public long ProcessMemoryExcludingSharedUsage { get; set; } // in bytes
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -25,7 +28,8 @@ namespace Raven.Server.Dashboard
             json[nameof(TotalMemory)] = TotalMemory;
             json[nameof(MachineMemoryUsage)] = MachineMemoryUsage;
             json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
-            
+            json[nameof(ProcessMemoryExcludingSharedUsage)] = ProcessMemoryExcludingSharedUsage;
+
             return json;
         }
     }

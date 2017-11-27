@@ -66,8 +66,7 @@ namespace Raven.Server.Documents.Patch
 
         private ScriptRunner GetScriptRunner(Key script)
         {
-            Lazy<ScriptRunner> lazy;
-            if (_cache.TryGetValue(script, out lazy))
+            if (_cache.TryGetValue(script, out var lazy))
                 return lazy.Value;
 
             return GetScriptRunnerUnlikely(script);

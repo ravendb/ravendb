@@ -14,13 +14,17 @@ using Microsoft.Extensions.Primitives;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web
 {
@@ -488,6 +492,59 @@ namespace Raven.Server.Web
                 var blittable = EntityToBlittable.ConvertEntityToBlittable(licenseLimit, DocumentConventions.Default, context);
                 context.Write(writer, blittable);
                 writer.Flush();
+            }
+        }
+
+        protected async Task DatabaseConfigurations(Func<TransactionOperationContext, string,
+           BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc,
+           string debug,
+           Func<string, BlittableJsonReaderObject, bool> beforeSetupConfiguration = null,
+           Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null, string databaseName = null, 
+           HttpStatusCode statusCode = HttpStatusCode.OK)
+        {
+            var name = databaseName ?? GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
+                return;
+
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
+                if (beforeSetupConfiguration?.Invoke(name, configurationJson) == false)
+                    return;
+
+                var (index, _) = await setupConfigurationFunc(context, name, configurationJson);
+                DatabaseRecord dbRecord;
+                using (context.OpenReadTransaction())
+                {
+                    //TODO: maybe have a timeout here for long loading operations
+                    dbRecord = ServerStore.Cluster.ReadDatabase(context, name);
+                }
+                if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
+                {
+                    var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(name);
+                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                }
+                else
+                {
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+                }
+                HttpContext.Response.StatusCode = (int)statusCode;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var json = new DynamicJsonValue
+                    {
+                        ["RaftCommandIndex"] = index
+                    };
+                    fillJson?.Invoke(json, configurationJson, index);
+                    context.Write(writer, json);
+                    writer.Flush();
+                }
             }
         }
     }

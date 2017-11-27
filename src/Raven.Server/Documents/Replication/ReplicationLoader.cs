@@ -414,6 +414,9 @@ namespace Raven.Server.Documents.Replication
             var removedDestiantions = newDestinations.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
+                if(newDestination.Disabled)
+                    continue;
+                
                 removedDestiantions.Remove(newDestination);
                 if (current.Contains(newDestination) == false)
                     addedDestinations.Add(newDestination);
@@ -441,6 +444,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     
                     _server.NotificationCenter.Add(AlertRaised.Create(
+                        Database.Name,
                         "Connection string name is empty",
                         msg,
                         AlertType.Replication,
@@ -774,6 +778,7 @@ namespace Raven.Server.Documents.Replication
 
             Database.NotificationCenter.Add(
                 PerformanceHint.Create(
+                    database: Database.Name,
                     title: "Large number of tombstones because of disabled replication destination",
                     msg:
                         $"The disabled replication destination {disabledReplicationNode.FromString()} prevents from cleaning large number of tombstones.",

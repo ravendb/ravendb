@@ -97,14 +97,14 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteEndArray();
         }
 
-        public override void VisitDeclaredFunctions(Dictionary<StringSegment, string> declaredFunctions)
+        public override void VisitDeclaredFunctions(Dictionary<StringSegment, (string FunctionText, Esprima.Ast.Program Program)> declaredFunctions)
         {
             _writer.WritePropertyName("Declare");
             _writer.WriteStartObject();
             foreach (var declaredFunction in declaredFunctions)
             {
                 _writer.WritePropertyName(declaredFunction.Key);
-                _writer.WriteValue(declaredFunction.Value);
+                _writer.WriteValue(declaredFunction.Value.FunctionText);
             }
             _writer.WriteEndObject();
         }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Esprima.Ast;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -16,6 +17,7 @@ using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Sparrow;
 using Sparrow.Json;
+using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -94,6 +96,8 @@ namespace Raven.Server.Documents.Queries
 
         public string[] Includes;
 
+        public bool HasIncludeOrLoad;
+
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -133,7 +137,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.Load != null)
                 HandleLoadClause(parameters);
 
-            if (Query.SelectFunctionBody != null)
+            if (Query.SelectFunctionBody.FunctionText != null)
                 HandleSelectFunctionBody(parameters);
             else if (Query.Select != null)
                 FillSelectFields(parameters);
@@ -148,9 +152,9 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.CmpXchg:
                         case MethodType.Count:
                         case MethodType.Sum:
-                        case MethodType.Point:
-                        case MethodType.Wkt:
-                        case MethodType.Circle:
+                        case MethodType.Spatial_Point:
+                        case MethodType.Spatial_Wkt:
+                        case MethodType.Spatial_Circle:
                             ThrowInvalidMethod(parameters, me);
                             break;
                     }
@@ -185,6 +189,66 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.Include != null)
                 HandleQueryInclude(parameters);
+
+            if (Query.DeclaredFunctions != null)
+                HandleDeclaredFunctions();
+        }
+
+        private void HandleDeclaredFunctions()
+        {
+            foreach (var function in Query.DeclaredFunctions)
+            {
+                var body = function.Value.Program.Body;
+                HandleDeclaredFunctionBody(body);
+                if (HasIncludeOrLoad)
+                    return;
+            }
+        }
+
+        private void HandleDeclaredFunctionBody(IEnumerable<StatementListItem> body)
+        {
+            foreach (var statement in body)
+            {
+                if (statement is ReturnStatement returnStatement)
+                {
+                    if (returnStatement.Argument is ObjectExpression objectExpression)
+                    {
+                        foreach (var property in objectExpression.Properties)
+                        {
+                            if (property.Value is StaticMemberExpression staticMemberExpression)
+                            {
+                                HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
+                                if (HasIncludeOrLoad)
+                                    return;
+                            }
+                        }
+                    }
+                    else if (returnStatement.Argument is StaticMemberExpression staticMemberExpression)
+                    {
+                        HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
+                        if (HasIncludeOrLoad)
+                            return;
+                    }
+                }
+                else if (statement is FunctionDeclaration functionDeclaration)
+                {
+                    HandleDeclaredFunctionBody(functionDeclaration.Body.Body);
+                }
+            }
+        }
+
+        private void HandleDeclaredFunctionStaticMemberExpression(StaticMemberExpression staticMemberExpression)
+        {
+            if (staticMemberExpression.Object is CallExpression callExpression)
+            {
+                if (callExpression.Callee is Identifier identifier)
+                {
+                    if (identifier.Name == "load")
+                    {
+                        HasIncludeOrLoad = true;
+                    }
+                }
+            }
         }
 
         private void ThrowInvalidMethod(BlittableJsonReaderObject parameters, MethodExpression me)
@@ -194,6 +258,8 @@ namespace Raven.Server.Documents.Queries
 
         private void HandleQueryInclude(BlittableJsonReaderObject parameters)
         {
+            HasIncludeOrLoad = true;
+
             var includes = new List<string>();
             foreach (var include in Query.Include)
             {
@@ -258,13 +324,12 @@ namespace Raven.Server.Documents.Queries
             }
             sb.Append("    return ");
 
-            sb.Append(Query.SelectFunctionBody);
+            sb.Append(Query.SelectFunctionBody.FunctionText);
 
             sb.AppendLine(";").AppendLine("}");
 
-            if (Query.TryAddFunction(name, sb.ToString()) == false)
+            if (Query.TryAddFunction(name, (sb.ToString(), Query.SelectFunctionBody.Program)) == false)
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
-
 
             SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
         }
@@ -308,6 +373,7 @@ namespace Raven.Server.Documents.Queries
 
         private void HandleLoadClause(BlittableJsonReaderObject parameters)
         {
+            HasIncludeOrLoad = true;
             foreach (var load in Query.Load)
             {
                 if (load.Alias == null)
@@ -400,20 +466,18 @@ namespace Raven.Server.Documents.Queries
                     parameters);
             }
 
-            if (me.Name.Equals("distance", StringComparison.OrdinalIgnoreCase))
+            if (me.Name.Equals("spatial.distance", StringComparison.OrdinalIgnoreCase))
             {
                 if (me.Arguments.Count != 2)
-                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected two arguments, got " + me.Arguments.Count, QueryText,
+                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected two arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
 
-                var fieldToken = me.Arguments[0] as FieldExpression;
-                if (fieldToken == null)
-                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected field token, got " + me.Arguments[0], QueryText,
+                if (!(me.Arguments[0] is FieldExpression fieldToken))
+                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected field token, got " + me.Arguments[0], QueryText,
                         parameters);
 
-                var expression = me.Arguments[1] as MethodExpression;
-                if (expression == null)
-                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected expression, got " + me.Arguments[1], QueryText,
+                if (!(me.Arguments[1] is MethodExpression expression))
+                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected expression, got " + me.Arguments[1], QueryText,
                         parameters);
 
                 var methodName = expression.Name;
@@ -421,13 +485,13 @@ namespace Raven.Server.Documents.Queries
 
                 switch (methodType)
                 {
-                    case MethodType.Circle:
+                    case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(expression.Arguments, QueryText, parameters);
                         break;
-                    case MethodType.Wkt:
+                    case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(expression.Arguments, QueryText, parameters);
                         break;
-                    case MethodType.Point:
+                    case MethodType.Spatial_Point:
                         QueryValidator.ValidatePoint(expression.Arguments, QueryText, parameters);
                         break;
                     default:
@@ -1247,10 +1311,10 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Sum:
                         HandleSum(arguments, parameters);
                         return;
-                    case MethodType.Within:
-                    case MethodType.Contains:
-                    case MethodType.Disjoint:
-                    case MethodType.Intersects:
+                    case MethodType.Spatial_Within:
+                    case MethodType.Spatial_Contains:
+                    case MethodType.Spatial_Disjoint:
+                    case MethodType.Spatial_Intersects:
                         HandleSpatial(methodName, arguments, parameters);
                         return;
                     case MethodType.MoreLikeThis:
@@ -1297,7 +1361,7 @@ namespace Raven.Server.Documents.Queries
                     var spatialType = QueryMethod.GetMethodType(spatialExpression.Name);
                     switch (spatialType)
                     {
-                        case MethodType.Wkt:
+                        case MethodType.Spatial_Wkt:
                             if (spatialExpression.Arguments.Count != 1)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a wkt() method with 1 argument", QueryText, parameters);
 
@@ -1308,7 +1372,7 @@ namespace Raven.Server.Documents.Queries
                                 wkt
                             });
                             break;
-                        case MethodType.Point:
+                        case MethodType.Spatial_Point:
                             if (spatialExpression.Arguments.Count != 2)
                                 throw new InvalidQueryException($"Method {methodName}() expects first argument to be a point() method with 2 arguments", QueryText, parameters);
 
@@ -1349,10 +1413,10 @@ namespace Raven.Server.Documents.Queries
                 var methodType = QueryMethod.GetMethodType(methodName);
                 switch (methodType)
                 {
-                    case MethodType.Circle:
+                    case MethodType.Spatial_Circle:
                         QueryValidator.ValidateCircle(shapeExpression.Arguments, QueryText, parameters);
                         break;
-                    case MethodType.Wkt:
+                    case MethodType.Spatial_Wkt:
                         QueryValidator.ValidateWkt(shapeExpression.Arguments, QueryText, parameters);
                         break;
                     default:
@@ -1395,7 +1459,7 @@ namespace Raven.Server.Documents.Queries
 
             public object EvaluateSingleMethod(QueryResultRetrieverBase revtriver, Document doc)
             {
-                _query.TryAddFunction(_expression.Name, _expression.Name);
+                _query.TryAddFunction(_expression.Name, (_expression.Name, null));
                 if (_expression.Arguments == null || _expression.Arguments.Count == 0)
                 {
                     return revtriver.InvokeFunction(_expression.Name, _query, new object[] { });
@@ -1518,7 +1582,7 @@ namespace Raven.Server.Documents.Queries
             if (argument is ValueExpression value) // escaped string might go there
                 return new QueryFieldName(value.Token, value.Value == ValueTokenType.String);
             
-            if (argument is MethodExpression method && method.ToString() == Constants.Documents.Indexing.Fields.DocumentIdFieldName) //id property might be written as id()
+            if (argument is MethodExpression method && string.Equals(method.Name, Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase)) //id property might be written as id() or id(<alias>)
                 return new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false);
 
             throw new InvalidQueryException($"Method {methodName}() expects a field name as its argument", queryText, parameters);

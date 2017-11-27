@@ -5,7 +5,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 
@@ -101,6 +103,41 @@ namespace FastTests.Client
                 Assert.Equal("Mega John", name.ToString());
                 ((BlittableJsonReaderObject)doc4).TryGetMember("Name", out name);
                 Assert.Equal("Mega Jane", name.ToString());
+            }
+        }
+
+        [Fact]
+        public void Bulk_Insert_Should_Throw_On_StoreAsync_Concurrent_Calls()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    var localList = new User[32];
+                    for (var index = 0; index < localList.Length; index++)
+                    {
+                        localList[index] = new User
+                        {
+                            Id = "myTest/"
+                        };
+                    }
+
+
+                    var ae = Assert.Throws<AggregateException>(() =>
+                    {
+                        Parallel.ForEach(localList, element =>
+                        {
+                            bulkInsert.StoreAsync(element).Wait();
+                        });
+                    });
+
+
+                    var msg = ae.InnerExceptions
+                        .OfType<AggregateException>()
+                        .SelectMany(x=>x.InnerExceptions)
+                        .OfType<ConcurrencyException>().First().Message;
+                    Assert.Contains("Store/StoreAsync in bulkInsert concurrently is forbidden", msg);
+                }
             }
         }
 

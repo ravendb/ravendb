@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             documentsContext.OpenReadTransaction();
 
-            FillCountOfResultsAndIndexEtag(result, query.Metadata.CollectionName, documentsContext);
+            FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
 
             if (existingResultEtag.HasValue)
             {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 documentsContext.OpenReadTransaction();
 
-                FillCountOfResultsAndIndexEtag(result, query.Metadata.CollectionName, documentsContext);
+                FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
 
                 ExecuteCollectionQuery(result, query, query.Metadata.CollectionName, documentsContext, token.Token);
             }
@@ -120,11 +120,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.TotalResults = (totalResults.Value == 0 && resultToFill.Results.Count != 0)?-1: totalResults.Value;
         }
 
-        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, string collection, DocumentsOperationContext context)
+        private unsafe void FillCountOfResultsAndIndexEtag(QueryResultServerSide resultToFill, QueryMetadata query, DocumentsOperationContext context)
         {
+            var collection = query.CollectionName;
             var buffer = stackalloc long[3];
 
-            if (collection == Constants.Documents.Collections.AllDocumentsCollection)
+            // If the query has include or load, it's too difficult to check the etags for just the included collections, 
+            // it's easier to just show etag for all docs isntead.
+            if (collection == Constants.Documents.Collections.AllDocumentsCollection || 
+                query.HasIncludeOrLoad)
             {
                 var numberOfDocuments = Database.DocumentsStorage.GetNumberOfDocuments(context);
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);

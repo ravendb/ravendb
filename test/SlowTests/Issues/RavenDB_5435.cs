@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 
@@ -23,7 +25,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-9188")]
+        [Fact]
         public async Task CanCompact()
         {
             var path = NewDataPath();
@@ -49,8 +51,14 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                //var operation = store.Maintenance.Send(new CompactIndexOperation(new Users_ByName().IndexName));
-                //await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                var operation = store.Maintenance.Server.Send(new CompactDatabaseOperation(new CompactSettings
+                {
+                    DatabaseName = store.Database,
+                    Documents = true,
+                    Indexes = new[] { new Users_ByName().IndexName }
+                }));
+
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var session = store.OpenSession())
                 {

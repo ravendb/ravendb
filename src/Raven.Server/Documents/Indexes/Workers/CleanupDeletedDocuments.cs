@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
 
+                    var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastTombstoneEtag;
                     var count = 0;
 
@@ -94,6 +95,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 count++;
                                 batchCount++;
                                 lastEtag = tombstone.Etag;
+                                inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: true);
 
                                 if (tombstone.DeletedEtag > lastMappedEtag)
                                     continue; // no-op, we have not yet indexed this document

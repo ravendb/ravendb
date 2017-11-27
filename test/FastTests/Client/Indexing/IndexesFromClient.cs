@@ -262,7 +262,9 @@ namespace FastTests.Client.Indexing
 
                 definition = await store.Maintenance.SendAsync(new GetIndexOperation(index.Name));
                 Assert.Equal(serverDefinition.Name, definition.Name);
+#if FEATURE_TEST_INDEX
                 Assert.Equal(serverDefinition.IsTestIndex, definition.IsTestIndex);
+#endif
                 Assert.Equal(serverDefinition.Reduce, definition.Reduce);
                 Assert.Equal((int)serverDefinition.Type, (int)definition.Type);
                 Assert.Equal(serverDefinition.Etag, definition.Etag);

@@ -199,7 +199,14 @@ namespace Raven.Server.Documents.Queries
                 IEnumerable<Document> documents;
                 if (_startsWith != null)
                 {
-                    documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize);
+                    if (_isAllDocsCollection)
+                    {
+                        documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize);
+                    }
+                    else
+                    {
+                        documents = _documents.GetDocumentsStartingWith(_context, _startsWith, null, null, null, _start, _query.PageSize, _collection);
+                    }
                 }
                 else if (_ids != null && _ids.Count > 0)
                 {

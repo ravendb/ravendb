@@ -79,8 +79,17 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
 
-            _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfConflicts, current.CountOfDocuments, current.CountOfIndexes,
-                current.CountOfStaleIndexes, current.GlobalChangeVector, current.LastEtag, current.CountOfIndexingErrors, lastIndexingErrorTime, modifiedCollections));
+            _notificationCenter.Add(DatabaseStatsChanged.Create(
+                _database.Name,
+                current.CountOfConflicts, 
+                current.CountOfDocuments, 
+                current.CountOfIndexes,
+                current.CountOfStaleIndexes, 
+                current.GlobalChangeVector, 
+                current.LastEtag, 
+                current.CountOfIndexingErrors, 
+                lastIndexingErrorTime, 
+                modifiedCollections));
 
             _latest = current;
         }

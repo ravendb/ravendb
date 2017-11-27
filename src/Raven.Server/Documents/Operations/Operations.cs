@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Operations
         private readonly Logger _logger;
         private readonly ConcurrentDictionary<long, Operation> _active = new ConcurrentDictionary<long, Operation>();
         private readonly ConcurrentDictionary<long, Operation> _completed = new ConcurrentDictionary<long, Operation>();
+        private readonly string _name;
         private readonly OperationsStorage _operationsStorage;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
         private readonly DocumentsChanges _changes;
@@ -33,11 +34,12 @@ namespace Raven.Server.Documents.Operations
             NotificationCenter.NotificationCenter notificationCenter,
             DocumentsChanges changes)
         {
+            _name = name;
             _operationsStorage = operationsStorage;
             _notificationCenter = notificationCenter;
             _changes = changes;
 
-            _logger = LoggingSource.Instance.GetLogger<Operations>(name);
+            _logger = LoggingSource.Instance.GetLogger<Operations>(name ?? "Server");
         }
 
         internal void CleanupOperations()
@@ -188,7 +190,7 @@ namespace Raven.Server.Documents.Operations
 
         private void RaiseNotifications(OperationStatusChange change, Operation operation)
         {
-            var operationChanged = OperationChanged.Create(change.OperationId, operation.Description, change.State, operation.Killable);
+            var operationChanged = OperationChanged.Create(_name,change.OperationId, operation.Description, change.State, operation.Killable);
 
             operation.NotifyCenter(operationChanged, x => _notificationCenter.Add(x));
 

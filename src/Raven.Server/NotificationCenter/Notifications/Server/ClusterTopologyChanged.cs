@@ -7,7 +7,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
 {
     public class ClusterTopologyChanged : Notification
     {
-        private ClusterTopologyChanged() : base(NotificationType.ClusterTopologyChanged)
+        private ClusterTopologyChanged() : base(NotificationType.ClusterTopologyChanged, null)
         {
         }
 

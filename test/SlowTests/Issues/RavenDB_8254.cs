@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                         Query = $@"
 declare function transform(item) {{ item.Name = 'transformed'; return item; }}
 FROM INDEX '{new Index_Spatial().IndexName}' as i
-WHERE within(Coordinates, circle(10, 50, 50))
+WHERE spatial.within(Coordinates, spatial.circle(10, 50, 50))
 SELECT transform(i)
 "
                     };

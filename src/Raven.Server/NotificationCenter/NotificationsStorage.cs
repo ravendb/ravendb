@@ -276,6 +276,19 @@ namespace Raven.Server.NotificationCenter
             };
         }
 
+        public string GetDatabaseFor(string id)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var item =  Get(id, context, tx);
+                if (item == null)
+                    return null;
+                item.Json.TryGet("Database", out string db);
+                return db;
+            }
+        }
+
         public void ChangePostponeDate(string id, DateTime? postponeUntil)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
