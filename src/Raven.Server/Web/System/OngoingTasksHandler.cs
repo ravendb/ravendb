@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
@@ -13,12 +14,15 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.ETL.SQL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
+using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -163,7 +167,175 @@ namespace Raven.Server.Web.System
             
             return taskInfo;
         }
-        
+
+        [RavenAction("/databases/*/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task TestPeriodicBackupCredentials()
+        {
+            // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
+
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
+                throw new ArgumentException($"Unkown backup connection: {type}");
+
+            DynamicJsonValue result;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                try
+                {
+                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
+                    switch (connectionType)
+                    {
+                        case PeriodicBackupTestConnectionType.S3:
+                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
+                            using (var awsClient = new RavenAwsS3Client(
+                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.BucketName,
+                                s3Settings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await awsClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.Glacier:
+                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
+                            using (var galcierClient = new RavenAwsGlacierClient(
+                                glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
+                                glacierSettings.AwsRegionName, glacierSettings.VaultName,
+                                cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await galcierClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.Azure:
+                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
+                            using (var azureClient = new RavenAzureClient(
+                                azureSettings.AccountName, azureSettings.AccountKey,
+                                azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
+                            {
+                                await azureClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.FTP:
+                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
+                            using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
+                                ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
+                            {
+                                await ftpClient.TestConnection();
+                            }
+                            break;
+                        case PeriodicBackupTestConnectionType.Local:
+                        case PeriodicBackupTestConnectionType.None:
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = true,
+                    };
+                }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                    };
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task UpdatePeriodicBackup()
+        {
+            await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
+                "update-periodic-backup",
+                databaseName: Database.Name, 
+                beforeSetupConfiguration: (_, readerObject) =>
+                {
+                    if (ServerStore.LicenseManager.CanAddPeriodicBackup(readerObject, out var licenseLimit) == false)
+                    {
+                        SetLicenseLimitResponse(licenseLimit);
+                        return false;
+                    }
+
+                    VerifyPeriodicBackupConfiguration(readerObject);
+                    return true;
+                },
+                fillJson: (json, readerObject, index) =>
+                {
+                    var taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
+                    readerObject.TryGet(taskIdName, out long taskId);
+                    if (taskId == 0)
+                        taskId = index;
+                    json[taskIdName] = taskId;
+                });
+        }
+
+        private static void VerifyPeriodicBackupConfiguration(BlittableJsonReaderObject readerObject)
+        {
+            readerObject.TryGet(
+                nameof(PeriodicBackupConfiguration.FullBackupFrequency),
+                out string fullBackupFrequency);
+            readerObject.TryGet(
+                nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency),
+                out string incrementalBackupFrequency);
+
+            if (VerifyBackupFrequency(fullBackupFrequency) == null &&
+                VerifyBackupFrequency(incrementalBackupFrequency) == null)
+            {
+                throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
+                                            $"full backup cron expression: {fullBackupFrequency}, " +
+                                            $"incremental backup cron expression: {incrementalBackupFrequency}");
+            }
+
+            readerObject.TryGet(nameof(PeriodicBackupConfiguration.LocalSettings),
+                out BlittableJsonReaderObject localSettings);
+
+            if (localSettings == null)
+                return;
+
+            localSettings.TryGet(nameof(LocalSettings.Disabled), out bool disabled);
+            if (disabled)
+                return;
+
+            localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
+            if (string.IsNullOrWhiteSpace(folderPath))
+                throw new ArgumentException("Backup directory cannot be null or empty");
+
+            var originalFolderPath = folderPath;
+            while (true)
+            {
+                var directoryInfo = new DirectoryInfo(folderPath);
+                if (directoryInfo.Exists == false)
+                {
+                    if (directoryInfo.Parent == null)
+                        throw new ArgumentException($"Path {originalFolderPath} cannot be accessed " +
+                                                    $"because '{folderPath}' doesn't exist");
+                    folderPath = directoryInfo.Parent.FullName;
+                    continue;
+                }
+
+                if (directoryInfo.Attributes.HasFlag(FileAttributes.ReadOnly))
+                    throw new ArgumentException($"Cannot write to directory path: {originalFolderPath}");
+
+                break;
+            }
+        }
+
+        private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)
+        {
+            if (string.IsNullOrWhiteSpace(backupFrequency))
+                return null;
+
+            return CrontabSchedule.Parse(backupFrequency);
+        }
+
         private IEnumerable<OngoingTask> CollectBackupTasks(
             DatabaseRecord databaseRecord,
             DatabaseTopology dbTopology,
@@ -220,6 +392,71 @@ namespace Raven.Server.Web.System
                 },
                 BackupDestinations = backupDestinations
             };
+        }
+
+        [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
+        public async Task AddEtl()
+        {
+            var id = GetLongQueryString("id", required: false);
+
+            if (id == null)
+            {
+                await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add", databaseName: Database.Name,
+                    beforeSetupConfiguration: CanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+
+                return;
+            }
+
+            string etlConfigurationName = null;
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) =>
+            {
+                var task = ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration);
+                etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
+                return task;
+
+            }, "etl-update", databaseName: Database.Name, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+
+
+            // Reset scripts if needed
+            var scriptsToReset = HttpContext.Request.Query["reset"];
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                foreach (var script in scriptsToReset)
+                {
+                    await ServerStore.ResetEtl(ctx, Database.Name, etlConfigurationName, script);
+                }
+            }
+        }
+
+        private bool CanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
+        {
+            LicenseLimit licenseLimit;
+            switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
+            {
+                case EtlType.Raven:
+
+                    if (ServerStore.LicenseManager.CanAddRavenEtl(out licenseLimit) == false)
+                    {
+                        SetLicenseLimitResponse(licenseLimit);
+                        return false;
+                    }
+
+                    break;
+                case EtlType.Sql:
+                    if (ServerStore.LicenseManager.CanAddSqlEtl(out licenseLimit) == false)
+                    {
+                        SetLicenseLimitResponse(licenseLimit);
+                        return false;
+                    }
+
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
+            }
+
+            return true;
         }
 
         private IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
@@ -553,40 +790,26 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-replication");
-                if (updateJson.TryGet(nameof(UpdateExternalReplicationCommand.Watcher), out BlittableJsonReaderObject watcherBlittable) == false)
-                {
-                    throw new InvalidDataException($"{nameof(UpdateExternalReplicationCommand.Watcher)} was not found.");
-                }
-
-                var watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
+  
                 if (ServerStore.LicenseManager.CanAddExternalReplication(out var licenseLimit) == false)
                 {
                     SetLicenseLimitResponse(licenseLimit);
                     return;
                 }
 
-                var (index, _) = await ServerStore.UpdateExternalReplication(Database.Name, watcher);
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
-                string responsibleNode;
-                using (context.OpenReadTransaction())
-                {
-                    var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                    responsibleNode = record.Topology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
+                ExternalReplication watcher = null;
+                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, out watcher), "update_external_replication", 
+                    databaseName: Database.Name,
+                    fillJson: (json, _, index) =>
                     {
-                        [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId,
-                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index,
-                        [nameof(OngoingTask.ResponsibleNode)] = responsibleNode
-                    });
-                    writer.Flush();
-                }
+                        using (context.OpenReadTransaction())
+                        {
+                            var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                            json[nameof(OngoingTask.ResponsibleNode)] = record.Topology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
+                        }
+
+                        json[nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId;
+                    }, statusCode: HttpStatusCode.Created);
             }
         }
 
