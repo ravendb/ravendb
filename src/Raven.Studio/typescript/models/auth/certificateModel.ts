@@ -65,6 +65,17 @@ class certificateModel {
         }
         return certificateModel.securityClearanceTypes.find(x => x.value === input).label;
     }
+    
+    static resolveDatabasesAccess(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition): Array<string> {
+        switch (certificateDefinition.SecurityClearance) {
+            case "ClusterAdmin":
+            case "Operator":
+            case "ClusterNode":
+                return ["All"];
+            default: 
+                return _.sortBy(Object.keys(certificateDefinition.Permissions), x => x.toLowerCase());
+        }
+    }
 
     private initValidation() {
         this.name.extend({

@@ -25,6 +25,8 @@ class certificates extends viewModelBase {
     hasAllDatabasesAccess: KnockoutComputed<boolean>;
     canExportClusterCertificates: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
+    
+    resolveDatabasesAccess = certificateModel.resolveDatabasesAccess;
 
     importedFileName = ko.observable<string>();
     
@@ -279,17 +281,6 @@ class certificates extends viewModelBase {
         });
     }
     
-    resolveDatabasesAccess(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition): Array<string> {
-        switch (certificateDefinition.SecurityClearance) {
-            case "ClusterAdmin":
-            case "Operator":
-            case "ClusterNode":
-                return ["All"];
-            default: 
-                return Object.keys(certificateDefinition.Permissions);
-        }
-    }
-
     copyThumbprint(thumbprint: string) {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
