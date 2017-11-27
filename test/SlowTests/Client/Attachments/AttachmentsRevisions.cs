@@ -209,7 +209,7 @@ namespace SlowTests.Client.Attachments
                     continue;
 
                 using (var attachmentStream = new MemoryStream(readBuffer))
-                using (var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector))
+                using (var attachment = session.Advanced.Attachments.GetRevision("users/1", name, changeVector))
                 {
                     attachment.Stream.CopyTo(attachmentStream);
                     if (i >= expectedCount)

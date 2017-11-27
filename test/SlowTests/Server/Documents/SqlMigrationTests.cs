@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents
 
                     Assert.NotNull(customer);
 
-                    var attachmentsCount = session.Advanced.GetAttachmentNames(customer).Length;
+                    var attachmentsCount = session.Advanced.Attachments.GetNames(customer).Length;
                     Assert.Equal(attachmentsCount, 2);
 
                     Assert.Equal(customer.Photos.Count, 2);

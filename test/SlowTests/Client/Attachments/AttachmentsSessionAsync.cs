@@ -39,9 +39,9 @@ namespace SlowTests.Client.Attachments
                     var user = new User {Name = "Fitzchak"};
                     await session.StoreAsync(user, "users/1");
 
-                    session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
-                    session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
-                    session.Advanced.StoreAttachment(user, names[2], fileStream);
+                    session.Advanced.Attachments.Store("users/1", names[0], profileStream, "image/png");
+                    session.Advanced.Attachments.Store(user, names[1], backgroundStream, "ImGgE/jPeG");
+                    session.Advanced.Attachments.Store(user, names[2], fileStream);
 
                     await session.SaveChangesAsync();
                 }
@@ -84,7 +84,7 @@ namespace SlowTests.Client.Attachments
                     {
                         var name = names[i];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = await session.Advanced.GetAttachmentAsync(user, name))
+                        using (var attachment = await session.Advanced.Attachments.GetAsync(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
                             Assert.Contains("A:"+(i+2), attachment.Details.ChangeVector);
@@ -114,7 +114,7 @@ namespace SlowTests.Client.Attachments
                         }
                     }
 
-                    using (var notExistsAttachment = await session.Advanced.GetAttachmentAsync("users/1", "not-there"))
+                    using (var notExistsAttachment = await session.Advanced.Attachments.GetAsync("users/1", "not-there"))
                     {
                         Assert.Null(notExistsAttachment);
                     }
@@ -140,11 +140,11 @@ namespace SlowTests.Client.Attachments
                     await session.StoreAsync(user, "users/1");
                     
                     using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
-                        session.Advanced.StoreAttachment(user, names[0], profileStream, "image/png");
+                        session.Advanced.Attachments.Store(user, names[0], profileStream, "image/png");
                     using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
-                        session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
+                        session.Advanced.Attachments.Store(user, names[1], backgroundStream, "ImGgE/jPeG");
                     using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
-                        session.Advanced.StoreAttachment(user, names[2], fileStream, null);
+                        session.Advanced.Attachments.Store(user, names[2], fileStream, null);
 
                     var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
                     Assert.Equal("Cannot put an attachment with a not readable stream. Make sure that the specified stream is readable and was not disposed.", exception.Message);
@@ -163,8 +163,8 @@ namespace SlowTests.Client.Attachments
                     var user = new User {Name = "Fitzchak"};
                     await session.StoreAsync(user, "users/1");
 
-                    session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
-                    session.Advanced.StoreAttachment(user, "other", stream, null);
+                    session.Advanced.Attachments.Store(user, "profile", stream, "image/png");
+                    session.Advanced.Attachments.Store(user, "other", stream, null);
 
                     var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
                     Assert.Equal("It is forbidden to re-use the same stream for more than one attachment. Use a unique stream per put attachment command.", exception.Message);
@@ -184,9 +184,9 @@ namespace SlowTests.Client.Attachments
                     var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
-                    session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
+                    session.Advanced.Attachments.Store(user, "profile", stream, "image/png");
 
-                    var exception = Assert.Throws<InvalidOperationException>(() => session.Advanced.StoreAttachment(user, "profile", stream2));
+                    var exception = Assert.Throws<InvalidOperationException>(() => session.Advanced.Attachments.Store(user, "profile", stream2));
                     Assert.Equal("Can't store attachment profile of document users/1, there is a deferred command registered to create an attachment with the same name.", exception.Message);
                 }
             }
@@ -203,7 +203,7 @@ namespace SlowTests.Client.Attachments
                     var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
-                    session.Advanced.StoreAttachment(user, "profile.png", profileStream, "image/png");
+                    session.Advanced.Attachments.Store(user, "profile.png", profileStream, "image/png");
 
                     session.Delete(user);
 
@@ -229,7 +229,7 @@ namespace SlowTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var user = await session.LoadAsync<User>("users/1");
-                    session.Advanced.StoreAttachment(user, "profile.png", profileStream, "image/png");
+                    session.Advanced.Attachments.Store(user, "profile.png", profileStream, "image/png");
                     session.Delete(user);
 
                     var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.SaveChangesAsync());
@@ -256,10 +256,10 @@ namespace SlowTests.Client.Attachments
                     using (var stream3 = new MemoryStream(Enumerable.Range(1, 9).Select(x => (byte)x).ToArray()))
                     using (var stream4 = new MemoryStream(Enumerable.Range(1, 12).Select(x => (byte)x).ToArray()))
                     {
-                        session.Advanced.StoreAttachment(user, "file1", stream1, "image/png");
-                        session.Advanced.StoreAttachment(user, "file2", stream2, "image/png");
-                        session.Advanced.StoreAttachment(user, "file3", stream3, "image/png");
-                        session.Advanced.StoreAttachment(user, "file4", stream4, "image/png");
+                        session.Advanced.Attachments.Store(user, "file1", stream1, "image/png");
+                        session.Advanced.Attachments.Store(user, "file2", stream2, "image/png");
+                        session.Advanced.Attachments.Store(user, "file3", stream3, "image/png");
+                        session.Advanced.Attachments.Store(user, "file4", stream4, "image/png");
 
                         await session.SaveChangesAsync();
                     }
@@ -271,8 +271,8 @@ namespace SlowTests.Client.Attachments
                 {
                     var user = await session.LoadAsync<User>("users/1");
 
-                    session.Advanced.DeleteAttachment("users/1", "file2");
-                    session.Advanced.DeleteAttachment(user, "file4");
+                    session.Advanced.Attachments.Delete("users/1", "file2");
+                    session.Advanced.Attachments.Delete(user, "file4");
 
                     await session.SaveChangesAsync();
                 }
@@ -297,7 +297,7 @@ namespace SlowTests.Client.Attachments
 
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = await session.Advanced.GetAttachmentAsync("users/1", "file1"))
+                    using (var attachment = await session.Advanced.Attachments.GetAsync("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
@@ -306,12 +306,12 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(3, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                     }
-                    using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file2"))
+                    using (var attachment = await session.Advanced.Attachments.GetAsync(user, "file2"))
                     {
                         Assert.Null(attachment);
                     }
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file3"))
+                    using (var attachment = await session.Advanced.Attachments.GetAsync(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Contains("A:4", attachment.Details.ChangeVector);
@@ -320,7 +320,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(9, attachmentStream.Position);
                         Assert.Equal(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, readBuffer.Take(9));
                     }
-                    using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file4"))
+                    using (var attachment = await session.Advanced.Attachments.GetAsync(user, "file4"))
                     {
                         Assert.Null(attachment);
                     }
@@ -345,7 +345,7 @@ namespace SlowTests.Client.Attachments
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
-                        session.Advanced.StoreAttachment(user, "file", stream, "image/png");
+                        session.Advanced.Attachments.Store(user, "file", stream, "image/png");
                         await session.SaveChangesAsync();
                     }
                 }
@@ -357,8 +357,8 @@ namespace SlowTests.Client.Attachments
                     var user = await session.LoadAsync<User>("users/1");
 
                     session.Delete(user);
-                    session.Advanced.DeleteAttachment(user, "file");
-                    session.Advanced.DeleteAttachment(user, "file"); // this should be no-op
+                    session.Advanced.Attachments.Delete(user, "file");
+                    session.Advanced.Attachments.Delete(user, "file"); // this should be no-op
 
                     await session.SaveChangesAsync();
                 }
@@ -377,7 +377,7 @@ namespace SlowTests.Client.Attachments
 
                     using (var stream = new MemoryStream(Enumerable.Range(1, 3).Select(x => (byte)x).ToArray()))
                     {
-                        session.Advanced.StoreAttachment("users/1", "file", stream, "image/png");
+                        session.Advanced.Attachments.Store("users/1", "file", stream, "image/png");
                         await session.SaveChangesAsync();
                     }
                 }
@@ -387,8 +387,8 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Defer(new DeleteCommandData("users/1", null));
-                    session.Advanced.DeleteAttachment("users/1", "file");
-                    session.Advanced.DeleteAttachment("users/1", "file"); // this should be no-op
+                    session.Advanced.Attachments.Delete("users/1", "file");
+                    session.Advanced.Attachments.Delete("users/1", "file"); // this should be no-op
 
                     await session.SaveChangesAsync();
                 }
@@ -416,9 +416,9 @@ namespace SlowTests.Client.Attachments
                     var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
-                    session.Advanced.StoreAttachment("users/1", names[0], profileStream, "image/png");
-                    session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
-                    session.Advanced.StoreAttachment(user, names[2], fileStream);
+                    session.Advanced.Attachments.Store("users/1", names[0], profileStream, "image/png");
+                    session.Advanced.Attachments.Store(user, names[1], backgroundStream, "ImGgE/jPeG");
+                    session.Advanced.Attachments.Store(user, names[2], fileStream);
 
                     await session.SaveChangesAsync();
                 }
@@ -426,7 +426,7 @@ namespace SlowTests.Client.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1");
-                    var attachments = session.Advanced.GetAttachmentNames(user);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
                     Assert.Equal(3, attachments.Length);
                     var orderedNames = names.OrderBy(x => x).ToArray();
                     for (var i = 0; i < names.Length; i++)
@@ -457,7 +457,7 @@ namespace SlowTests.Client.Attachments
                     var user2 = await session.LoadAsync<User>("users/2");
                     Assert.Null(user2);
                     // ReSharper disable once ExpressionIsAlwaysNull
-                    var attachments2 = session.Advanced.GetAttachmentNames(user2);
+                    var attachments2 = session.Advanced.Attachments.GetNames(user2);
                     Assert.Empty(attachments2);
                 }
             }
@@ -478,7 +478,7 @@ namespace SlowTests.Client.Attachments
                 for (var i = 0; i < count; i++)
                 {
                     var stream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.StoreAttachment("users/1", "Big And Very Long File Name " + i, stream, "image/png");
+                    session.Advanced.Attachments.Store("users/1", "Big And Very Long File Name " + i, stream, "image/png");
                     streams[i] = stream;
                 }
 
@@ -500,15 +500,15 @@ namespace SlowTests.Client.Attachments
                     var user = new User { Name = "Fitzchak" };
                     await session.StoreAsync(user, "users/1");
 
-                    session.Advanced.StoreAttachment("users/1", "profile", stream, "image/png");
+                    session.Advanced.Attachments.Store("users/1", "profile", stream, "image/png");
                     await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    Assert.True(await session.Advanced.AttachmentExistsAsync("users/1", "profile"));
-                    Assert.False(await session.Advanced.AttachmentExistsAsync("users/1", "background-photo"));
-                    Assert.False(await session.Advanced.AttachmentExistsAsync("users/2", "profile"));
+                    Assert.True(await session.Advanced.Attachments.ExistsAsync("users/1", "profile"));
+                    Assert.False(await session.Advanced.Attachments.ExistsAsync("users/1", "background-photo"));
+                    Assert.False(await session.Advanced.Attachments.ExistsAsync("users/2", "profile"));
                 }
             }
         }

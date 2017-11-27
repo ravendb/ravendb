@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.Session
             : base(dbName, documentStore, requestExecutor, id)
         {
             GenerateDocumentIdsOnStore = false;
+            Attachments = new DocumentSessionAttachmentsAsync(this);
         }
 
         public async Task<bool> ExistsAsync(string id)
@@ -94,6 +95,8 @@ namespace Raven.Client.Documents.Session
         public IAsyncEagerSessionOperations Eagerly => this;
 
         public IAsyncLazySessionOperations Lazily => this;
+
+        public IAsyncAttachmentsSessionOperations Attachments { get; }
 
         /// <summary>
         /// Begins the async save changes operation

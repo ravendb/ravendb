@@ -276,7 +276,7 @@ namespace SlowTests.Client.Attachments
                     {
                         var readBuffer = new byte[1024 * 1024];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = session.Advanced.GetAttachment("users/1", "empty-file"))
+                        using (var attachment = session.Advanced.Attachments.Get("users/1", "empty-file"))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
                             Assert.Contains("A:1", attachment.Details.ChangeVector);
@@ -347,7 +347,7 @@ namespace SlowTests.Client.Attachments
                         {
                             var readBuffer = new byte[1024 * 1024];
                             using (var attachmentStream = new MemoryStream(readBuffer))
-                            using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
+                            using (var attachment = session.Advanced.Attachments.Get("users/1", "big-file"))
                             {
                                 attachment.Stream.CopyTo(attachmentStream);
                                 Assert.Contains("A:" + (2 + 20 * i), attachment.Details.ChangeVector);
