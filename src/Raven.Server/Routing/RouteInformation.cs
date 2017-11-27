@@ -109,18 +109,11 @@ namespace Raven.Server.Routing
             {
                 if (databasesLandlord.InitLog.TryGetValue(databaseName, out var initLogQueue))
                 {
-                    // lets first check if database is in recovery process. if so - lets throw appropriate exception
-                    if (initLogQueue.TryPeek(out var str))
-                    {
-                        if (str.Equals(DatabasesLandlord.DatabaseInitDoneString) == false) // database still loading
-                        {
-                            var sb = new StringBuilder();
-                            foreach (var logline in initLogQueue)
-                                sb.Insert(0, $"{logline}{Environment.NewLine}");
+                    var sb = new StringBuilder();
+                    foreach (var logline in initLogQueue)
+                        sb.AppendLine(logline);
 
-                            ThrowDatabaseLoadTimeoutWithLog(databaseName, databasesLandlord.DatabaseLoadTimeout, sb.ToString());
-                        }
-                    }
+                    ThrowDatabaseLoadTimeoutWithLog(databaseName, databasesLandlord.DatabaseLoadTimeout, sb.ToString());
                 }
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);
             }
@@ -141,7 +134,7 @@ namespace Raven.Server.Routing
 
         private static void ThrowDatabaseLoadTimeoutWithLog(StringSegment databaseName, TimeSpan timeout, string log)
         {
-            throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. See log " + log);
+            throw new DatabaseLoadTimeoutException($"Database {databaseName} after {timeout} is still loading, try again later. Database initialization log: " + Environment.NewLine + log);
         }
 
         public Tuple<HandleRequest, Task<HandleRequest>> TryGetHandler(RequestHandlerContext context)

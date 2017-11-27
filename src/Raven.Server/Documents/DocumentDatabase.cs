@@ -47,6 +47,7 @@ namespace Raven.Server.Documents
     public class DocumentDatabase : IDisposable
     {
         private readonly ServerStore _serverStore;
+        private readonly Action<string> _addToInitLog;
         private readonly Logger _logger;
 
         private readonly CancellationTokenSource _databaseShutdown = new CancellationTokenSource();
@@ -91,6 +92,7 @@ namespace Raven.Server.Documents
             Name = name;
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
+            _addToInitLog = addToInitLog;
             StartTime = SystemTime.UtcNow;
             Configuration = configuration;
             Scripts = new ScriptRunnerCache(this, Configuration);
@@ -216,24 +218,24 @@ namespace Raven.Server.Documents
 
         public readonly QueryMetadataCache QueryMetadataCache;
 
-        public void Initialize(Action<string> addToInitLog, InitializeOptions options = InitializeOptions.None)
+        public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
             try
             {
-                addToInitLog("Initializing NotificationCenter");
+                _addToInitLog("Initializing NotificationCenter");
                 NotificationCenter.Initialize(this);
 
-                addToInitLog("Initializing DocumentStorage");
+                _addToInitLog("Initializing DocumentStorage");
                 DocumentsStorage.Initialize((options & InitializeOptions.GenerateNewDatabaseId) == InitializeOptions.GenerateNewDatabaseId);
-                addToInitLog("Starting Transaction Merger");
+                _addToInitLog("Starting Transaction Merger");
                 TxMerger.Start();
-                addToInitLog("Initializing ConfigurationStorage");
+                _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
                 
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
-                addToInitLog("Loading Database");
+                _addToInitLog("Loading Database");
                 long index;
                 DatabaseRecord record;
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -245,25 +247,26 @@ namespace Raven.Server.Documents
 
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
+                _addToInitLog("Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record);
-                addToInitLog("Initializing Replication");
+                _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record);
-                addToInitLog("Initializing ETL");
+                _addToInitLog("Initializing ETL");
                 EtlLoader.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
                 try
                 {
-                    addToInitLog("Initializing IndexStore");
                     _indexStoreTask.Wait(DatabaseShutdown);
                 }
                 finally
                 {
+                    _addToInitLog("Initializing IndexStore completed");
                     _indexStoreTask = null;
                 }
 
-                addToInitLog("Initializing SubscriptionStorage");
+                _addToInitLog("Initializing SubscriptionStorage");
                 SubscriptionStorage.Initialize();
 
                 NotifyFeaturesAboutStateChange(record, index);
