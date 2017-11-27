@@ -432,6 +432,34 @@ namespace Raven.Server.Documents
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
+            int start, int take, string collection)
+        {
+            foreach (var doc in GetDocumentsStartingWith(context, idPrefix, matches, exclude, startAfterId, start, take))
+            {
+                if (collection == Client.Constants.Documents.Collections.AllDocumentsCollection)
+                {
+                    yield return doc;
+                    continue;
+                }
+
+                if (doc.TryGetMetadata(out var metadata) == false)
+                {
+                    continue;
+                }
+                if (metadata.TryGet(Client.Constants.Documents.Metadata.Collection, out string c) == false)
+                {
+                    continue;
+                }
+                if (string.Equals(c, collection, StringComparison.Ordinal) == false)
+                {
+                    continue;
+                }
+
+                yield return doc;
+
+            }
+        }
+        public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
             int start, int take)
         {
             var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
