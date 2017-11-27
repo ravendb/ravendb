@@ -169,6 +169,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         await UpdateTopology(command.Update);
                         var alert = AlertRaised.Create(
+                            command.Update.DatabaseName,
                             $"Topology of database '{command.Update.DatabaseName}' was changed",
                             command.Reason,
                             AlertType.DatabaseTopologyWarning,
@@ -215,6 +216,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private void RaiseNoLivingNodesAlert(string alertMsg, string dbName)
         {
             var alert = AlertRaised.Create(
+                dbName,
                 $"Could not reach any node of '{dbName}' database",
                 $"{alertMsg}. {ThingsToCheck}",
                 AlertType.DatabaseTopologyWarning,

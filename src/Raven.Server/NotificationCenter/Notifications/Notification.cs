@@ -6,10 +6,11 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public abstract class Notification
     {
-        protected Notification(NotificationType type)
+        protected Notification(NotificationType type, string database)
         {
             CreatedAt = SystemTime.UtcNow;
             Type = type;
+            Database = database;
         }
 
         public abstract string Id { get; }
@@ -17,6 +18,14 @@ namespace Raven.Server.NotificationCenter.Notifications
         public DateTime CreatedAt { get; }
 
         public NotificationType Type { get; }
+
+        /// <summary>
+        /// The database this notification applies to
+        /// null - server level
+        /// * - applies to all dbs
+        /// anything else - the db this applies to
+        /// </summary>
+        public string Database { get; }
 
         public string Title { get; protected set; }
 

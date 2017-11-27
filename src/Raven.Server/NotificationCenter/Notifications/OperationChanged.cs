@@ -8,7 +8,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public class OperationChanged : Notification
     {
-        private OperationChanged() : base(NotificationType.OperationChanged)
+        private OperationChanged(string database) : base(NotificationType.OperationChanged, database)
         {
         }
 
@@ -40,7 +40,7 @@ namespace Raven.Server.NotificationCenter.Notifications
             return result;
         }
 
-        public static OperationChanged Create(long id, Operations.OperationDescription description, OperationState state, bool killable)
+        public static OperationChanged Create(string database, long id, Operations.OperationDescription description, OperationState state, bool killable)
         {
             NotificationSeverity severity;
 
@@ -62,7 +62,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                     throw new ArgumentException($"Unknown operation status: {state.Status}");
             }
 
-            return new OperationChanged
+            return new OperationChanged(database)
             {
                 OperationId = id,
                 State = state,

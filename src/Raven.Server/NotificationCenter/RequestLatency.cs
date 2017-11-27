@@ -17,11 +17,13 @@ namespace Raven.Server.NotificationCenter
         private readonly object _addHintSyncObj = new object();
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
-        
-        public RequestLatency(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage)
+        private readonly string _database;
+
+        public RequestLatency(NotificationCenter notificationCenter, NotificationsStorage notificationsStorage, string database)
         {
             _notificationCenter = notificationCenter;
             _notificationsStorage = notificationsStorage;
+            _database = database;
         }
 
         public void AddHint(string queryString, IQueryCollection requestQuery, long duration, string action)
@@ -59,6 +61,7 @@ namespace Raven.Server.NotificationCenter
                 }
 
                 return PerformanceHint.Create(
+                    _database,
                     "Request latency is too high",
                     "We have detected that some query duration has surpassed the configured threshold",
                     PerformanceHintType.RequestLatency,

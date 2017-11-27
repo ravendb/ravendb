@@ -52,6 +52,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             catch (Exception e)
             {
                 database.NotificationCenter.Add(AlertRaised.Create(
+                    database.Name,
                     SqlEtl.SqlEtlTag,
                     $"SQL ETL could not open connection to {_connection.ConnectionString}",
                     AlertType.SqlEtl_ConnectionError,
@@ -98,6 +99,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     _logger.Info(message, e);
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name,
                     SqlEtl.SqlEtlTag,
                     message,
                     AlertType.SqlEtl_ProviderError,
@@ -341,7 +343,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (_logger.IsInfoEnabled)
                 _logger.Info(message);
 
-            _database.NotificationCenter.Add(AlertRaised.Create(_etl.Tag, message, AlertType.SqlEtl_SlowSql, NotificationSeverity.Warning));
+            _database.NotificationCenter.Add(AlertRaised.Create(_database.Name,_etl.Tag, message, AlertType.SqlEtl_SlowSql, NotificationSeverity.Warning));
         }
 
         private string GetTableNameString(string tableName)

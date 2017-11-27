@@ -70,7 +70,9 @@ namespace Raven.Server.Documents
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {
-            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Non Durable File System - {Name ?? "Unknown Database"}",
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
+                Name,
+                $"Non Durable File System - {Name ?? "Unknown Database"}",
                 e.Message,
                 AlertType.NonDurableFileSystem,
                 NotificationSeverity.Warning,
@@ -80,7 +82,9 @@ namespace Raven.Server.Documents
 
         internal void HandleOnRecoveryError(object sender, RecoveryErrorEventArgs e)
         {
-            _serverStore?.NotificationCenter.Add(AlertRaised.Create($"Database Recovery Error - {Name ?? "Unknown Database"}",
+            _serverStore?.NotificationCenter.Add(AlertRaised.Create(
+                Name,
+                $"Database Recovery Error - {Name ?? "Unknown Database"}",
                 e.Message,
                 AlertType.RecoveryError,
                 NotificationSeverity.Error,

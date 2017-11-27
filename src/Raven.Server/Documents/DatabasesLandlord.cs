@@ -102,6 +102,7 @@ namespace Raven.Server.Documents
                         {
                             // raise alert
                             _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                                t.DatabaseName,
                                 $"Database '{t.DatabaseName}' cannot be deleted in order to maintain the replication factor",
                                 "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
                                 "but it may contain documents that are not existing in the rest of the database-group.\n" +
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents
                 var title = $"Failed to digest change of type '{changeType}' for database '{t.DatabaseName}'";
                 if (_logger.IsInfoEnabled)
                     _logger.Info(title, e);
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(title, e.Message, AlertType.DeletionError, NotificationSeverity.Error));
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(t.DatabaseName,title, e.Message, AlertType.DeletionError, NotificationSeverity.Error));
             }
             finally
             {
@@ -623,6 +624,7 @@ namespace Raven.Server.Documents
                 try
                 {
                     _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                        databaseName,
                         title,
                         message,
                         AlertType.CatastrophicDatabaseFailure,

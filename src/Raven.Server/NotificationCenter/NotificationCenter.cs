@@ -17,25 +17,25 @@ namespace Raven.Server.NotificationCenter
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<NotificationCenter>("NotificationCenter");
         private readonly NotificationsStorage _notificationsStorage;
-        private readonly string _resourceName;
+        private readonly string _database;
         private readonly CancellationToken _shutdown;
         private PostponedNotificationsSender _postponedNotificationSender;
 
-        public NotificationCenter(NotificationsStorage notificationsStorage, string resourceName, CancellationToken shutdown)
+        public NotificationCenter(NotificationsStorage notificationsStorage, string database, CancellationToken shutdown)
         {
             _notificationsStorage = notificationsStorage;
-            _resourceName = resourceName;
+            _database = database;
             _shutdown = shutdown;
             Options = new NotificationCenterOptions();
-            Paging = new Paging(this, _notificationsStorage);
-            RequestLatency = new RequestLatency(this, _notificationsStorage);
+            Paging = new Paging(this, _notificationsStorage, database);
+            RequestLatency = new RequestLatency(this, _notificationsStorage, database);
         }
 
         public bool IsInitialized { get; set; }
 
         public void Initialize(DocumentDatabase database = null)
         {
-            _postponedNotificationSender = new PostponedNotificationsSender(_resourceName, _notificationsStorage, Watchers, _shutdown);
+            _postponedNotificationSender = new PostponedNotificationsSender(_database, _notificationsStorage, Watchers, _shutdown);
             BackgroundWorkers.Add(_postponedNotificationSender);
 
             if (database != null)

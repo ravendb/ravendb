@@ -11,12 +11,14 @@ namespace Raven.Server.Documents.ETL
         private readonly string _processType;
         private readonly string _name;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
+        private readonly string _databaseName;
 
-        public EtlProcessStatistics(string processType, string name, NotificationCenter.NotificationCenter notificationCenter)
+        public EtlProcessStatistics(string processType, string name, NotificationCenter.NotificationCenter notificationCenter, string databaseName)
         {
             _processType = processType;
             _name = name;
             _notificationCenter = notificationCenter;
+            _databaseName = databaseName;
         }
 
         public string LastChangeVector { get; set; }
@@ -48,7 +50,9 @@ namespace Raven.Server.Documents.ETL
 
             LastErrorTime = SystemTime.UtcNow;
 
-            LastAlert = AlertRaised.Create(_processType,
+            LastAlert = AlertRaised.Create(
+                _databaseName,
+                _processType,
                 $"[{_name}] Transformation script failed",
                 AlertType.Etl_TransformationError,
                 NotificationSeverity.Warning,
@@ -64,7 +68,9 @@ namespace Raven.Server.Documents.ETL
             var message = $"[{_name}] Transformation errors ratio too high. " +
                           "Could not tolerate transformation script error ratio and stopped current ETL cycle";
 
-            LastAlert = AlertRaised.Create(_processType,
+            LastAlert = AlertRaised.Create(
+                _databaseName, 
+                _processType,
                 message,
                 AlertType.Etl_TransformationError,
                 NotificationSeverity.Error,
@@ -84,7 +90,9 @@ namespace Raven.Server.Documents.ETL
 
             LastErrorTime = SystemTime.UtcNow;
 
-            LastAlert = AlertRaised.Create(_processType,
+            LastAlert = AlertRaised.Create(
+                _databaseName, 
+                _processType,
                 $"[{_name}] Load error: {e.Message}",
                 AlertType.Etl_LoadError,
                 NotificationSeverity.Error,
@@ -98,7 +106,9 @@ namespace Raven.Server.Documents.ETL
 
             var message = $"[{_name}] Load error hit ratio too high. Could not tolerate load error ratio and stopped current ETL cycle";
 
-            LastAlert = AlertRaised.Create(_processType,
+            LastAlert = AlertRaised.Create(
+                _databaseName, 
+                _processType,
                 message,
                 AlertType.Etl_WriteErrorRatio,
                 NotificationSeverity.Error,

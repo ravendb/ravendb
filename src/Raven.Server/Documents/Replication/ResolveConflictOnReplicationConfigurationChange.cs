@@ -206,6 +206,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info(msg);
 
                     var differentCollectionNameAlert = AlertRaised.Create(
+                        _database.Name,
                         $"Script unable to resolve conflicted documents with the ID {documentConflict.Id}",
                         msg,
                         AlertType.Replication,

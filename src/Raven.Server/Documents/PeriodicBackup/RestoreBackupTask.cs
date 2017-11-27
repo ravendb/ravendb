@@ -191,6 +191,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     Logger.Operations("Failed to restore database", e);
 
                 var alert = AlertRaised.Create(
+                    _restoreConfiguration.DatabaseName,
                     "Failed to restore database",
                     $"Could not restore database named {_restoreConfiguration.DatabaseName}",
                     AlertType.RestoreError,

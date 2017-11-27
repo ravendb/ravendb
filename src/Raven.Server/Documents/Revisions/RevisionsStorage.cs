@@ -191,7 +191,9 @@ namespace Raven.Server.Documents.Revisions
             {
                 var msg = "Cannot enable revisions for documents as the revisions configuration" +
                           $" in the database record is missing or not valid: {dbRecord}";
-                _database.NotificationCenter.Add(AlertRaised.Create($"Revisions error in {_database.Name}", msg,
+                _database.NotificationCenter.Add(AlertRaised.Create(
+                    _database.Name, 
+                    $"Revisions error in {_database.Name}", msg,
                     AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, _database.Name));
                 if (_logger.IsOperationsEnabled)
                     _logger.Operations(msg, e);

@@ -7,7 +7,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public class DatabaseStatsChanged : Notification
     {
-        private DatabaseStatsChanged() : base(NotificationType.DatabaseStatsChanged)
+        private DatabaseStatsChanged(string database) : base(NotificationType.DatabaseStatsChanged, database)
         {
         }
 
@@ -48,10 +48,19 @@ namespace Raven.Server.NotificationCenter.Notifications
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfConflicts, long countOfDocs, int countOfIndexes, int countOfStaleIndexes, string globalChangeVector,
-            long lastEtag, long countOfIndexingErrors, DateTime? lastIndexingErrorTime, List<ModifiedCollection> modifiedCollections)
+        public static DatabaseStatsChanged Create(
+            string database, 
+            long countOfConflicts, 
+            long countOfDocs, 
+            int countOfIndexes, 
+            int countOfStaleIndexes, 
+            string globalChangeVector,
+            long lastEtag, 
+            long countOfIndexingErrors, 
+            DateTime? lastIndexingErrorTime, 
+            List<ModifiedCollection> modifiedCollections)
         {
-            return new DatabaseStatsChanged
+            return new DatabaseStatsChanged(database)
             {
                 IsPersistent = false,
                 Title = null,

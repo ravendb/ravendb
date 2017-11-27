@@ -394,7 +394,9 @@ namespace Raven.Server.Documents.Replication
             using (var txw = configurationContext.OpenWriteTransaction())
             {
                 _database.NotificationCenter.AddAfterTransactionCommit(
-                    AlertRaised.Create(AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)),
+                    AlertRaised.Create(
+                        _database.Name, 
+                        AlertTitle, msg, AlertType.Replication, NotificationSeverity.Warning, key: FromToString, details: new ExceptionDetails(e)),
                     txw);
 
                 txw.Commit();

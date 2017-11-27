@@ -444,6 +444,7 @@ namespace Raven.Server.Documents.Replication
                     }
                     
                     _server.NotificationCenter.Add(AlertRaised.Create(
+                        Database.Name,
                         "Connection string name is empty",
                         msg,
                         AlertType.Replication,
@@ -777,6 +778,7 @@ namespace Raven.Server.Documents.Replication
 
             Database.NotificationCenter.Add(
                 PerformanceHint.Create(
+                    database: Database.Name,
                     title: "Large number of tombstones because of disabled replication destination",
                     msg:
                         $"The disabled replication destination {disabledReplicationNode.FromString()} prevents from cleaning large number of tombstones.",

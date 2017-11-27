@@ -625,7 +625,9 @@ namespace Raven.Server.Rachis
 
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
-            var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
+            var alert = AlertRaised.Create(
+                null,
+                $"Node {node.Tag} encountered an error",
                 node.StatusMessage,
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,

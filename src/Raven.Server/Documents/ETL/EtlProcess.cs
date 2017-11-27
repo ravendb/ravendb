@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.ETL
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
             _serverStore = serverStore;
-            Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter);
+            Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter, Database.Name);
 
             if (transformation.ApplyToAllDocuments == false)
                 _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
@@ -203,6 +203,7 @@ namespace Raven.Server.Documents.ETL
                                 Logger.Operations(message, e);
 
                             var alert = AlertRaised.Create(
+                                Database.Name,
                                 Tag,
                                 message,
                                 AlertType.Etl_TransformationError,

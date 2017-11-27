@@ -108,13 +108,13 @@ namespace Raven.Server.ServerWide
 
             _notificationsStorage = new NotificationsStorage(ResourceName);
 
-            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, ResourceName, ServerShutdown);
+            NotificationCenter = new NotificationCenter.NotificationCenter(_notificationsStorage, null, ServerShutdown);
 
             ServerDashboardNotifications = new ServerDashboardNotifications(this, ServerShutdown);
 
             _operationsStorage = new OperationsStorage();
 
-            Operations = new Operations(ResourceName, _operationsStorage, NotificationCenter, null);
+            Operations = new Operations(null, _operationsStorage, NotificationCenter, null);
 
             LicenseManager = new LicenseManager(this);
 
@@ -300,7 +300,9 @@ namespace Raven.Server.ServerWide
 
             options.OnNonDurableFileSystemError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Non Durable File System - System Storage",
+                var alert = AlertRaised.Create(
+                    null,
+                    "Non Durable File System - System Storage",
                     e.Message,
                     AlertType.NonDurableFileSystem,
                     NotificationSeverity.Warning,
@@ -318,7 +320,9 @@ namespace Raven.Server.ServerWide
 
             options.OnRecoveryError += (obj, e) =>
             {
-                var alert = AlertRaised.Create("Recovery Error - System Storage",
+                var alert = AlertRaised.Create(
+                    null,
+                    "Recovery Error - System Storage",
                     e.Message,
                     AlertType.RecoveryError,
                     NotificationSeverity.Error,
@@ -337,7 +341,9 @@ namespace Raven.Server.ServerWide
             {
                 if (MemoryInformation.IsSwappingOnHddInsteadOfSsd())
                 {
-                    var alert = AlertRaised.Create("Swap Storage Type Warning",
+                    var alert = AlertRaised.Create(
+                        null,
+                        "Swap Storage Type Warning",
                         "OS swapping on at least one HDD drive while there is at least one SSD drive on this system. " +
                         "This can cause a slowdown, consider moving swap-partition/pagefile to SSD",
                         AlertType.SwappingHddInsteadOfSsd,
@@ -593,6 +599,7 @@ namespace Raven.Server.ServerWide
                         if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
                         {
                             NotificationCenter.Add(AlertRaised.Create(
+                                null,
                                 "Unable to refresh server certificate", 
                                 "Cluster wanted to install updated server certificate, but no path has been configured", 
                                 AlertType.ClusterTopologyWarning, 

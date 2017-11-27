@@ -414,7 +414,7 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                database.NotificationCenter.Add(OperationChanged.Create(1, new Operations.OperationDescription(), new OperationState()
+                database.NotificationCenter.Add(OperationChanged.Create(database.Name,1, new Operations.OperationDescription(), new OperationState()
                 {
                     Result = new PersistableResult()
                 }, false));
@@ -518,6 +518,7 @@ namespace FastTests.Server.NotificationCenter
         private static AlertRaised GetSampleAlert(string customMessage = null, string customKey = null)
         {
             return AlertRaised.Create(
+                null,
                 "title",
                 customMessage ?? "Alert #1",
                 0, //use any type

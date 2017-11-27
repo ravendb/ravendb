@@ -951,7 +951,9 @@ namespace Raven.Server.Documents.Indexes
                 if (_logger.IsInfoEnabled)
                     _logger.Info(message, e);
 
-                _documentDatabase.NotificationCenter.Add(AlertRaised.Create("Indexes store initialization error",
+                _documentDatabase.NotificationCenter.Add(AlertRaised.Create(
+                    _documentDatabase.Name, 
+                    "Indexes store initialization error",
                     message,
                     AlertType.IndexStore_IndexCouldNotBeOpened,
                     NotificationSeverity.Error,

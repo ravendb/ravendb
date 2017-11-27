@@ -5,7 +5,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 {
     public class AlertRaised : Notification
     {
-        private AlertRaised() : base(NotificationType.AlertRaised)
+        private AlertRaised(string database) : base(NotificationType.AlertRaised, database)
         {
         }
         
@@ -28,9 +28,9 @@ namespace Raven.Server.NotificationCenter.Notifications
             return json;
         }
 
-        public static AlertRaised Create(string title, string msg, AlertType type, NotificationSeverity severity, string key = null, INotificationDetails details = null)
+        public static AlertRaised Create(string database, string title, string msg, AlertType type, NotificationSeverity severity, string key = null, INotificationDetails details = null)
         {
-            return new AlertRaised
+            return new AlertRaised(database)
             {
                 IsPersistent = true,
                 Title = title,

@@ -2332,7 +2332,9 @@ namespace Raven.Server.Documents.Indexes
 
             _indexOutputsPerDocumentWarning.LastWarnedAt = SystemTime.UtcNow;
 
-            var hint = PerformanceHint.Create("High indexing fanout ratio",
+            var hint = PerformanceHint.Create(
+                DocumentDatabase.Name,
+                "High indexing fanout ratio",
                 $"Index '{Name}' has produced more than {PerformanceHints.MaxWarnIndexOutputsPerDocument:#,#} map results from a single document",
                 PerformanceHintType.Indexing,
                 NotificationSeverity.Warning,
