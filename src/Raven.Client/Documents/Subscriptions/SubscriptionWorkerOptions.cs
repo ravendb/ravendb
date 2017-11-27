@@ -117,5 +117,11 @@ namespace Raven.Client.Documents.Subscriptions
         /// Maximum amount of time during which a subscription connection may be in errorrous state. Default: 5 minutes
         /// </summary>
         public TimeSpan MaxErrorousPeriod { get; set; }
+        
+        /// <summary>
+        /// Will continue the subscription work until the server have no more new documents to send.
+        /// That's a usefull practice for ad-hoc, one-time, persistant data processing. 
+        /// </summary>
+        public bool CloseWhenNoDocsLeft { get; set; }
     }
 }
