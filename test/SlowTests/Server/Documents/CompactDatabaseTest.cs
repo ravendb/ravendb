@@ -77,13 +77,13 @@ namespace SlowTests.Server.Documents
                         Name = "Iftah"
                     };
                     session.Store(user, "users/1");
-                    session.Advanced.StoreAttachment(user, "randomFile.txt", fileStream);
+                    session.Advanced.Attachments.Store(user, "randomFile.txt", fileStream);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.DeleteAttachment("users/1", "randomFile.txt");
+                    session.Advanced.Attachments.Delete("users/1", "randomFile.txt");
                     session.SaveChanges();
                 }
 

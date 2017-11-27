@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
-        protected SessionInfo SessionInfo;
+        protected internal SessionInfo SessionInfo;
         private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
 
@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The entities waiting to be deleted
         /// </summary>
-        protected readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
+        protected internal readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterStoreEventArgs> OnAfterStore;
@@ -165,7 +165,7 @@ namespace Raven.Client.Documents.Session
         public bool UseOptimisticConcurrency { get; set; }
 
         protected readonly List<ICommandData> DeferredCommands = new List<ICommandData>();
-        protected readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>();
+        protected internal readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>();
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 

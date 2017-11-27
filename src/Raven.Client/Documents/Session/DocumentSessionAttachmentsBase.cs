@@ -16,9 +16,13 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract partial class InMemoryDocumentSessionOperations
+    public abstract class DocumentSessionAttachmentsBase : AdvancedSessionExtentionBase
     {
-        public AttachmentName[] GetAttachmentNames(object entity)
+        protected DocumentSessionAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)
+        {
+        }
+
+        public AttachmentName[] GetNames(object entity)
         {
             if (entity == null ||
                 DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false ||
@@ -34,7 +38,7 @@ namespace Raven.Client.Documents.Session
             return results;
         }
 
-        public void StoreAttachment(string documentId, string name, Stream stream, string contentType = null)
+        public void Store(string documentId, string name, Stream stream, string contentType = null)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -57,12 +61,12 @@ namespace Raven.Client.Documents.Session
             Defer(new PutAttachmentCommandData(documentId, name, stream, contentType, null));
         }
 
-        public void StoreAttachment(object entity, string name, Stream stream, string contentType = null)
+        public void Store(object entity, string name, Stream stream, string contentType = null)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
-            StoreAttachment(document.Id, name, stream, contentType);
+            Store(document.Id, name, stream, contentType);
         }
 
         protected void ThrowEntityNotInSession(object entity)
@@ -71,15 +75,15 @@ namespace Raven.Client.Documents.Session
                                         "Use documentId instead or track the entity in the session.", nameof(entity));
         }
 
-        public void DeleteAttachment(object entity, string name)
+        public void Delete(object entity, string name)
         {
             if (DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
                 ThrowEntityNotInSession(entity);
 
-            DeleteAttachment(document.Id, name);
+            Delete(document.Id, name);
         }
 
-        public void DeleteAttachment(string documentId, string name)
+        public void Delete(string documentId, string name)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
