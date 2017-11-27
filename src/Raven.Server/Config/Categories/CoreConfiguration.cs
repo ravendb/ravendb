@@ -37,8 +37,8 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool RunInMemory { get; set; }
 
-        [Description("The directory for the RavenDB resource. You can use the ~/ prefix to refer to RavenDB's base directory.")]
-        [DefaultValue(@"~/Databases/{name}")]
+        [Description("The directory for the RavenDB resource.")]
+        [DefaultValue(@"Databases/{name}")]
         [ConfigurationEntry("DataDir", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting DataDirectory { get; set; }
 

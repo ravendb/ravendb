@@ -10,7 +10,7 @@ namespace Raven.Server.Config.Categories
 {
     public class SecurityConfiguration : ConfigurationCategory
     {
-        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
+        [Description("The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1)Base64 2)Path 3)Executable")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePath { get; set; }

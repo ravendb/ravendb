@@ -10,12 +10,12 @@ namespace Raven.Server.Config.Settings
     public class PathSetting : PathSettingBase<PathSetting>
     {
         public PathSetting(string path, string baseDataDir = null)
-            : base(ExpandConstantsInPath(path), baseDataDir != null ? new PathSetting(baseDataDir) : null)
+            : base(path, baseDataDir != null ? new PathSetting(baseDataDir) : null)
         {
         }
 
         public PathSetting(string path, ResourceType type, string resourceName)
-            : base(ExpandConstantsInPath(EnsureResourceInfo(path, type, resourceName)))
+            : base(EnsureResourceInfo(path, type, resourceName))
         {
         }
 
@@ -34,37 +34,15 @@ namespace Raven.Server.Config.Settings
             if (path == (string)RavenConfiguration.GetDefaultValue(x => x.Core.DataDirectory))
             {
                 if (type == ResourceType.Server)
-                    return $"~{Path.DirectorySeparatorChar}";
+                    return "";
 
-                return Path.Combine("~", $"{type}s", name);
+                return Path.Combine($"{type}s", name);
             }
 
             if (type == ResourceType.Server)
                 return path;
 
             return Path.Combine(path, $"{type}s", name);
-        }
-
-        private static string ExpandConstantsInPath(string path)
-        {
-            if (path.StartsWith("APPDRIVE:", StringComparison.OrdinalIgnoreCase))
-            {
-                var baseDirectory = AppContext.BaseDirectory;
-                var rootPath = Path.GetPathRoot(baseDirectory);
-
-                if (string.IsNullOrEmpty(rootPath) == false)
-                    return Regex.Replace(path, "APPDRIVE:", rootPath.TrimEnd('\\'), RegexOptions.IgnoreCase);
-            }
-
-
-            if (PlatformDetails.RunningOnPosix && path.StartsWith("$HOME", StringComparison.OrdinalIgnoreCase))
-            {
-                var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                if (string.IsNullOrEmpty(homeDir) == false)
-                    return path.Replace("$HOME", homeDir.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
-            }
-
-            return path;
         }
     }
 

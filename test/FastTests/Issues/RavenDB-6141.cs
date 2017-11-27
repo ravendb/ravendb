@@ -143,7 +143,7 @@ namespace FastTests.Issues
 
             var database = RavenConfiguration.CreateFrom(server, "Foo", ResourceType.Database);
 
-            database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"~/Items");
+            database.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"Items");
 
             database.Initialize();
 
@@ -153,8 +153,8 @@ namespace FastTests.Issues
         [Fact]
         public void Should_trim_last_directory_separator_character()
         {
-            Assert.False(new PathSetting("~\\Items\\").FullPath.EndsWith(@"\\"));
-            Assert.False(new PathSetting("~/Items/").FullPath.EndsWith(@"/"));
+            Assert.False(new PathSetting("Items\\").FullPath.EndsWith(@"\\"));
+            Assert.False(new PathSetting("Items/").FullPath.EndsWith(@"/"));
         }
 
         public void Dispose()
