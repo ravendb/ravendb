@@ -414,6 +414,9 @@ namespace Raven.Server.Documents.Replication
             var removedDestiantions = newDestinations.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
+                if(newDestination.Disabled)
+                    continue;
+                
                 removedDestiantions.Remove(newDestination);
                 if (current.Contains(newDestination) == false)
                     addedDestinations.Add(newDestination);
