@@ -8,7 +8,7 @@ class savePeriodicBackupConfigurationCommand extends commandBase {
     }
  
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
-        const url = endpoints.global.adminDatabases.adminPeriodicBackup + this.urlEncodeArgs({ name: this.db.name });
+        const url = endpoints.databases.ongoingTasks.adminPeriodicBackup + this.urlEncodeArgs({ name: this.db.name });
 
         const isNewTask = this.configuration.TaskId === 0;
         return this.post(url, JSON.stringify(this.configuration))
