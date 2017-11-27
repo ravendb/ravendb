@@ -1922,23 +1922,29 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                                 {
                                     Name = u.Name,
                                     First = details.First(x => x.Number > 1).Number,
-                                    FirstOrDefault = details.FirstOrDefault(x => x.Number < 3),
+                                    FirstOrDefault = details.FirstOrDefault(),
+                                    FirstOrDefaultWithPredicate = details.FirstOrDefault(x => x.Number < 3)
                                 };
 
                     Assert.Equal("FROM Users as u LOAD u.DetailIds as details[] " +
-                                 "SELECT { Name : u.Name, First : details.find(function(x){return x.Number>1;}).Number, " +
-                                          "FirstOrDefault : details.find(function(x){return x.Number<3;}) }", query.ToString());
+                                 "SELECT { Name : u.Name, " +
+                                          "First : details.find(function(x){return x.Number>1;}).Number, " +
+                                          "FirstOrDefault : details[0], " +
+                                          "FirstOrDefaultWithPredicate : details.find(function(x){return x.Number<3;}) }"
+                                , query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(2, queryResult.Count);
 
                     Assert.Equal("Jerry", queryResult[0].Name);
                     Assert.Equal(2, queryResult[0].First);
-                    Assert.Equal(1, queryResult[0].FirstOrDefault.Number);
+                    Assert.Equal(1, queryResult[0].FirstOrDefault?.Number);
+                    Assert.Equal(1, queryResult[0].FirstOrDefaultWithPredicate.Number);
 
                     Assert.Equal("Bob", queryResult[1].Name);
                     Assert.Equal(3, queryResult[1].First);
-                    Assert.Null(queryResult[1].FirstOrDefault);
+                    Assert.Equal(3, queryResult[1].FirstOrDefault?.Number);
+                    Assert.Null(queryResult[1].FirstOrDefaultWithPredicate);
                 }
             }
         }
@@ -3067,6 +3073,124 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
             }
         }
         
+        [Fact]
+        public void Custom_Fuctions_With_Nested_Loads_Simple()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Detail { Number = 12345 }, "detail/1");
+                    session.Store(new Detail { Number = 67890 }, "detail/2");
+
+                    session.Store(new User { Name = "Jerry", DetailId = "detail/1", FriendId = "users/2"}, "users/1");
+                    session.Store(new User { Name = "Bob", DetailId = "detail/2", FriendId = "users/1"}, "users/2");
+                                                                             
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                let detail = session.Load<Detail>(user.DetailId)
+                                let friend = session.Load<User>(user.FriendId)
+                                let friendsDetail = session.Load<Detail>(friend.DetailId)
+                                select new
+                                {
+                                    user.Name,
+                                    Mine = detail.Number,
+                                    Friends = friendsDetail.Number
+                                };
+
+                    Assert.Equal("FROM Users as user " +
+                                 "LOAD user.DetailId as detail, user.FriendId as friend, friend.DetailId as friendsDetail " +
+                                 "SELECT { Name : user.Name, " +
+                                          "Mine : detail.Number, " +
+                                          "Friends : friendsDetail.Number }"
+                                , query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(2, queryResult.Count);
+                    
+                    Assert.Equal("Jerry" ,queryResult[0].Name);
+                    Assert.Equal(12345 ,queryResult[0].Mine);
+                    Assert.Equal(67890 ,queryResult[0].Friends);
+                    
+                    Assert.Equal("Bob" ,queryResult[1].Name);
+                    Assert.Equal(67890 ,queryResult[1].Mine);
+                    Assert.Equal(12345 ,queryResult[1].Friends);
+                }
+            }
+        }
+        
+        [Fact]
+        public void Custom_Fuctions_With_Nested_Loads_Complex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {                    
+                    session.Store(new Company
+                    {
+                        Name = "GD",
+                        EmployeesIds = new List<string> {"employees/1","employees/2", "employees/3"}
+                    }, "companies/1");
+                    
+                    session.Store(new Employee
+                    {
+                        FirstName = "Bob",
+                        LastName = "Weir",
+                        ReportsTo = "employees/2"
+                    }, "employees/1");
+                    
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        LastName = "Garcia"
+                    }, "employees/2");
+                    
+                    session.Store(new Order
+                    {
+                        OrderedAt = new DateTime(1942,8,1),
+                        Company = "companies/1",
+                    }, "orders/1");
+                                                         
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from o in session.Query<Order>()
+                                let company = session.Load<Company>(o.Company)
+                                let employee = RavenQuery.Load<Employee>(company.EmployeesIds).FirstOrDefault()
+                                let manager = session.Load<Employee>(employee.ReportsTo)
+                                select new
+                                {
+                                    Company = company.Name,
+                                    Employee = employee.FirstName + " " + employee.LastName,
+                                    Manager = manager.FirstName + " " + manager.LastName
+                                };
+
+                    Assert.Equal(
+@"DECLARE function output(o, company, _docs_1) {
+	var employee = _docs_1[0];
+	var manager = load(employee.ReportsTo);
+	return { Company : company.Name, Employee : employee.FirstName+"" ""+employee.LastName, Manager : manager.FirstName+"" ""+manager.LastName };
+}
+FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SELECT output(o, company, _docs_1)" ,query.ToString());
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal(1, queryResult.Count);
+                    
+                    Assert.Equal("GD" ,queryResult[0].Company);
+                    Assert.Equal("Bob Weir" ,queryResult[0].Employee);
+                    Assert.Equal("Jerry Garcia" ,queryResult[0].Manager);
+                }
+            }
+        }
+        
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -3367,6 +3491,14 @@ FROM Users as u WHERE u.LastName = $p0 SELECT output(u)", query.ToString());
         {
             public string Id { get; set; }
             public IDictionary<string, IList<string>> Data { get; set; } 
+        }
+        
+        private class Employee
+        {
+            public string Id { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string ReportsTo { get; set; }
         }
     }
 }

@@ -6,7 +6,6 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -25,6 +24,11 @@ namespace Raven.Client.Documents.Session
         ///     Access the lazy operations
         /// </summary>
         IAsyncLazySessionOperations Lazily { get; }
+
+        /// <summary>
+        ///     Access the attachments operations
+        /// </summary>
+        IAsyncAttachmentsSessionOperations Attachments { get; }
 
         /// <summary>
         ///     Updates entity with latest changes from server

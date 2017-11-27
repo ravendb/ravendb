@@ -128,7 +128,7 @@ namespace SlowTests.Client.Attachments
                     {
                         var name = names[i];
                         using (var attachmentStream = new MemoryStream(readBuffer))
-                        using (var attachment = session.Advanced.GetAttachment("users/1", name))
+                        using (var attachment = session.Advanced.Attachments.Get("users/1", name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
                             
@@ -155,7 +155,7 @@ namespace SlowTests.Client.Attachments
                         }
                     }
 
-                    using (var notExistsAttachment = session.Advanced.GetAttachment("users/1", "not-there"))
+                    using (var notExistsAttachment = session.Advanced.Attachments.Get("users/1", "not-there"))
                     {
                         Assert.Null(notExistsAttachment);
                     }
@@ -211,7 +211,7 @@ namespace SlowTests.Client.Attachments
                 {
                     var readBuffer = new byte[8];
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/1", name))
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", name))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Equal(name, attachment.Details.Name);
@@ -268,7 +268,7 @@ namespace SlowTests.Client.Attachments
                 {
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
@@ -278,7 +278,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(new byte[] { 1, 2, 3 }, readBuffer.Take(3));
                     }
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/1", "file3"))
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Contains("A:6", attachment.Details.ChangeVector);
@@ -342,7 +342,7 @@ namespace SlowTests.Client.Attachments
                 {
                     var readBuffer = new byte[1024 * 1024];
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/3", "file3"))
+                    using (var attachment = session.Advanced.Attachments.Get("users/3", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Contains("A:8", attachment.Details.ChangeVector);
@@ -354,7 +354,7 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(expected, actual);
                     }
                     using (var attachmentStream = new MemoryStream(readBuffer))
-                    using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
+                    using (var attachment = session.Advanced.Attachments.Get("users/1", "big-file"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
                         Assert.Contains("A:10", attachment.Details.ChangeVector);
@@ -656,7 +656,7 @@ namespace SlowTests.Client.Attachments
                 if (orderedNames.Contains(name) == false)
                     continue;
                 using (var attachmentStream = new MemoryStream(readBuffer))
-                using (var attachment = session.Advanced.GetRevisionAttachment("users/1", name, changeVector))
+                using (var attachment = session.Advanced.Attachments.GetRevision("users/1", name, changeVector))
                 {
                     attachment.Stream.CopyTo(attachmentStream);
                     if (i >= expectedCount)
@@ -906,7 +906,7 @@ namespace SlowTests.Client.Attachments
             using (var session = store.OpenAsyncSession())
             {
                 var user = await session.LoadAsync<User>("users/1");
-                var attachments = session.Advanced.GetAttachmentNames(user);
+                var attachments = session.Advanced.Attachments.GetNames(user);
                 var attachment = attachments.Single();
                 Assert.Equal(name, attachment.Name);
                 Assert.Equal(hash, attachment.Hash);

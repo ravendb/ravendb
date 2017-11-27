@@ -32,14 +32,19 @@ namespace Raven.Client.Documents.Session
         public IAdvancedSessionOperations Advanced => this;
 
         /// <summary>
-        /// Access the lazy operations
-        /// </summary>
-        public ILazySessionOperations Lazily => this;
-
-        /// <summary>
         /// Access the eager operations
         /// </summary>
         public IEagerSessionOperations Eagerly => this;
+
+        /// <summary>
+        /// Access the lazy operations
+        /// </summary>
+        public ILazySessionOperations Lazily => this;
+        
+        /// <summary>
+        /// Access the attachments operations
+        /// </summary>
+        public IAttachmentsSessionOperations Attachments { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
@@ -47,6 +52,7 @@ namespace Raven.Client.Documents.Session
         public DocumentSession(string dbName, DocumentStore documentStore, Guid id, RequestExecutor requestExecutor)
             : base(dbName, documentStore, requestExecutor, id)
         {
+            Attachments = new DocumentSessionAttachments(this);
         }
 
         /// <summary>

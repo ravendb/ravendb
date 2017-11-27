@@ -16,6 +16,7 @@ import buildInfo = require("models/resources/buildInfo");
 import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
 import allRoutes = require("common/shell/routes");
+import popoverUtils = require("common/popoverUtils");
 import registration = require("viewmodels/shell/registration");
 import collection = require("models/database/documents/collection");
 
@@ -43,6 +44,8 @@ import continueTest = require("common/shell/continueTest");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
 import studioSettings = require("common/settings/studioSettings");
+import clientCertificateModel = require("models/auth/clientCertificateModel");
+import certificateModel = require("models/auth/certificateModel");
 
 //TODO: extract cluster related logic to separate class
 //TODO: extract api key related logic to separate class 
@@ -67,6 +70,8 @@ class shell extends viewModelBase {
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
+    
+    clientCertificate = clientCertificateModel.certificateInfo;
 
     mainMenu = new menu(generateMenuItems(activeDatabaseTracker.default.database()));
     searchBox = new searchBox();
@@ -124,8 +129,9 @@ class shell extends viewModelBase {
 
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
+        const clientCertifiateTask = clientCertificateModel.fetchClientCertificate();
 
-        $.when<any>(licenseTask, topologyTask)
+        $.when<any>(licenseTask, topologyTask, clientCertifiateTask)
             .done(() => {
                 changesContext.default
                     .connectServerWideNotificationCenter();
@@ -163,6 +169,29 @@ class shell extends viewModelBase {
     attached() {
         super.attached();
 
+        if (this.clientCertificate() && this.clientCertificate().Name) {
+            
+            const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate())
+                .map(x => `<div>${x}</div>`)
+                .join("");
+            
+            popoverUtils.longWithHover($(".js-client-cert"),
+            {
+                content: `<dl class="dl-horizontal margin-none client-certificate-info">
+                            <dt>Client Certificate</dt>
+                            <dd><strong>${this.clientCertificate().Name}</strong></dd>
+                            <dt>Thumbprint</dt>
+                            <dd><strong>${this.clientCertificate().Thumbprint}</strong></dd>
+                            <dt><span>Security Clearance</span></dt>
+                            <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
+                            <dt><span>Access to databases:</span></dt>
+                            <dd><strong>${dbAccess}</strong></dd>
+                          </dl>`
+                ,
+                placement: 'top'
+            });    
+        }
+        
         sys.error = (e: any) => {
             console.error(e);
             messagePublisher.reportError("Failed to load routed module!", e);
@@ -215,6 +244,10 @@ class shell extends viewModelBase {
 
     urlForRevisionsBin() {
         return appUrl.forRevisionsBin(this.activeDatabase());
+    }
+    
+    urlForCertificates() {
+        return appUrl.forCertificates();
     }
 
     /*

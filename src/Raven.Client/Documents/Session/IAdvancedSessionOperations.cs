@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session.Operations.Lazy;
 
 namespace Raven.Client.Documents.Session
@@ -23,7 +22,12 @@ namespace Raven.Client.Documents.Session
         ///     Access the lazy operations
         /// </summary>
         ILazySessionOperations Lazily { get; }
-
+        
+        /// <summary>
+        ///     Access the attachments operations
+        /// </summary>
+        IAttachmentsSessionOperations Attachments { get; }
+        
         /// <summary>
         ///     Updates entity with latest changes from server
         /// </summary>
