@@ -478,7 +478,6 @@ namespace Raven.Server.Documents.TcpHandlers
                                     nameof(Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange),
                                 subscriptionChangeVectorBeforeCurrentBatch);
                             
-                            AssertCloseWhenNoDocsLeft();
                             
                             subscriptionChangeVectorBeforeCurrentBatch = _lastChangeVector?? SubscriptionState.ChangeVectorForNextBatchStartingPoint;
 
@@ -492,6 +491,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (globalEtag > _startEtag)
                                     continue;
                             }
+                            
+                            AssertCloseWhenNoDocsLeft();
 
                             if (await WaitForChangedDocuments(replyFromClientTask))
                                 continue;
