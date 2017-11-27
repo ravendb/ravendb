@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
@@ -864,8 +865,14 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, ExternalReplication watcher)
+        public Task<(long Index, object Result)> UpdateExternalReplication(string dbName, BlittableJsonReaderObject blittableJson, out ExternalReplication watcher)
         {
+            if (blittableJson.TryGet(nameof(UpdateExternalReplicationCommand.Watcher), out BlittableJsonReaderObject watcherBlittable) == false)
+            {
+                throw new InvalidDataException($"{nameof(UpdateExternalReplicationCommand.Watcher)} was not found.");
+            }
+
+            watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
             var addWatcherCommand = new UpdateExternalReplicationCommand(dbName)
             {
                 Watcher = watcher

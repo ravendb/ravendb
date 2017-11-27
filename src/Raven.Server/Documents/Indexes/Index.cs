@@ -1550,15 +1550,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public IndexProgress.CollectionStats GetOrCreateStats(string collection)
+        public IndexProgress.CollectionStats GetStats(string collection)
         {
-            if (_inMemoryIndexProgress.TryGetValue(collection, out var stats) == false)
-            {
-                stats = new IndexProgress.CollectionStats();
-                _inMemoryIndexProgress.TryAdd(collection, stats);
-            }
-
-            return stats;
+            return _inMemoryIndexProgress.GetOrAdd(collection, new IndexProgress.CollectionStats());
         }
 
         private (long LastProcessedDocumentEtag, long LastProcessedTombstoneEtag) GetLastEtags(

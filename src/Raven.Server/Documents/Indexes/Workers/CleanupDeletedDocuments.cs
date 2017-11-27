@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
 
-                    var inMemoryStats = _index.GetOrCreateStats(collection);
+                    var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastTombstoneEtag;
                     var count = 0;
 
