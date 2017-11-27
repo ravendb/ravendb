@@ -39,6 +39,11 @@ namespace Raven.Client.Documents.Operations
         public long CountOfDocumentsConflicts { get; set; }
 
         /// <summary>
+        /// Total number of tombstones in database.
+        /// </summary>
+        public long CountOfTombstones { get; set; }
+
+        /// <summary>
         /// Total number of conflicts in database.
         /// </summary>
         public long CountOfConflicts { get; set; }

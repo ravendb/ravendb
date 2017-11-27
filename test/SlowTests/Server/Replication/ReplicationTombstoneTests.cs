@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -214,6 +215,9 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(1, tombstoneIDs.Count);
                 Assert.Contains("foo/bar", tombstoneIDs);
 
+                var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfTombstones);
+
                 using (var s1 = store1.OpenSession())
                 {
                     s1.Store(new User(), "foo/bar");
@@ -227,6 +231,9 @@ namespace SlowTests.Server.Replication
                 //then verify that tombstone is deleted
                 var tombstonesAtStore2 = GetTombstones(store2);
                 Assert.Empty(tombstonesAtStore2);
+
+                stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(0, stats.CountOfTombstones);
             }
         }
 

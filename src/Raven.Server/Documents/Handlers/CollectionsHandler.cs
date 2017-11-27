@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     [nameof(CollectionStatistics.CountOfDocuments)] = Database.DocumentsStorage.GetNumberOfDocuments(context),
                     [nameof(CollectionStatistics.CountOfConflicts)] = 
-                        Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
+                        Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
                     [nameof(CollectionStatistics.Collections)] = collections
                 };
 
