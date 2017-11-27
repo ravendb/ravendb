@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
-    public class IncludeOrLoadShouldReturnAllDocsEtag
+    public class IncludeOrLoadShouldReturnAllDocsEtag : NoDisposalNeeded
     {
         [Fact]
         public void FunctionWithLoad()
