@@ -38,8 +38,11 @@ class dashboardChart {
     
     private xScale: d3.time.Scale<number, number>;
     
+    private containerSelector: string;
+    
     constructor(containerSelector: string, opts?: chartOpts) {
         this.opts = opts || {} as any;
+        this.containerSelector = containerSelector;
         
         if (!this.opts.topPaddingProvider) {
             this.opts.topPaddingProvider = () => dashboardChart.defaultTopPadding;
@@ -57,9 +60,6 @@ class dashboardChart {
             .attr("width", this.width)
             .attr("height", this.height);
         
-        const gridLocation = _.range(0, this.width, 20)
-            .map(x => this.width - x);
-        
         const gridContainer = this.svg
             .append("g")
             .attr("transform", "translate(-0.5, 0)")
@@ -69,21 +69,7 @@ class dashboardChart {
             .append("g")
             .attr("class", "series");
         
-        const lines = gridContainer.selectAll("line")
-            .data(gridLocation);
-        
-        lines
-            .exit()
-            .remove();
-        
-        lines
-            .enter()
-            .append("line")
-            .attr("class", "grid-line")
-            .attr("x1", x => x)
-            .attr("x2", x => x)
-            .attr("y1", 0)
-            .attr("y2", this.height);
+        this.drawGrid(gridContainer);
         
         const pointer = this.svg
             .append("g")
@@ -102,6 +88,46 @@ class dashboardChart {
         if (this.opts.tooltipProvider) {
             this.setupValuesPreview();
         }
+    }
+    
+    private drawGrid(gridContainer: d3.Selection<any>) {
+        const gridLocation = _.range(0, this.width, 20)
+            .map(x => this.width - x);
+        
+        const lines = gridContainer.selectAll("line")
+            .data(gridLocation);
+        
+        lines
+            .exit()
+            .remove();
+        
+        lines
+            .enter()
+            .append("line")
+            .attr("class", "grid-line")
+            .attr("x1", x => x)
+            .attr("x2", x => x)
+            .attr("y1", 0)
+            .attr("y2", this.height);
+    }
+    
+    onResize() {
+         const container = d3.select(this.containerSelector);
+        
+        const $container = $(this.containerSelector);
+        
+        this.width = $container.innerWidth();
+        this.height = $container.innerHeight();
+
+        this.svg = container
+            .select("svg")
+            .attr("width", this.width)
+            .attr("height", this.height);
+        
+        const gridContainer = this.svg.select(".grid");
+        gridContainer.selectAll("line").remove();
+        
+        this.drawGrid(gridContainer);
     }
     
     private setupValuesPreview() {

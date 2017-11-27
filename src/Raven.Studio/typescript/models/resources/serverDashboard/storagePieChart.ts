@@ -7,8 +7,10 @@ class storagePieChart {
     private width: number;
     private svg: d3.Selection<void>;
     private colorScale: d3.scale.Ordinal<string, string>;
+    private containerSelector: string;
     
     constructor(containerSelector: string) {
+        this.containerSelector = containerSelector;
         const container = d3.select(containerSelector);
 
         const $container = $(containerSelector);
@@ -25,15 +27,27 @@ class storagePieChart {
             .attr("class", "pie")
             .attr("transform", "translate(" + (this.width / 2) + ", " + (this.width / 2) + ")");
         
-        this.svg
-            .append("circle")
-            .attr("class", "border")
-            .attr("cx", 0)
-            .attr("cy", 0)
-            .attr("r", this.width);
-
         this.colorScale = d3.scale.ordinal<string>()
             .range(["#27c6db", "#d3e158", "#fea724"]); //TODO: colors
+    }
+    
+    onResize() {
+        const container = d3.select(this.containerSelector);
+
+        const $container = $(this.containerSelector);
+
+        this.width = Math.min($container.innerHeight(), $container.innerWidth());
+
+        this.svg = container
+            .select("svg")
+            .attr("width", this.width)
+            .attr("height", this.width);
+        
+        this.svg
+            .select("g.pie")
+            .attr("transform", "translate(" + (this.width / 2) + ", " + (this.width / 2) + ")")
+            .selectAll(".arc")
+            .remove();
     }
     
     getColorProvider() {
