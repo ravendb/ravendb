@@ -74,8 +74,8 @@ class collectionsTracker {
     }    
     
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
-        const removedCollections = notification.ModifiedCollections.filter(x => x.Count === -1);
-        const changedCollections = notification.ModifiedCollections.filter(x => x.Count !== -1);
+        const removedCollections = notification.ModifiedCollections.filter(x => x.Count < 1);
+        const changedCollections = notification.ModifiedCollections.filter(x => x.Count >= 1);
         const totalCount = notification.CountOfDocuments;
 
         // update all collections
@@ -84,7 +84,9 @@ class collectionsTracker {
 
         removedCollections.forEach(c => {
             const toRemove = this.collections().find(x => x.name.toLocaleLowerCase() === c.Name.toLocaleLowerCase());
-            this.onCollectionRemoved(toRemove);
+            if (toRemove) {
+                this.onCollectionRemoved(toRemove);    
+            }
         });
 
         this.events.globalChangeVector.forEach(handler => handler(notification.GlobalChangeVector));
