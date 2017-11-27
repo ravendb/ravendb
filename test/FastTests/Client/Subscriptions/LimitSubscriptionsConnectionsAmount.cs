@@ -81,7 +81,10 @@ namespace FastTests.Client.Subscriptions
         {
             var subscriptionId = store.Subscriptions.Create<User>();
 
-            var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId));
+            var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
+            {
+                TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500)
+            });
 
             subscription.AfterAcknowledgment += batch =>
             {
