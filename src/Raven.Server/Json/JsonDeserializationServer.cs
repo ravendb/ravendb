@@ -90,6 +90,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, LeasedLicense> LeasedLicense = GenerateJsonDeserializationRoutine<LeasedLicense>();
 
+        public static readonly Func<BlittableJsonReaderObject, LicenseSupportInfo> LicenseSupportInfo = GenerateJsonDeserializationRoutine<LicenseSupportInfo>();
+
         public static readonly Func<BlittableJsonReaderObject, UserRegistrationInfo> UserRegistrationInfo = GenerateJsonDeserializationRoutine<UserRegistrationInfo>();
 
         public static readonly Func<BlittableJsonReaderObject, FeedbackForm> FeedbackForm = GenerateJsonDeserializationRoutine<FeedbackForm>();

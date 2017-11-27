@@ -55,5 +55,24 @@ namespace Raven.Server.Web.Studio
 
             NoContentStatus();
         }
+
+        [RavenAction("/admin/license/forceUpdate", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task ForceUpdate()
+        {
+            await ServerStore.LicenseManager.LeaseLicense();
+
+            NoContentStatus();
+        }
+
+        [RavenAction("/license/support", "POST", AuthorizationStatus.ValidUser)]
+        public async Task LicenseSupport()
+        {
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var licenseSupport = await ServerStore.LicenseManager.GetLicenseSupportInfo();
+                context.Write(writer, licenseSupport.ToJson());
+            }
+        }
     }
 }
