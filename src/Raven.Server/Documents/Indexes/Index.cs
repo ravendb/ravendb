@@ -511,6 +511,7 @@ namespace Raven.Server.Documents.Indexes
                 if (disableIndex)
                 {
                     _indexDisabled = true;
+                    _mre.Set();
                 }
                 else
                 {
