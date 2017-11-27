@@ -659,7 +659,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task LeaseLicense()
+        public async Task LeaseLicense()
         {
             if (_serverStore.IsLeader() == false)
                 return;
@@ -1399,6 +1399,40 @@ namespace Raven.Server.Commercial
 
             licenseLimit = null;
             return true;
+        }
+
+        public async Task<LicenseSupportInfo> GetLicenseSupportInfo()
+        {
+            var license = _serverStore.LoadLicense();
+            if (license == null)
+            {
+                throw new InvalidOperationException("License doesn't exist");
+            }
+
+            var leaseLicenseInfo = new LeaseLicenseInfo
+            {
+                License = license,
+                BuildInfo = _buildInfo,
+                ClusterId = _serverStore.GetClusterTopology().TopologyId,
+                UtilizedCores = GetUtilizedCores()
+            };
+
+            var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/support",
+                    new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
+                .ConfigureAwait(false);
+
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                throw new InvalidOperationException($"Couldn't get license support info, repsonse: {responseString}, status code: {response.StatusCode}");
+            }
+
+            var licenseSupportStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var json = context.Read(licenseSupportStream, "license support info");
+                return JsonDeserializationServer.LicenseSupportInfo(json);
+            }
         }
     }
 }
