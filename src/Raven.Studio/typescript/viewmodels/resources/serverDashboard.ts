@@ -38,6 +38,11 @@ class machineResourcesSection {
         });
     }
     
+    onResize() {
+        this.cpuChart.onResize();
+        this.memoryChart.onResize();
+    }
+    
     onData(data: Raven.Server.Dashboard.MachineResources) {
         this.totalMemory = data.TotalMemory;
         
@@ -133,6 +138,11 @@ class indexingSpeedSection {
                 })
             ];
         });
+    }
+    
+    onResize() {
+        this.indexingChart.onResize();
+        this.reduceChart.onResize();
     }
     
     private static indexingTooltip(data: dashboardChartTooltipProviderArgs) {
@@ -343,6 +353,11 @@ class trafficSection {
             tooltipProvider: data => this.trafficTooltip(data)
         });
     }
+    
+    onResize() {
+        this.trafficChart.onResize();
+        this.gridController().reset(true);
+    }
 
     private trafficTooltip(data: dashboardChartTooltipProviderArgs) {
         if (data) {
@@ -424,6 +439,14 @@ class driveUsageSection {
     
     init() {
         this.storageChart = new storagePieChart("#storageChart");
+    }
+    
+    onResize() {
+        this.table().forEach(item => {
+            item.gridController().reset(true);
+        });
+        
+        this.storageChart.onResize();
     }
     
     onData(data: Raven.Server.Dashboard.DrivesUsage) {
@@ -546,6 +569,15 @@ class serverDashboard extends viewModelBase {
         this.indexingSpeedSection.init();
         this.machineResourcesSection.init();
         this.driveUsageSection.init();
+        
+        this.registerDisposableHandler($(window), "resize", _.debounce(() => this.onResize(), 700));
+    }
+    
+    private onResize() {
+        this.trafficSection.onResize();
+        this.indexingSpeedSection.onResize();
+        this.machineResourcesSection.onResize();
+        this.driveUsageSection.onResize();
     }
     
     private enableLiveView() {
