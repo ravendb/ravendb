@@ -29,8 +29,9 @@ namespace Voron.Util.Settings
         {
             var path = Environment.ExpandEnvironmentVariables(_path);
 
-            if (path.StartsWith(@"~\") || path.StartsWith(@"~/"))
-                path = Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path.Substring(2));
+            if (PlatformDetails.RunningOnPosix == false && path.StartsWith(@"\") == false ||
+                PlatformDetails.RunningOnPosix && path.StartsWith(@"/") == false) // if relative path
+                path = Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
 
             var result = Path.IsPathRooted(path)
                 ? path

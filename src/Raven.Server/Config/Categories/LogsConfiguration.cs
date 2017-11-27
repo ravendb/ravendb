@@ -7,7 +7,7 @@ namespace Raven.Server.Config.Categories
 {
     public class LogsConfiguration : ConfigurationCategory
     {
-        [DefaultValue("~/Logs")]
+        [DefaultValue("Logs")]
         [ConfigurationEntry("Logs.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting Path { get; set; }
 
