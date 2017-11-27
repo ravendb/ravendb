@@ -127,6 +127,8 @@ namespace Raven.Server.NotificationCenter
             Add(NotificationUpdated.Create(id, NotificationUpdateType.Dismissed));
         }
 
+        public string GetDatabaseFor(string id) => _notificationsStorage.GetDatabaseFor(id);
+
         public void Postpone(string id, DateTime until)
         {
             _notificationsStorage.ChangePostponeDate(id, until);

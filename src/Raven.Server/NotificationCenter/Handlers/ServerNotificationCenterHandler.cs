@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Util;
 using Raven.Server.Routing;
@@ -41,13 +43,20 @@ namespace Raven.Server.NotificationCenter.Handlers
         }
 
      
-        [RavenAction("/admin/notification-center/dismiss", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser)]
         public Task DismissPost()
         {
             var id = GetStringQueryString("id");
 
             var forever = GetBoolValueQueryString("forever", required: false);
-
+            var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
+            var isValidFor = GetDatabaseAccessValidationFunc();
+            if (isValidFor != null && isValidFor(dbForId) == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return HttpContext.Response
+                    .WriteAsync("{'Error':'Invalid attempt to dismiss notification that you do not have access for'}");
+            }
             if (forever == true)
                 ServerStore.NotificationCenter.Postpone(id, DateTime.MaxValue);
             else
@@ -56,12 +65,19 @@ namespace Raven.Server.NotificationCenter.Handlers
             return NoContent();
         }
 
-        [RavenAction("/admin/notification-center/postpone", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/notification-center/postpone", "POST", AuthorizationStatus.ValidUser)]
         public Task PostponePost()
         {
             var id = GetStringQueryString("id");
             var timeInSec = GetLongQueryString("timeInSec");
-
+            var dbForId = ServerStore.NotificationCenter.GetDatabaseFor(id);
+            var isValidFor = GetDatabaseAccessValidationFunc();
+            if (isValidFor != null && isValidFor(dbForId) == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return HttpContext.Response
+                    .WriteAsync("{'Error':'Invalid attempt to postpone notification that you do not have access for'}");
+            }
             ServerStore.NotificationCenter.Postpone(id, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec)));
             
             return NoContent();
