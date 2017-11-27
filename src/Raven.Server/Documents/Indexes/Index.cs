@@ -1575,8 +1575,8 @@ namespace Raven.Server.Documents.Indexes
             if (_inMemoryIndexProgress.TryGetValue(collection, out var stats) == false)
                 return (lastProcessedDocumentEtag, lastProcessedTombstoneEtag);
 
-            var lastDocumentEtag = Math.Max(lastProcessedDocumentEtag, stats.LastProcessedDocumentEtag - 1);
-            var lastTombstoneEtag = Math.Max(lastProcessedTombstoneEtag, stats.LastProcessedTombstoneEtag - 1);
+            var lastDocumentEtag = Math.Max(lastProcessedDocumentEtag, stats.LastProcessedDocumentEtag);
+            var lastTombstoneEtag = Math.Max(lastProcessedTombstoneEtag, stats.LastProcessedTombstoneEtag);
             return (lastDocumentEtag, lastTombstoneEtag);
         }
 
