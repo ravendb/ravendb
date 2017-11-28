@@ -44,8 +44,8 @@ class virtualRow {
         return top > scrollBottom || bottom < scrollTop;
     }
 
-    dataLoadError(error: any) {
-        this.element.text(`Unable to load data: ${JSON.stringify(error)}`);
+    dataLoadError() {
+        this.element.text(`Unable to load data`);
     }
 
     populate(item: Object | null, rowIndex: number, isSelected: boolean, columns: virtualColumn[]) {

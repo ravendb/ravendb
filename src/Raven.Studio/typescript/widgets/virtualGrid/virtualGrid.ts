@@ -258,7 +258,7 @@ class virtualGrid<T> {
                 const fetcherPostprocessor = () => {
                     fetcherTask
                         .then((results: pagedResult<T>) => this.chunkFetched(results, safeSkip, safeTake))
-                        .fail(error => this.chunkFetchFailed(error, skip, safeTake))
+                        .fail(error => this.chunkFetchFailed(skip, safeTake))
                         .always(() => {
                             // When we're done loading, run the next queued fetch as necessary.
                             this.isLoading(false);
@@ -468,12 +468,12 @@ class virtualGrid<T> {
         throw new Error(`Virtual grid defect: couldn't find an offscreen row to recycle. viewportTop = ${viewportTop}, viewportBottom = ${viewportBottom}, recycle row count = ${this.virtualRows.length}`);
     }
 
-    private chunkFetchFailed(error: any, skip: number, take: number) {
+    private chunkFetchFailed(skip: number, take: number) {
         // Any rows displaying these items, show an error.
         const endIndex = skip + take;
         const failedRows = this.virtualRows
             .filter(r => !r.hasData && r.index >= skip && r.index <= endIndex);
-        failedRows.forEach(r => r.dataLoadError(error));
+        failedRows.forEach(r => r.dataLoadError());
     }
 
     private static percentageToPixels(containerWidth: number, percentageValue: string): string {
