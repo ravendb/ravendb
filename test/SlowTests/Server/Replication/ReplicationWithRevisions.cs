@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using FastTests;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -36,8 +35,11 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(WaitForDocument(slave, "foo/bar"));
-                Assert.Equal(2, WaitForValue(() => slave.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                using (var session = slave.OpenSession())
+                {
+                    Assert.True(WaitForDocument(slave, "foo/bar"));
+                    Assert.Equal(2, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 2));
+                }
             }
         }
 
@@ -81,8 +83,11 @@ namespace SlowTests.Server.Replication
 
                 await SetupReplicationAsync(master, slave);
 
-                Assert.True(WaitForDocument(slave, "foo/bar"));
-                Assert.Equal(4, WaitForValue(() => slave.Commands().GetRevisionsFor("foo/bar").Count, 4));
+                using (var session = slave.OpenSession())
+                {
+                    Assert.True(WaitForDocument(slave, "foo/bar"));
+                    Assert.Equal(4, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 4));
+                }
             }
         }
 
@@ -96,8 +101,14 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
                 Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
 
-                Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
-                Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                using (var session = storeA.OpenSession())
+                {
+                    Assert.Equal(2, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 2));
+                }
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(2, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 2));
+                }
             }
         }
 
@@ -116,8 +127,14 @@ namespace SlowTests.Server.Replication
 
                 if (configureVersioning)
                 {
-                    Assert.Equal(2, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 2));
-                    Assert.Equal(2, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 2));
+                    using (var session = storeA.OpenSession())
+                    {
+                        Assert.Equal(2, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 2));
+                    }
+                    using (var session = storeB.OpenSession())
+                    {
+                        Assert.Equal(2, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 2));
+                    }
                 }
 
                 var config = new ConflictSolver
@@ -130,8 +147,14 @@ namespace SlowTests.Server.Replication
                 Assert.True(WaitForDocument(storeA, "foo/bar"));
                 Assert.True(WaitForDocument(storeB, "foo/bar"));
 
-                Assert.Equal(3, WaitForValue(() => storeA.Commands().GetRevisionsFor("foo/bar").Count, 3));
-                Assert.Equal(3, WaitForValue(() => storeB.Commands().GetRevisionsFor("foo/bar").Count, 3));
+                using (var session = storeA.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
             }
         }
 
@@ -181,9 +204,14 @@ namespace SlowTests.Server.Replication
                     await session.StoreAsync(new User {Name = "Fitzchak"}, "users/1");
                     await session.SaveChangesAsync();
                 }
-
-                Assert.Equal(1, WaitForValue(() => storeA.Commands().GetRevisionsFor("users/1").Count, 1));
-                Assert.Equal(1, WaitForValue(() => storeB.Commands().GetRevisionsFor("users/1").Count, 1));
+                using (var session = storeA.OpenSession())
+                {
+                    Assert.Equal(1, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("users/1").Count, 1));
+                }
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(1, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("users/1").Count, 1));
+                }
                 Assert.True(WaitForDocument(storeB, "users/1"));
 
                 await SetupReplicationAsync(storeA, storeC);
@@ -202,7 +230,10 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.True(WaitForDocument(storeB, "marker"));
 
-                Assert.Equal(1, WaitForValue(() => storeC.Commands().GetRevisionsFor("users/1").Count, 1));
+                using (var session = storeC.OpenSession())
+                {
+                    Assert.Equal(1, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("users/1").Count, 1));
+                }
             }
         }
     }

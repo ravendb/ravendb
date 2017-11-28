@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents;
@@ -64,6 +63,27 @@ namespace FastTests.Server.Documents.Revisions
 
                     Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(first.Key));
                     Assert.Null(await session.Advanced.Revisions.GetAsync<User>(last.Key));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanGetNullForNotExistsDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var revisions = await session.Advanced.Revisions.GetForAsync<User>(id);
+                    Assert.NotNull(revisions);
+                    Assert.Empty(revisions);
+
+                    var metadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.NotNull(metadata);
+                    Assert.Empty(metadata);
                 }
             }
         }
@@ -471,15 +491,15 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal("Fitzchak", users[1].Name);
                     Assert.Equal(null, users[2].Name);
                     Assert.Equal("Fitzchak", users[3].Name);
-                }
 
-                // Can get metadata only
-                dynamic revisions = await store.Commands().GetRevisionsForAsync(id, metadataOnly: true);
-                Assert.Equal(4, revisions.Count);
-                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                    // Can get metadata only
+                    var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(4, revisionsMetadata.Count);
+                    Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisionsMetadata[1].GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Contains(DocumentFlags.DeleteRevision.ToString(), revisionsMetadata[2].GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
+                }
 
                 await store.Maintenance.SendAsync(new DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
                 {
