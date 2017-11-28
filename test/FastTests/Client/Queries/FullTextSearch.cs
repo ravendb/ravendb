@@ -442,11 +442,11 @@ namespace FastTests.Client.Queries
                         .ToList();
 
                     var query = session.Query<Image>("test")
-                        .Search(x => x.Tags, "animal lover")
-                        .Suggest();
+                        .Suggest(x => x.Tags, "animal lover")
+                        .Execute();
 
-                    Assert.NotEmpty(query.Suggestions);
-                    Assert.Equal("animal", query.Suggestions[0]);
+                    Assert.NotEmpty(query["Tags"].Suggestions);
+                    Assert.Equal("animal", query["Tags"].Suggestions[0]);
                 }
             }
         }

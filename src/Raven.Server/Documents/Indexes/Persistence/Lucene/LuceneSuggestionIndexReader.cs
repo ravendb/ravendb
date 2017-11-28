@@ -6,10 +6,13 @@ using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Indexing;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Voron.Impl;
 
@@ -19,30 +22,32 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseSearcher;
-        private readonly IDisposable _releaseReadTransaction;       
+        private readonly IDisposable _releaseReadTransaction;
 
         private readonly IState _state;
-        
+
         public LuceneSuggestionIndexReader(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
             : base(index, LoggingSource.Instance.GetLogger<LuceneSuggestionIndexReader>(index._indexStorage.DocumentDatabase.Name))
-        {            
+        {
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public string[] Suggestions(SuggestionQueryServerSide query, CancellationToken token)
+        public SuggestionResult Suggestions(IndexQueryServerSide query, SuggestField field, JsonOperationContext documentsContext, CancellationToken token)
         {
-            var term = query.Term;
-            if (term.StartsWith("<<") && term.EndsWith(">>"))
-            {
-                return QueryOverMultipleWords(query, term.Substring(2, term.Length - 4));
-            }
-            if (term.StartsWith("(") && term.EndsWith(")"))
-            {
-                return QueryOverMultipleWords(query, term.Substring(1, term.Length - 2));
-            }
+            var options = field.GetOptions(documentsContext, query.QueryParameters) ?? new SuggestionOptions();
+            var terms = field.GetTerms(documentsContext, query.QueryParameters);
 
-            return QueryOverSingleWord(query, term);
+            var result = new SuggestionResult
+            {
+                Name = field.Name
+            };
+
+            result.Suggestions.AddRange(terms.Count > 1
+                ? QueryOverMultipleWords(field, terms, options)
+                : QueryOverSingleWord(field, terms[0], options));
+
+            return result;
         }
 
         private static readonly string[] EmptyArray = new string[0];
@@ -55,19 +60,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private const float BoostEnd = 1.0f;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string[] QueryOverSingleWord(SuggestionQueryServerSide parameters, string word)
+        private string[] QueryOverSingleWord(SuggestField field, string word, SuggestionOptions options)
         {
             // Perform devirtualization of the distance function when supported. 
-            switch (parameters.Distance)
-            {                
+            switch (options.Distance)
+            {
                 case StringDistanceTypes.JaroWinkler:
-                    return QueryOverSingleWord(parameters, word, new JaroWinklerDistance());
+                    return QueryOverSingleWord(field, word, options, new JaroWinklerDistance());
                 case StringDistanceTypes.NGram:
-                    return QueryOverSingleWord(parameters, word, new NGramDistance());
-                case StringDistanceTypes.Default:
-                case StringDistanceTypes.Levenshtein:
+                    return QueryOverSingleWord(field, word, options, new NGramDistance());
                 default:
-                    return QueryOverSingleWord(parameters, word, new LevenshteinDistance());                                
+                    return QueryOverSingleWord(field, word, options, new LevenshteinDistance());
             }
         }
 
@@ -77,6 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public string End;
             public string Gram;
         }
+
         // Avoiding allocations for string keys that are bounded in the set of potential values. 
         private static readonly GramKeys[] GramsTable;
 
@@ -95,13 +99,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private string[] QueryOverSingleWord<TDistance>(SuggestionQueryServerSide parameters, string word, TDistance sd) 
+        private string[] QueryOverSingleWord<TDistance>(SuggestField suggestField, string word, SuggestionOptions options, TDistance sd)
             where TDistance : IStringDistance
         {
-            float min = parameters.Accuracy.Value;
-            string field = parameters.Field;
-            int numSug = parameters.MaxSuggestions;
-            bool morePopular = parameters.Popularity;
+            var min = options.Accuracy ?? SuggestionOptions.DefaultAccuracy;
+            var field = suggestField.Name;
+            var pageSize = options.PageSize;
+            var morePopular = options.Popularity;
 
             int lengthWord = word.Length;
 
@@ -125,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var table = GramsTable;
             for (; ng <= max; ng++)
-            {                
+            {
                 string[] grams = FormGrams(word, ng);
 
                 if (grams.Length == 0)
@@ -151,13 +155,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            int maxHits = 10 * numSug;
+            int maxHits = 10 * pageSize;
 
             //    System.out.println("Q: " + query);
             ScoreDoc[] hits = _searcher.Search(query, null, maxHits, _state).ScoreDocs;
 
             //    System.out.println("HITS: " + hits.length());
-            var queue = new SuggestWordQueue(numSug);
+            var queue = new SuggestWordQueue(pageSize);
 
             // go thru more than 'maxr' matches in case the distance filter triggers
             int stop = Math.Min(hits.Length, maxHits);
@@ -190,7 +194,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 queue.InsertWithOverflow(suggestedWord);
-                if (queue.Size() == numSug)
+                if (queue.Size() == pageSize)
                 {
                     // if queue full, maintain the minScore score
                     min = queue.Top().Score;
@@ -260,26 +264,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return r;
         }
 
-        private string[] QueryOverMultipleWords(SuggestionQueryServerSide parameters, string queryText)
+        private string[] QueryOverMultipleWords(SuggestField field, List<string> words, SuggestionOptions options)
         {
-            parameters.Popularity = false;
-            var individualTerms = queryText.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            options.Popularity = false;
 
             var result = new HashSet<string>();
 
-            var currentMaxSuggestions = parameters.MaxSuggestions;            
-            foreach (var term in individualTerms)
+            var pageSize = options.PageSize;
+            foreach (var term in words)
             {
-                if (currentMaxSuggestions <= 0)
+                if (pageSize <= 0)
                     break;
 
-                foreach (var suggestion in QueryOverSingleWord(parameters, term))
+                foreach (var suggestion in QueryOverSingleWord(field, term, options))
                 {
                     if (result.Add(suggestion) == false)
                         continue;
 
-                    currentMaxSuggestions--;
-                    if (currentMaxSuggestions <= 0)
+                    pageSize--;
+                    if (pageSize <= 0)
                         break;
                 }
             }

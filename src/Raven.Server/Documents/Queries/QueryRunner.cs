@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -87,47 +86,39 @@ namespace Raven.Server.Documents.Queries
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }
 
-        public SuggestionQueryResultServerSide ExecuteSuggestionQuery(SuggestionQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public async Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            // Check pre-requisites for the query to happen. 
-
-            if (string.IsNullOrWhiteSpace(query.Term))
-                throw new InvalidOperationException("Suggestions queries require a term.");
-
-            if (string.IsNullOrWhiteSpace(query.Field))
-                throw new InvalidOperationException("Suggestions queries require a field.");
+            if (query.Metadata.IsDynamic)
+                throw new InvalidQueryException("Suggestion query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
             var sw = Stopwatch.StartNew();
 
-            // Check definition for the index. 
+            if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
+                throw new InvalidQueryException("Suggestion query must have one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
 
-            var index = GetIndex(query.IndexName);
+            var selectField = (SuggestField)query.Metadata.SelectFields[0];
+
+            var index = GetIndex(query.Metadata.IndexName);
+
             var indexDefinition = index.GetIndexDefinition();
-            if (indexDefinition == null)
-                throw new InvalidOperationException($"Could not find specified index '{this}'.");
 
-            if (indexDefinition.Fields.TryGetValue(query.Field, out IndexFieldOptions field) == false)
-                throw new InvalidOperationException($"Index '{this}' does not have a field '{query.Field}'.");
+            if (indexDefinition.Fields.TryGetValue(selectField.Name, out IndexFieldOptions field) == false)
+                throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have a field '{selectField.Name}'.");
 
             if (field.Suggestions == null)
-                throw new InvalidOperationException($"Index '{this}' does not have suggestions configured for field '{query.Field}'.");
+                throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' does not have suggestions configured for field '{selectField.Name}'.");
 
             if (field.Suggestions.Value == false)
-                throw new InvalidOperationException($"Index '{this}' have suggestions explicitly disabled for field '{query.Field}'.");
+                throw new InvalidOperationException($"Index '{query.Metadata.IndexName}' have suggestions explicitly disabled for field '{selectField.Name}'.");
 
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
                 if (etag == existingResultEtag.Value)
-                    return SuggestionQueryResultServerSide.NotModifiedResult;
+                    return SuggestionQueryResult.NotModifiedResult;
             }
 
-            context.OpenReadTransaction();
-
-            var result = index.SuggestionsQuery(query, context, token);
+            var result = await index.SuggestionQuery(query, context, token);
             result.DurationInMs = (int)sw.Elapsed.TotalMilliseconds;
             return result;
         }

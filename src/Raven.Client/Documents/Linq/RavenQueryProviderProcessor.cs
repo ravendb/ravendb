@@ -19,10 +19,12 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using SuggestionOptions = Raven.Client.Documents.Queries.Suggestion.SuggestionOptions;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -105,7 +107,7 @@ namespace Raven.Client.Documents.Linq
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
-            _aliasesToIdPropery  = new Dictionary<string, string>();
+            _aliasesToIdPropery = new Dictionary<string, string>();
             _loadAliasesMovedToOutputFuction = new HashSet<string>();
         }
 
@@ -1077,6 +1079,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     VisitGroupBy(((UnaryExpression)expression.Arguments[1]).Operand, behavior);
                     break;
+                case nameof(LinqExtensions.Suggest):
+                    VisitExpression(expression.Arguments[0]);
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var suggestFieldName);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var suggestTerms);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var suggestOptions);
+
+                    if (suggestTerms is string suggestTerm)
+                        _documentQuery.Suggest(suggestFieldName as string, suggestTerm, suggestOptions as SuggestionOptions);
+                    else if (suggestTerms is string[] suggestTermsArray)
+                        _documentQuery.Suggest(suggestFieldName as string, suggestTermsArray, suggestOptions as SuggestionOptions);
+                    break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
@@ -1913,15 +1927,15 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             var name = GetSelectPath(expression.Members[1]);
             var parameter = expression?.Arguments[0] as ParameterExpression;
-            
+
             if (_fromAlias == null)
             {
                 AddFromAlias(parameter?.Name);
             }
-            
+
             if (IsRaw(expression, name)) 
                 return;
-            
+
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
                 new JavascriptCompilationOptions(
@@ -2557,7 +2571,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 throw new ArgumentException("Could not understand expression: " + expression, e);
             }
-            catch (NotSupportedException e) 
+            catch (NotSupportedException e)
                 // we filter this so we'll get better errors
                 when (e.HelpLink != "DoNotWrap")
             {

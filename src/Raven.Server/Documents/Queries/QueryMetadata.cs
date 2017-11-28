@@ -13,8 +13,10 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Suggestion;
 using Sparrow;
 using Sparrow.Json;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
@@ -63,6 +65,8 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsGroupBy;
 
         public bool IsFacet { get; private set; }
+
+        public bool IsSuggest { get; private set; }
 
         public bool IsMoreLikeThis { get; private set; }
 
@@ -631,12 +635,18 @@ namespace Raven.Server.Documents.Queries
                 if (IsFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(ve, parameters);
 
+                if (IsSuggest)
+                    throw new InvalidOperationException("TODO ppekrol");
+
                 return SelectField.CreateValue(ve.Token, alias, ve.Value);
             }
             if (expression is FieldExpression fe)
             {
                 if (IsFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(fe, parameters);
+
+                if (IsSuggest)
+                    throw new InvalidOperationException("TODO ppekrol");
 
                 if (fe.IsQuoted && fe.Compound.Count == 1)
                     return SelectField.CreateValue(fe.Compound[0], alias, ValueTokenType.String);
@@ -652,6 +662,9 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (IsFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
+
+                        if (IsSuggest)
+                            throw new InvalidOperationException("TODO ppekrol");
 
                         var args = new SelectField[me.Arguments.Count];
                         for (int i = 0; i < me.Arguments.Count; i++)
@@ -689,9 +702,28 @@ namespace Raven.Server.Documents.Queries
                         if (IsDistinct)
                             ThrowFacetQueryCannotBeDistinct(parameters);
 
+                        if (IsSuggest)
+                            ThrowFacetQueryCannotBeSuggest(parameters);
+
                         IsFacet = true;
 
                         return CreateFacet(me, alias, parameters);
+                    }
+
+                    if (string.Equals("suggest", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (IsGroupBy)
+                            throw new InvalidOperationException("TODO ppekrol");
+
+                        if (IsDistinct)
+                            throw new InvalidOperationException("TODO ppekrol");
+
+                        if (IsFacet)
+                            throw new InvalidOperationException("TODO ppekrol");
+
+                        IsSuggest = true;
+
+                        return CreateSuggest(me, alias, parameters);
                     }
 
                     if (IsGroupBy == false)
@@ -709,6 +741,9 @@ namespace Raven.Server.Documents.Queries
 
                 if (IsFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(expression, parameters);
+
+                if (IsSuggest)
+                    throw new InvalidOperationException("TODO ppekrol");
 
                 QueryFieldName fieldName = null;
 
@@ -740,6 +775,37 @@ namespace Raven.Server.Documents.Queries
             }
             ThrowUnhandledExpressionTypeInSelect(expression.Type.ToString(), QueryText, parameters);
             return null; // never hit
+        }
+
+        private SuggestField CreateSuggest(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
+        {
+            if (expression.Arguments.Count < 2)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            if (expression.Arguments.Count > 2)
+                throw new InvalidOperationException("TODO ppekrol");
+
+            var result = new SuggestField();
+
+            var name = ExtractFieldNameFromArgument(expression.Arguments[0], "suggest", parameters, QueryText);
+
+            if (expression.Arguments[1] is ValueExpression termExpression)
+                result.AddTerm(termExpression.Token, termExpression.Value);
+            else
+                throw new InvalidOperationException("TODO ppekrol");
+
+            if (expression.Arguments.Count == 3)
+            {
+                if (expression.Arguments[2] is ValueExpression optionsExpression)
+                    result.AddOptions(termExpression.Token, termExpression.Value);
+                else
+                    throw new InvalidOperationException("TODO ppekrol");
+            }
+
+            result.Name = name;
+            result.Alias = alias;
+
+            return result;
         }
 
         private FacetField CreateFacet(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
@@ -1058,6 +1124,11 @@ namespace Raven.Server.Documents.Queries
         private void ThrowFacetQueryCannotBeDistinct(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Cannot use SELECT DISTINCT in a facet query", QueryText, parameters);
+        }
+
+        private void ThrowFacetQueryCannotBeSuggest(BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Cannot use SELECT suggest() in a facet query", QueryText, parameters);
         }
 
         private void ThrowInvalidNumberOfArgumentsOfFacetAggregation(FacetAggregation method, int expected, int got, BlittableJsonReaderObject parameters)
@@ -1608,7 +1679,7 @@ namespace Raven.Server.Documents.Queries
 
             if (argument is ValueExpression value) // escaped string might go there
                 return new QueryFieldName(value.Token, value.Value == ValueTokenType.String);
-            
+
             if (argument is MethodExpression method && string.Equals(method.Name, Constants.Documents.Indexing.Fields.DocumentIdMethodName, StringComparison.OrdinalIgnoreCase)) //id property might be written as id() or id(<alias>)
                 return new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false);
 

@@ -7,6 +7,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Queries.Suggestion;
 
 namespace Raven.Client.Documents.Session
 {
@@ -144,5 +145,13 @@ namespace Raven.Client.Documents.Session
         IAsyncAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
 
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey);
+
+        IAsyncSuggestionDocumentQuery<T> Suggest(Expression<Func<T, object>> path, string term, SuggestionOptions options = null);
+
+        IAsyncSuggestionDocumentQuery<T> Suggest(string fieldName, string term, SuggestionOptions options = null);
+
+        IAsyncSuggestionDocumentQuery<T> Suggest(Expression<Func<T, object>> path, string[] terms, SuggestionOptions options = null);
+
+        IAsyncSuggestionDocumentQuery<T> Suggest(string fieldName, string[] terms, SuggestionOptions options = null);
     }
 }

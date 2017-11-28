@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                 {
                     var result = session
                         .Query<Product, Products_ByName>()
-                        .Suggest(new SuggestionQuery
+                        .Suggest(new SuggestionQueryOld
                         {
                             Field = "Name",
                             Term = "<<chaig tof>>",

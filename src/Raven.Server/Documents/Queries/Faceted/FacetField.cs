@@ -7,7 +7,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries
+namespace Raven.Server.Documents.Queries.Faceted
 {
     public class FacetField : SelectField
     {
@@ -60,7 +60,11 @@ namespace Raven.Server.Documents.Queries
             else
                 throw new InvalidOperationException($"Unknown options type '{_optionsType}'.");
 
-            return _options = (FacetOptions)EntityToBlittable.ConvertToEntity(typeof(FacetOptions), "facet/options", optionsJson, DocumentConventions.Default);
+            var options = (FacetOptions)EntityToBlittable.ConvertToEntity(typeof(FacetOptions), "facet/options", optionsJson, DocumentConventions.Default);
+            if (_optionsType == AST.ValueTokenType.String)
+                _options = options;
+
+            return options;
         }
 
         public void AddAggregation(FacetAggregation aggregation, QueryFieldName name)

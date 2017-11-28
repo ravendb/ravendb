@@ -6,6 +6,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Queries.Suggestion;
 
 namespace Raven.Client.Documents.Session
 {
@@ -361,5 +362,9 @@ namespace Raven.Client.Documents.Session
         void AddFromAliasToWhereTokens(string fromAlias);
 
         string LoadParameter(object id);
+
+        void Suggest(string fieldName, string term, SuggestionOptions options = null);
+
+        void Suggest(string fieldName, string[] terms, SuggestionOptions options = null);
     }
 }

@@ -62,7 +62,8 @@ namespace SlowTests.Tests.Suggestions
                 {
                     var suggestionQueryResult = session.Query<User>("Test")
                         .Where(x => x.Name == "Oren")
-                        .Suggest(new SuggestionQuery
+                        .Suggest(x => x.Name, "Oren")
+                        .Suggest(new SuggestionQueryOld
                         {
                             MaxSuggestions = 10
                         });
@@ -101,7 +102,7 @@ namespace SlowTests.Tests.Suggestions
                     var suggestionQueryResult = s.Query<User>("test")
                         .Where(x => x.Name == "Orin")
                         .Where(x => x.Email == "whatever")
-                        .Suggest(new SuggestionQuery { Field = "Name", Term = "Orin" });
+                        .Suggest(new SuggestionQueryOld { Field = "Name", Term = "Orin" });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -120,7 +121,7 @@ namespace SlowTests.Tests.Suggestions
                     var suggestionQueryResult = session.Query<User>("test")
                         .Where(x => x.Email == "whatever")
                         .Where(x => x.Name == "Orin")
-                        .Suggest(new SuggestionQuery { Field = "Name", Term = "Orin" });
+                        .Suggest(new SuggestionQueryOld { Field = "Name", Term = "Orin" });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -138,7 +139,7 @@ namespace SlowTests.Tests.Suggestions
                 {
                     var suggestionQueryResult = s.Query<User>("test")
                         .Where(x => x.Name == "Orin")
-                        .Suggest(new SuggestionQuery { Accuracy = 0.4f });
+                        .Suggest(new SuggestionQueryOld { Accuracy = 0.4f });
 
                     Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
                     Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
@@ -156,7 +157,7 @@ namespace SlowTests.Tests.Suggestions
                 {
                     var suggestionQueryResult = session.Query<User>("Test")
                         .Where(x => x.Name == "Oern") // intentional typo
-                        .Suggest(new SuggestionQuery
+                        .Suggest(new SuggestionQueryOld
                         {
                             MaxSuggestions = 10,
                             Accuracy = 0.2f,
@@ -191,7 +192,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = store.OpenSession())
                 {
                     var suggestions = session.Query<User, Users_ByName> ()
-                                                    .Suggest(new SuggestionQuery
+                                                    .Suggest(new SuggestionQueryOld
                                                     {
                                                         Field = "Name",
                                                         Term = "<<johne davi>>",
