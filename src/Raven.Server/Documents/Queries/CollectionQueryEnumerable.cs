@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Queries
 
                 var idsRetriever = new RetrieveDocumentIdsVisitor(resultsRetriever, query.Metadata, _context.Allocator);
 
-                idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
+                idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters, isNegated:false);
                 
                 return (idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList() , idsRetriever.StartsWith);
             }
@@ -340,12 +340,12 @@ namespace Raven.Server.Documents.Queries
                     _allocator = allocator;
                 }
 
-                public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
+                public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters, bool isNegated)
                 {
-                    VisitFieldToken(leftSide, rightSide, parameters, operatorType);
+                    VisitFieldToken(leftSide, rightSide, parameters, operatorType, isNegated);
                 }
 
-                public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType)
+                public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType, bool isNegated)
                 {
                     if (fieldName is MethodExpression me)
                     {
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
+                public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters, bool isNegated)
                 {
                     if (fieldName is MethodExpression me && me.Name.Equals("id") && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
                     {
@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
+                public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters, bool isNegated)
                 {
                     if (fieldName is MethodExpression me && me.Name.Equals("id"))
                     {
@@ -396,16 +396,16 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                public override void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+                public override void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters, bool isNegated)
                 {
                     var expression = arguments[arguments.Count - 1];
                     if (expression is BinaryExpression be && be.Operator == OperatorType.Equal)
                     {
-                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters, be.Operator);                        
+                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters, be.Operator, isNegated);                        
                     }
                     else if (expression is InExpression ie)
                     {
-                        VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
+                        VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters, isNegated);
                     }
                     else if (string.Equals(name,"startsWith", StringComparison.OrdinalIgnoreCase))
                     {
