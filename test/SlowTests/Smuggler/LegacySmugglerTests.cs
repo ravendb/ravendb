@@ -162,7 +162,7 @@ namespace SlowTests.Smuggler
                     Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
                     Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
 
-                    var revisions = session.Advanced.GetRevisionsFor<User>("users/1");
+                    var revisions = session.Advanced.Revisions.GetFor<User>("users/1");
                     Assert.Equal(4, revisions.Count);
 
                     for (int i = 0; i <= 3; i++)

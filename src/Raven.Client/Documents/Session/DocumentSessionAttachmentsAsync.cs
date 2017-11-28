@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
+// <copyright file="DocumentSessionAttachmentsAsync.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Implements Unit of Work for accessing the RavenDB server
     /// </summary>
-    public class DocumentSessionAttachmentsAsync : DocumentSessionAttachmentsBase, IAsyncAttachmentsSessionOperations
+    public class DocumentSessionAttachmentsAsync : DocumentSessionAttachmentsBase, IAttachmentsSessionOperationsAsync
     {
         public DocumentSessionAttachmentsAsync(InMemoryDocumentSessionOperations session) : base(session)
         {

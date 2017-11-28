@@ -8,21 +8,20 @@ namespace Raven.Client.Documents.Session
 {
     public class AdvancedSessionExtentionBase
     {
-        private readonly InMemoryDocumentSessionOperations _session;
-
         protected AdvancedSessionExtentionBase(InMemoryDocumentSessionOperations session)
         {
-            _session = session;
-            DocumentsByEntity = _session.DocumentsByEntity;
-            RequestExecutor = _session.RequestExecutor;
-            SessionInfo = _session.SessionInfo;
-            Context = _session.Context;
-            DocumentStore = _session.DocumentStore;
-            DeferredCommandsDictionary = _session.DeferredCommandsDictionary;
-            DeletedEntities = _session.DeletedEntities;
-            DocumentsById = _session.DocumentsById;
+            Session = session;
+            DocumentsByEntity = Session.DocumentsByEntity;
+            RequestExecutor = Session.RequestExecutor;
+            SessionInfo = Session.SessionInfo;
+            Context = Session.Context;
+            DocumentStore = Session.DocumentStore;
+            DeferredCommandsDictionary = Session.DeferredCommandsDictionary;
+            DeletedEntities = Session.DeletedEntities;
+            DocumentsById = Session.DocumentsById;
         }
 
+        protected InMemoryDocumentSessionOperations Session { get; }
         protected Dictionary<object, DocumentInfo> DocumentsByEntity { get; }
         protected RequestExecutor RequestExecutor { get; }
         protected SessionInfo SessionInfo { get; }
@@ -35,7 +34,7 @@ namespace Raven.Client.Documents.Session
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Defer(ICommandData command, params ICommandData[] commands)
         {
-            _session.Defer(command, commands);
+            Session.Defer(command, commands);
         }
     }
 }
