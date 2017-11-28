@@ -1546,9 +1546,9 @@ namespace Raven.Server.Documents.Indexes
                 foreach (var collection in Collections)
                 {
                     var collectionStats = stats.Collections[collection];
-                    
-                    var lastEtags = GetLastEtags(collection, 
-                        collectionStats.LastProcessedDocumentEtag, 
+
+                    var lastEtags = GetLastEtags(collection,
+                        collectionStats.LastProcessedDocumentEtag,
                         collectionStats.LastProcessedTombstoneEtag);
 
                     var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
@@ -1974,31 +1974,75 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual SuggestionQueryResultServerSide SuggestionsQuery(SuggestionQueryServerSide query, DocumentsOperationContext documentsContext,
-            OperationCancelToken token)
+        public virtual async Task<SuggestionQueryResult> SuggestionQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
 
+            if (State == IndexState.Idle)
+                SetState(IndexState.Normal);
+
+            MarkQueried(DocumentDatabase.Time.GetUtcNow());
+            AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
+
             using (var marker = MarkQueryAsRunning(query, token))
             {
-                AssertIndexState();
-                marker.HoldLock();
+                var result = new SuggestionQueryResult();
 
-                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-                using (var tx = indexContext.OpenReadTransaction())
+                var queryDuration = Stopwatch.StartNew();
+                AsyncWaitForIndexing wait = null;
+
+                while (true)
                 {
-                    var result = new SuggestionQueryResultServerSide();
+                    AssertIndexState();
+                    marker.HoldLock();
 
-                    var isStale = IsStale(documentsContext, indexContext);
-
-                    FillSuggestionQueryResult(result, isStale, documentsContext, indexContext);
-
-                    using (var reader = IndexPersistence.OpenSuggestionIndexReader(tx.InnerTransaction, query.Field))
+                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
-                        result.Suggestions = reader.Suggestions(query, token.Token);
-                    }
+                        // we take the awaiter _before_ the indexing transaction happens, 
+                        // so if there are any changes, it will already happen to it, and we'll 
+                        // query the index again. This is important because of: 
+                        // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
+                        var frozenAwaiter = GetIndexingBatchAwaiter();
+                        using (var indexTx = indexContext.OpenReadTransaction())
+                        {
+                            documentsContext.OpenReadTransaction();
+                            // we have to open read tx for mapResults _after_ we open index tx
 
-                    return result;
+                            if (query.WaitForNonStaleResults && query.CutoffEtag == null)
+                                query.CutoffEtag =
+                                    Collections.Max(
+                                        x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+
+                            var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+
+                            if (WillResultBeAcceptable(isStale, query, wait) == false)
+                            {
+                                documentsContext.CloseTransaction();
+                                Debug.Assert(query.WaitForNonStaleResultsTimeout != null);
+
+                                if (wait == null)
+                                    wait = new AsyncWaitForIndexing(queryDuration,
+                                        query.WaitForNonStaleResultsTimeout.Value, this);
+
+                                marker.ReleaseLock();
+
+                                await wait.WaitForIndexingAsync(frozenAwaiter).ConfigureAwait(false);
+                                continue;
+                            }
+
+                            FillSuggestionQueryResult(result, isStale, documentsContext, indexContext);
+
+                            documentsContext.CloseTransaction();
+
+                            var suggestField = (SuggestField)query.Metadata.SelectFields[0];
+                            using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
+                            {
+                                result.Results.Add(reader.Suggestions(query, suggestField, documentsContext, token.Token));
+                                result.TotalResults = result.Results.Count;
+                                return result;
+                            }
+                        }
+                    }
                 }
             }
         }

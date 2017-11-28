@@ -345,7 +345,7 @@ namespace SlowTests.Core.Commands
 
                 using (var session = store.OpenSession())
                 {
-                    var suggestions = session.Query<User, Users_ByName>().Suggest(new SuggestionQuery()
+                    var suggestions = session.Query<User, Users_ByName>().Suggest(new SuggestionQueryOld()
                     {
                         Field = "Name",
                         Term = "<<johne davi>>",

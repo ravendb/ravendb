@@ -41,6 +41,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsFacet;
 
+        public bool IsSuggest;
+
         protected SelectField()
         {
 

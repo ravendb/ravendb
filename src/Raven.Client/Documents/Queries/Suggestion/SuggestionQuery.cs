@@ -1,81 +1,104 @@
-//-----------------------------------------------------------------------
-// <copyright file="SuggestionQuery.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Suggestion
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    public class SuggestionQuery
+    internal class SuggestionQuery<T> : SuggestionQueryBase, ISuggestionQuery<T>
     {
-        public static float DefaultAccuracy = 0.5f;
+        private readonly IQueryable<T> _source;
 
-        public static int DefaultMaxSuggestions = 15;
-
-        public static StringDistanceTypes DefaultDistance = StringDistanceTypes.Levenshtein;
-
-        /// <summary>
-        /// Create a new instance of <seealso cref="SuggestionQuery"/>
-        /// </summary>
-        public SuggestionQuery()
+        public SuggestionQuery(IQueryable<T> source) 
+            : base(((IRavenQueryInspector)source).Session)
         {
-            MaxSuggestions = DefaultMaxSuggestions;
-            Popularity = true;
+            _source = source;
         }
 
-        public string IndexName { get; set; }
-
-        /// <summary>
-        /// Term is what the user likely entered, and will used as the basis of the suggestions.
-        /// </summary>
-        public string Term { get; set; }
-
-        /// <summary>
-        /// Field to be used in conjunction with the index.
-        /// </summary>
-        public string Field { get; set; }
-
-        /// <summary>
-        /// Maximum number of suggestions to return.
-        /// <para>Value:</para>
-        /// <para>Default value is 15.</para>
-        /// </summary>
-        /// <value>Default value is 15.</value>
-        public int MaxSuggestions { get; set; }
-
-        /// <summary>
-        /// String distance algorithm to use. If <c>null</c> then default algorithm is used (Levenshtein).
-        /// </summary>
-        public StringDistanceTypes? Distance { get; set; }
-
-        /// <summary>
-        /// Suggestion accuracy. If <c>null</c> then default accuracy is used (0.5f).
-        /// </summary>
-        public float? Accuracy { get; set; }
-
-        /// <summary>
-        /// Whether to return the terms in order of popularity
-        /// </summary>
-        public bool Popularity { get; set; }
-
-        public ulong GetQueryHash(JsonOperationContext ctx)
+        protected override IndexQuery GetIndexQuery(bool isAsync)
         {
-            using (var hasher = new QueryHashCalculator(ctx))
+            var inspector = (IRavenQueryInspector)_source;
+            return inspector.GetIndexQuery(isAsync);
+        }
+
+        protected override void InvokeAfterQueryExecuted(QueryResult result)
+        {
+            var provider = (RavenQueryProvider<T>)_source.Provider;
+            provider.InvokeAfterQueryExecuted(result);
+        }
+    }
+
+    internal abstract class SuggestionQueryBase
+    {
+        private readonly InMemoryDocumentSessionOperations _session;
+
+        protected SuggestionQueryBase(InMemoryDocumentSessionOperations session)
+        {
+            _session = session;
+        }
+
+        public Dictionary<string, SuggestionResult> Execute()
+        {
+            var command = GetCommand(isAsync: false);
+
+            _session.IncrementRequestCount();
+            _session.RequestExecutor.Execute(command, _session.Context);
+
+            return ProcessResults(command.Result, _session.Conventions);
+        }
+
+        public async Task<Dictionary<string, SuggestionResult>> ExecuteAsync()
+        {
+            var command = GetCommand(isAsync: true);
+
+            _session.IncrementRequestCount();
+            await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
+
+            return ProcessResults(command.Result, _session.Conventions);
+        }
+
+        private static Dictionary<string, SuggestionResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
+        {
+            var results = new Dictionary<string, SuggestionResult>();
+            foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
-                hasher.Write(Popularity);
-                hasher.Write(Accuracy);
-                hasher.Write((int?)Distance);
-                hasher.Write(MaxSuggestions);
-                hasher.Write(Field);
-                hasher.Write(Term);
-                hasher.Write(IndexName);
-                return hasher.GetHash();
+                var suggestionResult = (SuggestionResult)EntityToBlittable.ConvertToEntity(typeof(SuggestionResult), "suggestion/result", result, conventions);
+                results[suggestionResult.Name] = suggestionResult;
             }
+
+            return results;
+        }
+
+        public Lazy<Dictionary<string, SuggestionResult>> ExecuteLazy(Action<string[]> onEval = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Lazy<Task<Dictionary<string, SuggestionResult>>> ExecuteLazyAsync(Action<string[]> onEval = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected abstract IndexQuery GetIndexQuery(bool isAsync);
+
+        protected abstract void InvokeAfterQueryExecuted(QueryResult result);
+
+        private QueryCommand GetCommand(bool isAsync)
+        {
+            var iq = GetIndexQuery(isAsync);
+
+            return new QueryCommand(_session.Conventions, iq);
+        }
+
+        public override string ToString()
+        {
+            var iq = GetIndexQuery(_session is AsyncDocumentSession);
+            return iq.ToString();
         }
     }
 }

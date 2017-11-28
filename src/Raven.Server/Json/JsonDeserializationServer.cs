@@ -22,7 +22,6 @@ using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Studio;
 using Raven.Server.ServerWide.BackgroundTasks;
 using Raven.Server.ServerWide.Maintenance;
@@ -117,8 +116,6 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexQueryServerSide> IndexQuery = GenerateJsonDeserializationRoutine<IndexQueryServerSide>();
-
-        public static readonly Func<BlittableJsonReaderObject, SuggestionQueryServerSide> SuggestionQuery = GenerateJsonDeserializationRoutine<SuggestionQueryServerSide>();
 
         public static readonly Func<BlittableJsonReaderObject, SingleDatabaseMigrationConfiguration> SingleDatabaseMigrationConfiguration = GenerateJsonDeserializationRoutine<SingleDatabaseMigrationConfiguration>();
 

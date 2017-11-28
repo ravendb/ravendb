@@ -27,8 +27,6 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -230,125 +228,53 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static SuggestionQueryResult Suggest(this IQueryable queryable)
+        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string term, SuggestionOptions options = null)
         {
-            return Suggest(queryable, new SuggestionQuery());
+            return source.Suggest(path.ToPropertyPath(), term, options);
         }
 
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static SuggestionQueryResult Suggest(this IQueryable source, SuggestionQuery query)
+        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string[] terms, SuggestionOptions options = null)
         {
-            var inspector = source as IRavenQueryInspector;
-            if (inspector == null)
-                throw new ArgumentException("You can only use Raven Queryable with suggests");
-
-            SetSuggestionQueryParameters(inspector, query);
-
-            var operation = new SuggestionOperation(inspector.Session, query);
-
-            var command = operation.CreateRequest();
-            inspector.Session.RequestExecutor.Execute(command, inspector.Session.Context);
-
-            var result = command.Result;
-            operation.SetResult(result);
-
-            return operation.Complete();
-        }
-
-        /// <summary>
-        /// Lazy Suggest alternative values for the queried term
-        /// </summary>
-        public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable queryable)
-        {
-            return SuggestLazy(queryable, new SuggestionQuery());
-        }
-
-        /// <summary>
-        /// Lazy Suggest alternative values for the queried term
-        /// </summary>
-        public static Lazy<SuggestionQueryResult> SuggestLazy(this IQueryable source, SuggestionQuery query)
-        {
-            var inspector = source as IRavenQueryInspector;
-            if (inspector == null)
-                throw new ArgumentException("You can only use Raven Queryable with suggests");
-
-            SetSuggestionQueryParameters(inspector, query);
-
-            var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
-
-            var documentSession = (DocumentSession)inspector.Session;
-            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
-        }
-
-        private static void SetSuggestionQueryParameters(IRavenQueryInspector inspector, SuggestionQuery query, bool isAsync = false)
-        {
-            query.IndexName = inspector.IndexName;
-
-            if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
-                return;
-
-            var lastEqualityTerm = inspector.GetLastEqualityTerm(isAsync);
-            if (lastEqualityTerm.Key == null)
-                throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
-
-            query.Field = lastEqualityTerm.Key;
-            query.Term = lastEqualityTerm.Value.ToString();
+            return source.Suggest(path.ToPropertyPath(), terms, options);
         }
 
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static async Task<SuggestionQueryResult> SuggestAsync(this IQueryable source, SuggestionQuery query, CancellationToken token = default(CancellationToken))
+        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, string fieldName, string term, SuggestionOptions options = null)
         {
-            var inspector = source as IRavenQueryInspector;
-            if (inspector == null)
-                throw new ArgumentException("You can only use Raven Queryable with suggests");
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null; //TODO [ppekrol]
+#endif
 
-            SetSuggestionQueryParameters(inspector, query, isAsync: true);
+            var expression = ConvertExpressionIfNecessary(source);
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(term), Expression.Constant(options ?? SuggestionOptions.Default)));
 
-            var operation = new SuggestionOperation(inspector.Session, query);
-
-            var command = operation.CreateRequest();
-            await inspector.Session.RequestExecutor.ExecuteAsync(command, inspector.Session.Context, token).ConfigureAwait(false);
-
-            var result = command.Result;
-            operation.SetResult(result);
-
-            return operation.Complete();
+            return new SuggestionQuery<T>(source);
         }
 
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static Task<SuggestionQueryResult> SuggestAsync(this IQueryable queryable, CancellationToken token = default(CancellationToken))
+        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, string fieldName, string[] terms, SuggestionOptions options = null)
         {
-            return SuggestAsync(queryable, new SuggestionQuery(), token);
-        }
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null; //TODO [ppekrol]
+#endif
 
-        /// <summary>
-        /// LazyAsync Suggest alternative values for the queried term
-        /// </summary>
-        public static Lazy<Task<SuggestionQueryResult>> SuggestLazyAsync(this IQueryable queryable)
-        {
-            return SuggestLazyAsync(queryable, new SuggestionQuery());
-        }
+            var expression = ConvertExpressionIfNecessary(source);
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(terms), Expression.Constant(options ?? SuggestionOptions.Default)));
 
-        /// <summary>
-        /// LazyAsync Suggest alternative values for the queried term
-        /// </summary>
-        public static Lazy<Task<SuggestionQueryResult>> SuggestLazyAsync(this IQueryable source, SuggestionQuery query)
-        {
-            var inspector = source as IRavenQueryInspector;
-            if (inspector == null)
-                throw new ArgumentException("You can only use Raven Queryable with suggests");
-
-            SetSuggestionQueryParameters(inspector, query, true);
-
-            var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
-            var documentSession = (AsyncDocumentSession)inspector.Session;
-            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+            return new SuggestionQuery<T>(source);
         }
 
         /// <summary>

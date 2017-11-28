@@ -59,6 +59,23 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, out int numberOfResults)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.TotalResults));
+            writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
+            writer.WriteComma();
+
+            writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
+
+            writer.WriteEndObject();
+        }
+
         public static void WriteFacetedQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetedQueryResult result, out int numberOfResults)
         {
             writer.WriteStartObject();
@@ -72,6 +89,19 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteSuggestionResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionResult result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.Name));
+            writer.WriteString(result.Name);
+            writer.WriteComma();
+
+            writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
 
             writer.WriteEndObject();
         }
@@ -219,39 +249,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResultServerSide result)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(result.DurationInMs));
-            writer.WriteInteger(result.DurationInMs);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.IndexName));
-            writer.WriteString(result.IndexName);
-            writer.WriteComma();
-
-            writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.IndexTimestamp));
-            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.LastQueryTime));
-            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.IsStale));
-            writer.WriteBool(result.IsStale);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(result.ResultEtag));
-            writer.WriteInteger(result.ResultEtag);
-
-            writer.WriteEndObject();
-        }
-
         public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, bool partial = false)
         {
             if (partial == false)
@@ -279,6 +276,13 @@ namespace Raven.Server.Json
                 numberOfResults = facets.Count;
 
                 writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
+                writer.WriteComma();
+            }
+            else if (results is List<SuggestionResult> suggestions)
+            {
+                numberOfResults = suggestions.Count;
+
+                writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
                 writer.WriteComma();
             }
             else
@@ -1243,3 +1247,4 @@ namespace Raven.Server.Json
         }
     }
 }
+

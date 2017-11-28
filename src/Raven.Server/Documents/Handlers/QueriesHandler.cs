@@ -11,8 +11,6 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Faceted;
-using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -40,14 +38,6 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var operation = GetStringQueryString("op", required: false);
-
-                if (string.Equals(operation, "suggest", StringComparison.OrdinalIgnoreCase))
-                {
-                    Suggest(context, token, HttpMethod.Post);
-                    return;
-                }
-
                 await Query(context, token, HttpMethod.Post).ConfigureAwait(false);
             }
         }
@@ -64,15 +54,6 @@ namespace Raven.Server.Documents.Handlers
                 {
                     await Debug(context, debug, token, HttpMethod.Get);
                     return;
-                }
-
-                var operation = GetStringQueryString("op", required: false);
-
-                if (string.Equals(operation, "suggest", StringComparison.OrdinalIgnoreCase))
-                {
-                    Suggest(context, token, HttpMethod.Get);
-                    return;
-
                 }
 
                 await Query(context, token, HttpMethod.Get).ConfigureAwait(false);
@@ -112,6 +93,12 @@ namespace Raven.Server.Documents.Handlers
             if (indexQuery.Metadata.IsFacet)
             {
                 await FacetedQuery(indexQuery, context, token);
+                return;
+            }
+
+            if (indexQuery.Metadata.IsSuggest)
+            {
+                await SuggestQuery(indexQuery, context, token);
                 return;
             }
 
@@ -156,27 +143,11 @@ namespace Raven.Server.Documents.Handlers
             return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
-        private SuggestionQueryServerSide GetSuggestionQuery(JsonOperationContext context, HttpMethod method)
-        {
-            if (method == HttpMethod.Get)
-            {
-                throw new NotImplementedException("RavenDB-8882");
-            }
-
-            var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "suggestion/query");
-
-            // read from cache here
-
-            return SuggestionQueryServerSide.Create(indexQueryJson);
-        }
-
-        private void Suggest(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
+        private async Task SuggestQuery(IndexQueryServerSide indexQuery, DocumentsOperationContext context, OperationCancelToken token)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = GetSuggestionQuery(context, method);
-
-            var result = Database.QueryRunner.ExecuteSuggestionQuery(query, context, existingResultEtag, token);
+            var result = await Database.QueryRunner.ExecuteSuggestionQuery(indexQuery, context, existingResultEtag, token);
             if (result.NotModified)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -185,12 +156,13 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
+            int numberOfResults;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                writer.WriteSuggestionQueryResult(context, result);
+                writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Suggest)} ({query.IndexName})", HttpContext, result.Suggestions.Length, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task Explain(DocumentsOperationContext context, HttpMethod method)
