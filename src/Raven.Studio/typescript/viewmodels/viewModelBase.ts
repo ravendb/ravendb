@@ -31,6 +31,7 @@ class viewModelBase {
     private postboxSubscriptions: Array<KnockoutSubscription> = [];
     static showSplash = ko.observable<boolean>(false);
     private isAttached = false;
+    protected disposed = false;
 
     pluralize = pluralizeHelpers.pluralize;
 
@@ -135,6 +136,7 @@ class viewModelBase {
 
         this.isAttached = true;
         viewModelBase.showSplash(false);
+        this.disposed = true;
     }
 
     protected registerDisposableHandler($element: JQuery, event: string, handler: Function) {
