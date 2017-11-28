@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.Handlers
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["TotalResults"] = Database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
+                    ["TotalResults"] = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
                     [nameof(GetConflictsResult.Results)] = array
                 });
 

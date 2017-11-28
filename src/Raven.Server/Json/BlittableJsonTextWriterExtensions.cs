@@ -428,6 +428,10 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
+            writer.WritePropertyName(nameof(statistics.CountOfTombstones));
+            writer.WriteInteger(statistics.CountOfTombstones);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.CountOfDocumentsConflicts));
             writer.WriteInteger(statistics.CountOfDocumentsConflicts);
             writer.WriteComma();

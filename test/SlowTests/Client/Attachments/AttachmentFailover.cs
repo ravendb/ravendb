@@ -59,7 +59,7 @@ namespace SlowTests.Client.Attachments
                 using (var session = (DocumentSession)store.OpenSession())
                 using (var stream = new BigDummyStream(size))
                 {
-                    session.Advanced.StoreAttachment("users/1", "File", stream, "application/pdf");
+                    session.Advanced.Attachments.Store("users/1", "File", stream, "application/pdf");
 
                     // SaveSession with failover
                     var saveChangesOperation = new BatchOperation(session);
@@ -77,7 +77,7 @@ namespace SlowTests.Client.Attachments
                 }
                 using (var session = store.OpenSession())
                 using (var dummyStream = new BigDummyStream(size))
-                using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
+                using (var attachment = session.Advanced.Attachments.Get("users/1", "File"))
                 {
                     attachment.Stream.CopyTo(dummyStream);
                     Assert.Equal("File", attachment.Details.Name);
@@ -164,7 +164,7 @@ namespace SlowTests.Client.Attachments
 
                 using (var session = store.OpenSession())
                 using (var dummyStream = new BigDummyStream(size))
-                using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
+                using (var attachment = session.Advanced.Attachments.Get("users/1", "File"))
                 {
                     attachment.Stream.CopyTo(dummyStream);
                     Assert.Equal("File", attachment.Details.Name);

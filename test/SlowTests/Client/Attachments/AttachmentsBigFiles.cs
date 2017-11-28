@@ -26,7 +26,7 @@ namespace SlowTests.Client.Attachments
                     var user = new User {Name = "Fitzchak"};
                     session.Store(user, "users/1");
 
-                    session.Advanced.StoreAttachment(user, "big-file", stream);
+                    session.Advanced.Attachments.Store(user, "big-file", stream);
 
                     session.SaveChanges();
                 }
@@ -36,7 +36,7 @@ namespace SlowTests.Client.Attachments
                     var user = session.Load<User>("users/1");
 
                     using (var bigStream = new BigDummyStream(size))
-                    using (var attachment = session.Advanced.GetAttachment(user, "big-file"))
+                    using (var attachment = session.Advanced.Attachments.Get(user, "big-file"))
                     {
                         attachment.Stream.CopyTo(bigStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
@@ -82,7 +82,7 @@ namespace SlowTests.Client.Attachments
                     var user = session.Load<User>("users/1");
 
                     using (var bigStream = new BigDummyStream(size))
-                    using (var attachment = session.Advanced.GetAttachment(user, "huge-file"))
+                    using (var attachment = session.Advanced.Attachments.Get(user, "huge-file"))
                     {
                         attachment.Stream.CopyTo(bigStream);
                         Assert.Contains("A:2", attachment.Details.ChangeVector);
