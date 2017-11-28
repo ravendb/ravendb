@@ -18,7 +18,7 @@ namespace Raven.Server.Extensions
         {
             var processesUsingFiles = GetProcessesUsingFile(path);
             var stringBuilder = new StringBuilder();
-            stringBuilder.Append("The following processing are locking ").Append(path).AppendLine();
+            stringBuilder.Append("The following processes are locking ").Append(path).AppendLine();
             foreach (var processesUsingFile in processesUsingFiles)
             {
                 stringBuilder.Append("\t").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
