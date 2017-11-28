@@ -38,6 +38,12 @@ class menu {
                 if (next.type !== 'leaf') {
                     return result;
                 }
+                
+                const leafItem = (next as leafMenuItem);
+                
+                if (leafItem.alias) {
+                    return result;
+                }
 
                 let route = (next as leafMenuItem).route;
                 if (typeof(route) === 'string') {
