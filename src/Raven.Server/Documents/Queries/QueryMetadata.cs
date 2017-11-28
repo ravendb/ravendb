@@ -104,12 +104,25 @@ namespace Raven.Server.Documents.Queries
             IsCollectionQuery = false;
         }
 
-        public void AddWhereField(QueryFieldName fieldName, BlittableJsonReaderObject parameters, bool search = false, bool exact = false, AutoSpatialOptions spatial = null)
+        public void AddWhereField(QueryFieldName fieldName, 
+            BlittableJsonReaderObject parameters,            
+            bool search = false, 
+            bool exact = false, 
+            AutoSpatialOptions spatial = null,
+            OperatorType? operatorType = null,
+            bool isNegated = false
+            )
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
-            if (IsCollectionQuery && indexFieldName.Equals(QueryFieldName.DocumentId) == false)
+            if (search || exact || spatial != null || operatorType != OperatorType.Equal || (operatorType == OperatorType.Equal && isNegated))
+            {
                 IsCollectionQuery = false;
+            }
+            else if (indexFieldName.Equals(QueryFieldName.DocumentId) == false)
+            {
+                IsCollectionQuery = false;
+            }
 
             IndexFieldNames.Add(indexFieldName);
             WhereFields[indexFieldName] = new WhereField(isFullTextSearch: search, isExactSearch: exact, spatial: spatial);
@@ -159,7 +172,7 @@ namespace Raven.Server.Documents.Queries
                             break;
                     }
                 }
-                new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText).Visit(Query.Where, parameters);
+                new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText).Visit(Query.Where, parameters, isNegated:false);
             }
 
             if (Query.OrderBy != null)
@@ -1098,10 +1111,10 @@ namespace Raven.Server.Documents.Queries
                 return new DisposableAction(() => _insideExact--);
             }
 
-            public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
+            public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters, bool isNegated)
             {
                 if (leftSide is FieldExpression fe)
-                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0, operatorType: operatorType, isNegated: isNegated);
                 if (leftSide is MethodExpression me)
                 {
                     var methodType = QueryMethod.GetMethodType(me.Name);
@@ -1122,24 +1135,24 @@ namespace Raven.Server.Documents.Queries
                             if (rightSide is MethodExpression meRight)
                             {
                                 _metadata.FillIds = new SingleMethodEvaluator(_metadata, meRight, parameters);
-                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0);
+                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType, isNegated: isNegated);
                             }
                             else
                             {
                                 if (rightSide is FieldExpression rfe)
-                                    _metadata.AddWhereField(new QueryFieldName(rfe.FieldValue, rfe.IsQuoted), parameters, exact: _insideExact > 0);
-                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0);
+                                    _metadata.AddWhereField(new QueryFieldName(rfe.FieldValue, rfe.IsQuoted), parameters, exact: _insideExact > 0, operatorType: operatorType, isNegated: isNegated);
+                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType, isNegated: isNegated);
                             }
                             break;
                         case MethodType.Sum:
                         case MethodType.Count:
-                            VisitFieldToken(leftSide, rightSide, parameters, null);
+                            VisitFieldToken(leftSide, rightSide, parameters, null, isNegated);
                             break;
                     }
                 }
             }
 
-            public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType)
+            public override void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType, bool isNegated)
             {
                 if (fieldName is FieldExpression fe)
                     _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
@@ -1149,28 +1162,28 @@ namespace Raven.Server.Documents.Queries
                     switch (methodType)
                     {
                         case MethodType.Id:
-                            _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType, isNegated: isNegated);
                             break;
                         case MethodType.Count:
-                            _metadata.AddWhereField(QueryFieldName.Count, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(QueryFieldName.Count, parameters, exact: _insideExact > 0, isNegated: isNegated);
                             break;
                         case MethodType.Sum:
                             if (me.Arguments != null && me.Arguments[0] is FieldExpression f)
-                                VisitFieldToken(f, value, parameters, operatorType);
+                                VisitFieldToken(f, value, parameters, operatorType, isNegated);
                             break;
                     }
                 }
             }
 
-            public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
+            public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters, bool isNegated)
             {
                 if (fieldName is FieldExpression fe)
                 {
-                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0, isNegated: isNegated);
                 }
                 else if (fieldName is MethodExpression me)
                 {
-                    VisitMethodTokens(me.Name, me.Arguments, parameters);
+                    VisitMethodTokens(me.Name, me.Arguments, parameters, isNegated);
                 }
                 else
                 {
@@ -1192,7 +1205,7 @@ namespace Raven.Server.Documents.Queries
 
             }
 
-            public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
+            public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters, bool isNegated)
             {
                 if (values.Count == 0)
                     return;
@@ -1222,7 +1235,7 @@ namespace Raven.Server.Documents.Queries
                         previousType = valueType;
                 }
                 if (fieldName is FieldExpression fieldExpression)
-                    _metadata.AddWhereField(new QueryFieldName(fieldExpression.FieldValue, fieldExpression.IsQuoted), parameters, exact: _insideExact > 0);
+                    _metadata.AddWhereField(new QueryFieldName(fieldExpression.FieldValue, fieldExpression.IsQuoted), parameters, exact: _insideExact > 0, operatorType: OperatorType.Equal, isNegated: isNegated);
             }
 
             private void ThrowInvalidInValue(BlittableJsonReaderObject parameters)
@@ -1230,7 +1243,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException("In expression arguments must all be values", QueryText, parameters);
             }
 
-            public override void VisitMethodTokens(StringSegment methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
+            public override void VisitMethodTokens(StringSegment methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters, bool isNegated)
             {
                 QueryFieldName fieldName;
 
@@ -1277,9 +1290,9 @@ namespace Raven.Server.Documents.Queries
                                 parameters);
 
                         if (methodType == MethodType.Search || methodType == MethodType.Lucene)
-                            _metadata.AddWhereField(fieldName, parameters, search: true);
+                            _metadata.AddWhereField(fieldName, parameters, search: true, isNegated: isNegated);
                         else
-                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, isNegated: isNegated);
                         break;
                     case MethodType.Exists:
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
@@ -1292,7 +1305,7 @@ namespace Raven.Server.Documents.Queries
                         if (firstArg == null)
                             throw new InvalidQueryException($"Method {methodName}() expects expression , got {arguments[0]}", QueryText, parameters);
 
-                        Visit(firstArg, parameters);
+                        Visit(firstArg, parameters, isNegated);
                         break;
                     case MethodType.Intersect:
                         _metadata.IsIntersect = true;
@@ -1300,7 +1313,7 @@ namespace Raven.Server.Documents.Queries
                         for (var i = 0; i < arguments.Count; i++)
                         {
                             var expressionArgument = arguments[i];
-                            Visit(expressionArgument, parameters);
+                            Visit(expressionArgument, parameters, isNegated);
                         }
                         return;
                     case MethodType.Exact:
@@ -1310,7 +1323,7 @@ namespace Raven.Server.Documents.Queries
                         using (Exact())
                         {
                             var expressionArgument = arguments[0];
-                            Visit(expressionArgument, parameters);
+                            Visit(expressionArgument, parameters, isNegated);
                         }
                         return;
                     case MethodType.Count:
