@@ -31,7 +31,7 @@
                                 <label for="toggleConflicts">Include Conflicts</label>
                             </div>
                             <div class="toggle" data-toggle="tooltip" data-placement="top"  data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
-                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: !$root.activeDatabase().hasRevisionsConfiguration()"/>
+                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: $root.activeDatabase() && !$root.activeDatabase().hasRevisionsConfiguration()"/>
                                 <label for="toggle6">Include Document Revisions</label>
                             </div>
                             
