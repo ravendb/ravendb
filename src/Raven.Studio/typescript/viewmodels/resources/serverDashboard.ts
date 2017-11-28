@@ -580,6 +580,14 @@ class serverDashboard extends viewModelBase {
         this.driveUsageSection.onResize();
     }
     
+    deactivate() {
+        super.deactivate();
+        
+        if (this.liveClient()) {
+            this.liveClient().dispose();
+        }
+    }
+    
     private enableLiveView() {
         this.liveClient(new serverDashboardWebSocketClient(d => this.onData(d)));
     }
