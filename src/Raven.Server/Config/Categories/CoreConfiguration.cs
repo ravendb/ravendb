@@ -37,7 +37,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool RunInMemory { get; set; }
 
-        [Description("The directory for the RavenDB resource.")]
+        [Description("The directory for the RavenDB resource. Relative path will be located under the application base directory.")]
         [DefaultValue(@"Databases/{name}")]
         [ConfigurationEntry("DataDir", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting DataDirectory { get; set; }
