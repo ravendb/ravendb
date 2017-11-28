@@ -18,10 +18,7 @@ namespace Raven.Server.Documents.Queries
         
         public static implicit operator string(QueryFieldName self)
         {
-            if (self == null)
-                return null;
-
-            return self.Value;
+            return self?.Value;
         }
 
         public readonly string Value;
@@ -30,7 +27,7 @@ namespace Raven.Server.Documents.Queries
 
         protected bool Equals(QueryFieldName other)
         {
-            return string.Equals(Value, other.Value, StringComparison.OrdinalIgnoreCase) && IsQuoted == other.IsQuoted;
+            return string.Equals(Value, other.Value) && IsQuoted == other.IsQuoted;
         }
 
         public override bool Equals(object obj)
@@ -48,7 +45,7 @@ namespace Raven.Server.Documents.Queries
         {
             unchecked
             {
-                return ((Value != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Value) : 0) * 397) ^ IsQuoted.GetHashCode();
+                return ((Value != null ? Value.GetHashCode() : 0) * 397) ^ IsQuoted.GetHashCode();
             }
         }
     }

@@ -18,33 +18,33 @@ namespace Raven.Server.Documents.Queries
             QueryText = queryText;
         }
 
-        public void Visit(QueryExpression expression, BlittableJsonReaderObject parameters, bool isNegated)
+        public void Visit(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
             if (expression is TrueExpression)
                 return;
 
             if (expression is FieldExpression f)
             {
-                VisitFieldToken(f, null, parameters, null, isNegated);
+                VisitFieldToken(f, null, parameters, null);
                 return;
             }
 
             if (expression is BetweenExpression between)
             {
-                VisitFieldToken(between.Source, null, parameters,OperatorType.GreaterThanEqual, isNegated);
-                VisitBetween(between.Source, between.Min, between.Max, parameters, isNegated);
+                VisitFieldToken(between.Source, null, parameters,OperatorType.GreaterThanEqual);
+                VisitBetween(between.Source, between.Min, between.Max, parameters);
                 return;
             }
 
             if (expression is InExpression ie)
             {
-                VisitFieldToken(ie.Source, null, parameters, OperatorType.Equal, isNegated);
-                VisitIn(ie.Source, ie.Values, parameters, isNegated);
+                VisitFieldToken(ie.Source, null, parameters, OperatorType.Equal);
+                VisitIn(ie.Source, ie.Values, parameters);
                 return;
             }
             if (expression is MethodExpression me)
             {
-                VisitMethodTokens(me.Name, me.Arguments, parameters, isNegated);
+                VisitMethodTokens(me.Name, me.Arguments, parameters);
                 return;
             }
             
@@ -62,20 +62,20 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    VisitBooleanMethod(be.Left, be.Right, be.Operator, parameters, isNegated);
+                    VisitBooleanMethod(be.Left, be.Right, be.Operator, parameters);
                     return;
                 case OperatorType.NotEqual:
-                    VisitBooleanMethod(be.Left, be.Right, be.Operator, parameters, !isNegated);
+                    VisitBooleanMethod(be.Left, be.Right, be.Operator, parameters);
                     return;
                 case OperatorType.And:                
                 case OperatorType.Or:                
-                    Visit(be.Left, parameters, isNegated);
-                    Visit(be.Right, parameters, isNegated);
+                    Visit(be.Left, parameters);
+                    Visit(be.Right, parameters);
                     break;
                 case OperatorType.AndNot:
                 case OperatorType.OrNot:
-                    Visit(be.Left, parameters, isNegated);
-                    Visit(be.Right, parameters, !isNegated);
+                    Visit(be.Left, parameters);
+                    Visit(be.Right, parameters);
                     break;
                 default:
                     ThrowInvalidOperatorType(expression);
@@ -112,14 +112,14 @@ namespace Raven.Server.Documents.Queries
             return value.Value;
         }
 
-        public abstract void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters, bool isNegated);
+        public abstract void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters);
         
-        public abstract void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType, bool isNegated);
+        public abstract void VisitFieldToken(QueryExpression fieldName, QueryExpression value, BlittableJsonReaderObject parameters, OperatorType? operatorType);
 
-        public abstract void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters, bool isNegated);
+        public abstract void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters);
 
-        public abstract void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters, bool isNegated);
+        public abstract void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters);
 
-        public abstract void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters, bool isNegated);
+        public abstract void VisitMethodTokens(StringSegment name, List<QueryExpression> arguments, BlittableJsonReaderObject parameters);
     }
 }
