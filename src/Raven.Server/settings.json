@@ -1,5 +1,4 @@
 ﻿{
     "ServerUrl": "http://127.0.0.1:8080",
-    "Setup.Mode": "None",
-    "DataDir": "D:/myDirrr/zsebra" 
+    "Setup.Mode": "None"
 }
