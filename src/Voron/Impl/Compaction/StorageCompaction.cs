@@ -381,7 +381,7 @@ namespace Voron.Impl.Compaction
             Report(copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries}/{inputTable.NumberOfEntries} entries.", treeName);
             using (var txw = compactedEnv.WriteTransaction(context))
             {
-                schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, ushort.MaxValue));
+                schema.Create(txw, treeName, Math.Max((ushort)inputTable.ActiveDataSmallSection.NumberOfPages, (ushort)((ushort.MaxValue + 1) / Constants.Storage.PageSize)));
                 txw.Commit(); // always create a table, even if it is empty
             }
 
