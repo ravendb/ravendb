@@ -44,6 +44,15 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             badgeData: collectionsTracker.default.conflictsCount
         }),
         new leafMenuItem({
+            route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
+            moduleId: 'viewmodels/database/query/query',
+            title: 'Query',
+            nav: true,
+            css: 'icon-query',
+            alias: true, 
+            dynamicHash: appUrls.query('')
+        }),
+        new leafMenuItem({
             route: "databases/edit",
             title: "Edit Document",
             moduleId: "viewmodels/database/documents/editDocument",
