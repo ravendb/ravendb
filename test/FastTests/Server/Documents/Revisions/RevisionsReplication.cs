@@ -232,15 +232,15 @@ namespace FastTests.Server.Documents.Revisions
                     Assert.Equal("Fitzchak", users[1].Name);
                     Assert.Equal(null, users[2].Name);
                     Assert.Equal("Fitzchak", users[3].Name);
-                }
 
-                // Can get metadata only
-                dynamic revisions = await store2.Commands().GetRevisionsForAsync(id, metadataOnly: true);
-                Assert.Equal(4, revisions.Count);
-                Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), revisions[0][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision |  DocumentFlags.FromReplication).ToString(), revisions[1][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), revisions[2][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
-                Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisions[3][Constants.Documents.Metadata.Key][Constants.Documents.Metadata.Flags]);
+                    // Can get metadata only
+                    var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(4, revisionsMetadata.Count);
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisionsMetadata[1].GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.DeleteRevision | DocumentFlags.HasRevisions | DocumentFlags.FromReplication).ToString(), revisionsMetadata[2].GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal((DocumentFlags.HasRevisions | DocumentFlags.Revision | DocumentFlags.FromReplication).ToString(), revisionsMetadata[3].GetString(Constants.Documents.Metadata.Flags));
+                }
 
                 await store1.Maintenance.SendAsync(new RevisionsTests.DeleteRevisionsOperation(new AdminRevisionsHandler.Parameters
                 {

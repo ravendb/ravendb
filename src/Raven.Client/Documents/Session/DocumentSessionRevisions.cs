@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
         {
             var operation = new GetRevisionOperation(Session, id, start, pageSize, true);
             var command = operation.CreateRequest();
-            RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
             operation.SetResult(command.Result);
             return operation.GetRevisionsMetadataFor();
         }
