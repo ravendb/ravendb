@@ -1424,7 +1424,12 @@ namespace Raven.Server.Commercial
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                throw new InvalidOperationException($"Couldn't get license support info, repsonse: {responseString}, status code: {response.StatusCode}");
+
+                var message = $"Couldn't get license support info, repsonse: {responseString}, status code: {response.StatusCode}";
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message);
+
+                throw new InvalidOperationException(message);
             }
 
             var licenseSupportStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
