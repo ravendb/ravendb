@@ -26,6 +26,7 @@ namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
+        private const string DoNotRemove = "DoNotRemove";
         private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
@@ -362,7 +363,7 @@ namespace Raven.Server.Documents
                         // If a database was unloaded, this is what we get from DatabasesCache. 
                         // We want to keep the exception there until UnloadAndLockDatabase is disposed.
                         var extractSingleInnerException = database.Exception.ExtractSingleInnerException();
-                        if (Equals(extractSingleInnerException.Data["DoNoRemove"], true))
+                        if (Equals(extractSingleInnerException.Data[DoNotRemove], true))
                             return database;
                     }
 
@@ -663,7 +664,7 @@ namespace Raven.Server.Documents
             {
                 Data =
                 {
-                    ["DoNotRemove"] = true
+                    [DoNotRemove] = true
                 }
             });
 
