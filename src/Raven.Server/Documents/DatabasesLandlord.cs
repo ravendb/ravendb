@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -355,6 +356,17 @@ namespace Raven.Server.Documents
 
                 if (DatabasesCache.TryGetValue(databaseName, out var database))
                 {
+                    if (database.IsFaulted && database.Exception.InnerExceptions.Count > 0)
+                    {
+                        foreach (var inner in database.Exception.InnerExceptions)
+                        {
+                            // If a database was unloaded, this is what we get from DatabasesCache. 
+                            // We want to keep the exception there until UnloadAndLockDatabase is disposed.
+                            if (inner.GetType() == typeof(DatabaseDisabledException))
+                                return database;
+                        }
+                    }
+
                     if (database.IsFaulted || database.IsCanceled)
                     {
                         DatabasesCache.TryRemove(databaseName, out database);
