@@ -1,7 +1,6 @@
 <div class="flex-window stretch query content-margin" id="queryContainer">
     <div class="flex-window-head">
         <div class="row">
-           
         </div>
         <div class="row margin-bottom">
             <div class="col-sm-2">
@@ -16,7 +15,6 @@
                                 <i class="icon-warning"></i> <span>The Query contains <strong>*.*</strong>. Did you intend to use <strong>*:*</strong> ?</span>
                             </div>
                         </div>
-
                         <div class="clearfix toolbar">
                             <div class="pull-right-sm flex-horizontal">
                                 <div class="input-group query-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: querySaveName">
@@ -31,7 +29,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="btn-group btn-group-sm pull-right" role="group">
                             <div class="dropdown">
                                 <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -56,16 +53,13 @@
                         </button>
                     </div>
                 </div>
-
             </div>
         </div>
-
         <h2 class="pull-left-sm">
             Results
             <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
         </h2>
     </div>
-
     <div class="flex-window-scroll flex-window stretch">
         <div class="flex-window-head">
             <div class="clearfix">
@@ -78,37 +72,30 @@
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="dropdownMenu">
-                            
                             <li>
                                 <a href="#" data-bind="attr: { href: editIndexUrl }">
                                     <strong><i data-bind="attr: { class: isAutoIndex() ? 'icon-preview' : 'icon-edit' }"></i> <span data-bind="text: isAutoIndex() ? 'View index' : 'Edit index'"></span></strong>
                                 </a>
                             </li>
-
                             <li class="has-disable-reason" 
                                 data-original-title="Available only for static and auto indexes">
                                 <a href="#" data-bind="css: { 'disabled' : isDynamicIndex }, attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes', href: termsUrl }" title="Navigate to index terms">
                                     <i class="icon-terms"></i> <span>View index terms</span>
                                 </a>
                             </li>
-
                             <li>
                                 <a href="#" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance">
                                     <i class="icon-traffic-watch"></i> <span>Index performance</span>
                                 </a>
                             </li>
-
-                            <li class="has-disable-reason"  data-original-title="Available only for map-reduce indexes">
-                                
+                            <li class="has-disable-reason"  data-original-title="Available only for map-reduce indexes">                                
                                 <a href="#" data-bind="visible: isMapReduceIndex, attr: { href: visualizerUrl }" title="Map-Reduce Visualizer">
                                     <i class="icon-map-reduce-visualizer"></i> <span>Map-Reduce Visualizer</span>
                                 </a>
-
                                 <a data-bind="visible: !isMapReduceIndex()" class="disabled has-disable-reason" title="Available only for map-reduce indexes">
                                     <i class="icon-map-reduce-visualizer"></i> <span>Map-Reduce Visualizer</span>
                                 </a>
                             </li>
-
                         </ul>
                     </div>
                     <small data-bind="if: queryStats, visible: queryStats">
@@ -131,7 +118,6 @@
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats, enable: queryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
-
                     <div class="btn-group dropdown-right">
                         <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
@@ -228,9 +214,8 @@
     </div>
 </script>
 
-
 <script type="text/html" id="saved-queries-dialog">
-    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadQuery" data-toggle="dropdown" data-bind="enable: hasAnySavedQuery" title="Load saved query">
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadQuery" data-toggle="dropdown" data-bind="enable: hasAnySavedQuery, click: showFirsItemInPreviewArea" title="Load saved query">
         <i class="icon-query"></i> <span>Load Query</span>
         <span class="caret"></span>
     </button>
@@ -239,9 +224,7 @@
             <div class="flex-grow loadpatch-container">
                 <div class="patch-preview-container flex-vertical">
                     <div class="flex-header">
-                        <h3>
-                            Query preview
-                        </h3>
+                        <h2>Query preview</h2>
                     </div>
                     <div class="flex-grow flex-vertical scroll">
                         <div class="bg-info padding padding-sm">
@@ -249,10 +232,15 @@
                                 <div class="col-xs-6">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().name : ''"></strong>
                                 </div>
-                            </div>
+                                <div class="col-xs-6">                                 
+                                    <span class="pull-right"> 
+                                        <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
+                                    </span>
+                                </div>
+                            </div>                           
                         </div>
                         <div class="pre-container">
-                            <pre>
+<pre class="bg-info">
 <code data-bind="html: previewCode"></code>
 </pre>
                         </div>
@@ -262,7 +250,7 @@
                     <div class="flex-header">
                         <div class="row">
                             <div class="col-xs-6">
-                                <h3>Select query</h3>
+                                <h2>Select query</h2>
                             </div>
                             <div class="col-xs-6">
                                 <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter" title="Filter saved queries by name">
@@ -271,8 +259,8 @@
                     </div>
                     <div class="flex-grow scroll">
                         <ul class="patch-list" data-bind="foreach: filteredQueries">
-                            <li data-bind="css: { selected: $data === $parent.previewItem() }">
-                                <a href="#" class="patch-link" data-bind="click: $parent.previewQuery">
+                            <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewQuery }">
+                                <a href="#" class="patch-link close-panel" data-bind="click: $parent.useQueryItem.bind($parent, $data)">
                                     <span class="name" data-bind="text: name"></span>
                                     <span class="modified" data-bind="text: modificationDate"></span>
                                 </a>
@@ -280,11 +268,6 @@
                             </li>
                         </ul>
                     </div>
-                </div>
-            </div>
-            <div class="flex-footer">
-                <div class="text-right">
-                    <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
                 </div>
             </div>
         </div>

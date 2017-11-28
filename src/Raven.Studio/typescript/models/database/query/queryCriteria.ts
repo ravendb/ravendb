@@ -25,7 +25,7 @@ class queryCriteria {
     
     private initValidation() {
         this.queryText.extend({
-            // We want to be able to send invalid queryies in order to get the server side error as well.
+            // We want to be able to send invalid queries in order to get the server side error as well.
             // aceValidation: true
         });
         

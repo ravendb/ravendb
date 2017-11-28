@@ -160,7 +160,7 @@ class query extends viewModelBase {
 
     constructor() {
         super();
-        _.bindAll(this, ...["previewQuery", "removeQuery", "useQuery"] as Array<keyof this>);
+        _.bindAll(this, ...["previewQuery", "removeQuery", "useQuery", "useQueryItem"] as Array<keyof this>);
 
         this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes, "Select");
         aceEditorBindingHandler.install();
@@ -323,6 +323,8 @@ class query extends viewModelBase {
                 setTimeout(() => $input.hide(), 200);
             }
         });
+        
+        this.previewItem.extend({ rateLimit: 100}); 
     }
 
     private initValidation() {
@@ -593,17 +595,33 @@ class query extends viewModelBase {
             eventsCollector.default.reportEvent("query", "save");
 
             if (this.isValid(this.saveQueryValidationGroup)) {
-                this.criteria().name(this.querySaveName());
-                this.saveQueryInStorage(false);
-                this.querySaveName(null);
-                this.saveQueryValidationGroup.errors.showAllMessages(false);
-                messagePublisher.reportSuccess("Query saved successfully");
+                
+                // Verify if name already exists
+                if (_.find(savedQueriesStorage.getSavedQueries(this.activeDatabase()), x => x.name.toUpperCase() === this.querySaveName().toUpperCase())) {
+                    this.confirmationMessage(`Query ${this.querySaveName()} already exists`, `Overwrite existing query ?`, ["No", "Overwrite"])
+                        .done(result => {
+                            if (result.can) {
+                                this.saveQueryToStorage();   
+                            }
+                        });  
+                }    
+                else {
+                    this.saveQueryToStorage();
+                }
             }
         } else {
             if (this.isValid(this.criteria().validationGroup)) {
                 this.inSaveMode(true);
             }
         }
+    }
+    
+    private saveQueryToStorage() {
+        this.criteria().name(this.querySaveName());
+        this.saveQueryInStorage(false);
+        this.querySaveName(null);
+        this.saveQueryValidationGroup.errors.showAllMessages(false);
+        messagePublisher.reportSuccess("Query saved successfully");
     }
 
     private saveRecentQuery() {
@@ -622,6 +640,10 @@ class query extends viewModelBase {
         this.loadSavedQueries();
     }
 
+    showFirsItemInPreviewArea() {
+        this.previewItem(savedQueriesStorage.getSavedQueries(this.activeDatabase())[0]);
+    }
+    
     appendQuery(doc: storedQueryDto) {
         if (doc.recentQuery) {
             const existing = this.savedQueries().find(query => query.hash === doc.hash);
@@ -658,6 +680,11 @@ class query extends viewModelBase {
 
     previewQuery(item: storedQueryDto) {
         this.previewItem(item);
+    }
+
+    useQueryItem(item: storedQueryDto) {
+        this.previewItem(item);
+        this.useQuery();
     }
 
     useQuery() {
