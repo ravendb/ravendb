@@ -27,6 +27,11 @@ namespace Raven.Client.Documents.Session
         ///     Access the attachments operations
         /// </summary>
         IAttachmentsSessionOperations Attachments { get; }
+
+        /// <summary>
+        ///     Access the revisions operations
+        /// </summary>
+        IRevisionsSessionOperations Revisions { get; }
         
         /// <summary>
         ///     Updates entity with latest changes from server

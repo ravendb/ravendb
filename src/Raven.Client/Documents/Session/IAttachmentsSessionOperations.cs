@@ -10,7 +10,7 @@ using Raven.Client.Documents.Operations;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    ///     Advanced synchronous session operations
+    ///     Attachments advanced synchronous session operations
     /// </summary>
     public interface IAttachmentsSessionOperations
     {

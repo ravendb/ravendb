@@ -396,7 +396,7 @@ return out;
 
         private static void VerifyRevisionsAfterConflictResolving(IDocumentSession session)
         {
-            var revision = session.Advanced.GetRevisionsFor<User>("users/1");
+            var revision = session.Advanced.Revisions.GetFor<User>("users/1");
             Assert.Equal(3, revision.Count);
 
             var metadata = session.Advanced.GetMetadataFor(revision[0]);

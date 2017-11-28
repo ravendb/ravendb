@@ -156,7 +156,7 @@ namespace SlowTests.Client.Attachments
 
             using (var session = store.OpenSession())
             {
-                var revisions = session.Advanced.GetRevisionsFor<User>("users/1");
+                var revisions = session.Advanced.Revisions.GetFor<User>("users/1");
                 Assert.Equal(4, revisions.Count);
                 assertAction(session, revisions);
             }

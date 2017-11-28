@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="IAsyncAttachmentsSessionOperations.cs" company="Hibernating Rhinos LTD">
+// <copyright file="IAttachmentsSessionOperationsAsync.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async attachments session operations
     /// </summary>
-    public interface IAsyncAttachmentsSessionOperations
+    public interface IAttachmentsSessionOperationsAsync
     {
         /// <summary>
         /// Returns the attachments info of a document.

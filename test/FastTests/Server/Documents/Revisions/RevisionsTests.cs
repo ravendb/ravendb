@@ -46,7 +46,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
                     Assert.Equal(2, companiesRevisions.Count);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
                     Assert.Equal("Company Name", companiesRevisions[1].Name);
@@ -85,7 +85,7 @@ namespace FastTests.Server.Documents.Revisions
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>("companies/1");
                     Assert.Equal(0, companiesRevisions.Count);
                 }
             }
@@ -108,8 +108,8 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    Assert.Empty(await session.Advanced.GetRevisionsForAsync<Comment>(comment.Id));
-                    var users = await session.Advanced.GetRevisionsForAsync<User>(user.Id);
+                    Assert.Empty(await session.Advanced.Revisions.GetForAsync<Comment>(comment.Id));
+                    var users = await session.Advanced.Revisions.GetForAsync<User>(user.Id);
                     Assert.Equal(1, users.Count);
                 }
             }
@@ -143,7 +143,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companiesRevisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
+                    var companiesRevisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
                     Assert.Equal(2, companiesRevisions.Count);
                     Assert.Equal("Hibernating Rhinos", companiesRevisions[0].Name);
                     Assert.Equal("Company Name", companiesRevisions[1].Name);
@@ -181,7 +181,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var users = await session.Advanced.GetRevisionsForAsync<User>(product.Id);
+                    var users = await session.Advanced.Revisions.GetForAsync<User>(product.Id);
                     Assert.Equal(3, users.Count);
                     Assert.Equal("Hibernating Rhinos - RavenDB", users[0].Name);
                     Assert.Equal("Hibernating Rhinos", users[1].Name);
@@ -208,7 +208,7 @@ namespace FastTests.Server.Documents.Revisions
                     var actualUser = await session.LoadAsync<User>(user.Id);
                     Assert.Equal(actualUser.Name, user.Name);
 
-                    var users = await session.Advanced.GetRevisionsForAsync<User>(user.Id);
+                    var users = await session.Advanced.Revisions.GetForAsync<User>(user.Id);
                     Assert.Equal(user.Name, users.Single().Name);
                 }
             }
@@ -241,7 +241,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var products = await session.Advanced.GetRevisionsForAsync<Product>(product.Id);
+                    var products = await session.Advanced.Revisions.GetForAsync<Product>(product.Id);
                     Assert.Equal(0, products.Count);
                 }
             }
@@ -267,7 +267,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var revisions = await session.Advanced.GetRevisionsForAsync<Company>(company.Id);
+                    var revisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
                     Assert.Equal(5, revisions.Count);
                     Assert.Equal("Company #2: 9", revisions[0].Name);
                     Assert.Equal("Company #2: 5", revisions[4].Name);
@@ -316,8 +316,8 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
-                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    var companies = await session.Advanced.Revisions.GetForAsync<Company>("companies/1");
+                    var users = await session.Advanced.Revisions.GetForAsync<User>("users/1");
                     Assert.Equal(5, companies.Count);
                     Assert.Empty(users);
                 }
@@ -330,8 +330,8 @@ namespace FastTests.Server.Documents.Revisions
                 }
                 using (var session = store.OpenAsyncSession())
                 {
-                    var companies = await session.Advanced.GetRevisionsForAsync<Company>("companies/1");
-                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    var companies = await session.Advanced.Revisions.GetForAsync<Company>("companies/1");
+                    var users = await session.Advanced.Revisions.GetForAsync<User>("users/1");
                     Assert.Equal(5, companies.Count);
                     Assert.Equal("New Company", companies.First().Name);
                     Assert.Equal(1, users.Count);
@@ -366,7 +366,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var users = await session.Advanced.GetRevisionsForAsync<User>("users/1");
+                    var users = await session.Advanced.Revisions.GetForAsync<User>("users/1");
                     Assert.Equal(3, users.Count);
                     Assert.Equal("Hibernating Rhinos - RavenDB", users[0].Name);
                     Assert.Equal("Hibernating Rhinos", users[1].Name);
@@ -423,7 +423,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var users = await session.Advanced.GetRevisionsForAsync<User>(id);
+                    var users = await session.Advanced.Revisions.GetForAsync<User>(id);
                     Assert.Equal(4, users.Count);
                     Assert.Equal(null, users[0].Name);
                     Assert.Equal("Fitzchak", users[1].Name);

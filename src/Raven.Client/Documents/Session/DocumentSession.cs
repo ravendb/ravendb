@@ -45,6 +45,11 @@ namespace Raven.Client.Documents.Session
         /// Access the attachments operations
         /// </summary>
         public IAttachmentsSessionOperations Attachments { get; }
+        
+        /// <summary>
+        /// Access the revisions operations
+        /// </summary>
+        public IRevisionsSessionOperations Revisions { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentSession"/> class.
@@ -53,6 +58,7 @@ namespace Raven.Client.Documents.Session
             : base(dbName, documentStore, requestExecutor, id)
         {
             Attachments = new DocumentSessionAttachments(this);
+            Revisions = new DocumentSessionRevisions(this);
         }
 
         /// <summary>

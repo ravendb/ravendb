@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// <copyright file="IAsyncAdvancedSessionOperations.cs" company="Hibernating Rhinos LTD">
+// <copyright file="IRevisionsSessionOperationsAsync.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    ///     Advanced async session operations
+    ///     Revisions advanced async session operations
     /// </summary>
-    public partial interface IAsyncAdvancedSessionOperations
+    public interface IRevisionsSessionOperationsAsync
     {
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging).
         /// </summary>
-        Task<List<T>> GetRevisionsForAsync<T>(string id, int start = 0, int pageSize = 25);
+        Task<List<T>> GetForAsync<T>(string id, int start = 0, int pageSize = 25);
     }
 }
