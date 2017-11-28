@@ -35,7 +35,9 @@ class unsecureSetup {
             required: {
                 onlyIf: () => this.ips().length > 1
             },
-            validUrl: true
+            validUrl: {
+                message: "Url format expected: 'http://hostName' or 'http://hostName:port'"
+            }
         });
         
         this.unsafeNetworkConfirm.extend({
