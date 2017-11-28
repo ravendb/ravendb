@@ -580,7 +580,19 @@ namespace Raven.Server.Documents
         public ByteStringContext.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte
             * lowerName, int lowerNameSize, AttachmentType type, string changeVector, out Slice partialKeySlice)
         {
-            using (Slice.From(context.Allocator, changeVector, out Slice cvSlice))
+            Slice cvSlice;
+            ByteStringContext.InternalScope cvDispose;
+            if (changeVector == null)
+            {
+                cvSlice = Slices.Empty;
+                cvDispose = default(ByteStringContext.InternalScope);
+            }
+            else
+            {
+                cvDispose = Slice.From(context.Allocator, changeVector, out cvSlice);
+            }
+
+            using (cvDispose)
             {
                 return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, default(Slice), null, 0,
                     KeyType.PartialKey, type, cvSlice, out partialKeySlice);
