@@ -12,14 +12,7 @@ namespace Sparrow.Json
         private decimal? _decimalVal;
         private long? _longVal;
         private ulong? _ulongVal;
-        public static string DoubleMaxValueAsString;
-        public static string DoubleMinValueAsString;
-
-        static LazyNumberValue()
-        {
-            DoubleMaxValueAsString= double.MaxValue.ToString("G17");
-            DoubleMinValueAsString = double.MinValue.ToString("G17");
-        }
+                
         public LazyNumberValue(LazyStringValue inner)
         {
             Inner = inner;
@@ -62,15 +55,7 @@ namespace Sparrow.Json
                 return self._val.Value;
 
             var val = double.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
-
-            var valueAsString = self.Inner.ToString();
-            if (valueAsString.Length == DoubleMaxValueAsString.Length || valueAsString.Length == DoubleMinValueAsString.Length)
-            {
-                if (valueAsString.Equals(DoubleMaxValueAsString,StringComparison.OrdinalIgnoreCase))
-                return double.MaxValue;
-            else if (valueAsString.Equals(DoubleMinValueAsString, StringComparison.OrdinalIgnoreCase))
-                return double.MinValue;
-            }
+                    
             
             
             self._val = val;

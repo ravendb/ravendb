@@ -230,10 +230,12 @@ namespace Raven.Client.Json
                 SetToken(JsonToken.None);
                 return null;
             }
-            if (Value == null)
+ if (Value is double)
+                return (decimal)(double)Value;
+            if (Value is decimal)
+                return (decimal)Value;            if (Value == null)
                 return null;
-            if (Value is LazyNumberValue lazyNumber)
-                return lazyNumber;                        
+                            
             return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);
         }
 
@@ -246,8 +248,8 @@ namespace Raven.Client.Json
             }
             if (Value == null)
                 return null;
-            if (Value is LazyNumberValue lazyNumber)
-                return lazyNumber;
+            if (Value is double)
+                return (double)Value;
             return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
         }                
 
