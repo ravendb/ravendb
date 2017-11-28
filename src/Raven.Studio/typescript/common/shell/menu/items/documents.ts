@@ -26,6 +26,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         }),
 
         new collectionMenuItem(),
+
         new leafMenuItem({
             title: "Patch",
             nav: true,
@@ -34,6 +35,17 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-patch',
             dynamicHash: appUrls.patch
         }),
+        
+        new leafMenuItem({
+            route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
+            moduleId: 'viewmodels/database/query/query',
+            title: 'Query',
+            nav: true,
+            css: 'icon-query',
+            alias: true,
+            dynamicHash: appUrls.query('')
+        }),       
+        
         new leafMenuItem({
             title: "Conflicts",
             nav: true,
@@ -42,16 +54,8 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-conflicts',
             dynamicHash: appUrls.conflicts,
             badgeData: collectionsTracker.default.conflictsCount
-        }),
-        new leafMenuItem({
-            route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
-            moduleId: 'viewmodels/database/query/query',
-            title: 'Query',
-            nav: true,
-            css: 'icon-query',
-            alias: true, 
-            dynamicHash: appUrls.query('')
-        }),
+        }),   
+        
         new leafMenuItem({
             route: "databases/edit",
             title: "Edit Document",
