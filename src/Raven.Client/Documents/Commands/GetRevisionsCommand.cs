@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Http;
@@ -10,6 +11,9 @@ namespace Raven.Client.Documents.Commands
 {
     public class GetRevisionsCommand : RavenCommand<BlittableArrayResult>
     {
+        private readonly string _changeVector;
+        public readonly string[] ChangeVectors;
+
         private readonly string _id;
         private readonly int? _start;
         private readonly int? _pageSize;
@@ -23,6 +27,18 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
+        public GetRevisionsCommand(string changeVector, bool metadataOnly = false)
+        {
+            _changeVector = changeVector ?? throw new ArgumentNullException(nameof(changeVector));
+            _metadataOnly = metadataOnly;
+        }
+
+        public GetRevisionsCommand(string[] changeVectors, bool metadataOnly = false)
+        {
+            ChangeVectors = changeVectors ?? throw new ArgumentNullException(nameof(changeVectors));
+            _metadataOnly = metadataOnly;
+        }
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
@@ -33,9 +49,19 @@ namespace Raven.Client.Documents.Commands
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
                 .Append(node.Database)
-                .Append("/revisions")
-                .Append("?id=")
-                .Append(Uri.EscapeDataString(_id));
+                .Append("/revisions?");
+
+            if (_id != null)
+                pathBuilder.Append("&id=").Append(Uri.EscapeDataString(_id));
+            else if (_changeVector != null)
+                pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(_changeVector));
+            else if (ChangeVectors != null)
+            {
+                foreach (var changeVector in ChangeVectors)
+                {
+                    pathBuilder.Append("&changeVector=").Append(Uri.EscapeDataString(changeVector));
+                }
+            }
 
             if (_start.HasValue)
                 pathBuilder.Append("&start=").Append(_start);
@@ -51,7 +77,11 @@ namespace Raven.Client.Documents.Commands
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
-                throw new InvalidOperationException();
+            {
+                Result = null;
+                return;
+            }
+           
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
 

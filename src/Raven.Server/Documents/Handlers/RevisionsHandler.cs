@@ -5,9 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
+using Raven.Client;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -15,7 +19,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -57,82 +60,137 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsFor()
         {
-            var changeVector = GetStringQueryString("changeVector", required: false);
-            if (changeVector != null)
-            {
-                return GetRevision(changeVector);
-            }
-            return GetRevisions();
-        }
-
-        private Task GetRevision(string changeVector)
-        {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
+                var changeVectors = GetStringValuesQueryString("changeVector", required: false);
+                var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+
+                if (changeVectors.Count > 0)
+                    GetRevisionByChangeVector(context, changeVectors, metadataOnly);
+                else
+                    GetRevisions(context, metadataOnly);
+
+                return Task.CompletedTask;
+            }
+        }
+
+        private void GetRevisionByChangeVector(DocumentsOperationContext context, StringValues changeVectors, bool metadataOnly)
+        {
+            var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
+            var sw = Stopwatch.StartNew();
+
+            var revisions = new List<Document>(changeVectors.Count);
+            foreach (var changeVector in changeVectors)
+            {
                 var revision = revisionsStorage.GetRevision(context, changeVector);
-                if (revision == null)
+                if (revision == null && changeVectors.Count == 1)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    return;
                 }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Results");
-                        writer.WriteDocuments(context, new[] { revision }, metadataOnly: false, numberOfResults: out int _);
-                        writer.WriteEndObject();
-                    }
-                }
-
-            return Task.CompletedTask;
-        }
-
-        private Task GetRevisions()
-        {
-            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-
-                var sw = Stopwatch.StartNew();
-                var start = GetStart();
-                var pageSize = GetPageSize();
-                var revisions = revisionsStorage.GetRevisions(context, id, start, pageSize);
-
-                var actualChangeVector = revisions.Revisions.Length == 0 ? "" : revisions.Revisions[0].ChangeVector;
-
-                if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return Task.CompletedTask;
-                }
-
-                HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
-
-                int count;
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteDocuments(context, revisions.Revisions, metadataOnly, out count);
-
-                    writer.WriteComma();
-
-                    writer.WritePropertyName("TotalResults");
-                    writer.WriteInteger(revisions.Count);
-                    writer.WriteEndObject();
-                }
-
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext, count, pageSize, sw.Elapsed);
+                revisions.Add(revision);
             }
 
-            return Task.CompletedTask;
+            var actualEtag = ComputeHttpEtags.ComputeEtagForRevisions(revisions);
+
+            var etag = GetStringFromHeaders("If-None-Match");
+            if (etag == actualEtag)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+
+            HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + actualEtag + "\"";
+
+            int numberOfResults;
+            var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
+            if (blittable)
+            {
+                WriteRevisionsBlittable(context, revisions, out numberOfResults);
+            }
+            else
+            {
+                WriteRevisionsJson(context, metadataOnly, revisions, out numberOfResults);
+            }
+
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext, numberOfResults, revisions.Count, sw.Elapsed);
+        }
+
+        private void WriteRevisionsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, out int numberOfResults)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+                writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
+                writer.WriteEndObject();
+            }
+        }
+
+        private void WriteRevisionsBlittable(DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, out int numberOfResults)
+        {
+            numberOfResults = 0;
+            HttpContext.Response.Headers["Content-Type"] = "binary/blittable-json";
+
+            using (var streamBuffer = new UnmanagedStreamBuffer(context, ResponseBodyStream()))
+            using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedStreamBuffer>(context,
+                null, new BlittableWriter<UnmanagedStreamBuffer>(context, streamBuffer)))
+            {
+                writer.StartWriteObjectDocument();
+
+                writer.StartWriteObject();
+                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+
+                writer.StartWriteArray();
+                foreach (var document in documentsToWrite)
+                {
+                    numberOfResults++;
+                    writer.WriteEmbeddedBlittableDocument(document.Data);
+                }
+                writer.WriteArrayEnd();
+
+                writer.WriteObjectEnd();
+
+                writer.FinalizeDocument();
+            }
+        }
+
+        private void GetRevisions(DocumentsOperationContext context, bool metadataOnly)
+        {
+            var sw = Stopwatch.StartNew();
+
+            var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
+            var start = GetStart();
+            var pageSize = GetPageSize();
+            var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisions(context, id, start, pageSize);
+
+            var actualChangeVector = revisions.Revisions.Length == 0 ? "" : revisions.Revisions[0].ChangeVector;
+
+            if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+
+            HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
+
+            int count;
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteDocuments(context, revisions.Revisions, metadataOnly, out count);
+
+                writer.WriteComma();
+
+                writer.WritePropertyName("TotalResults");
+                writer.WriteInteger(revisions.Count);
+                writer.WriteEndObject();
+            }
+
+            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext, count, pageSize, sw.Elapsed);
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser)]

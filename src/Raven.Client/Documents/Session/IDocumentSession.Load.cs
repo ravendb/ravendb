@@ -23,7 +23,6 @@ namespace Raven.Client.Documents.Session
         ///     Loads the specified entities with the specified ids.
         /// </summary>
         /// <param name="ids">Enumerable of Ids that should be loaded</param>
-        Dictionary<string, TResult> Load<TResult>(IEnumerable<string> ids);
-
+        Dictionary<string, T> Load<T>(IEnumerable<string> ids);
     }
 }

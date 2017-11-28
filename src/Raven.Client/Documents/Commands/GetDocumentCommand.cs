@@ -22,8 +22,8 @@ namespace Raven.Client.Documents.Commands
 
         private readonly string _startWith;
         private readonly string _matches;
-        private readonly int _start;
-        private readonly int _pageSize;
+        private readonly int? _start;
+        private readonly int? _pageSize;
         private readonly string _exclude;
         private readonly string _startAfter;
 
@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Commands
 
         public GetDocumentCommand(string id, string[] includes, bool metadataOnly)
         {
-            _id = id;
+            _id = id ?? throw new ArgumentNullException(nameof(id));
             _includes = includes;
             _metadataOnly = metadataOnly;
         }
@@ -68,26 +68,30 @@ namespace Raven.Client.Documents.Commands
                 .Append(node.Database)
                 .Append("/docs?");
 
+            if (_start.HasValue)
+                pathBuilder.Append("&start=").Append(_start);
+            if (_pageSize.HasValue)
+                pathBuilder.Append("&pageSize=").Append(_pageSize);
             if (_metadataOnly)
                 pathBuilder.Append("&metadata-only=true");
 
             if (_startWith != null)
             {
-                pathBuilder.Append($"startsWith={Uri.EscapeDataString(_startWith)}&start={_start.ToInvariantString()}&pageSize={_pageSize.ToInvariantString()}");
+                pathBuilder.Append("startsWith=").Append(Uri.EscapeDataString(_startWith));
 
                 if (_matches != null)
-                    pathBuilder.Append($"&matches={_matches}");
+                    pathBuilder.Append("&matches=").Append(_matches);
                 if (_exclude != null)
-                    pathBuilder.Append($"&exclude={_exclude}");
+                    pathBuilder.Append("&exclude=").Append(_exclude);
                 if (_startAfter != null)
-                    pathBuilder.Append($"&startAfter={Uri.EscapeDataString(_startAfter)}");
+                    pathBuilder.Append("&startAfter=").Append(Uri.EscapeDataString(_startAfter));
             }
 
             if (_includes != null)
             {
                 foreach (var include in _includes)
                 {
-                    pathBuilder.Append($"&include={include}");
+                    pathBuilder.Append("&include=").Append(include);
                 }
             }
 
@@ -98,7 +102,7 @@ namespace Raven.Client.Documents.Commands
 
             if (_id != null)
             {
-                pathBuilder.Append($"&id={Uri.EscapeDataString(_id)}");
+                pathBuilder.Append("&id=").Append(Uri.EscapeDataString(_id));
             }
             else if (_ids != null)
             {
@@ -117,7 +121,7 @@ namespace Raven.Client.Documents.Commands
             var isGet = uniqueIds.Sum(x => x.Length) < 1024;
             if (isGet)
             {
-                uniqueIds.ApplyIfNotNull(id => pathBuilder.Append($"&id={Uri.EscapeDataString(id)}"));
+                uniqueIds.ApplyIfNotNull(id => pathBuilder.Append("&id=").Append(Uri.EscapeDataString(id)));
             }
             else
             {
