@@ -103,9 +103,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             Document.GetFields().Clear();
 
             int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext);
-
-            shouldSkip = numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
-
+            if (_fields.Count > 0)
+            {
+                shouldSkip = numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
+            }
+            else
+            {
+                shouldSkip = numberOfFields <= 0; // if we have no entries, we might have an index on the id only, so retain it
+            }
             return Scope;
         }
 

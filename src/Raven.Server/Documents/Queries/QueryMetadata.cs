@@ -1111,6 +1111,12 @@ namespace Raven.Server.Documents.Queries
                 return new DisposableAction(() => _insideExact--);
             }
 
+            protected override void VisitBinaryExpression(BinaryExpression be)
+            {
+                if (be.Operator != OperatorType.Equal)
+                    _metadata.IsCollectionQuery = false;
+            }
+
             public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
             {
                 if (leftSide is FieldExpression fe)

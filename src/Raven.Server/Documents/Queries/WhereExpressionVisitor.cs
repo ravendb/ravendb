@@ -54,6 +54,8 @@ namespace Raven.Server.Documents.Queries
                 return;// never hit
             }
 
+            VisitBinaryExpression(be);
+
             switch (be.Operator)
             {
                 case OperatorType.Equal:
@@ -68,7 +70,7 @@ namespace Raven.Server.Documents.Queries
                     VisitBooleanMethod(be.Left, be.Right, be.Operator, parameters);
                     return;
                 case OperatorType.And:                
-                case OperatorType.Or:                
+                case OperatorType.Or:
                     Visit(be.Left, parameters);
                     Visit(be.Right, parameters);
                     break;
@@ -81,6 +83,11 @@ namespace Raven.Server.Documents.Queries
                     ThrowInvalidOperatorType(expression);
                     break;
             }
+        }
+
+        protected virtual void VisitBinaryExpression(BinaryExpression be)
+        {
+            
         }
 
         private static void ThrowInvalidOperatorType(QueryExpression expression)
