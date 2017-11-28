@@ -1,6 +1,4 @@
 /// <reference path="../../typings/tsd.d.ts" />
-
-import database = require("models/resources/database");
 import abstractWebSocketClient = require("common/abstractWebSocketClient");
 import endpoints = require("endpoints");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
