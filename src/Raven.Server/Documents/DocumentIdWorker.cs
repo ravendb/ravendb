@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -80,20 +82,25 @@ namespace Raven.Server.Documents
         public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext,  byte* str, int size, out Slice loweredKey)
         {
             var release = byteStringContext.Allocate(size, out var ptr);
+
+            byte* pointer = ptr.Ptr;
             for (int i = 0; i < size; i++)
             {
-                var ch = str[i];
-                if ((ch < 65) || (ch > 90))
-                {
-                    if (ch > 127) // not ASCII, use slower mode
-                        goto UnlikelyUnicode;
+                byte ch = str[i];
 
-                    ptr.Ptr[i] = ch;
+                // PERF: Trick to avoid multiple compare instructions on hot loops. 
+                //       This is the same as (ch >= 65 && ch <= 90)
+                if (ch - 65 <= 90 - 65) 
+                {
+                    ch = (byte)(ch | 0x20);
                 }
                 else
                 {
-                    ptr.Ptr[i] = (byte)(ch | 0x20);
+                    if (ch > 127) // not ASCII, use slower mode
+                        goto UnlikelyUnicode;
                 }
+
+                pointer[i] = ch;
             }
             loweredKey = new Slice(ptr);
             return release;
@@ -161,31 +168,35 @@ namespace Raven.Server.Documents
 
 
             byte* ptr = buffer.Ptr;
+
             fixed (char* pChars = str)
-            {
-                var strSize = Encoding.GetBytes(pChars, strLength, ptr, maxStrSize);
-                _jsonParserState.FindEscapePositionsIn(ptr, strSize, escapePositionsSize);
-            }
-
-            for (var i = 0; i < strLength; i++)
-            {
-                var ch = str[i];
-                if ((ch < 65) || (ch > 90))
+            {                
+                for (var i = 0; i < strLength; i++)
                 {
-                    if (ch > 127) // not ASCII, use slower mode
-                        goto UnlikelyUnicode;
+                    uint ch = pChars[i];
 
-                    ptr[i] = (byte)ch;
+                    // PERF: Trick to avoid multiple compare instructions on hot loops. 
+                    //       This is the same as (ch >= 65 && ch <= 90)
+                    if (ch - 65 <= 90 - 65)
+                    {
+                        ptr[i] = (byte)(ch | 0x20);
+                    }
+                    else
+                    {
+                        if (ch > 127) // not ASCII, use slower mode
+                            goto UnlikelyUnicode;
+
+                        ptr[i] = (byte)ch;
+                    }
+
+                    ptr[i + idSize + maxStrSize] = (byte)ch;
                 }
-                else
-                {
-                    ptr[i] = (byte)(ch | 0x20);
-                }
 
-
-                ptr[i + idSize + maxStrSize] = (byte)ch;
+                // TODO: We may remove this before RTM, but given the criticality of this code I would prefer this assertion to be here until then. 
+                Debug.Assert(Encoding.GetByteCount(pChars, strLength) == strLength);
+                _jsonParserState.FindEscapePositionsIn(ptr, strLength, escapePositionsSize);
             }
-
+            
             var writePos = ptr + maxStrSize;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
@@ -198,32 +209,30 @@ namespace Raven.Server.Documents
 
             UnlikelyUnicode:
             scope.Dispose();
-            return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice);
+            return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice, maxStrSize, escapePositionsSize);
         }
 
         private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey<TTransaction>(
             TransactionOperationContext<TTransaction> context, string str,
-            out Slice lowerIdSlice, out Slice idSlice)
+            out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int escapePositionsSize)
             where TTransaction : RavenTransaction
         {
             // See comment in GetLowerIdSliceAndStorageKey for the format
-            _jsonParserState.Reset();
-            var byteCount = Encoding.GetMaxByteCount(str.Length);
-            var maxIdLenSize = JsonParserState.VariableSizeIntSize(byteCount);
+
+            var maxIdLenSize = JsonParserState.VariableSizeIntSize(maxStrSize);
 
             int strLength = str.Length;
-            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
             var scope = context.Allocator.Allocate(
                 sizeof(char) * strLength // for the lower calls
-                + byteCount // lower ID
+                + maxStrSize // lower ID
                 + maxIdLenSize // the size of var int for the len of the ID
-                + byteCount // actual ID
+                + maxStrSize // actual ID
                 + escapePositionsSize, out ByteString buffer);
 
             fixed (char* pChars = str)
             {
-                var size = Encoding.GetBytes(pChars, strLength, buffer.Ptr, byteCount);
+                var size = Encoding.GetBytes(pChars, strLength, buffer.Ptr, maxStrSize);
                 _jsonParserState.FindEscapePositionsIn(buffer.Ptr, size, escapePositionsSize);
 
                 var destChars = (char*)buffer.Ptr;
@@ -232,14 +241,14 @@ namespace Raven.Server.Documents
 
                 byte* lowerId = buffer.Ptr + strLength * sizeof(char);
 
-                int lowerSize = Encoding.GetBytes(destChars, strLength, lowerId, byteCount);
+                int lowerSize = Encoding.GetBytes(destChars, strLength, lowerId, maxStrSize);
 
                 if (lowerSize > 512)
                     ThrowDocumentIdTooBig(str);
 
-                byte* id = buffer.Ptr + strLength * sizeof(char) + byteCount;
+                byte* id = buffer.Ptr + strLength * sizeof(char) + maxStrSize;
                 byte* writePos = id;
-                int idSize = Encoding.GetBytes(pChars, strLength, writePos + maxIdLenSize, byteCount);
+                int idSize = Encoding.GetBytes(pChars, strLength, writePos + maxIdLenSize, maxStrSize);
 
                 var actualIdLenSize = JsonParserState.VariableSizeIntSize(idSize);
                 if (actualIdLenSize < maxIdLenSize)
