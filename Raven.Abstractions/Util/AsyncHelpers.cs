@@ -22,25 +22,27 @@ namespace Raven.Abstractions.Util
             var oldContext = SynchronizationContext.Current;
             try
             {
-                var synch = new ExclusiveSynchronizationContext();
-                SynchronizationContext.SetSynchronizationContext(synch);
-                synch.Post(async _ =>
+                using (var synch = new ExclusiveSynchronizationContext())
                 {
-                    try
+                    SynchronizationContext.SetSynchronizationContext(synch);
+                    synch.Post(async _ =>
                     {
-                        await task().ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        synch.InnerException = e;
-                        throw;
-                    }
-                    finally
-                    {
-                        synch.EndMessageLoop();
-                    }
-                }, null);
-                synch.BeginMessageLoop();
+                        try
+                        {
+                            await task().ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            synch.InnerException = e;
+                            throw;
+                        }
+                        finally
+                        {
+                            synch.EndMessageLoop();
+                        }
+                    }, null);
+                    synch.BeginMessageLoop();
+                }
             }
             catch (AggregateException ex)
             {
@@ -60,27 +62,29 @@ namespace Raven.Abstractions.Util
             var oldContext = SynchronizationContext.Current;
             try
             {
-                var synch = new ExclusiveSynchronizationContext();
-                SynchronizationContext.SetSynchronizationContext(synch);
-
-                synch.Post(async _ =>
+                using (var synch = new ExclusiveSynchronizationContext())
                 {
-                    try
+                    SynchronizationContext.SetSynchronizationContext(synch);
+
+                    synch.Post(async _ =>
                     {
-                        result = await task().ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        synch.InnerException = e;
-                        throw;
-                    }
-                    finally
-                    {
-                        sp.Stop();
-                        synch.EndMessageLoop();
-                    }
-                }, null);
-                synch.BeginMessageLoop();
+                        try
+                        {
+                            result = await task().ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            synch.InnerException = e;
+                            throw;
+                        }
+                        finally
+                        {
+                            sp.Stop();
+                            synch.EndMessageLoop();
+                        }
+                    }, null);
+                    synch.BeginMessageLoop();
+                }
             }
             catch (AggregateException ex)
             {
@@ -97,7 +101,7 @@ namespace Raven.Abstractions.Util
             return result;
         }
 
-        private class ExclusiveSynchronizationContext : SynchronizationContext
+        private class ExclusiveSynchronizationContext : SynchronizationContext, IDisposable
         {
             private readonly AutoResetEvent workItemsWaiting = new AutoResetEvent(false);
             private readonly Queue<Tuple<SendOrPostCallback, object>> items = new Queue<Tuple<SendOrPostCallback, object>>();
@@ -154,6 +158,11 @@ namespace Raven.Abstractions.Util
             public override SynchronizationContext CreateCopy()
             {
                 return this;
+            }
+
+            public void Dispose()
+            {
+                this.workItemsWaiting.Dispose();
             }
         }
     }
