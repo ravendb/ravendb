@@ -59,17 +59,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 if (_transformation.HasLoadAttachment && 
                     prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
-                    Stream attachmentStream;
-                    using (Slice.From(Context.Allocator, Current.Document.ChangeVector, out var cv))
-                    {
-                        attachmentStream = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
-                                                         Context,
-                                                         Current.DocumentId,
-                                                         attachmentName,
-                                                         AttachmentType.Document,
-                                                         cv)
-                                                     ?.Stream ?? Stream.Null;
-                    }
+                    var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId,
+                        attachmentName, AttachmentType.Document, Current.Document.ChangeVector);
+                    var attachmentStream = attachment?.Stream ?? Stream.Null;
 
                     sqlColumn.Type = 0;
                     sqlColumn.Value = attachmentStream;

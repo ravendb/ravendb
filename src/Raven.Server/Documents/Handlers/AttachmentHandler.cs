@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, Slices.Empty);
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -73,8 +73,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var type = AttachmentType.Document;
-                Slice cv;
-                ByteStringContext.InternalScope disposeCv = default(ByteStringContext.InternalScope);
+                string changeVector = null;
                 if (isDocument == false)
                 {
                     var stream = TryGetRequestFromStream("ChangeVectorAndType") ?? RequestBodyStream();
@@ -84,18 +83,11 @@ namespace Raven.Server.Documents.Handlers
                         Enum.TryParse(typeString, out type) == false)
                         throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                    if (request.TryGet("ChangeVector", out string changeVector) == false && changeVector != null)
+                    if (request.TryGet("ChangeVector", out changeVector) == false && changeVector != null)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
-                    disposeCv = Slice.From(context.Allocator, changeVector, out cv);
-                }
-                else
-                {
-                    cv = Slices.Empty;
                 }
 
-                Attachment attachment;
-                using (disposeCv)
-                    attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, cv);
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

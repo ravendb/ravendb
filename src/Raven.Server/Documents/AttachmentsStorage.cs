@@ -491,7 +491,7 @@ namespace Raven.Server.Documents
             return (count, streamsCount);
         }
 
-        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, Slice changeVector)
+        public Attachment GetAttachment(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument is null or whitespace", nameof(documentId));
@@ -499,12 +499,27 @@ namespace Raven.Server.Documents
                 throw new ArgumentException("Argument is null or whitespace", nameof(name));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
-            if (type != AttachmentType.Document && changeVector.Size == 0)
+            if (type != AttachmentType.Document && string.IsNullOrWhiteSpace(changeVector))
                 throw new ArgumentException($"Change Vector cannot be empty for attachment type {type}", nameof(changeVector));
 
             var attachment = GetAttachmentDirect(context, documentId, name, type, changeVector);
             if (attachment == null)
+            {
+                if (type == AttachmentType.Revision)
+                {
+                    // Return the attachment of the current document if it has the same change vector
+                    var document = _documentsStorage.Get(context, documentId, throwOnConflict: false);
+                    if (document != null &&
+                        document.TryGetMetadata(out var metadata) &&
+                        metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
+                        exitingDocumentCv == changeVector)
+                    {
+                        return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
+                    }
+                }
+
                 return null;
+            }
 
             var stream = GetAttachmentStream(context, attachment.Base64Hash);
             if (stream == null)
@@ -514,7 +529,7 @@ namespace Raven.Server.Documents
             return attachment;
         }
 
-        private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, Slice changeVector)
+        private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
@@ -552,7 +567,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.InternalScope GetAttachmentKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, AttachmentType type, Slice changeVector, out Slice keySlice)
+        public ByteStringContext.InternalScope GetAttachmentKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, 
+            byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, 
+            AttachmentType type, Slice changeVector, out Slice keySlice)
         {
             return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize, KeyType.Key, type, changeVector, out keySlice);
         }
@@ -560,9 +577,14 @@ namespace Raven.Server.Documents
         // NOTE: GetAttachmentPartialKey should be called only when the document's that hold the attachment does not have a conflict.
         // In this specific case it is ensured that we have a unique partial keys.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize, AttachmentType type, Slice changeVector, out Slice partialKeySlice)
+        public ByteStringContext.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte
+            * lowerName, int lowerNameSize, AttachmentType type, string changeVector, out Slice partialKeySlice)
         {
-            return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, default(Slice), null, 0, KeyType.PartialKey, type, changeVector, out partialKeySlice);
+            using (Slice.From(context.Allocator, changeVector, out Slice cvSlice))
+            {
+                return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, default(Slice), null, 0,
+                    KeyType.PartialKey, type, cvSlice, out partialKeySlice);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -723,7 +745,8 @@ namespace Raven.Server.Documents
                 context.LastDatabaseChangeVector = changeVector;
 
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
-                using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, Slices.Empty, out Slice partialKeySlice))
+                using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, 
+                    AttachmentType.Document, null, out Slice partialKeySlice))
                 {
                     DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedChangeVector, changeVector);
                 }
