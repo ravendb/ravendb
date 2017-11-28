@@ -2,9 +2,39 @@
     Events emitted through ko.postbox
         * SearchBox.Show - when searchbox is opened
         * SearchBox.Hide - when searchbox is hidden
-        * SearchBox.Input - on searchbox input, passes the searchbox value as arg
 */
+
+import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import recentDocuments = require("models/database/documents/recentDocuments");
+import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
+import appUrl = require("common/appUrl");
+import router = require("plugins/router");
+
 class searchBox {
+
+    searchQuery = ko.observable<string>();
+
+    recentDocumentsList = ko.pureComputed(() => {
+        const currentDb = activeDatabaseTracker.default.database();
+        if (!currentDb) {
+            return [];
+        }
+
+        return recentDocuments.getTopRecentDocumentsAsObservable(currentDb)();
+    });
+    
+    matchedDocumentIds = ko.observableArray<string>([]);
+    
+    spinners = {
+        startsWith: ko.observable<boolean>(false)
+    };
+    
+    showMatchedDocumentsSection = ko.pureComputed(() => {
+        const hasDocuments = this.matchedDocumentIds().length;
+        const inProgress = this.spinners.startsWith();
+        
+        return hasDocuments || inProgress;
+    });
 
     private $searchContainer: JQuery;
     private $searchInput: JQuery;
@@ -13,27 +43,40 @@ class searchBox {
             this.hide()
         }
     };
+    
+    constructor() {
+        _.bindAll(this, "goToDocument");
+    }
 
     initialize() {
         this.$searchInput = $('.search-container input[type=search]');
         this.$searchContainer = $('.search-container');
-
-        this.$searchInput.on('input', (e) => {
-            ko.postbox.publish('SearchBox.Input', this.$searchInput.val());
-        });
 
         this.$searchInput.click((e) => {
             e.stopPropagation();
             this.show();
         });
 
-        $('.search-container .autocomplete-list.box-container')
-            .click(e => e.stopPropagation());
-
-        $('.search-container .autocomplete-list.box-container a').on('click', (e) => {
-            e.stopPropagation();
-            this.hide();
+        this.searchQuery.throttle(250).subscribe(query => {
+            this.matchedDocumentIds([]);
+            
+            if (query) {
+                this.spinners.startsWith(true);
+                new getDocumentsMetadataByIDPrefixCommand(query, 10, activeDatabaseTracker.default.database())
+                    .execute()
+                    .done((results: Array<metadataAwareDto>) => {
+                        this.matchedDocumentIds(results.map(x => x['@metadata']['@id']));
+                    })
+                    .always(() => this.spinners.startsWith(false));
+            }
         });
+    }
+    
+    goToDocument(documentName: string) {
+        const url = appUrl.forEditDoc(documentName, activeDatabaseTracker.default.database());
+        this.hide();
+        this.searchQuery("");
+        router.navigate(url);
     }
 
     private show() {

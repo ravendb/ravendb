@@ -51,12 +51,30 @@
                     </div>
                 </div>
             </div>
-            <!--
-            <div class="search-upcoming"><i class="icon-search"></i><span>search</span> <span class="text-muted"> | in development</span></div>
             
             <div class="search-container">
-                <input type="search" class="form-control omnisearch" placeholder="search" />
+                <input type="search" class="form-control omnisearch" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
                 <div class="icon-search"></div>
+                <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.showMatchedDocumentsSection() || $root.searchBox.recentDocumentsList().length">
+                    <div class="scroller">
+                        <section data-bind="visible: showMatchedDocumentsSection">
+                            <h4>Matched documents</h4>
+                            <ul data-bind="foreach: matchedDocumentIds">
+                                <li><a href="#" data-bind="click: _.partial($parent.goToDocument, $data)"><span class="icon-document" style="color:#93278f;"></span> <span data-bind="text: $data"></span></a></li>
+                            </ul>
+                            <div class="text-center" data-bind="visible: spinners.startsWith">
+                                <div class="global-spinner"></div>
+                            </div>
+                        </section>
+                        <section data-bind="visible: recentDocumentsList().length">
+                            <h4>Recent documents</h4>
+                            <ul data-bind="foreach: recentDocumentsList">
+                                <li><a href="#" data-bind="click: _.partial($parent.goToDocument, $data)"><span class="icon-document" style="color:#93278f;"></span> <span data-bind="text: $data"></span></a></li>
+                            </ul>
+                        </section>
+                    </div>
+                </div>
+                <!-- TODO
                 <div class="autocomplete-list box-container">
                     <div class="scroller">
                         <section>
@@ -97,9 +115,9 @@
                             <div class="global-spinner"></div>
                         </section>
                     </div>
-                </div>
+                </div>-->
             </div>
-            -->
+            
         </div>
         <ul class="nav navbar-nav navbar-right">
             <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
