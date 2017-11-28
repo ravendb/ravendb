@@ -109,29 +109,7 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting($@"{_rootPathString}my-indexes-temp").FullPath, database.Indexing.TempPath.FullPath);
         }
 
-        [Fact]
-        public void Should_handle_APPDRIVE_properly_if_specified()
-        {
-            var server = new RavenConfiguration(null, ResourceType.Server);
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
-
-            server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"APPDRIVE:\RavenData");
-
-            server.Initialize();
-
-            var rootPath = Path.GetPathRoot(AppContext.BaseDirectory);
-
-            Assert.Equal(new PathSetting($@"{rootPath}RavenData").FullPath, server.Core.DataDirectory.FullPath);
-
-            var database = RavenConfiguration.CreateFrom(server, "Foo", ResourceType.Database);
-
-            database.Initialize();
-
-            Assert.Equal(new PathSetting($@"{rootPath}RavenData\Databases\Foo").FullPath, database.Core.DataDirectory.FullPath);
-            Assert.Equal(new PathSetting($@"{rootPath}RavenData\Databases\Foo\Indexes").FullPath, database.Indexing.StoragePath.FullPath);
-        }
-
-        [Fact]
+       [Fact]
         public void Should_create_data_in_directory_specified_at_server_level()
         {
             var server = new RavenConfiguration(null, ResourceType.Server);
