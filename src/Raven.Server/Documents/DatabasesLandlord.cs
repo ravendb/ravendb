@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -356,15 +357,13 @@ namespace Raven.Server.Documents
 
                 if (DatabasesCache.TryGetValue(databaseName, out var database))
                 {
-                    if (database.IsFaulted && database.Exception.InnerExceptions.Count > 0)
+                    if (database.IsFaulted)
                     {
-                        foreach (var inner in database.Exception.InnerExceptions)
-                        {
-                            // If a database was unloaded, this is what we get from DatabasesCache. 
-                            // We want to keep the exception there until UnloadAndLockDatabase is disposed.
-                            if (inner.GetType() == typeof(DatabaseDisabledException))
-                                return database;
-                        }
+                        // If a database was unloaded, this is what we get from DatabasesCache. 
+                        // We want to keep the exception there until UnloadAndLockDatabase is disposed.
+                        var extractSingleInnerException = database.Exception.ExtractSingleInnerException();
+                        if (Equals(extractSingleInnerException.Data["DoNoRemove"], true))
+                            return database;
                     }
 
                     if (database.IsFaulted || database.IsCanceled)
@@ -660,7 +659,13 @@ namespace Raven.Server.Documents
 
         public async Task<IDisposable> UnloadAndLockDatabase(string dbName, string reason)
         {
-            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}" ));
+            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked because {reason}" )
+            {
+                Data =
+                {
+                    ["DoNotRemove"] = true
+                }
+            });
 
             try
             {
