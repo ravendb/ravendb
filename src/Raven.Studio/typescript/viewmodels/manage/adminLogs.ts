@@ -151,12 +151,9 @@ class adminLogs extends viewModelBase {
     }
     
     // noinspection JSMethodCanBeStatic
-    itemHtmlProvider(item: string) {
-        const itemLower = item.toLocaleLowerCase();
-        
-        //TODO: this logic doesn't work well in every case - it creates false positives 
-        const hasError = itemLower.includes("exception") || itemLower.includes("error") || itemLower.includes("failure");
-        
+    itemHtmlProvider(item: string) {    
+        const hasError = item.includes("EXCEPTION:");  
+               
         return $("<pre class='item'></pre>")
             .toggleClass("bg-danger", hasError)
             .text(item);

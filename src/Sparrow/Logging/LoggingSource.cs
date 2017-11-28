@@ -108,7 +108,6 @@ namespace Sparrow.Logging
             }
         }
 
-
         private LoggingSource(string path, LogMode logMode = LogMode.Information,
             TimeSpan retentionTime = default(TimeSpan))
         {
@@ -317,9 +316,10 @@ namespace Sparrow.Logging
             writer.Write(entry.Logger);
             writer.Write(", ");
             writer.Write(entry.Message);
-            writer.Write(", ");
+            
             if (entry.Exception != null)
             {
+                writer.Write(", EXCEPTION: ");
                 writer.Write(entry.Exception);
             }
             writer.WriteLine();
