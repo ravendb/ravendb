@@ -15,12 +15,10 @@
                     </div>
                 </div>
             </div>
-
             <div class="form-horizontal">
                 <div class="row">
                     <div class="col-sm-3 col-lg-2">
-                        <h2 class="query-label">Patch
-                        </h2>
+                        <h2 class="query-label">Patch</h2>
                         <a href="#" data-bind="click: syntaxHelp">Syntax help</a>
                     </div>
                     <div class="col-sm-9 col-lg-10 margin-bottom">
@@ -89,12 +87,10 @@
                                 <i class="icon-preview"></i>
                             </button>
                         </span>
-
                         <button class="btn btn-default" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }" >
                             <i class="icon-import"></i>
                             <span>Load document</span>
                         </button>
-
                     </div>
                 </div>
                 <div class="col-sm-6">
@@ -105,7 +101,6 @@
     </div>
     <div class="row tabs-left form-horizontal">
         <div class="col-sm-3 col-lg-2">
-
             <ul class="nav nav-tabs nav-stacked" data-bind="with: test">
                 <li class="active">
                     <a href="#preview" data-toggle="tab" title="Show document before and after patch">
@@ -178,7 +173,6 @@
                                     <pre data-bind="html: $parent.formatAsJson(Data)"></pre>
                                 </div>
                             </div>
-
                             <p data-bind="visible: actions.putDocument().length === 0">No data available.</p>
                         </div>
                         <div class="tab-pane fade flex-vertical" id="loads">
@@ -186,7 +180,6 @@
                             <ul class="flex-grow scroll" data-bind="foreach: actions.loadDocument">
                                 <li data-bind="text: $data"></li>
                             </ul>
-
                             <p data-bind="visible: actions.loadDocument().length === 0">No data available.</p>
                         </div>
                         <div class="tab-pane fade flex-vertical" id="deletes">
@@ -194,7 +187,6 @@
                             <ul class="flex-grow scroll" data-bind="foreach: actions.deleteDocument">
                                 <li data-bind="text: $data"></li>
                             </ul>
-
                             <p data-bind="visible: actions.deleteDocument().length === 0">No data available.</p>
                         </div>
                         <div class="tab-pane fade flex-vertical" id="output">
@@ -202,7 +194,6 @@
                             <ul class="flex-grow scroll" data-bind="foreach: actions.info">
                                 <li data-bind="text: $data"></li>
                             </ul>
-
                             <p data-bind="visible: actions.info().length === 0">No data available.</p>
                         </div>
                     </div>
@@ -214,8 +205,8 @@
 </script>
 
 <script type="text/html" id="saved-patches-dialog">
-    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch" title="Load saved patch">
-        <i class="icon-patch"></i> <span>Load patch</span>
+    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownLoadPatch" data-toggle="dropdown" data-bind="enable: savedPatches.hasAnySavedPatch, click: showFirstItemInPreviewArea" title="Load saved patch">
+        <i class="icon-patch"></i><span>Load patch</span>
         <span class="caret"></span>
     </button>
     <div class="dropdown-menu slidein-style" aria-labelledby="dropdownLoadPatch" data-bind="dropdownPanel: true, with: savedPatches">
@@ -223,9 +214,7 @@
             <div class="flex-grow loadpatch-container">
                 <div class="patch-preview-container flex-vertical">
                     <div class="flex-header">
-                        <h3>
-                            Patch preview
-                        </h3>
+                        <h2>Patch preview</h2>
                     </div>
                     <div class="flex-grow flex-vertical scroll">
                         <div class="bg-info padding padding-sm">
@@ -233,10 +222,15 @@
                                 <div class="col-xs-6">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().Name : ''"></strong>
                                 </div>
+                                <div class="col-xs-6">                                 
+                                    <span class="pull-right"> 
+                                        <button title="Load saved patch" class="btn btn-success btn-sm close-panel" data-bind="click: usePatch , enable: previewItem()">Load</button>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <div class="pre-container">
-                            <pre>
+<pre class="bg-info">
 <code data-bind="html: previewCode"></code>
 </pre>
                         </div>
@@ -246,7 +240,7 @@
                     <div class="flex-header">
                         <div class="row">
                             <div class="col-xs-6">
-                                <h3>Select patch</h3>
+                                <h2>Select patch</h2>
                             </div>
                             <div class="col-xs-6">
                                 <input type="search" class="form-control input-sm patch-filter" data-bind="textInput: filters.searchText" placeholder="filter" title="Filter saved patches by name">
@@ -255,8 +249,8 @@
                     </div>
                     <div class="flex-grow scroll">
                         <ul class="patch-list" data-bind="foreach: filteredPatches">
-                            <li data-bind="css: { selected: $data === $parent.previewItem() }">
-                                <a href="#" class="patch-link" data-bind="click: $parent.previewPatch">
+                            <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewPatch }">                             
+                                <a href="#" class="patch-link close-panel" data-bind="click: $parent.usePatchItem.bind($parent, $data)">
                                     <span class="name" data-bind="text: Name"></span>
                                     <span class="modified" data-bind="text: ModificationDate"></span>
                                 </a>
@@ -266,12 +260,6 @@
                     </div>
                 </div>
             </div>
-                <div class="flex-footer">
-                    <div class="text-right">
-                        <button title="Load saved patch" class="btn btn-success btn-sm close-panel" data-bind="click: usePatch, enable: previewItem()">Load</button>
-                    </div>
-                </div>
-            
         </div>
     </div>
 </script>

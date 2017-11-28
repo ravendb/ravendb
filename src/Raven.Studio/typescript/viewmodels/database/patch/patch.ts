@@ -12,7 +12,6 @@ import eventsCollector = require("common/eventsCollector");
 import notificationCenter = require("common/notifications/notificationCenter");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import popoverUtils = require("common/popoverUtils");
-import deleteDocumentsCommand = require("commands/database/documents/deleteDocumentsCommand");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
@@ -47,7 +46,7 @@ class patchList {
     });
 
     constructor(useHandler: (patch: storedPatchDto) => void, removeHandler: (patch: storedPatchDto) => void) {
-        _.bindAll(this, ...["previewPatch", "removePatch", "usePatch"] as Array<keyof this>);
+        _.bindAll(this, ...["previewPatch", "removePatch", "usePatch", "usePatchItem"] as Array<keyof this>);
         this.useHandler = useHandler;
         this.removeHandler = removeHandler;
     }
@@ -75,6 +74,11 @@ class patchList {
     usePatch() {
         this.useHandler(this.previewItem());
     }
+
+    usePatchItem(item: storedPatchDto) {
+        this.previewItem(item);
+        this.usePatch();
+    } 
 
     removePatch(item: storedPatchDto) {
         if (this.previewItem() === item) {
@@ -205,7 +209,6 @@ class patch extends viewModelBase {
         }
     }
 
-
     deactivate(): void {
         super.deactivate();
 
@@ -293,11 +296,19 @@ class patch extends viewModelBase {
             eventsCollector.default.reportEvent("patch", "save");
 
             if (this.isValid(this.saveValidationGroup) && this.isValid(this.patchDocument().validationGroup)) {
-                this.patchDocument().name(this.patchSaveName());
-                this.savePatchInStorage(false);
-                this.patchSaveName(null);
-                this.saveValidationGroup.errors.showAllMessages(false);
-                messagePublisher.reportSuccess("Patch saved successfully");
+
+                // Verify if name already exists
+                if (_.find(savedPatchesStorage.getSavedPatches(this.activeDatabase()), x => x.Name.toUpperCase() === this.patchSaveName().toUpperCase())) { 
+                    this.confirmationMessage(`Patch ${this.patchSaveName()} already exists`, `Overwrite existing patch ?`, ["No", "Overwrite"])
+                        .done(result => {
+                            if (result.can) {
+                                this.savePatchToStorage();
+                            }
+                        });
+                }
+                else {
+                    this.savePatchToStorage();
+                }                
                 
                 this.inSaveMode(false);
             }
@@ -308,6 +319,14 @@ class patch extends viewModelBase {
         }
     }
 
+    private savePatchToStorage() {
+        this.patchDocument().name(this.patchSaveName());
+        this.savePatchInStorage(false);
+        this.patchSaveName(null);
+        this.saveValidationGroup.errors.showAllMessages(false);
+        messagePublisher.reportSuccess("Patch saved successfully");
+    }
+    
     private saveRecentPatch() {
         const name = this.getRecentPatchName();
         this.patchDocument().name(name);
@@ -324,6 +343,10 @@ class patch extends viewModelBase {
         this.savedPatches.loadAll(this.activeDatabase());
     }
 
+    showFirstItemInPreviewArea() {
+        this.savedPatches.previewItem(savedPatchesStorage.getSavedPatches(this.activeDatabase())[0]);
+    }
+    
     private getRecentPatchName(): string {
         const collectionIndexName = queryUtil.getCollectionOrIndexName(this.patchDocument().query());
 

@@ -640,7 +640,7 @@ class query extends viewModelBase {
         this.loadSavedQueries();
     }
 
-    showFirsItemInPreviewArea() {
+    showFirstItemInPreviewArea() {
         this.previewItem(savedQueriesStorage.getSavedQueries(this.activeDatabase())[0]);
     }
     
