@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Revisions
             catch (Exception e)
             {
                 var msg = "Cannot enable revisions for documents as the revisions configuration" +
-                          $" in the database record is missing or not valid: {dbRecord}";
+                          $" in the database record is missing or not valid.";
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name, 
                     $"Revisions error in {_database.Name}", msg,
