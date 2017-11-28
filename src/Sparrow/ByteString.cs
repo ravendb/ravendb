@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Sparrow.Collections;
+using Sparrow.Extensions;
 using Sparrow.Global;
 using Sparrow.Json;
 using Sparrow.LowMemory;
@@ -1128,7 +1129,7 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = Encodings.Utf8.GetByteCount(value);
+            var byteCount = value.GetUtf8MaxSize();
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
             {
@@ -1151,7 +1152,7 @@ namespace Sparrow
         {
             Debug.Assert(value != null, $"{nameof(value)} cant be null.");
 
-            var byteCount = Encodings.Utf8.GetByteCount(value);
+            var byteCount = value.GetUtf8MaxSize();
 
             str = AllocateInternal(byteCount, type);
             fixed (char* ptr = value)
