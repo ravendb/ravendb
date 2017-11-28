@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
+using Sparrow;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -42,15 +43,17 @@ namespace SlowTests.Issues
                     Assert.Equal("Auto/Users/ByFirstName", indexes[0].Name);
                 }
 
-                var mre = new ManualResetEventSlim();
+                var mre = new AsyncManualResetEvent();
 
-                store.Changes()
-                    .ForAllIndexes()
+                var allIndexes = store.Changes()
+                    .ForAllIndexes();
+                allIndexes
                     .Subscribe(x =>
                     {
                         if (x.Type == IndexChangeTypes.IndexRemoved)
                             mre.Set();
                     });
+                await allIndexes.EnsureSubscribedNow();
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.Query<User>()
@@ -58,7 +61,7 @@ namespace SlowTests.Issues
                         .ToListAsync();
                 }
 
-                Assert.True(mre.Wait(TimeSpan.FromSeconds(15)));
+                await mre.WaitAsync(TimeSpan.FromSeconds(15));
 
                 indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 25));
                 Assert.Equal("Auto/Users/ByFirstNameAndLastName", indexes[0].Name);
