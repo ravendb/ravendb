@@ -117,9 +117,10 @@ namespace Raven.Client.Documents.Conventions
             BulkInsert = new BulkInsertConventions(this);
 
             DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
+
+            PreserveDocumentPropertiesNotFoundOnModel = true;
+            MaxHttpCacheSize = new Size(IntPtr.Size == 4 ? 32 : 512, SizeUnit.Megabytes);
         }
-
-
 
         private bool _frozen;
         private ClientConfiguration _originalConfiguration;
@@ -147,8 +148,18 @@ namespace Raven.Client.Documents.Conventions
 
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
+        private bool _preserveDocumentPropertiesNotFoundOnModel;
+        private Size _maxHttpCacheSize;
 
-        public bool PreserveDocumentPropertiesNotFoundOnModel { get; set; } = true;
+        public bool PreserveDocumentPropertiesNotFoundOnModel
+        {
+            get => _preserveDocumentPropertiesNotFoundOnModel;
+            set
+            {
+                AssertNotFrozen();
+                _preserveDocumentPropertiesNotFoundOnModel = value;
+            }
+        }
 
         public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable
         {
@@ -202,9 +213,15 @@ namespace Raven.Client.Documents.Conventions
         ///     Default value is 512MB on 64 bits, 32MB on 32 bits
         /// </summary>
         /// <value>The max size of cache in requestExecutor.</value>
-        public Size MaxHttpCacheSize { get; set; } = new Size(
-            IntPtr.Size == 4 ?  32 : 512
-            , SizeUnit.Megabytes);
+        public Size MaxHttpCacheSize
+        {
+            get => _maxHttpCacheSize;
+            set
+            {
+                AssertNotFrozen();
+                _maxHttpCacheSize = value;
+            }
+        }
 
         /// <summary>
         ///     If set to 'true' then it will throw an exception when any query is performed (in session)
@@ -661,15 +678,6 @@ namespace Raven.Client.Documents.Conventions
         public DocumentConventions Clone()
         {
             return (DocumentConventions)MemberwiseClone();
-        }
-
-        public static RangeType GetRangeType(object o)
-        {
-            if (o == null)
-                return RangeType.None;
-
-            var type = o as Type ?? o.GetType();
-            return GetRangeType(type);
         }
 
         public static RangeType GetRangeType(Type type)
