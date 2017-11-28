@@ -27,6 +27,48 @@ namespace FastTests.Server.Documents.Revisions
     public class RevisionsTests : RavenTestBase
     {
         [Fact]
+        public async Task CanGetRevisionsByChangeVectors()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "users/1";
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Fitzchak" }, id);
+                    await session.SaveChangesAsync();
+                }
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<Company>(id);
+                        user.Name = "Fitzchak " + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(11, revisionsMetadata.Count);
+
+                    var changeVectors = revisionsMetadata.Select(x => x.GetString(Constants.Documents.Metadata.ChangeVector)).ToList();
+                    changeVectors.Add("NotExistsChangeVector");
+
+                    var revisions = await session.Advanced.Revisions.GetAsync<User>(changeVectors);
+                    var first = revisions.First();
+                    var last = revisions.Last();
+                    Assert.NotNull(first.Value);
+                    Assert.Null(last.Value);
+
+                    Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(first.Key));
+                    Assert.Null(await session.Advanced.Revisions.GetAsync<User>(last.Key));
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanGetAllRevisionsFor()
         {
             var company = new Company { Name = "Company Name" };
