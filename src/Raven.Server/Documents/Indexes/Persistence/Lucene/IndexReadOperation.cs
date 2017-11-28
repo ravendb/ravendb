@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -120,12 +121,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             yield break;
                     }
 
-                    docsToGet += GetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                     if (search.TotalHits == search.ScoreDocs.Length)
                         break;
 
                     if (returnedResults >= pageSize)
                         break;
+
+                    Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
+
+                    docsToGet += GetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                 }
             }
         }

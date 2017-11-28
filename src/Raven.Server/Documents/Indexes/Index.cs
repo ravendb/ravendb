@@ -898,20 +898,6 @@ namespace Raven.Server.Documents.Indexes
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
-
-                                    if (ShouldReplace())
-                                    {
-                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
-
-                                        // this can fail if the indexes lock is currently held, so we'll retry
-                                        // however, we might be requested to shutdown, so we want to skip replacing
-                                        // in this case, worst case scenario we'll handle this in the next batch
-                                        while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
-                                        {
-                                            if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
-                                                break;
-                                        }
-                                    }
                                 }
                                 catch (OutOfMemoryException oome)
                                 {
@@ -968,6 +954,28 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Could not update stats for '{Name} ({Etag})'.", e);
+                                }
+
+                                try
+                                {
+                                    if (ShouldReplace())
+                                    {
+                                        var originalName = Name.Replace(Constants.Documents.Indexing.SideBySideIndexNamePrefix, string.Empty);
+
+                                        // this can fail if the indexes lock is currently held, so we'll retry
+                                        // however, we might be requested to shutdown, so we want to skip replacing
+                                        // in this case, worst case scenario we'll handle this in the next batch
+                                        while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
+                                        {
+                                            if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
+                                                break;
+                                        }
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info($"Could not replace index '{Name}' ({Etag})'.", e);
                                 }
                             }
                         }
