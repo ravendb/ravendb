@@ -50,6 +50,7 @@ var paths = {
     ],
     externalLibs: [
         'es6-shim/es6-shim.js',
+        'Content/modernizr.js',
         "jquery/dist/jquery.js",
         'lodash/dist/lodash.js',
         'prism/prism.js',
