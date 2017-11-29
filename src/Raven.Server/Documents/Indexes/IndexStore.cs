@@ -379,7 +379,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public async Task<long> CreateIndex(IndexDefinition definition)
+        public async Task<long> CreateIndex(IndexDefinition definition, TimeSpan? timeoutForIndexNotification = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -405,7 +405,15 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                    try
+                    {
+                        await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag , timeoutForIndexNotification);
+
+                    }
+                    catch (TimeoutException)
+                    {
+                        //Ignored
+                    }
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
                     return index.Etag;
@@ -421,7 +429,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public async Task<long> CreateIndex(IndexDefinitionBase definition)
+        public async Task<long> CreateIndex(IndexDefinitionBase definition, TimeSpan? timeoutForIndexNotification = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -437,9 +445,16 @@ namespace Raven.Server.Documents.Indexes
 
                 var command = PutAutoIndexCommand.Create((AutoIndexDefinitionBase)definition, _documentDatabase.Name);
 
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);      
+                try
+                {
+                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, timeoutForIndexNotification);
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                }
+                catch (TimeoutException)
+                {
+                    //Ignored
+                }
 
                 var instance = GetIndex(definition.Name);
 
@@ -851,6 +866,49 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public void RecreateIndexes(PathSetting path, DatabaseRecord record, List<Exception> exceptions = null)
+        {
+            foreach (var indexPath in Directory.GetDirectories(path.FullPath))
+            {
+                try
+                {
+                    if (_documentDatabase.DatabaseShutdown.IsCancellationRequested)
+                        return;
+
+                    var indexName = Path.GetFileName(indexPath);
+                    var index = OpenIndex(path, 1, indexPath, exceptions, indexName);
+                    if (index == null)
+                        continue;
+
+                    var definition = index.Definition;
+
+                    switch (index.Type)
+                    {
+                        case IndexType.AutoMap:
+                            var autoMapIndexDefinition = (AutoMapIndexDefinition)definition;
+                            AsyncHelpers.RunSync(() => CreateIndex(autoMapIndexDefinition, TimeSpan.Zero));
+                            break;
+                        case IndexType.AutoMapReduce:
+                            var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)definition;
+                            AsyncHelpers.RunSync(() => CreateIndex(autoMapReduceIndexDefinition, TimeSpan.Zero));
+                            break;
+                        case IndexType.Map:
+                        case IndexType.MapReduce:
+                            var indexDefinition = index.GetIndexDefinition();
+                            AsyncHelpers.RunSync(() => CreateIndex(indexDefinition, TimeSpan.Zero));
+                            break;
+                        default:
+                            throw new NotSupportedException(index.Type.ToString());
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Could not open index {Path.GetFileName(indexPath)}", e);
+                }
+            }
+        }
+
         private void OpenIndexesFromRecord(PathSetting path, DatabaseRecord record)
         {
             if (_logger.IsInfoEnabled)
@@ -912,11 +970,18 @@ namespace Raven.Server.Documents.Indexes
                     OpenIndex(path, definition.Etag, indexPath, exceptions, name);
             }
 
+            if (Directory.Exists(path.FullPath) &&
+                record.AutoIndexes.Count == 0 && record.Indexes.Count == 0)
+            {
+                RecreateIndexes(path, record, exceptions);
+            }
+            
+
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);
         }
 
-        private void OpenIndex(PathSetting path, long etag, string indexPath, List<Exception> exceptions, string name)
+        private Index OpenIndex(PathSetting path, long etag, string indexPath, List<Exception> exceptions, string name)
         {
             Index index = null;
 
@@ -942,7 +1007,7 @@ namespace Raven.Server.Documents.Indexes
                 index?.Dispose();
                 exceptions?.Add(e);
                 if (alreadyFaulted)
-                    return;
+                    return index;
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
                 var fakeIndex = new FaultyInMemoryIndex(e, etag, name, configuration);
 
@@ -961,6 +1026,7 @@ namespace Raven.Server.Documents.Indexes
                     details: new ExceptionDetails(e)));
                 _indexes.Add(fakeIndex);
             }
+            return index;
         }
 
         public IEnumerable<Index> GetIndexesForCollection(string collection)
