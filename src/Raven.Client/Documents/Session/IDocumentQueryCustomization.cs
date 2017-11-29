@@ -69,13 +69,13 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 #endif
-
+#if FEATURE_SHOW_TIMINGS
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
         ///     results). Default: false
         /// </summary>
         IDocumentQueryCustomization ShowTimings();
-
+#endif
         /// <summary>
         ///     EXPERT ONLY: Instructs the query to wait for non stale results.
         ///     This shouldn't be used outside of unit tests unless you are well aware of the implications

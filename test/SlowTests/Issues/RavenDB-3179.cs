@@ -39,7 +39,6 @@ namespace SlowTests.Issues
                     var facetResultsLazy = query.AggregateUsing("facets/ArticleFacets").ExecuteLazyAsync();
 
                     var articleResults = query
-                        .Customize(x => x.ShowTimings())
                         .Statistics(out stats)
                         .OrderByScoreDescending()
                         .As<Article>()
