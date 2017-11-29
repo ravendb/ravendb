@@ -151,7 +151,20 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.LazyNumber:
-                    SetToken(JsonToken.Float, (double)((LazyNumberValue)value));
+                    var lazyNumber = (LazyNumberValue)value;
+                    var asDouble = (double)lazyNumber;
+                    var asDoubleString = asDouble.ToString("G17",CultureInfo.InvariantCulture);
+                    
+                    if (asDouble == double.MaxValue || asDouble == double.MinValue || asDoubleString == lazyNumber.ToString())
+                    {
+                        SetToken(JsonToken.Float, asDouble);
+                    }
+                    else
+                    {
+                        var asDecimal = (decimal)lazyNumber;
+                        SetToken(JsonToken.Float, asDecimal);
+                    }
+
                     return true;
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:
@@ -176,6 +189,9 @@ namespace Raven.Client.Json
                 return null;
             }
 
+            if (Value is LazyNumberValue lazyNumber)
+                return (int)lazyNumber;
+
             if (Value is int)
                 return (int)Value;
 
@@ -197,7 +213,7 @@ namespace Raven.Client.Json
                 return null;
             }
             return Value?.ToString();
-        }
+        }               
 
         public override byte[] ReadAsBytes()
         {
@@ -214,14 +230,28 @@ namespace Raven.Client.Json
                 SetToken(JsonToken.None);
                 return null;
             }
-            if (Value is double)
+ if (Value is double)
                 return (decimal)(double)Value;
             if (Value is decimal)
-                return (decimal)Value;
-            if (Value == null)
+                return (decimal)Value;            if (Value == null)
                 return null;
+                            
             return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);
         }
+
+        public override double? ReadAsDouble()
+        {
+            if (!Read())
+            {
+                SetToken(JsonToken.None);
+                return null;
+            }
+            if (Value == null)
+                return null;
+            if (Value is double)
+                return (double)Value;
+            return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
+        }                
 
         public override DateTime? ReadAsDateTime()
         {
