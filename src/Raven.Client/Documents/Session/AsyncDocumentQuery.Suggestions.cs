@@ -5,18 +5,18 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentQuery<T>
     {
-        IAsyncSuggestionDocumentQuery<T> IAsyncDocumentQuery<T>.Suggest(SuggestionBase suggestion)
+        IAsyncSuggestionDocumentQuery<T> IAsyncDocumentQuery<T>.SuggestUsing(SuggestionBase suggestion)
         {
-            Suggest(suggestion);
+            SuggestUsing(suggestion);
             return new AsyncSuggestionDocumentQuery<T>(this);
         }
 
-        IAsyncSuggestionDocumentQuery<T> IAsyncDocumentQuery<T>.Suggest(Action<ISuggestionFactory<T>> factory)
+        IAsyncSuggestionDocumentQuery<T> IAsyncDocumentQuery<T>.SuggestUsing(Action<ISuggestionFactory<T>> factory)
         {
             var f = new SuggestionFactory<T>();
             factory.Invoke(f);
 
-            Suggest(f.Suggestion);
+            SuggestUsing(f.Suggestion);
 
             return new AsyncSuggestionDocumentQuery<T>(this);
         }

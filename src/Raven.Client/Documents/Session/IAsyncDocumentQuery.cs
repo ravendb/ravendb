@@ -146,8 +146,8 @@ namespace Raven.Client.Documents.Session
 
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey);
 
-        IAsyncSuggestionDocumentQuery<T> Suggest(SuggestionBase suggestion);
+        IAsyncSuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
-        IAsyncSuggestionDocumentQuery<T> Suggest(Action<ISuggestionFactory<T>> factory);
+        IAsyncSuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionFactory<T>> factory);
     }
 }

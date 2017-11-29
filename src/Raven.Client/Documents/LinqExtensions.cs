@@ -230,7 +230,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, SuggestionBase suggestion)
+        public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, SuggestionBase suggestion)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -248,12 +248,12 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, Action<ISuggestionFactory<T>> factory)
+        public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, Action<ISuggestionFactory<T>> factory)
         {
             var f = new SuggestionFactory<T>();
             factory?.Invoke(f);
 
-            return source.Suggest(f.Suggestion);
+            return source.SuggestUsing(f.Suggestion);
         }
 
         /// <summary>
@@ -1347,7 +1347,7 @@ namespace Raven.Client.Documents
 
                 foreach (var method in typeof(LinqExtensions).GetMethods())
                 {
-                    if (method.Name != nameof(Suggest))
+                    if (method.Name != nameof(SuggestUsing))
                         continue;
 
                     var parameters = method.GetParameters();
