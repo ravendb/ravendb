@@ -6,30 +6,27 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        public void Suggest(string fieldName, string term, SuggestionOptions options = null)
+        public void Suggest(SuggestionBase suggestion)
         {
-            if (fieldName == null)
-                throw new ArgumentNullException(nameof(fieldName));
-            if (term == null)
-                throw new ArgumentNullException(nameof(term));
+            if (suggestion == null)
+                throw new ArgumentNullException(nameof(suggestion));
 
             AssertCanSuggest();
 
-            SelectTokens.AddLast(SuggestToken.Create(fieldName, AddQueryParameter(term), GetOptionsParameterName(options)));
-        }
+            SuggestToken token;
+            switch (suggestion)
+            {
+                case SuggestionWithTerm term:
+                    token = SuggestToken.Create(term.Field, AddQueryParameter(term.Term), GetOptionsParameterName(term.Options));
+                    break;
+                case SuggestionWithTerms terms:
+                    token = SuggestToken.Create(terms.Field, AddQueryParameter(terms.Terms), GetOptionsParameterName(terms.Options));
+                    break;
+                default:
+                    throw new NotSupportedException($"Unknown type of suggestion '{suggestion.GetType()}'");
+            }
 
-        public void Suggest(string fieldName, string[] terms, SuggestionOptions options = null)
-        {
-            if (fieldName == null)
-                throw new ArgumentNullException(nameof(fieldName));
-            if (terms == null)
-                throw new ArgumentNullException(nameof(terms));
-            if (terms.Length == 0)
-                throw new ArgumentException("Value cannot be an empty collection.", nameof(terms));
-
-            AssertCanSuggest();
-
-            SelectTokens.AddLast(SuggestToken.Create(fieldName, AddQueryParameter(terms), GetOptionsParameterName(options)));
+            SelectTokens.AddLast(token);
         }
 
         private string GetOptionsParameterName(SuggestionOptions options)
@@ -41,16 +38,5 @@ namespace Raven.Client.Documents.Session
             return optionsParameterName;
         }
 
-        private void AssertCanSuggest()
-        {
-            if (WhereTokens.Count > 0)
-                throw new InvalidOperationException("Cannot add suggest when WHERE statements are present.");
-
-            if (SelectTokens.Count > 0)
-                throw new InvalidOperationException("Cannot add suggest when SELECT statements are present.");
-
-            if (OrderByTokens.Count > 0)
-                throw new InvalidOperationException("Cannot add suggest when ORDER BY statements are present.");
-        }
-    }
+        private void AssertCanSuggest()        {            if (WhereTokens.Count > 0)                throw new InvalidOperationException("Cannot add suggest when WHERE statements are present.");            if (SelectTokens.Count > 0)                throw new InvalidOperationException("Cannot add suggest when SELECT statements are present.");            if (OrderByTokens.Count > 0)                throw new InvalidOperationException("Cannot add suggest when ORDER BY statements are present.");        }    }
 }

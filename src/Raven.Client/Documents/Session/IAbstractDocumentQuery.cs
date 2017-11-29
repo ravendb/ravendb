@@ -363,8 +363,6 @@ namespace Raven.Client.Documents.Session
 
         string LoadParameter(object id);
 
-        void Suggest(string fieldName, string term, SuggestionOptions options = null);
-
-        void Suggest(string fieldName, string[] terms, SuggestionOptions options = null);
+        void Suggest(SuggestionBase suggestion);
     }
 }

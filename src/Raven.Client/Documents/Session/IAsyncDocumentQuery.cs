@@ -146,12 +146,8 @@ namespace Raven.Client.Documents.Session
 
         IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey);
 
-        IAsyncSuggestionDocumentQuery<T> Suggest(Expression<Func<T, object>> path, string term, SuggestionOptions options = null);
+        IAsyncSuggestionDocumentQuery<T> Suggest(SuggestionBase suggestion);
 
-        IAsyncSuggestionDocumentQuery<T> Suggest(string fieldName, string term, SuggestionOptions options = null);
-
-        IAsyncSuggestionDocumentQuery<T> Suggest(Expression<Func<T, object>> path, string[] terms, SuggestionOptions options = null);
-
-        IAsyncSuggestionDocumentQuery<T> Suggest(string fieldName, string[] terms, SuggestionOptions options = null);
+        IAsyncSuggestionDocumentQuery<T> Suggest(Action<ISuggestionFactory<T>> factory);
     }
 }
