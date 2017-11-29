@@ -425,7 +425,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var script in scriptsToReset)
                 {
-                    await ServerStore.ResetEtl(ctx, Database.Name, etlConfigurationName, script);
+                    await ServerStore.RemoveEtlProcessState(ctx, Database.Name, etlConfigurationName, script);
                 }
             }
         }
@@ -842,8 +842,18 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name);
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                long index;
+
+                var action = new DeleteOngoingTaskAction(id, type, ServerStore, Database, context);
+                try
+                {
+                    (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name);
+                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                }
+                finally
+                {
+                    await action.Complete();
+                }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -869,6 +879,59 @@ namespace Raven.Server.Web.System
                 taskState = OngoingTaskState.PartiallyEnabled;
 
             return taskState;
+        }
+
+        private class DeleteOngoingTaskAction
+        {
+            private readonly ServerStore _serverStore;
+            private readonly DocumentDatabase _database;
+            private readonly TransactionOperationContext _context;
+            private readonly (string Name, List<string> Transformations) _deletingEtl;
+
+            public DeleteOngoingTaskAction(long id, OngoingTaskType type, ServerStore serverStore, DocumentDatabase database, TransactionOperationContext context)
+            {
+                _serverStore = serverStore;
+                _database = database;
+                _context = context;
+
+                switch (type)
+                {
+                    case OngoingTaskType.RavenEtl:
+                    case OngoingTaskType.SqlEtl:
+                        DatabaseRecord record;
+
+                        using (context.Transaction == null ? context.OpenReadTransaction() : null)
+                        {
+                            record = _serverStore.Cluster.ReadDatabase(context, database.Name);
+                        }
+
+                        if (type == OngoingTaskType.RavenEtl)
+                        {
+                            var ravenEtl = record.RavenEtls?.Find(x => x.TaskId == id);
+                            if (ravenEtl != null)
+                                _deletingEtl = (ravenEtl.Name, ravenEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                        }
+                        else
+                        {
+                            var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == id);
+                            if (sqlEtl != null)
+                                _deletingEtl = (sqlEtl.Name, sqlEtl.Transforms.Where(x => string.IsNullOrEmpty(x.Name) == false).Select(x => x.Name).ToList());
+                        }
+                        break;
+                }
+            }
+
+            public async Task Complete()
+            {
+                if (_deletingEtl.Name != null)
+                {
+                    foreach (var transformation in _deletingEtl.Transformations)
+                    {
+                        var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation);
+                        await _database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                    }
+                }
+            }
         }
     }
 

@@ -836,7 +836,7 @@ namespace Raven.Server.Web.System
             var configurationName = GetStringQueryString("configuration-name"); // etl task name
             var transformationName = GetStringQueryString("transformation-name");
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.ResetEtl(_, databaseName, configurationName, transformationName), "etl-reset");
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName), "etl-reset");
         }
 
         [RavenAction("/admin/console", "POST", AuthorizationStatus.ClusterAdmin)]
