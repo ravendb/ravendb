@@ -57,20 +57,26 @@
         <div class="col-sm-12 col-lg-8 flex-vertical">
             <div class="scroll flex-grow">
                 <div data-bind="with: defaultConfiguration">
-                    <div class="panel panel-info panel-state revisions-item" data-bind="template: { name: 'revisions-config-item-template' }">
+                    <div class="panel panel-info panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
                 <div data-bind="foreach: perCollectionConfigurations">
-                    <div class="panel panel-state revisions-item" data-bind="template: { name: 'revisions-config-item-template' }">
+                    <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
                 <div class="row" data-bind="visible: perCollectionConfigurations().length == 0 && !defaultConfiguration()">
                     <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                         <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h2 class="text-center">No configuration have been created.</h2>
+                        <h2 class="text-center">No configuration have been created</h2>    
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-sm-12 col-lg-4 pick-item-to-edit" data-bind="visible: !currentlyEditedItem()">
+            <div class="padding absolute-center">
+                <h2 class="text-center">Add new <br />or edit existing one</h2>
+            </div>
+            
         </div>
         <div class="col-sm-12 col-lg-4" data-bind="with: currentlyEditedItem">
             <div class="panel padding edit-panel">

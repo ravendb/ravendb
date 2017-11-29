@@ -19,7 +19,7 @@ class revisions extends viewModelBase {
     selectedItems = ko.observableArray<revisionsConfigurationEntry>([]);
 
     currentlyEditedItem = ko.observable<revisionsConfigurationEntry>(); // reference to cloned and currently being edited item
-    currentBackingItem: revisionsConfigurationEntry = null; // original item which is edited
+    currentBackingItem = ko.observable<revisionsConfigurationEntry>(null); // original item which is edited
 
     spinners = {
         save: ko.observable<boolean>(false)
@@ -124,7 +124,7 @@ class revisions extends viewModelBase {
     addCollectionSpecificConfiguration() {
         eventsCollector.default.reportEvent("revisions", "create");
 
-        this.currentBackingItem = null;
+        this.currentBackingItem(null);
         this.currentlyEditedItem(revisionsConfigurationEntry.empty());
 
         this.currentlyEditedItem().validationGroup.errors.showAllMessages(false);
@@ -142,7 +142,7 @@ class revisions extends viewModelBase {
 
     applyChanges() {
         const itemToSave = this.currentlyEditedItem();
-        const isEdit = !!this.currentBackingItem;
+        const isEdit = !!this.currentBackingItem();
         if (!this.isValid(itemToSave.validationGroup)) {
             return;
         }
@@ -150,7 +150,7 @@ class revisions extends viewModelBase {
         if (itemToSave.isDefault()) {
             this.defaultConfiguration(itemToSave);
         } else if (isEdit) {
-            this.currentBackingItem.copyFrom(itemToSave);
+            this.currentBackingItem().copyFrom(itemToSave);
         } else {
             this.perCollectionConfigurations.push(itemToSave);
         }
@@ -213,7 +213,7 @@ class revisions extends viewModelBase {
     }
 
     editItem(entry: revisionsConfigurationEntry) {
-        this.currentBackingItem = entry;
+        this.currentBackingItem(entry);
         const clone = revisionsConfigurationEntry.empty().copyFrom(entry);
         this.currentlyEditedItem(clone);
     }
@@ -231,7 +231,7 @@ class revisions extends viewModelBase {
     }
 
     exitEditMode() {
-        this.currentBackingItem = null;
+        this.currentBackingItem(null);
         this.currentlyEditedItem(null);
     }
 

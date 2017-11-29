@@ -68,7 +68,7 @@ class clusterTopology {
             this.mapNodes("Promotable", newTopology.Promotables, incomingChanges.Status),
             this.mapNodes("Watcher", newTopology.Watchers, incomingChanges.Status)
         );
-        const newServerUrls = new Set(newNodes.map(x => x.serverUrl()));
+        const newServerUrls = new Set<string>(newNodes.map(x => x.serverUrl()));
 
         const toDelete = existingNodes.filter(x => !newServerUrls.has(x.serverUrl()));
         toDelete.forEach(x => this.nodes.remove(x));
