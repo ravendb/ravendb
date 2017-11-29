@@ -17,12 +17,6 @@
     </div>        
     <button class="btn btn-info" data-bind="click: addDiscoveryUrlWithBlink, disable: !inputUrl().discoveryUrlName() || !inputUrl().validationGroup.isValid()"><i class="icon-plus"></i><span>Add Url</span></button> 
 </div>
-<div class="form-group" data-bind="if: topologyDiscoveryUrls.error()">
-    <label class="control-label">&nbsp;</label>
-    <span data-bind="validationElement: topologyDiscoveryUrls">
-        <span class="help-block" data-bind="validationMessage: topologyDiscoveryUrls"></span>
-    </span>
-</div>
 <div class="form-group" data-bind="visible: topologyDiscoveryUrls().length">
     <label class="control-label">&nbsp;</label>
     <div class="flex-grow">
@@ -42,4 +36,10 @@
             </li>
         </ul>
     </div>
+</div>
+<div class="form-group" data-bind="if: topologyDiscoveryUrls.error()">
+    <label class="control-label">&nbsp;</label>
+    <span data-bind="validationElement: topologyDiscoveryUrls">
+        <span class="help-block" data-bind="validationMessage: topologyDiscoveryUrls"></span>
+    </span>
 </div>

@@ -15,10 +15,12 @@ import transformationScriptSyntax = require("viewmodels/database/tasks/transform
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import jsonUtil = require("common/jsonUtil");
+import ongoingTaskEtlTransformationModel = require("models/database/tasks/ongoingTaskRavenEtlTransformationModel");
 
 class editRavenEtlTask extends viewModelBase {
     
     static readonly scriptNamePrefix = "Script #";
+    static isApplyToAll = ongoingTaskRavenEtlTransformationModel.isApplyToAll;
 
     editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
@@ -275,6 +277,7 @@ class editRavenEtlTask extends viewModelBase {
 
     createCollectionNameAutocompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
+            let result;            
             const key = collectionText();
 
             const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
@@ -284,10 +287,16 @@ class editRavenEtlTask extends viewModelBase {
             const filteredOptions = _.difference(options, usedOptions);
 
             if (key) {
-                return filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));               
             } else {
-                return filteredOptions;
+                result = filteredOptions;
             }
+            
+            if (!_.includes(this.editedRavenEtl().editedTransformationScriptSandbox().transformScriptCollections(), ongoingTaskEtlTransformationModel.applyToAllCollectionsText)) {
+                result.unshift(ongoingTaskEtlTransformationModel.applyToAllCollectionsText);
+            }
+            
+            return result;
         });
     }
 
