@@ -763,7 +763,6 @@ namespace Raven.Server.Commercial
                     }
 
                     var nodeDetailsExist = detailsPerNode.TryGetValue(nodeTag, out var nodeDetails);
-
                     if (nodeDetailsExist &&
                         nodeDetails.NumberOfCores == numberOfCores &&
                         nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
@@ -794,6 +793,7 @@ namespace Raven.Server.Commercial
                 var nodesToRemove = detailsPerNode.Keys.Except(allNodes.Keys).ToList();
                 foreach (var nodeToRemove in nodesToRemove)
                 {
+                    hasChanges = true;
                     detailsPerNode.Remove(nodeToRemove);
                 }
 
