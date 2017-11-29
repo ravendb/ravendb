@@ -93,9 +93,12 @@ namespace Raven.Client.Documents.Indexes
             if (Equals(Etag, other.Etag) == false)
                 result |= IndexDefinitionCompareDifferences.Etag;
 
-            if (Maps.SequenceEqual(other.Maps) == false)
+            if (Maps.SetEquals(other.Maps) == false)
             {
-                if (Maps.SequenceEqual(other.Maps, IndexPrettyPrinterEqualityComparer.Instance))
+                var currentWithFormattingComparer = new HashSet<string>(Maps, IndexPrettyPrinterEqualityComparer.Instance);
+                var otherWithFormattingComparer = new HashSet<string>(other.Maps, IndexPrettyPrinterEqualityComparer.Instance);
+
+                if (currentWithFormattingComparer.SetEquals(otherWithFormattingComparer))
                     result |= IndexDefinitionCompareDifferences.MapsFormatting;
                 else
                     result |= IndexDefinitionCompareDifferences.Maps;

@@ -116,7 +116,7 @@ namespace Raven.Client.ServerWide
                 result &= ~IndexDefinitionCompareDifferences.Priority;
 
                 if (result != IndexDefinitionCompareDifferences.None)
-                    throw new NotSupportedException($"Can not update auto-index: {definition.Name}");
+                    throw new NotSupportedException($"Can not update auto-index: {definition.Name} (compare result: {result})");
             }
 
             AutoIndexes[definition.Name] = definition;

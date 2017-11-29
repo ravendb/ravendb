@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -38,10 +39,10 @@ namespace Raven.Client.Documents.Indexes
 
             var result = IndexDefinitionCompareDifferences.None;
 
-            if (string.Equals(Collection, other.Collection) == false || MapFields.SequenceEqual(other.MapFields) == false)
+            if (string.Equals(Collection, other.Collection) == false || DictionaryExtensions.ContentEquals(MapFields, other.MapFields) == false)
                 result |= IndexDefinitionCompareDifferences.Maps;
 
-            if (GroupByFields.SequenceEqual(other.GroupByFields) == false)
+            if (DictionaryExtensions.ContentEquals(GroupByFields, other.GroupByFields) == false)
                 result |= IndexDefinitionCompareDifferences.Reduce;
 
             if (Priority != other.Priority)
