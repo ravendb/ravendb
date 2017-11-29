@@ -176,28 +176,25 @@
                                 <div class="help-block" data-bind="validationMessage: script"></div>
                             </div>
                         </div>
-                        <div class="toggle" data-bind="visible: !isNew()">
+                        <div class="toggle margin-top" data-bind="visible: !isNew()">
                             <input id="reset" type="checkbox" data-bind="checked: resetScript">
                             <label for="reset">Apply script to documents from beginning of time (Reset)</label>
                         </div>
-                        <div class="toggle">
-                            <input id="applyToAll" type="checkbox" data-bind="checked: applyScriptForAllCollections">
-                            <label for="applyToAll">Apply script to all collections</label>
-                        </div>
-                        <div class="margin-bottom" data-bind="collapse: !applyScriptForAllCollections(), css: {'invisible': applyScriptForAllCollections }">
+                        <div class="margin-bottom margin-top">
                             <div class="flex-horizontal">
                                 <div class="flex-grow">
                                     <div class="dropdown btn-block flex-grow">
-                                        <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown"
+                                        <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" autocomplete="off"
                                                data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput', disabled: $root.collections().length === 0 }" />
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                         <ul class="dropdown-menu" role="menu" style="display: none;"
-                                            data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">
+                                            data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">                                            
                                             <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
                                                 <a role="menuitem" tabindex="-1" href="#">
                                                     <span data-bind="text: $data"></span>
                                                 </a>
-                                            </li>
+                                                <div class="divider" data-bind="visible: $root.constructor.isApplyToAll($data)"></div>
+                                            </li>   
                                         </ul>
                                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScriptCollections">
                                             <div class="help-block" data-bind="validationMessage: transformScriptCollections"></div>
@@ -208,15 +205,13 @@
                                     <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
                                 </div>
                             </div>
-                            <div data-bind="visible: !applyScriptForAllCollections() && transformScriptCollections().length">
+                            <div data-bind="visible: transformScriptCollections().length" class="margin-top">
                                 <label><strong>Collections Selected:</strong></label>
-                                <ul class="well collection-list">
-                                    <!-- ko foreach: transformScriptCollections -->
+                                <ul class="well collection-list" data-bind="foreach: transformScriptCollections"> 
                                     <li>
                                         <div class="name" data-bind="text: $data"></div>
                                         <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
                                     </li>
-                                    <!-- /ko -->
                                 </ul>
                             </div>
                         </div>

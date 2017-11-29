@@ -3,6 +3,9 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskEtlTransformationModel {
+    
+    static readonly applyToAllCollectionsText = "Apply to All Collections";
+    
     name = ko.observable<string>();
     script = ko.observable<string>();
     transformScriptCollections = ko.observableArray<string>([]);
@@ -31,6 +34,10 @@ class ongoingTaskEtlTransformationModel {
         false, jsonUtil.newLineNormalizingHashFunction);
     }
 
+    static isApplyToAll(colectionName: string){
+        return colectionName === ongoingTaskEtlTransformationModel.applyToAllCollectionsText;
+    }
+    
     getCollectionEntry(collectionName: string) {
         return collectionsTracker.default.getCollectionColorIndex(collectionName);        
     }
@@ -90,7 +97,16 @@ class ongoingTaskEtlTransformationModel {
     }
     
     addWithBlink(collectionName: string) {
-        this.transformScriptCollections.unshift(collectionName);
+        if (collectionName === ongoingTaskEtlTransformationModel.applyToAllCollectionsText) {
+            this.applyScriptForAllCollections(true);
+            this.transformScriptCollections([ongoingTaskEtlTransformationModel.applyToAllCollectionsText]);
+        }
+        else {
+            this.applyScriptForAllCollections(false);          
+            _.remove(this.transformScriptCollections(), x => x === ongoingTaskEtlTransformationModel.applyToAllCollectionsText);
+            this.transformScriptCollections.unshift(collectionName);
+        }
+       
         this.inputCollection("");
         
         // blink on newly created item
@@ -102,6 +118,11 @@ class ongoingTaskEtlTransformationModel {
         this.script(dto.Script);
         this.transformScriptCollections(dto.Collections || []);
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
+        
+        if (this.applyScriptForAllCollections()) {
+            this.transformScriptCollections(["Apply to All Collections"]);
+        }
+        
         this.isNew(isNew);
         this.resetScript(resetScript)
     }
