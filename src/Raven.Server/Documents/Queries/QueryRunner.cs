@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.SelectFields.Length != 1 || query.Metadata.SelectFields[0].IsSuggest == false)
                 throw new InvalidQueryException("Suggestion query must have one suggest token in SELECT.", query.Metadata.QueryText, query.QueryParameters);
 
-            var selectField = (SuggestField)query.Metadata.SelectFields[0];
+            var selectField = (SuggestionField)query.Metadata.SelectFields[0];
 
             var index = GetIndex(query.Metadata.IndexName);
 

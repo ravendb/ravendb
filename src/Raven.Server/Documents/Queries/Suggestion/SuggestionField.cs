@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries.Suggestion
 {
-    public class SuggestField : SelectField
+    public class SuggestionField : SelectField
     {
         private string _termAsStringOrParameterName;
 
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Suggestion
 
         private SuggestionOptions _options;
 
-        public SuggestField()
+        public SuggestionField()
         {
             IsSuggest = true;
         }

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public SuggestionResult Suggestions(IndexQueryServerSide query, SuggestField field, JsonOperationContext documentsContext, CancellationToken token)
+        public SuggestionResult Suggestions(IndexQueryServerSide query, SuggestionField field, JsonOperationContext documentsContext, CancellationToken token)
         {
             var options = field.GetOptions(documentsContext, query.QueryParameters) ?? new SuggestionOptions();
             var terms = field.GetTerms(documentsContext, query.QueryParameters);
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private const float BoostEnd = 1.0f;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string[] QueryOverSingleWord(SuggestField field, string word, SuggestionOptions options)
+        private string[] QueryOverSingleWord(SuggestionField field, string word, SuggestionOptions options)
         {
             // Perform devirtualization of the distance function when supported. 
             switch (options.Distance)
@@ -99,11 +99,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private string[] QueryOverSingleWord<TDistance>(SuggestField suggestField, string word, SuggestionOptions options, TDistance sd)
+        private string[] QueryOverSingleWord<TDistance>(SuggestionField suggestionField, string word, SuggestionOptions options, TDistance sd)
             where TDistance : IStringDistance
         {
             var min = options.Accuracy ?? SuggestionOptions.DefaultAccuracy;
-            var field = suggestField.Name;
+            var field = suggestionField.Name;
             var pageSize = options.PageSize;
             var morePopular = options.Popularity;
 
@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return r;
         }
 
-        private string[] QueryOverMultipleWords(SuggestField field, List<string> words, SuggestionOptions options)
+        private string[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
         {
             options.Popularity = false;
 

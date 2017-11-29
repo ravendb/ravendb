@@ -2034,7 +2034,7 @@ namespace Raven.Server.Documents.Indexes
 
                             documentsContext.CloseTransaction();
 
-                            var suggestField = (SuggestField)query.Metadata.SelectFields[0];
+                            var suggestField = (SuggestionField)query.Metadata.SelectFields[0];
                             using (var reader = IndexPersistence.OpenSuggestionIndexReader(indexTx.InnerTransaction, suggestField.Name))
                             {
                                 result.Results.Add(reader.Suggestions(query, suggestField, documentsContext, token.Token));
