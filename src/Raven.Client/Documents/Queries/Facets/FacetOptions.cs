@@ -2,12 +2,12 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetOptions
     {
+        internal static readonly FacetOptions Default = new FacetOptions();
+
         public FacetOptions()
         {
             PageSize = int.MaxValue;
         }
-
-        public static FacetOptions Default = new FacetOptions();
 
         /// <summary>
         /// Indicates how terms should be sorted.

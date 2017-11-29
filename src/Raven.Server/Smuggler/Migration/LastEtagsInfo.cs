@@ -1,4 +1,4 @@
-namespace Raven.Server.Web.System
+namespace Raven.Server.Smuggler.Migration
 {
     public class LastEtagsInfo
     {

@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var min = options.Accuracy ?? SuggestionOptions.DefaultAccuracy;
             var field = suggestionField.Name;
             var pageSize = options.PageSize;
-            var morePopular = options.Popularity;
+            var morePopular = options.SortMode == SuggestionSortMode.Popularity;
 
             int lengthWord = word.Length;
 
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private string[] QueryOverMultipleWords(SuggestionField field, List<string> words, SuggestionOptions options)
         {
-            options.Popularity = false;
+            options.SortMode = SuggestionSortMode.None;
 
             var result = new HashSet<string>();
 

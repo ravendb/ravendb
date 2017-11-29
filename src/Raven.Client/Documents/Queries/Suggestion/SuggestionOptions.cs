@@ -2,17 +2,19 @@
 {
     public class SuggestionOptions
     {
-        public static SuggestionOptions Default = new SuggestionOptions();
+        internal static readonly SuggestionOptions Default = new SuggestionOptions();
 
-        public static float DefaultAccuracy = 0.5f;
+        public static readonly float DefaultAccuracy = 0.5f;
 
-        public static int DefaultPageSize = 15;
+        public static readonly int DefaultPageSize = 15;
 
-        public static StringDistanceTypes DefaultDistance = StringDistanceTypes.Levenshtein;
+        public static readonly StringDistanceTypes DefaultDistance = StringDistanceTypes.Levenshtein;
+
+        public static readonly SuggestionSortMode DefaultSortMode = SuggestionSortMode.Popularity;
 
         public SuggestionOptions()
         {
-            Popularity = true;
+            SortMode = DefaultSortMode;
             Distance = DefaultDistance;
             Accuracy = DefaultAccuracy;
             PageSize = DefaultPageSize;
@@ -33,6 +35,6 @@
         /// <summary>
         /// Whether to return the terms in order of popularity
         /// </summary>
-        public bool Popularity { get; set; }
+        public SuggestionSortMode SortMode { get; set; }
     }
 }
