@@ -315,9 +315,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
 
-            if (assignedCores == null)
-                assignedCores = ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
-
             if (assignedCores != null && assignedCores > nodeInfo.NumberOfCores)
             {
                 throw new ArgumentException("Cannot add node because the assigned cores is larger " +
@@ -326,12 +323,17 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             ServerStore.EnsureNotPassive();
 
-            if (ServerStore.LicenseManager.CanAddNode(nodeUrl, assignedCores, out var licenseLimit) == false)
+            if (assignedCores == null)
+                assignedCores = ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
+
+            Debug.Assert(assignedCores <= nodeInfo.NumberOfCores);
+
+            if (ServerStore.LicenseManager.CanAddNode(nodeUrl, assignedCores.Value, out var licenseLimit) == false)
             {
                 SetLicenseLimitResponse(licenseLimit);
                 return;
             }
-            
+
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -442,7 +444,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
                             UsableMemoryInGb = nodeInfo.UsableMemoryInGb
                         };
-                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true);
+                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true, waitToUpdate: true);
                     }
 
                     NoContentStatus();
@@ -462,7 +464,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
+                ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
                 NoContentStatus();
                 return;
             }

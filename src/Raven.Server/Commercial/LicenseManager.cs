@@ -317,7 +317,8 @@ namespace Raven.Server.Commercial
 
         public void CalculateLicenseLimits(
             NodeDetails newNodeDetails = null,
-            bool forceFetchingNodeInfo = false)
+            bool forceFetchingNodeInfo = false,
+            bool waitToUpdate = false)
         {
             if (_serverStore.IsLeader() == false)
                 return;
@@ -325,7 +326,7 @@ namespace Raven.Server.Commercial
             if (_disableCalculatingLicenseLimits)
                 return;
 
-            if (_licenseLimitsSemaphore.Wait(0) == false)
+            if (_licenseLimitsSemaphore.Wait(waitToUpdate ? 500 : 0) == false)
                 return;
 
             try
@@ -383,12 +384,9 @@ namespace Raven.Server.Commercial
             return Math.Min(availableCores, numberOfCores);
         }
 
-        private bool CanAssignCores(int? assignedCores, out string details)
+        private bool CanAssignCores(int assignedCores, out string details)
         {
             details = null;
-
-            if (assignedCores.HasValue == false)
-                return true;
 
             var licenseLimits = _serverStore.LoadLicenseLimits();
             if (licenseLimits?.NodeLicenseDetails == null ||
@@ -396,9 +394,9 @@ namespace Raven.Server.Commercial
                 return true;
 
             var coresInUse = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
-            if (coresInUse + assignedCores.Value > _licenseStatus.MaxCores)
+            if (coresInUse + assignedCores > _licenseStatus.MaxCores)
             {
-                details = $"Can't assign {assignedCores} core{Pluralize(assignedCores.Value)} " +
+                details = $"Can't assign {assignedCores} core{Pluralize(assignedCores)} " +
                           $"to the node, max allowed cores on license: {_licenseStatus.MaxCores}, " +
                           $"number of utilized cores: {coresInUse}";
                 return false;
@@ -462,7 +460,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            CalculateLicenseLimits(forceFetchingNodeInfo: true);
+            CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
             return null;
         }
 
@@ -1218,7 +1216,7 @@ namespace Raven.Server.Commercial
             return (hasSnapshotBackup, hasCloudBackup);
         }
 
-        public bool CanAddNode(string nodeUrl, int? assignedCores, out LicenseLimit licenseLimit)
+        public bool CanAddNode(string nodeUrl, int assignedCores, out LicenseLimit licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
                 return false;
