@@ -27,9 +27,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
     public enum DynamicQueryMatchType
     {
-        Complete,
+        Failure,
         Partial,
-        Failure
+        Complete,
+        CompleteButIdle
     }
 
     public class DynamicQueryToIndexMatcher
@@ -70,20 +71,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (results.TryGetValue(DynamicQueryMatchType.Complete, out DynamicQueryMatchResult[] matchResults) && matchResults.Length > 0)
             {
-                var prioritizedResults = matchResults
-                    .OrderByDescending(x => x.LastMappedEtag)
-                    .ThenByDescending(x => x.NumberOfMappedFields)
-                    .ToArray();
+                return SelectIndexMatchingCompletely(explanations, matchResults);
+            }
 
-                if (explanations != null)
-                {
-                    for (var i = 1; i < prioritizedResults.Length; i++)
-                    {
-                        explanations.Add(new Explanation(prioritizedResults[i].IndexName, "Wasn't the widest / most unstable index matching this query"));
-                    }
-                }
-
-                return prioritizedResults[0];
+            if (results.TryGetValue(DynamicQueryMatchType.CompleteButIdle, out matchResults) && matchResults.Length > 0)
+            {
+                return SelectIndexMatchingCompletely(explanations, matchResults);
             }
 
             if (results.TryGetValue(DynamicQueryMatchType.Partial, out matchResults) && matchResults.Length > 0)
@@ -92,6 +85,24 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             return new DynamicQueryMatchResult(string.Empty, DynamicQueryMatchType.Failure);
+        }
+
+        private static DynamicQueryMatchResult SelectIndexMatchingCompletely(List<Explanation> explanations, DynamicQueryMatchResult[] matchResults)
+        {
+            var prioritizedResults = matchResults
+                .OrderByDescending(x => x.LastMappedEtag)
+                .ThenByDescending(x => x.NumberOfMappedFields)
+                .ToArray();
+
+            if (explanations != null)
+            {
+                for (var i = 1; i < prioritizedResults.Length; i++)
+                {
+                    explanations.Add(new Explanation(prioritizedResults[i].IndexName, "Wasn't the widest / most unstable index matching this query"));
+                }
+            }
+
+            return prioritizedResults[0];
         }
 
         private DynamicQueryMatchResult ConsiderUsageOfIndex(DynamicQueryMapping query, AutoIndexDefinitionBase definition, List<Explanation> explanations = null)
@@ -166,8 +177,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (currentBestState == DynamicQueryMatchType.Complete && state == IndexState.Idle)
             {
-                currentBestState = DynamicQueryMatchType.Partial;
-                explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match"));
+                currentBestState = DynamicQueryMatchType.CompleteButIdle;
+                explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is idle. The preference is for active indexes - making a complete match but marking the index is idle"));
             }
 
             if (currentBestState != DynamicQueryMatchType.Failure && query.IsGroupBy)
@@ -177,9 +188,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (bestMapReduceMatch != DynamicQueryMatchType.Complete)
                     return new DynamicQueryMatchResult(indexName, bestMapReduceMatch);
             }
-
-            if (currentBestState == DynamicQueryMatchType.Partial && index.Type.IsStatic()) // we cannot support this because we might extend fields from static index into auto index
-                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
 
             long lastMappedEtagFor;
             try
