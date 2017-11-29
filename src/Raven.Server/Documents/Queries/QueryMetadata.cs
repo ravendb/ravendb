@@ -768,12 +768,12 @@ namespace Raven.Server.Documents.Queries
             return null; // never hit
         }
 
-        private SuggestField CreateSuggest(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
+        private SuggestionField CreateSuggest(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
         {
             if (expression.Arguments.Count < 2 || expression.Arguments.Count > 3)
                 ThrowSuggestMethodMustHaveTwoOrThreeArguments(expression.Arguments.Count, parameters);
 
-            var result = new SuggestField();
+            var result = new SuggestionField();
 
             var name = ExtractFieldNameFromArgument(expression.Arguments[0], "suggest", parameters, QueryText);
 
