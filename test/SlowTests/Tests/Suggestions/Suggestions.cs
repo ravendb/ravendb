@@ -194,7 +194,7 @@ namespace SlowTests.Tests.Suggestions
                                 Accuracy = 0.4f,
                                 PageSize = 5,
                                 Distance = StringDistanceTypes.JaroWinkler,
-                                Popularity = true
+                                SortMode = SuggestionSortMode.Popularity
                             }))
                             .Execute();
 

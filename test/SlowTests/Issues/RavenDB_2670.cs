@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                         {
                             PageSize = 5,
                             Distance = StringDistanceTypes.JaroWinkler,
-                            Popularity = true,
+                            SortMode = SuggestionSortMode.Popularity,
                             Accuracy = 0.4f
                         }))
                         .Execute();
