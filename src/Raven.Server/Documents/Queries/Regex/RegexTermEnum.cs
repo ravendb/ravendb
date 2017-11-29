@@ -16,10 +16,9 @@
  */
 
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Lucene.Net.Store;
 
-namespace Raven.Server.Documents.Queries.Regex
+namespace Lucene.Net.Search
 {
     /// <summary>
     /// Subclass of FilteredTermEnum for enumerating all terms that match the
@@ -31,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Regex
     /// <remarks>http://www.java2s.com/Open-Source/Java-Document/Net/lucene-connector/org/apache/lucene/search/regex/RegexTermEnum.java.htm</remarks>
     public class RegexTermEnum : FilteredTermEnum
     {
-        private string _sField;
+        private readonly string _sField;
         private bool _bEndEnum;
         private System.Text.RegularExpressions.Regex _regex;
 
