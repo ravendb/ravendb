@@ -18,9 +18,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -31,6 +28,14 @@ namespace Raven.Server.Web.System
 {
     public class OngoingTasksHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/admin/backup/database", "OPTIONS", AuthorizationStatus.DatabaseAdmin)]
+        public Task AllowPreflightRequest()
+        {
+            SetupCORSHeaders();
+            HttpContext.Response.Headers.Remove("Content-Type");
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/tasks", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTasks()
         {
@@ -168,88 +173,6 @@ namespace Raven.Server.Web.System
             return taskInfo;
         }
 
-        [RavenAction("/databases/*/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task TestPeriodicBackupCredentials()
-        {
-            // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
-
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
-                throw new ArgumentException($"Unkown backup connection: {type}");
-
-            DynamicJsonValue result;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                try
-                {
-                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
-                    switch (connectionType)
-                    {
-                        case PeriodicBackupTestConnectionType.S3:
-                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(
-                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.BucketName,
-                                s3Settings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                await awsClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.Glacier:
-                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var galcierClient = new RavenAwsGlacierClient(
-                                glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
-                                glacierSettings.AwsRegionName, glacierSettings.VaultName,
-                                cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                await galcierClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.Azure:
-                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(
-                                azureSettings.AccountName, azureSettings.AccountKey,
-                                azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                await azureClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.FTP:
-                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                            using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
-                                ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
-                            {
-                                await ftpClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.Local:
-                        case PeriodicBackupTestConnectionType.None:
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    result = new DynamicJsonValue
-                    {
-                        [nameof(NodeConnectionTestResult.Success)] = true,
-                    };
-                }
-                catch (Exception e)
-                {
-                    result = new DynamicJsonValue
-                    {
-                        [nameof(NodeConnectionTestResult.Success)] = false,
-                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
-                    };
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, result);
-                }
-            }
-        }
-
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
@@ -334,6 +257,46 @@ namespace Raven.Server.Web.System
                 return null;
 
             return CrontabSchedule.Parse(backupFrequency);
+        }
+
+        [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task BackupDatabase()
+        {
+            SetupCORSHeaders();
+
+            var taskId = GetLongQueryString("taskId");
+            var isFullBackup = GetBoolValueQueryString("isFullBackup", required: false);
+
+            var nodeTag = Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+            if (nodeTag == ServerStore.NodeTag)
+            {
+                Database.PeriodicBackupRunner.StartBackupTask(taskId, isFullBackup ?? true);
+                NoContentStatus();
+                return Task.CompletedTask;
+            }
+
+            RedirectToRelevantNode(nodeTag);
+            return Task.CompletedTask;
+        }
+
+        private void RedirectToRelevantNode(string nodeTag)
+        {
+            ClusterTopology topology;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                topology = ServerStore.GetClusterTopology(context);
+            }
+            var url = topology.GetUrlFromTag(nodeTag);
+            if (url == null)
+            {
+                throw new InvalidOperationException($"Couldn't find the node url for node tag: {nodeTag}");
+            }
+
+            var location = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
+            HttpContext.Response.Headers.Remove("Content-Type");
+            HttpContext.Response.Headers.Add("Location", location);
         }
 
         private IEnumerable<OngoingTask> CollectBackupTasks(

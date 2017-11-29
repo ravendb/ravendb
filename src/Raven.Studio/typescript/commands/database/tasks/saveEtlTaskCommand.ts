@@ -27,7 +27,7 @@ class saveEtlTaskCommand<T extends Raven.Client.ServerWide.ETL.RavenEtlConfigura
         
         const url = endpoints.global.adminDatabases.adminEtl + this.urlEncodeArgs(args);
         
-        return this.put(url, JSON.stringify(this.payload));
+        return this.put(url, JSON.stringify(this.payload), this.db);
     }
 
     static forRavenEtl(db: database, payload: Raven.Client.ServerWide.ETL.RavenEtlConfiguration, scriptsToReset?: string[]) {
