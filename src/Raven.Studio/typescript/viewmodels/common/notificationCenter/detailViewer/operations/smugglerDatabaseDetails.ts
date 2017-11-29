@@ -33,6 +33,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     exportItems: KnockoutComputed<Array<smugglerListItem>>;
     messages: KnockoutComputed<Array<string>>;
+    messagesJoined: KnockoutComputed<string>;
     previousProgressMessages: string[];
 
     constructor(op: operation, notificationCenter: notificationCenter) {
@@ -127,6 +128,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
         });
 
+        this.messagesJoined = ko.pureComputed(() => this.messages() ? this.messages().join("\n") : "");
+        
         this.registerDisposable(this.messages.subscribe(() => {
             if (this.tail()) {
                 this.scrollDown();
