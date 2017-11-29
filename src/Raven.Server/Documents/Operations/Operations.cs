@@ -320,14 +320,6 @@ namespace Raven.Server.Documents.Operations
                     return false;
                 }
                 
-                switch (notification.TaskType)
-                {
-                    case OperationType.MigrationFromLegacyData:
-                    case OperationType.DatabaseExport:
-                    case OperationType.DatabaseImport:
-                        return false;
-                }
-                
                 return true;
             }
 
