@@ -73,6 +73,8 @@ namespace Raven.Client.Documents
         private static MethodInfo _groupByArrayValuesMethod;
 
         private static MethodInfo _groupByArrayContentMethod;
+
+        private static MethodInfo _suggestMethod;
 #endif
 
         /// <summary>
@@ -234,7 +236,7 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            MethodInfo currentMethod = null; //TODO [ppekrol]
+            var currentMethod = GetSuggestMethod();
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
@@ -1333,6 +1335,36 @@ namespace Raven.Client.Documents
         }
 
 #if LEGACY
+        private static MethodInfo GetSuggestMethod()
+        {
+            if (_suggestMethod != null)
+                return _suggestMethod;
+
+            lock (Locker)
+            {
+                if (_suggestMethod != null)
+                    return _suggestMethod;
+
+                foreach (var method in typeof(LinqExtensions).GetMethods())
+                {
+                    if (method.Name != nameof(Suggest))
+                        continue;
+
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 2)
+                        continue;
+
+                    if (parameters[1].ParameterType != typeof(SuggestionBase))
+                        continue;
+
+                    _suggestMethod = method;
+                    break;
+                }
+
+                return _suggestMethod;
+            }
+        }
+
         private static MethodInfo GetAggregateByMethod()
         {
             if (_aggregateByMethod != null)
@@ -1352,7 +1384,7 @@ namespace Raven.Client.Documents
                     if (paramters.Length != 2)
                         continue;
 
-                    if (paramters[1].ParameterType != typeof(Facet))
+                    if (paramters[1].ParameterType != typeof(FacetBase))
                         continue;
 
                     _aggregateByMethod = method;
