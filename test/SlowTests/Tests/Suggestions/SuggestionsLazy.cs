@@ -49,12 +49,12 @@ namespace SlowTests.Tests.Suggestions
                     var oldRequests = s.Advanced.NumberOfRequests;
 
                     var suggestionQueryResult = s.Query<User>("test")
-                        .Where(x => x.Name == "Owen")
-                        .SuggestLazy();
+                        .Suggest(x => x.ByField(y => y.Name, "Owen"))
+                        .ExecuteLazy();
 
                     Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
-                    Assert.Equal(1, suggestionQueryResult.Value.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Value.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult.Value["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult.Value["Name"].Suggestions[0]);
 
                     Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
                 }
@@ -93,12 +93,12 @@ namespace SlowTests.Tests.Suggestions
                     var oldRequests = s.Advanced.NumberOfRequests;
 
                     var suggestionQueryResult = s.Query<User>("test")
-                        .Where(x => x.Name == "Owen")
-                        .SuggestLazyAsync();
+                        .Suggest(x => x.ByField(y => y.Name, "Owen"))
+                        .ExecuteLazyAsync();
 
                     Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
-                    Assert.Equal(1, suggestionQueryResult.Value.Result.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Value.Result.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult.Value.Result["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult.Value.Result["Name"].Suggestions[0]);
 
                     Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
                 }

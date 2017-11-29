@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations.Lazy;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Suggestion
@@ -74,14 +75,14 @@ namespace Raven.Client.Documents.Queries.Suggestion
             return results;
         }
 
-        public Lazy<Dictionary<string, SuggestionResult>> ExecuteLazy(Action<string[]> onEval = null)
+        public Lazy<Dictionary<string, SuggestionResult>> ExecuteLazy(Action<Dictionary<string, SuggestionResult>> onEval = null)
         {
-            throw new NotImplementedException();
+            return ((DocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, GetIndexQuery(isAsync: false), InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
-        public Lazy<Task<Dictionary<string, SuggestionResult>>> ExecuteLazyAsync(Action<string[]> onEval = null)
+        public Lazy<Task<Dictionary<string, SuggestionResult>>> ExecuteLazyAsync(Action<Dictionary<string, SuggestionResult>> onEval = null)
         {
-            throw new NotImplementedException();
+            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, GetIndexQuery(isAsync: true), InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
         protected abstract IndexQuery GetIndexQuery(bool isAsync);

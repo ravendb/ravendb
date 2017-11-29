@@ -7,10 +7,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
 
@@ -53,11 +51,10 @@ namespace SlowTests.MailingList
 
                     await session.SaveChangesAsync();
 
+                    var query = session.Query<Person, People_ByName>()
+                        .Suggest(x => x.ByField(y => y.Name, "martin"));
 
-                    IRavenQueryable<Person> query = session.Query<Person, People_ByName>()
-                                                           .Search(p => p.Name, "martin");
-
-                    await  query.SuggestAsync();
+                    await query.ExecuteAsync();
                 }
             }
         }

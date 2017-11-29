@@ -64,14 +64,14 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User>("DefaultSuggestionIndex")
-                        .Where(x => x.Name == "Owen")
-                        .Suggest(new SuggestionQueryOld
+                        .Suggest(x => x.ByField(y => y.Name, "Owen").WithOptions(new SuggestionOptions
                         {
-                            MaxSuggestions = 10
-                        });
+                            PageSize = 10
+                        }))
+                        .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }
@@ -96,11 +96,11 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-                                                       .Where(x => x.Name == "Owen")
-                                                       .Suggest();
+                        .Suggest(x => x.ByField(y => y.Name, "Owen"))
+                        .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }
@@ -125,12 +125,11 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-                                                       .Where(x => x.Name == "Orin")
-                                                       .Where(x => x.Email == "whatever")
-                                                       .Suggest(new SuggestionQueryOld { Field = "Name", Term = "Orin" });
+                        .Suggest(x => x.ByField(y => y.Name, "Orin"))
+                        .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }
@@ -155,12 +154,11 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-                                                       .Where(x => x.Email == "whatever")
-                                                       .Where(x => x.Name == "Orin")
-                                                       .Suggest(new SuggestionQueryOld { Field = "Name", Term = "Orin" });
+                        .Suggest(x => x.ByField(y => y.Name, "Orin"))
+                        .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }
@@ -185,11 +183,14 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, SuggestionIndex>()
-                                                       .Where(x => x.Name == "Orin")
-                                                       .Suggest(new SuggestionQueryOld { Accuracy = 0.4f });
+                        .Suggest(x => x.ByField(y => y.Name, "Orin").WithOptions(new SuggestionOptions
+                        {
+                            Accuracy = 0.4f
+                        }))
+                        .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }
@@ -214,16 +215,16 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User>("SuggestionIndex")
-                        .Where(x => x.Name == "Oern") // intentional typo
-                        .Suggest(new SuggestionQueryOld
+                        .Suggest(x => x.ByField(y => y.Name, "Oern").WithOptions(new SuggestionOptions
                         {
-                            MaxSuggestions = 10,
+                            PageSize = 10,
                             Accuracy = 0.1f,
                             Distance = StringDistanceTypes.NGram
-                        });
+                        }))
+                        .Execute();
 
-                    Assert.Equal(1, suggestionQueryResult.Suggestions.Length);
-                    Assert.Equal("oren", suggestionQueryResult.Suggestions[0]);
+                    Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
+                    Assert.Equal("oren", suggestionQueryResult["Name"].Suggestions[0]);
                 }
             }
         }

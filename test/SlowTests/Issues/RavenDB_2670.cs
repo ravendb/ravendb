@@ -69,17 +69,16 @@ namespace SlowTests.Issues
                 {
                     var result = session
                         .Query<Product, Products_ByName>()
-                        .Suggest(new SuggestionQueryOld
+                        .Suggest(f => f.ByField("Name", new[] { "chaig", "tof" }).WithOptions(new SuggestionOptions
                         {
-                            Field = "Name",
-                            Term = "<<chaig tof>>",
-                            Accuracy = 0.4f,
-                            MaxSuggestions = 5,
+                            PageSize = 5,
                             Distance = StringDistanceTypes.JaroWinkler,
-                            Popularity = true
-                        });
+                            Popularity = true,
+                            Accuracy = 0.4f
+                        }))
+                        .Execute();
 
-                    Assert.True(result.Suggestions.Length <= 5);
+                    Assert.True(result["Name"].Suggestions.Count <= 5);
                 }
             }
         }

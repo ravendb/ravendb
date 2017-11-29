@@ -80,14 +80,12 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     string q = "lorem";
-                    var hits = session.Query<The_Search.Result, The_Search>()
-                        .Search(x => x.Query, q)
-                        .As<TheArticle>();
+                    var query = session.Query<The_Search.Result, The_Search>()
+                        .Suggest(x => x.ByField(y => y.Query, q));
 
+                    var suggestionResult = query.Execute();
 
-                    SuggestionQueryResult suggestionResult = hits.Suggest();
-
-                    Assert.False(suggestionResult.Suggestions.Contains(q));
+                    Assert.False(suggestionResult["Query"].Suggestions.Contains(q));
                 }
             }
         }
