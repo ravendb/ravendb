@@ -77,7 +77,7 @@ namespace Raven.Client.Documents.Commands
 
             if (_startWith != null)
             {
-                pathBuilder.Append("startsWith=").Append(Uri.EscapeDataString(_startWith));
+                pathBuilder.Append("&startsWith=").Append(Uri.EscapeDataString(_startWith));
 
                 if (_matches != null)
                     pathBuilder.Append("&matches=").Append(_matches);
