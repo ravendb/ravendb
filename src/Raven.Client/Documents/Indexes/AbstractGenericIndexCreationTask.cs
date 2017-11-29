@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Indexes
 {

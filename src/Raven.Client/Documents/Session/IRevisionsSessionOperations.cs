@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Raven.Client.Json;
 
 namespace Raven.Client.Documents.Session

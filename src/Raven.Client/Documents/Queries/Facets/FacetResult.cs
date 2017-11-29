@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using Raven.Client.Documents.Queries.Facets;
 
-namespace Raven.Client.Documents.Commands
+namespace Raven.Client.Documents.Queries.Facets
 {
     public class FacetResult
     {

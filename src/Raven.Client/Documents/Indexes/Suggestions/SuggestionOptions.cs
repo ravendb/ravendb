@@ -1,13 +1,13 @@
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 
-namespace Raven.Client.Documents.Indexes.Suggestion
+namespace Raven.Client.Documents.Indexes.Suggestions
 {
     public class SuggestionOptions
     {
         public SuggestionOptions()
         {
-            Distance = Queries.Suggestion.SuggestionOptions.DefaultDistance;
-            Accuracy = Queries.Suggestion.SuggestionOptions.DefaultAccuracy;
+            Distance = Queries.Suggestions.SuggestionOptions.DefaultDistance;
+            Accuracy = Queries.Suggestions.SuggestionOptions.DefaultAccuracy;
         }
 
         /// <summary>

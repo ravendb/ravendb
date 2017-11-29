@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Linq.Expressions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations;
 using Sparrow.Json;

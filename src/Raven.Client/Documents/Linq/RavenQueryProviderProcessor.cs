@@ -19,12 +19,11 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
-using SuggestionOptions = Raven.Client.Documents.Queries.Suggestion.SuggestionOptions;
 
 namespace Raven.Client.Documents.Linq
 {

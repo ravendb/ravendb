@@ -1,14 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Text;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Facets;
 
-namespace Raven.Server.Documents.Queries.Faceted
+namespace Raven.Server.Documents.Queries.Facets
 {
     public class FacetedQueryResult : QueryResult<List<FacetResult>, List<Document>>
     {

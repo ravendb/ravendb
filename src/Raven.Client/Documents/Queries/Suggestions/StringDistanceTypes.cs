@@ -3,7 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-namespace Raven.Client.Documents.Queries.Suggestion
+namespace Raven.Client.Documents.Queries.Suggestions
 {
     /// <summary>
     /// String distance algorithms used in suggestion query

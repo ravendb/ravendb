@@ -1,5 +1,5 @@
 using System;
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
@@ -38,5 +38,16 @@ namespace Raven.Client.Documents.Session
             return optionsParameterName;
         }
 
-        private void AssertCanSuggest()        {            if (WhereTokens.Count > 0)                throw new InvalidOperationException("Cannot add suggest when WHERE statements are present.");            if (SelectTokens.Count > 0)                throw new InvalidOperationException("Cannot add suggest when SELECT statements are present.");            if (OrderByTokens.Count > 0)                throw new InvalidOperationException("Cannot add suggest when ORDER BY statements are present.");        }    }
+        private void AssertCanSuggest()
+        {
+            if (WhereTokens.Count > 0)
+                throw new InvalidOperationException("Cannot add suggest when WHERE statements are present.");
+
+            if (SelectTokens.Count > 0)
+                throw new InvalidOperationException("Cannot add suggest when SELECT statements are present.");
+
+            if (OrderByTokens.Count > 0)
+                throw new InvalidOperationException("Cannot add suggest when ORDER BY statements are present.");
+        }
+    }
 }

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Documents.Indexes;
+﻿using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Util
 {

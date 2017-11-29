@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Commands;
 
-namespace Raven.Client.Documents.Queries.Suggestion
+namespace Raven.Client.Documents.Queries.Suggestions
 {
     public interface ISuggestionDocumentQuery<T>
     {

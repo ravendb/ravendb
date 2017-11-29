@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries.Suggestion
+namespace Raven.Server.Documents.Queries.Suggestions
 {
     public class SuggestionField : SelectField
     {

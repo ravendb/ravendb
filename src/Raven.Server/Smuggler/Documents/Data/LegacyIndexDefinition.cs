@@ -1,4 +1,12 @@
-using System;using System.Collections.Generic;using System.Linq;using Newtonsoft.Json;using Raven.Client.Documents.Indexes;using Raven.Client.Documents.Indexes.Spatial;using Raven.Client.Documents.Indexes.Suggestion;namespace Raven.Server.Smuggler.Documents.Data
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Indexes.Suggestions;
+
+namespace Raven.Server.Smuggler.Documents.Data
 {
     internal class LegacyIndexDefinition
     {

@@ -15,11 +15,11 @@
  * limitations under the License.
  */
 
-using System.Text.RegularExpressions;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 
-namespace Lucene.Net.Search
+namespace Raven.Server.Documents.Queries.Regex
 {
     /// <summary>
     /// Subclass of FilteredTermEnum for enumerating all terms that match the
@@ -33,9 +33,9 @@ namespace Lucene.Net.Search
     {
         private string _sField;
         private bool _bEndEnum;
-        private Regex _regex;
+        private System.Text.RegularExpressions.Regex _regex;
 
-        public RegexTermEnum(IndexReader reader, Term term, IState state, Regex regex)
+        public RegexTermEnum(IndexReader reader, Term term, IState state, System.Text.RegularExpressions.Regex regex)
         {
             _sField = term.Field;
 

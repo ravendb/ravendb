@@ -8,7 +8,7 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 
 namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
-    internal class RavenMoreLikeThis : Lucene.Net.Search.Similar.MoreLikeThis
+    internal class RavenMoreLikeThis : MoreLikeThis
     {
         private readonly IndexReader _ir;
         private readonly IState _state;
