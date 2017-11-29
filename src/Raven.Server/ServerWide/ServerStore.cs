@@ -430,7 +430,6 @@ namespace Raven.Server.ServerWide
 
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
-            _engine.LeaderElected += OnLeaderElected;
 
             if (IsLeader())
             {
@@ -471,11 +470,6 @@ namespace Raven.Server.ServerWide
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
                 }
             }
-        }
-
-        private void OnLeaderElected(object sender, EventArgs e)
-        {
-            LicenseManager.CalculateLicenseLimits();
         }
 
         public Task RefreshOutgoingTasks()
