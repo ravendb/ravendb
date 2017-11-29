@@ -782,7 +782,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count < 2)
                 throw new InvalidOperationException("TODO ppekrol");
 
-            if (expression.Arguments.Count > 2)
+            if (expression.Arguments.Count > 3)
                 throw new InvalidOperationException("TODO ppekrol");
 
             var result = new SuggestField();
@@ -797,7 +797,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 3)
             {
                 if (expression.Arguments[2] is ValueExpression optionsExpression)
-                    result.AddOptions(termExpression.Token, termExpression.Value);
+                    result.AddOptions(optionsExpression.Token, optionsExpression.Value);
                 else
                     throw new InvalidOperationException("TODO ppekrol");
             }

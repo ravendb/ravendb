@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Queries.Suggestion
     {
         Dictionary<string, SuggestionResult> Execute();
         Task<Dictionary<string, SuggestionResult>> ExecuteAsync();
-        Lazy<Dictionary<string, SuggestionResult>> ExecuteLazy(Action<string[]> onEval = null);
-        Lazy<Task<Dictionary<string, SuggestionResult>>> ExecuteLazyAsync(Action<string[]> onEval = null);
+        Lazy<Dictionary<string, SuggestionResult>> ExecuteLazy(Action<Dictionary<string, SuggestionResult>> onEval = null);
+        Lazy<Task<Dictionary<string, SuggestionResult>>> ExecuteLazyAsync(Action<Dictionary<string, SuggestionResult>> onEval = null);
     }
 }

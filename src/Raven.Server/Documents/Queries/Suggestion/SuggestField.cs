@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.Suggestion
                 return null;
 
             var terms = new List<string>();
-            if (_optionsType == AST.ValueTokenType.Parameter)
+            if (_termType == AST.ValueTokenType.Parameter)
             {
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.Suggestion
                 return terms;
             }
 
-            if (_optionsType == AST.ValueTokenType.String)
+            if (_termType == AST.ValueTokenType.String)
             {
                 terms.Add(_termAsStringOrParameterName);
                 _terms = terms;

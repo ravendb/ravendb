@@ -345,21 +345,21 @@ namespace SlowTests.Core.Commands
 
                 using (var session = store.OpenSession())
                 {
-                    var suggestions = session.Query<User, Users_ByName>().Suggest(new SuggestionQueryOld()
-                    {
-                        Field = "Name",
-                        Term = "<<johne davi>>",
-                        Accuracy = 0.4f,
-                        MaxSuggestions = 5,
-                        Distance = StringDistanceTypes.JaroWinkler,
-                        Popularity = true,
-                    });
+                    var suggestions = session.Query<User, Users_ByName>()
+                        .Suggest(f => f.ByField("Name", new[] { "johne", "davi" }).WithOptions(new SuggestionOptions
+                        {
+                            PageSize = 5,
+                            Distance = StringDistanceTypes.JaroWinkler,
+                            Popularity = true,
+                            Accuracy = 0.4f
+                        }))
+                        .Execute();
 
-                    Assert.Equal("john", suggestions.Suggestions[0]);
-                    Assert.Equal("jones", suggestions.Suggestions[1]);
-                    Assert.Equal("johnson", suggestions.Suggestions[2]);
-                    Assert.Equal("david", suggestions.Suggestions[3]);
-                    Assert.Equal("jack", suggestions.Suggestions[4]);
+                    Assert.Equal("john", suggestions["Name"].Suggestions[0]);
+                    Assert.Equal("jones", suggestions["Name"].Suggestions[1]);
+                    Assert.Equal("johnson", suggestions["Name"].Suggestions[2]);
+                    Assert.Equal("david", suggestions["Name"].Suggestions[3]);
+                    Assert.Equal("jack", suggestions["Name"].Suggestions[4]);
                 }
             }
         }

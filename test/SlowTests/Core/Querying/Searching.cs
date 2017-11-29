@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,7 +12,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.Suggestion;
 using SlowTests.Core.Utils.Indexes;
 
 using Xunit;
@@ -303,25 +301,27 @@ namespace SlowTests.Core.Querying
                     session.SaveChanges();
                     WaitForIndexing(store);
 
-                    var users = session.Query<User, Users_ByName>()
-                        .Where(x => x.Name == "johne");
+                    var suggestionResult = session.Query<User, Users_ByName>()
+                        .Suggest(f => f.ByField(x => x.Name, "johne"))
+                        .Execute();
 
-                    SuggestionQueryResult suggestionResult = users.Suggest();
-                    Assert.Equal(3, suggestionResult.Suggestions.Length);
-                    Assert.Equal("john", suggestionResult.Suggestions[0]);
-                    Assert.Equal("jones", suggestionResult.Suggestions[1]);
-                    Assert.Equal("johnson", suggestionResult.Suggestions[2]);
+                    Assert.Equal(3, suggestionResult["Name"].Suggestions.Count);
+                    Assert.Equal("john", suggestionResult["Name"].Suggestions[0]);
+                    Assert.Equal("jones", suggestionResult["Name"].Suggestions[1]);
+                    Assert.Equal("johnson", suggestionResult["Name"].Suggestions[2]);
 
-                    Lazy<SuggestionQueryResult> lazySuggestionResult = users.SuggestLazy();
+                    var lazySuggestionResult = session.Query<User, Users_ByName>()
+                        .Suggest(f => f.ByField(x => x.Name, "johne"))
+                        .ExecuteLazy();
 
                     Assert.False(lazySuggestionResult.IsValueCreated);
 
                     suggestionResult = lazySuggestionResult.Value;
 
-                    Assert.Equal(3, suggestionResult.Suggestions.Length);
-                    Assert.Equal("john", suggestionResult.Suggestions[0]);
-                    Assert.Equal("jones", suggestionResult.Suggestions[1]);
-                    Assert.Equal("johnson", suggestionResult.Suggestions[2]);
+                    Assert.Equal(3, suggestionResult["Name"].Suggestions.Count);
+                    Assert.Equal("john", suggestionResult["Name"].Suggestions[0]);
+                    Assert.Equal("jones", suggestionResult["Name"].Suggestions[1]);
+                    Assert.Equal("johnson", suggestionResult["Name"].Suggestions[2]);
                 }
             }
         }
@@ -378,7 +378,7 @@ namespace SlowTests.Core.Querying
                             }
                         }
                     };
-                    session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets});
+                    session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets, RangeFacets = rangeFacets });
                     session.SaveChanges();
                     WaitForIndexing(store);
 
