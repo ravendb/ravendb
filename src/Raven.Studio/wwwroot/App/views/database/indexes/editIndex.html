@@ -229,7 +229,6 @@
         </div>
 
         <div>
-
             <h2 class="label-margin" data-bind="visible: editedIndex().hasReduce">Map-Reduce</h2>
             <h2 class="label-margin" data-bind="visible: !editedIndex().hasReduce()">Map</h2>
             <div>
@@ -313,9 +312,7 @@
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
 <script type="text/html" id="additional-source-template">
-    <i class="icon-xl icon-empty-set text-muted"></i>
-    <h2 class="text-center">No Additional sources uploaded</h2>
-<!--<div class="padding padding-sm">
+<div class="padding padding-sm">
 <div>Example additional source:</div>    
 <pre class="margin-bottom">
 <span class="token keyword">namespace</span> My<span class="token punctuation">.</span>Namespace
@@ -335,7 +332,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
     _ <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">CreateField</span><span class="token punctuation">(</span><span class="token string">"Email"</span><span class="token punctuation">,</span> PeopleUtil<span class="token punctuation">.</span><span class="token function">CalculatePersonEmail</span><span class="token punctuation">(</span>person<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">,</span> stored<span class="token punctuation">:</span> <span class="token keyword">true</span><span class="token punctuation">,</span> analyzed<span class="token punctuation">:</span> <span class="token keyword">true</span><span class="token punctuation">)</span>
 <span class="token punctuation">}</span><span class="token punctuation">)</span>    
 </pre>
-</div>-->
+</div>
 </script>
 
 <script type="text/html" id="field-template">
