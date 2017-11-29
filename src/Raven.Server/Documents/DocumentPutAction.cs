@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -17,6 +16,7 @@ using System.Linq;
 using System.Text;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Documents.Revisions;
+using Sparrow;
 using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents
@@ -25,7 +25,6 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentDatabase _documentDatabase;
-        private readonly StringBuilder _idBuilder = new StringBuilder();
 
         public DocumentPutAction(DocumentsStorage documentsStorage, DocumentDatabase documentDatabase)
         {
@@ -280,9 +279,32 @@ namespace Raven.Server.Documents
                 }
 
                 if (lastChar == '/')
-                {
+                {                    
+                    string nodeTag = _documentDatabase.ServerStore.NodeTag;
+
+                    // PERF: we are creating an string and mutating it for performance reasons.
+                    //       while nasty this shouldnt have any side effects because value didn't
+                    //       escape yet the function, so while not pretty it works (and it's safe).      
+                    string value = new string('0', id.Length + 1 + 19 + nodeTag.Length);
+                    fixed (char* valuePtr = value)
+                    {
+                        char* valueTagPtr = valuePtr + value.Length - nodeTag.Length;
+                        for (int j = 0; j < nodeTag.Length; j++)
+                            valueTagPtr[j] = nodeTag[j];
+
+                        int i;
+                        for (i = 0; i < id.Length; i++)
+                            valuePtr[i] = id[i];
+
+                        i += 19;
+                        valuePtr[i] = '-';
+
+                        Format.Backwards.WriteNumber(valuePtr + i - 1, (ulong)newEtag);
+                    }
+
+                    id = value;
+
                     knownNewId = true;
-                    id = AppendNumericValueToId(id, newEtag);
                 }
                 else
                 {
@@ -298,17 +320,6 @@ namespace Raven.Server.Documents
         {
             throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id +
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
-        }
-        
-        private string AppendNumericValueToId(string id, long val)
-        {
-            _idBuilder.Length = 0;
-            _idBuilder.Append(id);
-            _idBuilder[_idBuilder.Length - 1] = '/';
-            _idBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
-            _idBuilder.Append("-");
-            _idBuilder.Append(_documentDatabase.ServerStore.NodeTag);
-            return _idBuilder.ToString();
         }
 
         private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
