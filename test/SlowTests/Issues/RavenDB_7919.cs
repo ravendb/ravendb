@@ -3,7 +3,9 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Xunit;
@@ -35,9 +37,72 @@ namespace SlowTests.Issues
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    var results = await database.QueryRunner.ExecuteQuery(new IndexQueryServerSide("from Users where LastName = 'Arek'"), context, null,
+                    // it shouldn't throw
+                    await database.QueryRunner.ExecuteQuery(new IndexQueryServerSide("from Users where LastName = 'Arek'"), context, null,
                         OperationCancelToken.None);
                 }
+            }
+        }
+
+        [Fact]
+        public async Task Complete_but_idle_match_if_auto_map_index_is_idle()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var matcher = new DynamicQueryToIndexMatcher(database.IndexStore);
+
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
+                {
+                    new AutoIndexField
+                    {
+                        Name = "FirstName",
+                    }
+                }));
+
+                var autoIndex = database.IndexStore.GetIndex(indexId);
+
+                autoIndex.SetState(IndexState.Idle);
+
+                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users where FirstName = 'Arek'"));
+
+                var result = matcher.Match(dynamicQuery);
+
+                Assert.Equal(DynamicQueryMatchType.CompleteButIdle, result.MatchType);
+            }
+        }
+
+        [Fact]
+        public async Task Complete_but_idle_match_if_auto_map_reduce_index_is_idle()
+        {
+            using (var database = CreateDocumentDatabase())
+            {
+                var matcher = new DynamicQueryToIndexMatcher(database.IndexStore);
+
+                var indexId = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[]
+                {
+                    new AutoIndexField
+                    {
+                        Name = "Count",
+                        Aggregation = AggregationOperation.Count
+                    }
+                },
+                new[]
+                {
+                    new AutoIndexField
+                    {
+                        Name = "Location",
+                    }
+                }));
+
+                var autoIndex = database.IndexStore.GetIndex(indexId);
+
+                autoIndex.SetState(IndexState.Idle);
+
+                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("from Users group by Location select count()"));
+
+                var result = matcher.Match(dynamicQuery);
+
+                Assert.Equal(DynamicQueryMatchType.CompleteButIdle, result.MatchType);
             }
         }
     }
