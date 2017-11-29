@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Session
 {
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        public void Suggest(SuggestionBase suggestion)
+        public void SuggestUsing(SuggestionBase suggestion)
         {
             if (suggestion == null)
                 throw new ArgumentNullException(nameof(suggestion));

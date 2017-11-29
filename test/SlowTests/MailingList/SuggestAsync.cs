@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
                     await session.SaveChangesAsync();
 
                     var query = session.Query<Person, People_ByName>()
-                        .Suggest(x => x.ByField(y => y.Name, "martin"));
+                        .SuggestUsing(x => x.ByField(y => y.Name, "martin"));
 
                     await query.ExecuteAsync();
                 }

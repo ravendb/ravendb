@@ -64,7 +64,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User>("DefaultSuggestionIndex")
-                        .Suggest(x => x.ByField(y => y.Name, "Owen").WithOptions(new SuggestionOptions
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Owen").WithOptions(new SuggestionOptions
                         {
                             PageSize = 10
                         }))
@@ -96,7 +96,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-                        .Suggest(x => x.ByField(y => y.Name, "Owen"))
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Owen"))
                         .Execute();
 
                     Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
@@ -125,7 +125,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-                        .Suggest(x => x.ByField(y => y.Name, "Orin"))
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Orin"))
                         .Execute();
 
                     Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
@@ -154,7 +154,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, DefaultSuggestionIndex>()
-                        .Suggest(x => x.ByField(y => y.Name, "Orin"))
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Orin"))
                         .Execute();
 
                     Assert.Equal(1, suggestionQueryResult["Name"].Suggestions.Count);
@@ -183,7 +183,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User, SuggestionIndex>()
-                        .Suggest(x => x.ByField(y => y.Name, "Orin").WithOptions(new SuggestionOptions
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Orin").WithOptions(new SuggestionOptions
                         {
                             Accuracy = 0.4f
                         }))
@@ -215,7 +215,7 @@ namespace SlowTests.Tests.Suggestions
                 using (var session = documentStore.OpenSession())
                 {
                     var suggestionQueryResult = session.Query<User>("SuggestionIndex")
-                        .Suggest(x => x.ByField(y => y.Name, "Oern").WithOptions(new SuggestionOptions
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Oern").WithOptions(new SuggestionOptions
                         {
                             PageSize = 10,
                             Accuracy = 0.1f,

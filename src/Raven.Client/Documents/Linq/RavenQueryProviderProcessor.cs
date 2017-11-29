@@ -1078,12 +1078,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     VisitGroupBy(((UnaryExpression)expression.Arguments[1]).Operand, behavior);
                     break;
-                case nameof(LinqExtensions.Suggest):
+                case nameof(LinqExtensions.SuggestUsing):
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var suggestionAsObject);
 
-                    _documentQuery.Suggest(suggestionAsObject as SuggestionBase);
+                    _documentQuery.SuggestUsing(suggestionAsObject as SuggestionBase);
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);

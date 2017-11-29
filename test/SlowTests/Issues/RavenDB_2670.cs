@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                 {
                     var result = session
                         .Query<Product, Products_ByName>()
-                        .Suggest(f => f.ByField("Name", new[] { "chaig", "tof" }).WithOptions(new SuggestionOptions
+                        .SuggestUsing(f => f.ByField("Name", new[] { "chaig", "tof" }).WithOptions(new SuggestionOptions
                         {
                             PageSize = 5,
                             Distance = StringDistanceTypes.JaroWinkler,

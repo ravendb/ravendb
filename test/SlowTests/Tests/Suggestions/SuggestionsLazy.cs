@@ -49,7 +49,7 @@ namespace SlowTests.Tests.Suggestions
                     var oldRequests = s.Advanced.NumberOfRequests;
 
                     var suggestionQueryResult = s.Query<User>("test")
-                        .Suggest(x => x.ByField(y => y.Name, "Owen"))
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Owen"))
                         .ExecuteLazy();
 
                     Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
@@ -93,7 +93,7 @@ namespace SlowTests.Tests.Suggestions
                     var oldRequests = s.Advanced.NumberOfRequests;
 
                     var suggestionQueryResult = s.Query<User>("test")
-                        .Suggest(x => x.ByField(y => y.Name, "Owen"))
+                        .SuggestUsing(x => x.ByField(y => y.Name, "Owen"))
                         .ExecuteLazyAsync();
 
                     Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);

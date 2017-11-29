@@ -346,7 +346,7 @@ namespace SlowTests.Core.Commands
                 using (var session = store.OpenSession())
                 {
                     var suggestions = session.Query<User, Users_ByName>()
-                        .Suggest(f => f.ByField("Name", new[] { "johne", "davi" }).WithOptions(new SuggestionOptions
+                        .SuggestUsing(f => f.ByField("Name", new[] { "johne", "davi" }).WithOptions(new SuggestionOptions
                         {
                             PageSize = 5,
                             Distance = StringDistanceTypes.JaroWinkler,

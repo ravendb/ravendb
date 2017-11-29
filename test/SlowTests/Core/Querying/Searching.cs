@@ -302,7 +302,7 @@ namespace SlowTests.Core.Querying
                     WaitForIndexing(store);
 
                     var suggestionResult = session.Query<User, Users_ByName>()
-                        .Suggest(f => f.ByField(x => x.Name, "johne"))
+                        .SuggestUsing(f => f.ByField(x => x.Name, "johne"))
                         .Execute();
 
                     Assert.Equal(3, suggestionResult["Name"].Suggestions.Count);
@@ -311,7 +311,7 @@ namespace SlowTests.Core.Querying
                     Assert.Equal("johnson", suggestionResult["Name"].Suggestions[2]);
 
                     var lazySuggestionResult = session.Query<User, Users_ByName>()
-                        .Suggest(f => f.ByField(x => x.Name, "johne"))
+                        .SuggestUsing(f => f.ByField(x => x.Name, "johne"))
                         .ExecuteLazy();
 
                     Assert.False(lazySuggestionResult.IsValueCreated);

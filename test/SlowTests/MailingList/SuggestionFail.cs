@@ -81,7 +81,7 @@ namespace SlowTests.MailingList
                 {
                     string q = "lorem";
                     var query = session.Query<The_Search.Result, The_Search>()
-                        .Suggest(x => x.ByField(y => y.Query, q));
+                        .SuggestUsing(x => x.ByField(y => y.Query, q));
 
                     var suggestionResult = query.Execute();
 
