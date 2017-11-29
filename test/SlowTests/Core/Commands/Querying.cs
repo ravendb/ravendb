@@ -8,7 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 using SlowTests.Core.Utils.Indexes;
 using Sparrow.Json;
 using Xunit;

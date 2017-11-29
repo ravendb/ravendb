@@ -3,20 +3,19 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Queries.Faceted;
-using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
+using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {

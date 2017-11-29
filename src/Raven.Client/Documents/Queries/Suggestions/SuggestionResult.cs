@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Client.Documents.Commands
+namespace Raven.Client.Documents.Queries.Suggestions
 {
     public class SuggestionResult
     {

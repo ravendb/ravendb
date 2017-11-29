@@ -2,7 +2,7 @@
 using System.Linq.Expressions;
 using Raven.Client.Extensions;
 
-namespace Raven.Client.Documents.Queries.Suggestion
+namespace Raven.Client.Documents.Queries.Suggestions
 {
     public interface ISuggestionFactory<T>
     {

@@ -4,7 +4,7 @@ using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 
-namespace Raven.Server.Documents.Queries.Faceted
+namespace Raven.Server.Documents.Queries.Facets
 {
     public static class FacetedQueryHelper
     {

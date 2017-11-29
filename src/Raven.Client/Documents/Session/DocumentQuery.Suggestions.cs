@@ -1,5 +1,5 @@
 ﻿using System;
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 
 namespace Raven.Client.Documents.Session
 {

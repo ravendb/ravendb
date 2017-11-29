@@ -4,7 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Globalization;
 
 namespace Raven.Client.Documents.Indexes

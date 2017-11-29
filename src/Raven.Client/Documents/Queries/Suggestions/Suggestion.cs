@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.Documents.Queries.Suggestion
+﻿namespace Raven.Client.Documents.Queries.Suggestions
 {
     public class SuggestionWithTerm : SuggestionBase
     {

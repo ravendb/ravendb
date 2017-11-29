@@ -4,10 +4,11 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
-using Raven.Server.Documents.Queries.Faceted;
+using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries

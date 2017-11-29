@@ -11,7 +11,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Linq

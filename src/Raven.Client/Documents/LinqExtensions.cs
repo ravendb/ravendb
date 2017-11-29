@@ -25,7 +25,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Queries.Suggestions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -37,9 +37,9 @@ namespace Raven.Client.Documents
     ///</summary>
     public static class LinqExtensions
     {
+#if LEGACY
         private static readonly object Locker = new object();
 
-#if LEGACY
         private static MethodInfo _includeMethod;
 
         private static MethodInfo _whereMethod2;

@@ -1,12 +1,12 @@
 using Raven.Client.Documents.Session;
 
-namespace Raven.Client.Documents.Queries.Suggestion
+namespace Raven.Client.Documents.Queries.Suggestions
 {
-    internal class SuggestionDocumentQuery<T> : SuggestionQueryBase, ISuggestionDocumentQuery<T>
+    internal class AsyncSuggestionDocumentQuery<T> : SuggestionQueryBase, IAsyncSuggestionDocumentQuery<T>
     {
-        private readonly DocumentQuery<T> _source;
+        private readonly AsyncDocumentQuery<T> _source;
 
-        public SuggestionDocumentQuery(DocumentQuery<T> source)
+        public AsyncSuggestionDocumentQuery(AsyncDocumentQuery<T> source)
             : base((InMemoryDocumentSessionOperations)source.Session)
         {
             _source = source;

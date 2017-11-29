@@ -7,7 +7,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries.Faceted
+namespace Raven.Server.Documents.Queries.Facets
 {
     public class FacetField : SelectField
     {

@@ -6,7 +6,6 @@ using System.Threading;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
-using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Sparrow;
@@ -14,14 +13,15 @@ using Sparrow.Logging;
 using Voron.Impl;
 using System.Linq;
 using Lucene.Net.Store;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Sparrow.LowMemory;
+using FacetedQueryHelper = Raven.Server.Documents.Queries.Facets.FacetedQueryHelper;
+using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {

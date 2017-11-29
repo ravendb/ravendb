@@ -9,7 +9,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Queries.Suggestion
+namespace Raven.Client.Documents.Queries.Suggestions
 {
     internal class SuggestionQuery<T> : SuggestionQueryBase, ISuggestionQuery<T>
     {

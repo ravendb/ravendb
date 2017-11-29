@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Commands;
 
-namespace Raven.Client.Documents.Queries.Suggestion
+namespace Raven.Client.Documents.Queries.Suggestions
 {
     public interface IAsyncSuggestionDocumentQuery<T>
     {

@@ -9,7 +9,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets

@@ -6,7 +6,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;
 
-namespace Raven.Server.Documents.Queries.Faceted
+namespace Raven.Server.Documents.Queries.Facets
 {
     public class FacetQuery
     {

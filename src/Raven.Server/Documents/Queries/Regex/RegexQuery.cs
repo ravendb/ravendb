@@ -17,12 +17,12 @@
 
 using System;
 using System.Text;
-using System.Text.RegularExpressions;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 
-namespace Lucene.Net.Search
+namespace Raven.Server.Documents.Queries.Regex
 {
     /// <summary>
     /// Regular expression based query.
@@ -30,10 +30,10 @@ namespace Lucene.Net.Search
     /// <remarks>http://www.java2s.com/Open-Source/Java-Document/Net/lucene-connector/org/apache/lucene/search/regex/RegexQuery.java.htm</remarks>
     public class RegexQuery : MultiTermQuery, IEquatable<RegexQuery>
     {
-        private Regex _regex;
+        private System.Text.RegularExpressions.Regex _regex;
         public Term Term { get; }
 
-        public RegexQuery(Term term, Regex regex)
+        public RegexQuery(Term term, System.Text.RegularExpressions.Regex regex)
         {
             Term = term;
             _regex = regex;

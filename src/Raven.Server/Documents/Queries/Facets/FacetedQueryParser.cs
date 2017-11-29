@@ -10,7 +10,7 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Queries.Faceted
+namespace Raven.Server.Documents.Queries.Facets
 {
     public static class FacetedQueryParser
     {
@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             var result = new FacetResult
             {
-                Result = new Client.Documents.Commands.FacetResult(),
+                Result = new Raven.Client.Documents.Queries.Facets.FacetResult(),
                 Options = facet.Options
             };
 
@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
             public List<ParsedRange> Ranges;
 
-            public Raven.Client.Documents.Commands.FacetResult Result;
+            public Raven.Client.Documents.Queries.Facets.FacetResult Result;
 
             public FacetOptions Options;
 

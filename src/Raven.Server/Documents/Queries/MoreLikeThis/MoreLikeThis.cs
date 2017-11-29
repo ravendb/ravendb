@@ -15,16 +15,14 @@
  * limitations under the License.
  */
 
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-
-using Lucene.Net.Analysis.Tokenattributes;
 using System.Linq;
 using System.Text;
-
+using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
+using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Support;
 using Lucene.Net.Util;
@@ -32,12 +30,10 @@ using Sparrow.Json;
 using IndexReader = Lucene.Net.Index.IndexReader;
 using Term = Lucene.Net.Index.Term;
 using Analyzer = Lucene.Net.Analysis.Analyzer;
-using TokenStream = Lucene.Net.Analysis.TokenStream;
 using StandardAnalyzer = Lucene.Net.Analysis.Standard.StandardAnalyzer;
-using Document = Lucene.Net.Documents.Document;
 using Version = Lucene.Net.Util.Version;
 
-namespace Lucene.Net.Search.Similar
+namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
     /// <summary> Generate "more like this" similarity queries. 
     /// Based on this mail:
