@@ -26,8 +26,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition("test", null));
             Assert.Throws<ArgumentNullException>(() => new AutoMapIndexDefinition(null, fields));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapIndexDefinition("test", new AutoIndexField[0]));
-
             new AutoMapIndexDefinition("test", fields);
         }
 
