@@ -121,10 +121,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 return IndexDefinitionCompareDifferences.None;
 
             var result = IndexDefinitionCompareDifferences.None;
-            if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
+            if (Collections.SetEquals(otherDefinition.Collections) == false || DictionaryExtensions.ContentEquals(MapFields, otherDefinition.MapFields) == false)
                 result |= IndexDefinitionCompareDifferences.Maps;
 
-            if (GroupByFields.SequenceEqual(otherDefinition.GroupByFields) == false)
+            if (DictionaryExtensions.ContentEquals(GroupByFields, otherDefinition.GroupByFields) == false)
                 result |= IndexDefinitionCompareDifferences.Reduce;
 
             if (LockMode != other.LockMode)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 using Voron;
 
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 return IndexDefinitionCompareDifferences.None;
 
             var result = IndexDefinitionCompareDifferences.None;
-            if (Collections.SequenceEqual(otherDefinition.Collections) == false || MapFields.SequenceEqual(otherDefinition.MapFields) == false)
+            if (Collections.SetEquals(otherDefinition.Collections) == false || DictionaryExtensions.ContentEquals(MapFields, otherDefinition.MapFields) == false)
                 result |= IndexDefinitionCompareDifferences.Maps;
 
             if (LockMode != other.LockMode)

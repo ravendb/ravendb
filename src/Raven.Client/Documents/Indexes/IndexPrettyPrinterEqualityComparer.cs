@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Indexes
@@ -27,7 +26,7 @@ namespace Raven.Client.Documents.Indexes
 
         public int GetHashCode(string obj)
         {
-            throw new NotSupportedException();
+            return IndexPrettyPrinter.TryFormat(obj).GetHashCode();
         }
     }
 }
