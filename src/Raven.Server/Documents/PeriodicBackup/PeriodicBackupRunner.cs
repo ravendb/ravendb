@@ -256,6 +256,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                             if (_logger.IsInfoEnabled)
                                 _logger.Info("Skipping incremental backup because " +
                                              $"last etag ({currentLastEtag}) hasn't changed since last backup");
+
+                            runningBackupStatus.LastIncrementalBackup = periodicBackup.StartTime;
                             return;
                         }
                     }
@@ -786,6 +788,28 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return;
 
             CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
+        }
+
+        public string WhoseTaskIsIt(long taskId)
+        {
+            if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false)
+            {
+                throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");
+            }
+
+            if (periodicBackup.Configuration.Disabled)
+            {
+                throw new InvalidOperationException($"Backup task id: {taskId} is disabled");
+            }
+
+            if (periodicBackup.Configuration.HasBackup() == false)
+            {
+                throw new InvalidOperationException($"All backup destinations are disabled for backup task id: {taskId}");
+            }
+
+            var databaseRecord = GetDatabaseRecord();
+            var whoseTaskIsIt = databaseRecord.Topology.WhoseTaskIsIt(periodicBackup.Configuration, _serverStore.Engine.CurrentState);
+            return whoseTaskIsIt;
         }
 
         public void StartBackupTask(long taskId, bool isFullBackup)

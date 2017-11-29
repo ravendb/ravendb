@@ -8,10 +8,10 @@ class savePeriodicBackupConfigurationCommand extends commandBase {
     }
  
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
-        const url = endpoints.databases.ongoingTasks.adminPeriodicBackup + this.urlEncodeArgs({ name: this.db.name });
+        const url = endpoints.databases.ongoingTasks.adminPeriodicBackup;
 
         const isNewTask = this.configuration.TaskId === 0;
-        return this.post(url, JSON.stringify(this.configuration))
+        return this.post(url, JSON.stringify(this.configuration), this.db)
             .done((results: Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult) => {
                 const taskTypeText = isNewTask ? "created" : "updated";
                 this.reportSuccess(`Succefully ${taskTypeText} backup configuration with task ID: ${results.TaskId}`);
