@@ -18,11 +18,10 @@
 using System;
 using System.Text;
 using Lucene.Net.Index;
-using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Lucene.Net.Util;
 
-namespace Raven.Server.Documents.Queries.Regex
+namespace Lucene.Net.Search
 {
     /// <summary>
     /// Regular expression based query.
@@ -30,7 +29,7 @@ namespace Raven.Server.Documents.Queries.Regex
     /// <remarks>http://www.java2s.com/Open-Source/Java-Document/Net/lucene-connector/org/apache/lucene/search/regex/RegexQuery.java.htm</remarks>
     public class RegexQuery : MultiTermQuery, IEquatable<RegexQuery>
     {
-        private System.Text.RegularExpressions.Regex _regex;
+        private readonly System.Text.RegularExpressions.Regex _regex;
         public Term Term { get; }
 
         public RegexQuery(Term term, System.Text.RegularExpressions.Regex regex)
@@ -67,19 +66,24 @@ namespace Raven.Server.Documents.Queries.Regex
         /// <param name="other">An object to compare with this object</param>
         public bool Equals(RegexQuery other)
         {
-            if (other == null) return false;
-            if (this == other) return true;
+            if (other == null)
+                return false;
+            if (this == other)
+                return true;
 
-            if (!base.Equals(other)) return false;
+            if (!base.Equals(other))
+                return false;
             return Term.Equals(other.Term);
         }
 
         public override bool Equals(object obj)
         {
-            if ((obj == null) || (obj as RegexQuery == null)) return false;
-            if (this == obj) return true;
+            if ((obj == null) || (obj as RegexQuery == null))
+                return false;
+            if (this == obj)
+                return true;
 
-            return Equals((RegexQuery) obj);
+            return Equals((RegexQuery)obj);
         }
 
         public override int GetHashCode()
