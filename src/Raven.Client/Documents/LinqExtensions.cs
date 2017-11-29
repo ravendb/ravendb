@@ -228,23 +228,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string term, SuggestionOptions options = null)
-        {
-            return source.Suggest(path.ToPropertyPath(), term, options);
-        }
-
-        /// <summary>
-        /// Suggest alternative values for the queried term
-        /// </summary>
-        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string[] terms, SuggestionOptions options = null)
-        {
-            return source.Suggest(path.ToPropertyPath(), terms, options);
-        }
-
-        /// <summary>
-        /// Suggest alternative values for the queried term
-        /// </summary>
-        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, string fieldName, string term, SuggestionOptions options = null)
+        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, SuggestionBase suggestion)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -254,7 +238,7 @@ namespace Raven.Client.Documents
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
-            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(term), Expression.Constant(options ?? SuggestionOptions.Default)));
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(suggestion)));
 
             return new SuggestionQuery<T>(source);
         }
@@ -262,19 +246,12 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, string fieldName, string[] terms, SuggestionOptions options = null)
+        public static ISuggestionQuery<T> Suggest<T>(this IQueryable<T> source, Action<ISuggestionFactory<T>> factory)
         {
-#if CURRENT
-            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            MethodInfo currentMethod = null; //TODO [ppekrol]
-#endif
+            var f = new SuggestionFactory<T>();
+            factory?.Invoke(f);
 
-            var expression = ConvertExpressionIfNecessary(source);
-            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(terms), Expression.Constant(options ?? SuggestionOptions.Default)));
-
-            return new SuggestionQuery<T>(source);
+            return source.Suggest(f.Suggestion);
         }
 
         /// <summary>

@@ -1,9 +1,23 @@
-﻿using System;using System.Linq.Expressions;using Raven.Client.Documents.Queries.Suggestion;using Raven.Client.Extensions;namespace Raven.Client.Documents.Session
+﻿using System;
+using Raven.Client.Documents.Queries.Suggestion;
+
+namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
-    {        ISuggestionDocumentQuery<T> IDocumentQuery<T>.Suggest(Expression<Func<T, object>> path, string term, SuggestionOptions options = null)        {            Suggest(path.ToPropertyPath(), term, options);            return new SuggestionDocumentQuery<T>(this);        }        ISuggestionDocumentQuery<T> IDocumentQuery<T>.Suggest(string fieldName, string term, SuggestionOptions options)        {            Suggest(fieldName, term, options);            return new SuggestionDocumentQuery<T>(this);        }        ISuggestionDocumentQuery<T> IDocumentQuery<T>.Suggest(Expression<Func<T, object>> path, string[] terms, SuggestionOptions options = null)        {            Suggest(path.ToPropertyPath(), terms, options);            return new SuggestionDocumentQuery<T>(this);        }        ISuggestionDocumentQuery<T> IDocumentQuery<T>.Suggest(string fieldName, string[] terms, SuggestionOptions options)
+    {
+        ISuggestionDocumentQuery<T> IDocumentQuery<T>.Suggest(SuggestionBase suggestion)
         {
-            Suggest(fieldName, terms, options);
+            Suggest(suggestion);
+            return new SuggestionDocumentQuery<T>(this);
+        }
+
+        ISuggestionDocumentQuery<T> IDocumentQuery<T>.Suggest(Action<ISuggestionFactory<T>> factory)
+        {
+            var f = new SuggestionFactory<T>();
+            factory.Invoke(f);
+
+            Suggest(f.Suggestion);
+
             return new SuggestionDocumentQuery<T>(this);
         }
     }

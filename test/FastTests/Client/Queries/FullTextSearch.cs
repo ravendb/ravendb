@@ -442,7 +442,7 @@ namespace FastTests.Client.Queries
                         .ToList();
 
                     var query = session.Query<Image>("test")
-                        .Suggest(x => x.Tags, "animal lover")
+                        .Suggest(f => f.ByField(x => x.Tags, "animal lover"))
                         .Execute();
 
                     Assert.NotEmpty(query["Tags"].Suggestions);

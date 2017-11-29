@@ -1082,14 +1082,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Suggest):
                     VisitExpression(expression.Arguments[0]);
 
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var suggestFieldName);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var suggestTerms);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var suggestOptions);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var suggestionAsObject);
 
-                    if (suggestTerms is string suggestTerm)
-                        _documentQuery.Suggest(suggestFieldName as string, suggestTerm, suggestOptions as SuggestionOptions);
-                    else if (suggestTerms is string[] suggestTermsArray)
-                        _documentQuery.Suggest(suggestFieldName as string, suggestTermsArray, suggestOptions as SuggestionOptions);
+                    _documentQuery.Suggest(suggestionAsObject as SuggestionBase);
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
