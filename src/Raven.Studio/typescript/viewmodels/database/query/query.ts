@@ -520,11 +520,14 @@ class query extends viewModelBase {
 
             const queryCmd = new queryCommand(database, 0, 25, this.criteria(), !this.cacheEnabled());
 
+            // we declare this variable here, if any result returns skippedResults <> 0 we enter infinite scroll mode 
+            let totalSkippedResults = 0;
+            
             this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
             this.csvUrl(queryCmd.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryCommand(database, skip, take + 1, this.criteria(), !this.cacheEnabled());
+                const command = new queryCommand(database, skip + totalSkippedResults, take + 1, this.criteria(), !this.cacheEnabled());
                 
                 const resultsTask = $.Deferred<pagedResultWithIncludes<document>>();
                 const queryForAllFields = this.criteria().showFields();
@@ -553,6 +556,19 @@ class query extends viewModelBase {
                             }
                             
                             queryResults.additionalResultInfo.TotalResults = queryResults.totalResultCount;
+                        }
+                        
+                        if (queryResults.additionalResultInfo.SkippedResults) {
+                            totalSkippedResults += queryResults.additionalResultInfo.SkippedResults;
+                        }
+                        
+                        if (totalSkippedResults) {
+                            queryResults.totalResultCount = skip + queryResults.items.length;
+                            if (queryResults.items.length === take + 1) {
+                                queryResults.totalResultCount += 30;
+                                this.hasMoreUnboundedResults(true);
+                            }
+                            queryResults.additionalResultInfo.TotalResults = skip + queryResults.items.length;
                         }
                     
                         const endQueryTime = new Date().getTime();
