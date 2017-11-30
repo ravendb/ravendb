@@ -42,7 +42,7 @@ class operation extends abstractNotification {
         this.taskType(incomingChanges.TaskType);
                 
         this.startTime(incomingChanges.StartTime ? moment.utc(incomingChanges.StartTime) : null);  
-        this.endTime(incomingChanges.EndTime ? serverTime.default.getAdjustedTime(incomingChanges.EndTime) : null);
+        this.endTime(incomingChanges.EndTime ? moment.utc(incomingChanges.EndTime) : null);
     }
 
     percentageProgress(): number {
@@ -81,7 +81,8 @@ class operation extends abstractNotification {
             const start = this.startTime();
             const end = this.endTime();
 
-            const endTime = end || timeHelpers.utcNowWithSecondPrecision();
+            // Adjust studio-server time difference if we are 'in progress' 
+            const endTime = end || serverTime.default.getAdjustedTime(timeHelpers.utcNowWithSecondPrecision());
 
             return generalUtils.formatAsTimeSpan(endTime.diff(start));
         });
