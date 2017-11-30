@@ -1273,8 +1273,8 @@ namespace Raven.Server.Web.System
             if (Directory.Exists(dataDir) == false)
                 throw new DirectoryNotFoundException($"Could not find directory {dataDir}");
 
-            var dataExporter = configuration.DataExporterFullPath;
-            if (File.Exists(configuration.DataExporterFullPath) == false)
+            var dataExporter = configuration.DataExporterFullPath.Trim('"');
+            if (File.Exists(dataExporter) == false)
                 throw new FileNotFoundException($"Could not find file {dataExporter}");
 
             var databaseName = configuration.DatabaseRecord.DatabaseName;
