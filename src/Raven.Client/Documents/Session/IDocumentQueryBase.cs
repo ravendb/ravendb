@@ -54,11 +54,13 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         TSelf NoTracking();
 
+#if FEATURE_SHOW_TIMINGS
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
         ///     results). Default: false
         /// </summary>
         TSelf ShowTimings();
+#endif
 
         /// <summary>
         ///     Skips the specified count.

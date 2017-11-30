@@ -53,12 +53,14 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#if FEATURE_SHOW_TIMINGS
         /// <inheritdoc />
         public IDocumentQueryCustomization ShowTimings()
         {
             ShowQueryTimings = true;
             return this;
         }
+#endif
 
         /// <inheritdoc />
         IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()

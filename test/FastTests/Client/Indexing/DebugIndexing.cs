@@ -49,7 +49,9 @@ namespace FastTests.Client.Indexing
                         CutoffEtag = q.CutoffEtag,
                         ExplainScores = q.ExplainScores,
                         PageSize = q.PageSize,
+#if FEATURE_SHOW_TIMINGS
                         ShowTimings = q.ShowTimings,
+#endif
                         SkipDuplicateChecking = q.SkipDuplicateChecking,
                         WaitForNonStaleResults = q.WaitForNonStaleResults,
                         WaitForNonStaleResultsTimeout = q.WaitForNonStaleResultsTimeout

@@ -64,12 +64,14 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
+#if FEATURE_SHOW_TIMINGS
             if (query.ShowTimings)
             {
                 writer.WritePropertyName(nameof(query.ShowTimings));
                 writer.WriteBool(query.ShowTimings);
                 writer.WriteComma();
             }
+#endif
 
             if (query.SkipDuplicateChecking)
             {
