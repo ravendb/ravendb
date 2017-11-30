@@ -316,7 +316,7 @@ namespace Raven.Server
 
             if (exception is DatabaseNotRelevantException)
             {
-                response.StatusCode = (int)HttpStatusCode.Gone;
+                response.StatusCode = (int)HttpStatusCode.SeeOther;
                 return;
             }
 
