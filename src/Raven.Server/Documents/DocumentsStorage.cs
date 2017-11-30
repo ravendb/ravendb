@@ -341,10 +341,10 @@ namespace Raven.Server.Documents
         {
             var changeVector = GetDatabaseChangeVector(context);
             if (string.IsNullOrEmpty(changeVector))
-                return ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbId);
+                return ChangeVectorUtils.NewChangeVector(DocumentDatabase.ServerStore.NodeTag, newEtag, DocumentDatabase.DbBase64Id);
 
-            ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.DbId, newEtag, ref changeVector);
-            return changeVector;
+            var result = ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase.ServerStore.NodeTag, Environment.Base64Id, newEtag, changeVector);
+            return result.ChangeVector;
         }
 
         public string GetNewChangeVector(DocumentsOperationContext context)

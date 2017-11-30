@@ -281,11 +281,11 @@ namespace Raven.Server.Documents
                             if (state.CurrentTokenType != JsonParserToken.String)
                                 ThrowExpectedFieldTypeOfString("@etag", state);
                             _firstEtagOfLegacyRevision = CreateLazyStringValueFromParserState(state);
-                            ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision));
+                            ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision).ToBase64Unpadded());
                             break;
                         }
 
-                        ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision));
+                        ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision).ToBase64Unpadded());
                     }
 
                     goto case -1;
@@ -653,7 +653,7 @@ namespace Raven.Server.Documents
                     if (state.CurrentTokenType != JsonParserToken.String)
                         ThrowExpectedFieldTypeOfString("@etag", state);
                     _firstEtagOfLegacyRevision = CreateLazyStringValueFromParserState(state);
-                    ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision));
+                    ChangeVector = ChangeVectorUtils.NewChangeVector("RV", ++_legacyRevisionsCount, new Guid(_firstEtagOfLegacyRevision).ToBase64Unpadded());
 
                     break;
             }

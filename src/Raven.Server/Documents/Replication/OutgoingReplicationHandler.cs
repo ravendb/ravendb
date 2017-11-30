@@ -517,7 +517,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly ReplicationMessageReply _replicationBatchReply;
             private readonly AsyncManualResetEvent _trigger;
-            private Guid _dbId;
+            private string _dbId;
 
             public UpdateSiblingCurrentEtag(ReplicationMessageReply replicationBatchReply, AsyncManualResetEvent trigger)
             {
@@ -527,8 +527,10 @@ namespace Raven.Server.Documents.Replication
 
             public bool InitAndValidate()
             {
-                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbId) == false)
+                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out Guid dbGuid) == false)
                     return false;
+
+                _dbId = dbGuid.ToBase64Unpadded();
 
                 return _replicationBatchReply.CurrentEtag > 0;
             }
@@ -544,9 +546,11 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var res = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
-                if (res == 1)
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);                
+                if (result.IsValid)
                 {
+                    context.LastDatabaseChangeVector = result.ChangeVector;
+
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                     {
                         try
@@ -559,7 +563,7 @@ namespace Raven.Server.Documents.Replication
                         }
                     };
                 }
-                return res;
+                return result.IsValid ? 1 : 0;
             }
         }
 
