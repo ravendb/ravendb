@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
 using Raven.Server.Documents.Replication;
+using Sparrow;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -90,16 +91,6 @@ namespace Raven.Server.Utils
             return count;
         }
 
-        private static void WriteNumberBackwards(StringBuilder sb, int offset, long etag)
-        {
-            do
-            {
-                var rem = etag % 10;
-                etag /= 10;
-                sb[offset--] = (char)((char)rem + '0');
-            } while (etag != 0);
-        }
-
         private static long ParseToLong(string s, int start, int len)
         {
             int num;
@@ -118,22 +109,25 @@ namespace Raven.Server.Utils
 
             Debug.Assert(oldChangeVector != null);
 
+            // PERF: Avoid paying the threadstatic sync code every time. 
+            var vectorBuffer = _changeVectorBuffer;
+
             var dbIndex = oldChangeVector.IndexOf(dbIdInBase64, StringComparison.Ordinal);
             if (dbIndex < 0)
             {
                 if (string.IsNullOrEmpty(oldChangeVector) == false)
                 {
-                    _changeVectorBuffer.Append(oldChangeVector)
+                    vectorBuffer.Append(oldChangeVector)
                         .Append(", ");
                 }
 
-                _changeVectorBuffer.Append(nodeTag)
+                vectorBuffer.Append(nodeTag)
                     .Append(':')
                     .Append(etag)
                     .Append('-')
                     .Append(dbIdInBase64);
 
-                return (true, _changeVectorBuffer.ToString());
+                return (true, vectorBuffer.ToString());
             }
 
             int newEtagSize = NumberOfDigits(etag);
@@ -154,12 +148,12 @@ namespace Raven.Server.Utils
                     return (false, null);
                 }
                 // we clone the string because others might hold a reference to it and consider it immutable
-                _changeVectorBuffer.Append(oldChangeVector);
+                vectorBuffer.Append(oldChangeVector);
 
                 // replace the etag
 
-                WriteNumberBackwards(_changeVectorBuffer, currentEtagStartIndex + newEtagSize - 1, etag);
-                return (true, _changeVectorBuffer.ToString());
+                Format.Backwards.WriteNumber(vectorBuffer, currentEtagStartIndex + newEtagSize - 1, etag);
+                return (true, vectorBuffer.ToString());
             }
 
             if (diff < 0)
@@ -169,11 +163,11 @@ namespace Raven.Server.Utils
             }
 
             // allocate new string
-            _changeVectorBuffer.Append(oldChangeVector, 0, currentEtagStartIndex)
+            vectorBuffer.Append(oldChangeVector, 0, currentEtagStartIndex)
                 .Append(etag)
                 .Append(oldChangeVector, existingEtagEndIndex, oldChangeVector.Length - existingEtagEndIndex);
  
-            return (true, _changeVectorBuffer.ToString());
+            return (true, vectorBuffer.ToString());
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
