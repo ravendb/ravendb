@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
@@ -347,6 +348,8 @@ namespace Raven.Server.Smuggler.Documents
                     };
 
                     var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
+                    if(ShouldSkip(attachmentInfo))
+                        continue;
                     var dummyDoc = new DocumentItem()
                     {
                         Document = new Document()
@@ -370,6 +373,13 @@ namespace Raven.Server.Smuggler.Documents
 
         }
 
+        private bool ShouldSkip(LegacyAttachmentDetails attachmentInfo)
+        {
+            if (attachmentInfo.Metadata.TryGet("Raven-Delete-Marker", out bool deleted) && deleted)
+                return true;
+            return attachmentInfo.Key.EndsWith(".deleting") || attachmentInfo.Key.EndsWith(".downloading");
+        }
+
         private BlittableJsonReaderObject WriteDummyDocumentForAttachment(DocumentsOperationContext context, LegacyAttachmentDetails details)
         {
             var attachment = new DynamicJsonValue
@@ -385,6 +395,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 [Constants.Documents.Metadata.Collection] = "@files",
                 [Constants.Documents.Metadata.Attachments] = attachmets,
+                [Constants.Documents.Metadata.LegacyAttachmentsMetadata] = details.Metadata
             };
             var djv = new DynamicJsonValue
             {
@@ -392,6 +403,7 @@ namespace Raven.Server.Smuggler.Documents
 
             };
             return context.ReadObject(djv, details.Id);
+            ;
         }
 
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
@@ -668,7 +680,8 @@ namespace Raven.Server.Smuggler.Documents
                 Hash = hash,
                 Key = key,
                 Size = attachment.Stream.Length,
-                Tag = tag
+                Tag = tag,
+                Metadata = attachment.Data
             };
         }
 
@@ -679,10 +692,11 @@ namespace Raven.Server.Smuggler.Documents
             public string Key;
             public long Size;
             public string Tag;
+            public BlittableJsonReaderObject Metadata;
         }
 
         private readonly char _recordSeperator = (char)SpecialChars.RecordSeparator;
-        private readonly string _dummyDocument = "dummy/";
+        private readonly string _dummyDocument = "files/";
 
         public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
