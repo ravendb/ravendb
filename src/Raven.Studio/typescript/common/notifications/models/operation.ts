@@ -1,5 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
-
+import serverTime = require("common/helpers/database/serverTime");
 import abstractNotification = require("common/notifications/models/abstractNotification");
 import database = require("models/resources/database");
 import generalUtils = require("common/generalUtils");
@@ -40,8 +40,9 @@ class operation extends abstractNotification {
         this.result(stateDto.Result);
         this.status(stateDto.Status);
         this.taskType(incomingChanges.TaskType);
-        this.startTime(incomingChanges.StartTime ? moment.utc(incomingChanges.StartTime) : null);
-        this.endTime(incomingChanges.EndTime ? moment.utc(incomingChanges.EndTime) : null);
+                
+        this.startTime(incomingChanges.StartTime ? moment.utc(incomingChanges.StartTime) : null);  
+        this.endTime(incomingChanges.EndTime ? serverTime.default.getAdjustedTime(incomingChanges.EndTime) : null);
     }
 
     percentageProgress(): number {
