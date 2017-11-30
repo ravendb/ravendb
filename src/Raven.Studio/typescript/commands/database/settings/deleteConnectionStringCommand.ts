@@ -9,10 +9,10 @@ class deleteConnectionStringCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {                       
-        const args = { name: this.db.name, type: this.type, connectionString: this.connectionStringName };
-        const url = endpoints.global.adminDatabases.adminConnectionStrings + this.urlEncodeArgs(args);
+        const args = { type: this.type, connectionString: this.connectionStringName };
+        const url = endpoints.databases.ongoingTasks.adminConnectionStrings + this.urlEncodeArgs(args);
 
-        return this.del<void>(url, null)
+        return this.del<void>(url, null, this.db)
             .done(() => this.reportSuccess(`Successfully deleted connection string - ${this.connectionStringName}`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to delete connection string - ${this.connectionStringName}`, response.responseText, response.statusText));
     }

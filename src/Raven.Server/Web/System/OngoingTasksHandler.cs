@@ -13,6 +13,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.ETL.SQL;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
@@ -178,7 +179,6 @@ namespace Raven.Server.Web.System
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
-                databaseName: Database.Name, 
                 beforeSetupConfiguration: (_, readerObject) =>
                 {
                     if (ServerStore.LicenseManager.CanAddPeriodicBackup(readerObject, out var licenseLimit) == false)
@@ -357,6 +357,149 @@ namespace Raven.Server.Web.System
             };
         }
 
+        [RavenAction("/databases/*/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public async Task RemoveConnectionString()
+        {
+            if (TryGetAllowedDbs(Database.Name, out var _, requireAdmin: true) == false)
+                return;
+
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            ServerStore.EnsureNotPassive();
+
+            var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type);
+            await ServerStore.Cluster.WaitForIndexNotification(index);
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["RaftCommandIndex"] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetConnectionStrings()
+        {
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            if (TryGetAllowedDbs(Database.Name, out var allowedDbs, true) == false)
+                return Task.CompletedTask;
+
+            var connectionStringName = GetStringQueryString("connectionStringName", false);
+            var type = GetStringQueryString("type", false);
+
+            ServerStore.EnsureNotPassive();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DatabaseRecord record;
+                using (context.OpenReadTransaction())
+                {
+                    record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                }
+
+                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
+                Dictionary<string, SqlConnectionString> sqlConnectionstrings;
+                if (connectionStringName != null)
+                {
+                    if (string.IsNullOrWhiteSpace(connectionStringName))
+                        throw new ArgumentException($"connectionStringName {connectionStringName}' must have a non empty value");
+
+
+                    if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                        throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+
+                    (ravenConnectionStrings, sqlConnectionstrings) = GetConnectionString(record, connectionStringName, connectionStringType);
+                }
+                else
+                {
+                    ravenConnectionStrings = record.RavenConnectionStrings;
+                    sqlConnectionstrings = record.SqlConnectionStrings;
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var result = new GetConnectionStringsResult
+                    {
+                        RavenConnectionStrings = ravenConnectionStrings,
+                        SqlConnectionStrings = sqlConnectionstrings
+                    };
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>)
+            GetConnectionString(DatabaseRecord record, string connectionStringName, ConnectionStringType connectionStringType)
+        {
+            var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
+            var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
+
+            switch (connectionStringType)
+            {
+                case ConnectionStringType.Raven:
+                    if (record.RavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
+                    {
+                        ravenConnectionStrings.TryAdd(connectionStringName, new RavenConnectionString
+                        {
+                            Name = ravenConnectionString.Name,
+                            TopologyDiscoveryUrls = ravenConnectionString.TopologyDiscoveryUrls,
+                            Database = ravenConnectionString.Database
+                        });
+                    }
+
+                    break;
+
+                case ConnectionStringType.Sql:
+                    if (record.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
+                    {
+                        sqlConnectionStrings.TryAdd(connectionStringName, new SqlConnectionString
+                        {
+                            Name = sqlConnectionString.Name,
+                            ConnectionString = sqlConnectionString.ConnectionString
+                        });
+                    }
+
+                    break;
+
+                default:
+                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+            }
+
+            return (ravenConnectionStrings, sqlConnectionStrings);
+        }
+
+        [RavenAction("/databases/*/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
+        public async Task PutConnectionString()
+        {
+            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
+        }
+
+        [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
+        public async Task ResetEtl()
+        {
+            var configurationName = GetStringQueryString("configuration-name"); // etl task name
+            var transformationName = GetStringQueryString("transformation-name");
+
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName), "etl-reset");
+        }
+
         [RavenAction("/databases/*/admin/etl", "PUT", AuthorizationStatus.Operator)]
         public async Task AddEtl()
         {
@@ -364,7 +507,7 @@ namespace Raven.Server.Web.System
 
             if (id == null)
             {
-                await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add", databaseName: Database.Name,
+                await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
                     beforeSetupConfiguration: CanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
@@ -378,7 +521,7 @@ namespace Raven.Server.Web.System
                 etlConfiguration.TryGet(nameof(RavenEtlConfiguration.Name), out etlConfigurationName);
                 return task;
 
-            }, "etl-update", databaseName: Database.Name, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+            }, "etl-update", fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
 
             // Reset scripts if needed
@@ -761,8 +904,7 @@ namespace Raven.Server.Web.System
                 }
 
                 ExternalReplication watcher = null;
-                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, out watcher), "update_external_replication", 
-                    databaseName: Database.Name,
+                await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, out watcher), "update_external_replication",
                     fillJson: (json, _, index) =>
                     {
                         using (context.OpenReadTransaction())

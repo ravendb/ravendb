@@ -40,7 +40,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/revisions/config?name={_databaseName}";
+            url = $"{node.Url}/databases/{_databaseName}/admin/revisions/config";
 
             var request = new HttpRequestMessage
             {

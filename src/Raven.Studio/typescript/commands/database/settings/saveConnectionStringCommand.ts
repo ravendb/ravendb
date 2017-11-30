@@ -18,14 +18,13 @@ class saveConnectionStringCommand extends commandBase {
 
     private saveConnectionString(): JQueryPromise<void> { 
         
-        const args = { name: this.db.name };
-        const url = endpoints.global.adminDatabases.adminConnectionStrings + this.urlEncodeArgs(args);
+        const url = endpoints.databases.ongoingTasks.adminConnectionStrings;
         
         const saveConnectionStringTask = $.Deferred<void>();
         
         const payload = this.connectionString.toDto();
 
-        this.put(url, JSON.stringify(payload))
+        this.put(url, JSON.stringify(payload), this.db)
             .done(() => saveConnectionStringTask.resolve())
             .fail(response => saveConnectionStringTask.reject(response));
 
