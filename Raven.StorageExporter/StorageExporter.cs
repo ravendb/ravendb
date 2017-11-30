@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Extensions;
+using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.MEF;
 using Raven.Bundles.Compression.Plugin;
 using Raven.Bundles.Encryption.Plugin;
@@ -344,7 +345,9 @@ namespace Raven.StorageExporter
                     {
                         var fileHeaders = accsesor.GetFilesAfter(lastEtag, batchSize);
                         foreach (var header in fileHeaders)
-                        {                                      
+                        {      
+                            if(ShouldSkipFile(header))
+                                continue;
                             var file = StorageStream.Reading(fileStorage, header.FullPath);
                             jsonWriter.WriteStartObject();
                             jsonWriter.WritePropertyName("Data");
@@ -377,6 +380,11 @@ namespace Raven.StorageExporter
                         ReportProgress("files", currentFilesCount, totalFilesCount);
                 }
             } while (currentFilesCount < totalFilesCount);
+        }
+
+        private bool ShouldSkipFile(FileHeader header)
+        {
+            return header.Name.EndsWith(".deleting") || header.Name.EndsWith(".downloading");
         }
 
         private MemoryStream _buffer = new MemoryStream();
