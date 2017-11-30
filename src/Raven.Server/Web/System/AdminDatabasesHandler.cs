@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
@@ -43,7 +44,13 @@ using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Config;
+using Raven.Server.Config.Settings;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Sparrow;
 using Sparrow.Utils;
 using Voron.Impl;
@@ -54,6 +61,8 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AdminDatabasesHandler>("AdminDatabasesTasks");
+
         [RavenAction("/admin/databases", "GET", AuthorizationStatus.Operator)]
         public Task Get()
         {
@@ -224,6 +233,8 @@ namespace Raven.Server.Web.System
                     return;
                 }
 
+                await RecreateIndexes(databaseRecord);
+
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -240,6 +251,87 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
+        }
+
+        private async Task RecreateIndexes(DatabaseRecord databaseRecord)
+        {
+            PathSetting dataDirectory = databaseRecord.Settings.TryGetValue("DataDir", out var path) == false || path == null
+                ? new PathSetting(ServerStore.Configuration.Core.DataDirectory.ToFullPath(), ResourceType.Database, databaseRecord.DatabaseName) : new PathSetting(path);
+
+            if (Directory.Exists(dataDirectory.FullPath) == false)
+            {
+                return;
+            }
+
+            var addToInitLog = new Action<string>(txt =>
+            {
+                var msg = $"[Recreateing indexes] {DateTime.UtcNow} :: Database '{databaseRecord.DatabaseName}' : {txt}";
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(msg);
+            });
+
+            using (var documnetDatabase = new DocumentDatabase(databaseRecord.DatabaseName,
+                new RavenConfiguration(databaseRecord.DatabaseName, ResourceType.Database)
+                {
+                    Core =
+                    {
+                            DataDirectory = dataDirectory,
+                            RunInMemory = false
+                    }
+                }, ServerStore, addToInitLog))
+            {
+                var options = InitializeOptions.SkipLoadingDatabaseRecord;
+                documnetDatabase.Initialize(options);
+
+                var command = new GetRaftEtagCommand();
+
+                var indexesPath = dataDirectory.FullPath + "\\Indexes";
+                foreach (var indexPath in Directory.GetDirectories(indexesPath))
+                {
+                    Index index = null;
+                    try
+                    {
+                        if (documnetDatabase.DatabaseShutdown.IsCancellationRequested)
+                            return;
+
+                        index = Index.Open(1, indexPath, documnetDatabase);
+                        if (index == null)
+                            continue;
+
+                        var definition = index.Definition;
+                        var (etag, _) = await ServerStore.SendToLeaderAsync(command);
+                        switch (index.Type)
+                        {
+                            case IndexType.AutoMap:
+                            case IndexType.AutoMapReduce:
+                                var autoIndexDefinition = PutAutoIndexCommand.GetAutoIndexDefinition((AutoIndexDefinitionBase)definition, index.Type);
+                                autoIndexDefinition.Etag = etag;
+                                databaseRecord.AutoIndexes.Add(autoIndexDefinition.Name, autoIndexDefinition);
+                                break;
+
+                            case IndexType.Map:
+                            case IndexType.MapReduce:
+                                var indexDefinition = index.GetIndexDefinition();
+                                indexDefinition.Etag = etag;
+                                databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
+                                break;
+                            default:
+                                throw new NotSupportedException(index.Type.ToString());
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Could not open index {Path.GetFileName(indexPath)}", e);
+                    }
+                    finally
+                    {
+                        index?.Dispose();
+                    }
+                }
+
+            }
+            
         }
 
         private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index)
