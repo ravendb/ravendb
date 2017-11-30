@@ -4,11 +4,11 @@ using System.Text;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class GetRaftEtagCommand : CommandBase
+    public class GetRaftIndexCommand : CommandBase
     {
         // This command is only to get a unique etag from the cluster (The RaftCommandIndex)
         // We using it for recreating indexes on a recreated database
-        public GetRaftEtagCommand()
+        public GetRaftIndexCommand()
         {
             // for deserialization
         }

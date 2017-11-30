@@ -118,7 +118,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateSnmpDatabasesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabasesMappingCommand>(),
             [nameof(UpdateSnmpDatabaseIndexesMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseIndexesMappingCommand>(),
             [nameof(RemoveEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveEtlProcessStateCommand>(),
-            [nameof(GetRaftEtagCommand)] = GenerateJsonDeserializationRoutine<GetRaftEtagCommand>(),
+            [nameof(GetRaftIndexCommand)] = GenerateJsonDeserializationRoutine<GetRaftIndexCommand>(),
         };
     }
 }
