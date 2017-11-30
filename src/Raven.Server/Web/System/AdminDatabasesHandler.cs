@@ -435,18 +435,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/expiration/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigExpiration()
-        {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
-        }
-
-        [RavenAction("/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigRevisions()
-        {
-            await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
-        }
-
         [RavenAction("/admin/restore/points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
@@ -868,15 +856,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/etl", "RESET", AuthorizationStatus.Operator)]
-        public async Task ResetEtl()
-        {
-            var configurationName = GetStringQueryString("configuration-name"); // etl task name
-            var transformationName = GetStringQueryString("transformation-name");
-
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName), "etl-reset");
-        }
-
         [RavenAction("/admin/console", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task AdminConsole()
         {
@@ -935,143 +914,6 @@ namespace Raven.Server.Web.System
                     await textWriter.FlushAsync();
                 }
             }
-        }
-
-        [RavenAction("/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
-        public async Task PutConnectionString()
-        {
-            await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
-        }
-
-        [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
-        public async Task RemoveConnectionString()
-        {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            if (TryGetAllowedDbs(dbName, out var _, requireAdmin: true) == false)
-                return;
-
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            ServerStore.EnsureNotPassive();
-
-            var (index, _) = await ServerStore.RemoveConnectionString(dbName, connectionStringName, type);
-            await ServerStore.Cluster.WaitForIndexNotification(index);
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        ["RaftCommandIndex"] = index
-                    });
-                    writer.Flush();
-                }
-            }
-        }
-
-        [RavenAction("/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetConnectionStrings()
-        {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            if (TryGetAllowedDbs(dbName, out var allowedDbs, true) == false)
-                return Task.CompletedTask;
-
-            var connectionStringName = GetStringQueryString("connectionStringName", false);
-            var type = GetStringQueryString("type", false);
-
-            ServerStore.EnsureNotPassive();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                DatabaseRecord record;
-                using (context.OpenReadTransaction())
-                {
-                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
-                }
-
-                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
-                Dictionary<string, SqlConnectionString> sqlConnectionstrings;
-                if (connectionStringName != null)
-                {
-                    if(string.IsNullOrWhiteSpace(connectionStringName))
-                        throw new ArgumentException($"connectionStringName {connectionStringName}' must have a non empty value");
-
-
-                    if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
-                        throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-
-                    (ravenConnectionStrings, sqlConnectionstrings) = GetConnectionString(record, connectionStringName, connectionStringType);
-                }
-                else
-                {
-                    ravenConnectionStrings = record.RavenConnectionStrings;
-                    sqlConnectionstrings = record.SqlConnectionStrings;
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var result = new GetConnectionStringsResult
-                    {
-                        RavenConnectionStrings = ravenConnectionStrings,
-                        SqlConnectionStrings = sqlConnectionstrings
-                    };
-                    context.Write(writer, result.ToJson());
-                    writer.Flush();
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>)
-            GetConnectionString(DatabaseRecord record ,string connectionStringName, ConnectionStringType connectionStringType)
-        {
-            var ravenConnectionStrings = new Dictionary<string, RavenConnectionString>();
-            var sqlConnectionStrings = new Dictionary<string, SqlConnectionString>();
-
-            switch (connectionStringType)
-            {
-                case ConnectionStringType.Raven:
-                    if (record.RavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString))
-                    {
-                        ravenConnectionStrings.TryAdd(connectionStringName, new RavenConnectionString
-                        {
-                            Name = ravenConnectionString.Name,
-                            TopologyDiscoveryUrls = ravenConnectionString.TopologyDiscoveryUrls,
-                            Database = ravenConnectionString.Database
-                        });
-                    }
-
-                    break;
-
-                case ConnectionStringType.Sql:
-                    if (record.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString))
-                    {
-                        sqlConnectionStrings.TryAdd(connectionStringName, new SqlConnectionString
-                        {
-                            Name = sqlConnectionString.Name,
-                            ConnectionString = sqlConnectionString.ConnectionString
-                        });
-                    }
-
-                    break;
-
-                default:
-                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-            }
-
-            return (ravenConnectionStrings, sqlConnectionStrings);
         }
 
         [RavenAction("/admin/replication/conflicts/solver", "POST", AuthorizationStatus.DatabaseAdmin)]

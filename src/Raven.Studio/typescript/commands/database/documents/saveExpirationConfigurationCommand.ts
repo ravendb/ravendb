@@ -9,9 +9,9 @@ class saveExpirationConfigurationCommand extends commandBase {
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
 
-        const url = endpoint.global.adminDatabases.adminExpirationConfig + this.urlEncodeArgs({ name: this.db.name });
+        const url = endpoint.databases.expiration.adminExpirationConfig;
         const args = ko.toJSON(this.expirationConfiguration);
-        return this.post<updateDatabaseConfigurationsResult>(url, args)
+        return this.post<updateDatabaseConfigurationsResult>(url, args, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to save expiration configuration", response.responseText, response.statusText));
 
     }

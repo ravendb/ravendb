@@ -57,6 +57,12 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigRevisions()
+        {
+            await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
+        }
+
         [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsFor()
         {

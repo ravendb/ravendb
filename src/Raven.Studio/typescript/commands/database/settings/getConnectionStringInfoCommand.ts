@@ -15,10 +15,10 @@ class getConnectionStringInfoCommand extends commandBase {
     }
 
     private getConnectionStringInfo(): JQueryPromise<Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult> {
-        const args = { name: this.db.name, connectionStringName: this.connectionStringName, type: this.type };
-        const url = endpoints.global.adminDatabases.adminConnectionStrings + this.urlEncodeArgs(args);
+        const args = { connectionStringName: this.connectionStringName, type: this.type };
+        const url = endpoints.databases.ongoingTasks.adminConnectionStrings + this.urlEncodeArgs(args);
 
-        return this.query(url, null);
+        return this.query(url, null, this.db);
     }
 
     static forRavenEtl(db: database, connectionStringName: string) {
