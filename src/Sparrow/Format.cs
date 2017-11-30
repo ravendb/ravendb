@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Sparrow.Utils;
 
 namespace Sparrow
 {
@@ -41,6 +43,19 @@ namespace Sparrow
                 }
                 while (value != 0);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string ToBase64Unpadded(this Guid guid)
+        {
+            string result = new string(' ', 22);
+            fixed (char* pChars = result)
+            {
+                int size = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&guid, 0, 16);
+                Debug.Assert(size == 22);
+            }
+
+            return result;
         }
     }
 }

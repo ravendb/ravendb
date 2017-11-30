@@ -458,8 +458,8 @@ namespace Raven.Server.Documents
         {
             if (string.IsNullOrEmpty(oldChangeVector) == false)
             {
-                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.DbId, newEtag, ref oldChangeVector);
-                return oldChangeVector;
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, oldChangeVector);
+                return result.ChangeVector;
             }
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);

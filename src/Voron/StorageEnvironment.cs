@@ -304,10 +304,10 @@ namespace Voron
                     VoronUnrecoverableErrorException.Raise(this,
                         "The db id value in metadata tree wasn't 16 bytes in size, possible mismatch / corruption?");
 
-                var databseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
-                DbId = databseGuidId;
+                var databaseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
 
-                FillBase64Id(databseGuidId);
+                DbId = databaseGuidId;
+                FillBase64Id(databaseGuidId);
 
                 if (_options.GenerateNewDatabaseId)
                 {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Support;
 using Raven.Server.Documents.Replication;
@@ -76,8 +77,6 @@ namespace Raven.Server.Utils
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
 
-        [ThreadStatic] private static string _dbIdBuffer;
-
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
 
         private static int NumberOfDigits(long etag)
@@ -113,26 +112,18 @@ namespace Raven.Server.Utils
             return num;
         }
 
-        public static unsafe bool TryUpdateChangeVector(string nodeTag, Guid dbId, long etag, ref string changeVector)
+        public static (bool IsValid, string ChangeVector) TryUpdateChangeVector(string nodeTag, string dbIdInBase64, long etag, string oldChangeVector)
         {
-            InitiailizeThreadLocalState();
+            InitializeThreadLocalState();
 
-            Debug.Assert(changeVector != null);
+            Debug.Assert(oldChangeVector != null);
 
-
-            fixed (char* pChars = _dbIdBuffer)
-            {
-                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&dbId, 0, 16);
-                Debug.Assert(result == 22);
-            }
-            var newEtagLen = NumberOfDigits(etag);
-            var dbIndex = changeVector.IndexOf(_dbIdBuffer, StringComparison.Ordinal);
-
+            var dbIndex = oldChangeVector.IndexOf(dbIdInBase64, StringComparison.Ordinal);
             if (dbIndex < 0)
             {
-                if (string.IsNullOrEmpty(changeVector) == false)
+                if (string.IsNullOrEmpty(oldChangeVector) == false)
                 {
-                    _changeVectorBuffer.Append(changeVector)
+                    _changeVectorBuffer.Append(oldChangeVector)
                         .Append(", ");
                 }
 
@@ -140,53 +131,54 @@ namespace Raven.Server.Utils
                     .Append(':')
                     .Append(etag)
                     .Append('-')
-                    .Append(_dbIdBuffer);
+                    .Append(dbIdInBase64);
 
-                changeVector = _changeVectorBuffer.ToString();
-                return true;
+                return (true, _changeVectorBuffer.ToString());
             }
 
+            int newEtagSize = NumberOfDigits(etag);
+
             var existingEtagEndIndex = dbIndex - 1;
-            var currentEtagStartIndex = changeVector.LastIndexOf(':', existingEtagEndIndex) + 1;
+            var currentEtagStartIndex = oldChangeVector.LastIndexOf(':', existingEtagEndIndex) + 1;
 
             var existingLen = existingEtagEndIndex - currentEtagStartIndex;
-            var existingEtag = ParseToLong(changeVector, currentEtagStartIndex, existingLen);
+            var existingEtag = ParseToLong(oldChangeVector, currentEtagStartIndex, existingLen);
             // assume no trailing zeros
-            var diff = newEtagLen - existingLen;
+            var diff = newEtagSize - existingLen;
             if (diff == 0)
             {
                 // compare the strings instead of parsing to int
                 if (existingEtag >= etag)
                 {
                     //nothing to do
-                    return false;
+                    return (false, null);
                 }
                 // we clone the string because others might hold a reference to it and consider it immutable
-                _changeVectorBuffer.Append(changeVector);
+                _changeVectorBuffer.Append(oldChangeVector);
 
                 // replace the etag
 
-                WriteNumberBackwards(_changeVectorBuffer, currentEtagStartIndex + newEtagLen - 1, etag);
-                changeVector = _changeVectorBuffer.ToString();
-                return true;
+                WriteNumberBackwards(_changeVectorBuffer, currentEtagStartIndex + newEtagSize - 1, etag);
+                return (true, _changeVectorBuffer.ToString());
             }
+
             if (diff < 0)
             {
                 // nothing to do, already known to be smaller
-                return false;
+                return (false, null);
             }
+
             // allocate new string
-            _changeVectorBuffer.Append(changeVector, 0, currentEtagStartIndex)
+            _changeVectorBuffer.Append(oldChangeVector, 0, currentEtagStartIndex)
                 .Append(etag)
-                .Append(changeVector, existingEtagEndIndex, changeVector.Length - existingEtagEndIndex);
-            changeVector = _changeVectorBuffer.ToString();
-            return true;
+                .Append(oldChangeVector, existingEtagEndIndex, oldChangeVector.Length - existingEtagEndIndex);
+ 
+            return (true, _changeVectorBuffer.ToString());
         }
 
-        private static void InitiailizeThreadLocalState()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void InitializeThreadLocalState()
         {
-            if (_dbIdBuffer == null)
-                _dbIdBuffer = new string(' ', 22);
             if (_changeVectorBuffer == null)
                 _changeVectorBuffer = new StringBuilder();
             _changeVectorBuffer.Length = 0;
@@ -225,22 +217,16 @@ namespace Raven.Server.Utils
             return _mergeVectorBuffer.SerializeVector();
         }
 
-        public static unsafe string NewChangeVector(string nodeTag, long etag, Guid dbId)
+        public static string NewChangeVector(string nodeTag, long etag, string dbIdInBase64)
         {
-            InitiailizeThreadLocalState();
-
-            fixed (char* pChars = _dbIdBuffer)
-            {
-                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&dbId, 0, 16);
-                Debug.Assert(result == 22);
-            }
+            InitializeThreadLocalState();
 
             return _changeVectorBuffer
                 .Append(nodeTag)
                 .Append(':')
                 .Append(etag)
                 .Append('-')
-                .Append(_dbIdBuffer)
+                .Append(dbIdInBase64)
                 .ToString();
         }
 

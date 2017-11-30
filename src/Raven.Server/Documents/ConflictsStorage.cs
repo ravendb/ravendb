@@ -479,7 +479,7 @@ namespace Raven.Server.Documents
                 conflictChangeVectors.Count == 0)
                 return MergeVectorsWithoutConflicts(newEtag, existingChangeVector);
 
-            var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
+            var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
             conflictChangeVectors.Add(newChangeVector);
             return ChangeVectorUtils.MergeVectors(conflictChangeVectors);
         }
@@ -488,10 +488,10 @@ namespace Raven.Server.Documents
         {
             if (existing != null)
             {
-                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.DbId, newEtag, ref existing);
-                return existing;
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.Base64Id, newEtag, existing);
+                return result.ChangeVector;
             }
-            return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
+            return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.Base64Id);
         }
 
         public bool ShouldThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, Slice lowerId, long? expectedEtag, out long? currentMaxConflictEtag)
@@ -543,7 +543,7 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(documentChangeVector) == false)
                 mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
             var newChangeVector =
-                ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId);
+                ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbBase64Id);
             mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, newChangeVector);
 
             return (mergedChangeVectorEntries, result.NonPersistentFlags);
@@ -674,7 +674,10 @@ namespace Raven.Server.Documents
                 var etag = _documentsStorage.GenerateNextEtag();
                 if (context.LastDatabaseChangeVector == null)
                     context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
-                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbId, etag, ref context.LastDatabaseChangeVector);
+                
+                var result = ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, etag, context.LastDatabaseChangeVector);
+                if (result.IsValid)
+                    context.LastDatabaseChangeVector = result.ChangeVector;
 
                 byte* doc = null;
                 var docSize = 0;
