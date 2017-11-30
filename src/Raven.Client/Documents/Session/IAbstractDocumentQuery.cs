@@ -310,11 +310,6 @@ namespace Raven.Client.Documents.Session
         /// </returns>
         string ToString();
 
-        /// <summary>
-        ///   The last term that we asked the query to use equals on
-        /// </summary>
-        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
-
         void Intersect();
         void AddRootType(Type type);
         void Distinct();

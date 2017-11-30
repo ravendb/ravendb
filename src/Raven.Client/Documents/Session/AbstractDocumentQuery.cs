@@ -60,8 +60,6 @@ namespace Raven.Client.Documents.Session
 
         protected string QueryRaw;
 
-        protected KeyValuePair<string, object> LastEquality;
-
         protected Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
@@ -591,7 +589,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
 
             var transformToEqualValue = TransformValue(whereParams);
-            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
@@ -626,7 +623,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
 
             var transformToEqualValue = TransformValue(whereParams);
-            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
@@ -672,7 +668,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             };
 
             var transformToEqualValue = TransformValue(whereParams);
-            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
@@ -698,7 +693,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             };
 
             var transformToEqualValue = TransformValue(whereParams);
-            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
@@ -1060,11 +1054,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         /// </summary>
         public void Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or)
         {
-            var hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
-            LastEquality = new KeyValuePair<string, object>(fieldName,
-                hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
-            );
-
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
 
@@ -1128,14 +1117,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     queryText.Append(include);
                 }
             }
-        }
-
-        /// <summary>
-        /// The last term that we asked the query to use equals on
-        /// </summary>
-        public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
-        {
-            return LastEquality;
         }
 
         public void Intersect()
