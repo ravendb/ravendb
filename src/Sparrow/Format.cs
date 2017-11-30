@@ -22,10 +22,12 @@ namespace Sparrow
 
                 do
                 {
-                    var v = value % 10;
+                    // PERF: This is faster because the JIT cannot figure out the idiom: (x,y) = value \ c, value % c
+                    ulong div = value / 10;
+                    ulong v = value - div * 10;
+                    value = div;
 
                     ptr[i--] = (char)('0' + v);
-                    value /= 10;
                 }
                 while (value != 0);
             }
@@ -36,10 +38,12 @@ namespace Sparrow
                 int i = 0;
                 do
                 {
-                    var v = value % 10;
+                    // PERF: This is faster because the JIT cannot figure out the idiom: (x,y) = value \ c, value % c
+                    ulong div = value / 10;
+                    ulong v = value - div * 10;
+                    value = div;
 
                     ptr[i--] = (byte)('0' + v);
-                    value /= 10;
                 }
                 while (value != 0);
             }
