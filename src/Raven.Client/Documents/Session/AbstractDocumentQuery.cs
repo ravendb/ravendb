@@ -127,10 +127,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected bool DisableCaching;
 
+#if FEATURE_SHOW_TIMINGS
         /// <summary>
         /// Indicates if detailed timings should be calculated for various query parts (Lucene search, loading documents, transforming results). Default: false
         /// </summary>
         protected bool ShowQueryTimings;
+#endif
 
         /// <summary>
         /// Determine if scores of query results should be explained
@@ -1040,7 +1042,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching,
+#if FEATURE_SHOW_TIMINGS
                 ShowTimings = ShowQueryTimings,
+#endif
                 ExplainScores = ShouldExplainScores
             };
 

@@ -674,6 +674,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#if FEATURE_SHOW_TIMINGS
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.ShowTimings()
         {
@@ -687,6 +688,7 @@ namespace Raven.Client.Documents.Session
             ShowTimings();
             return this;
         }
+#endif
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Distinct()
@@ -849,7 +851,9 @@ namespace Raven.Client.Documents.Session
 #endif
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
+#if FEATURE_SHOW_TIMINGS
                 ShowQueryTimings = ShowQueryTimings,
+#endif
                 LastEquality = LastEquality,
                 ShouldExplainScores = ShouldExplainScores,
                 IsIntersect = IsIntersect,
