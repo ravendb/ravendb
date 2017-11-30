@@ -255,46 +255,36 @@ namespace Raven.Server.Web.System
 
         private async Task RecreateIndexes(DatabaseRecord databaseRecord)
         {
-            PathSetting dataDirectory = databaseRecord.Settings.TryGetValue("DataDir", out var path) == false || path == null
-                ? new PathSetting(ServerStore.Configuration.Core.DataDirectory.ToFullPath(), ResourceType.Database, databaseRecord.DatabaseName) : new PathSetting(path);
-
-            if (Directory.Exists(dataDirectory.FullPath) == false)
+            var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseRecord.DatabaseName, true, true, true, databaseRecord);
+            if (databaseConfiguration.Indexing.RunInMemory ||
+                Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)
             {
                 return;
             }
 
             var addToInitLog = new Action<string>(txt =>
             {
-                var msg = $"[Recreateing indexes] {DateTime.UtcNow} :: Database '{databaseRecord.DatabaseName}' : {txt}";
+                var msg = $"[Recreating indexes] {DateTime.UtcNow} :: Database '{databaseRecord.DatabaseName}' : {txt}";
                 if (Logger.IsInfoEnabled)
                     Logger.Info(msg);
             });
 
-            using (var documnetDatabase = new DocumentDatabase(databaseRecord.DatabaseName,
-                new RavenConfiguration(databaseRecord.DatabaseName, ResourceType.Database)
-                {
-                    Core =
-                    {
-                            DataDirectory = dataDirectory,
-                            RunInMemory = false
-                    }
-                }, ServerStore, addToInitLog))
+            using (var documentDatabase = new DocumentDatabase(databaseRecord.DatabaseName, databaseConfiguration, ServerStore, addToInitLog))
             {
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
-                documnetDatabase.Initialize(options);
+                documentDatabase.Initialize(options);
+                var command = new GetRaftIndexCommand();
 
-                var command = new GetRaftEtagCommand();
-
-                var indexesPath = dataDirectory.FullPath + "\\Indexes";
+                var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
                 {
                     Index index = null;
                     try
                     {
-                        if (documnetDatabase.DatabaseShutdown.IsCancellationRequested)
+                        if (documentDatabase.DatabaseShutdown.IsCancellationRequested)
                             return;
 
-                        index = Index.Open(1, indexPath, documnetDatabase);
+                        index = Index.Open(1, indexPath, documentDatabase);
                         if (index == null)
                             continue;
 

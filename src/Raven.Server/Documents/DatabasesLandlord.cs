@@ -195,7 +195,7 @@ namespace Raven.Server.Documents
                 RavenConfiguration configuration;
                 try
                 {
-                    configuration = CreateDatabaseConfiguration(t.DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, databaseRecord: record);
+                    configuration = CreateDatabaseConfiguration(t.DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: record);
                 }
                 catch (Exception ex)
                 {
@@ -542,7 +542,7 @@ namespace Raven.Server.Documents
             serverStore.DatabaseInfoCache.Delete(database.Name);
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
             if (databaseName.IsNullOrWhiteSpace())
                 throw new ArgumentNullException(nameof(databaseName), "Database name cannot be empty");
@@ -571,11 +571,11 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, databaseRecord);
+                return CreateDatabaseConfiguration(databaseName, ignoreDisabledDatabase, ignoreBeenDeleted, ignoreNotRelevant, databaseRecord);
             }
         }
 
-        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, DatabaseRecord databaseRecord)
+        public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase, bool ignoreBeenDeleted, bool ignoreNotRelevant, DatabaseRecord databaseRecord)
         {
             if (databaseRecord.Disabled && ignoreDisabledDatabase == false)
                 throw new DatabaseDisabledException(databaseName + " has been disabled");
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents
             if (ignoreBeenDeleted == false && databaseIsBeenDeleted)
                 throw new DatabaseDisabledException(databaseName + " is currently being deleted on " + _serverStore.NodeTag);
 
-            if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
+            if (ignoreNotRelevant == false && databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
                 databaseIsBeenDeleted == false)
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
             return CreateConfiguration(databaseName, databaseRecord);
