@@ -13,7 +13,6 @@ import searchBox = require("common/shell/searchBox");
 import database = require("models/resources/database");
 import license = require("models/auth/licenseModel");
 import buildInfo = require("models/resources/buildInfo");
-import environmentColor = require("models/resources/environmentColor");
 import changesContext = require("common/changesContext");
 import allRoutes = require("common/shell/routes");
 import popoverUtils = require("common/popoverUtils");
@@ -30,7 +29,6 @@ import notificationCenter = require("common/notifications/notificationCenter");
 
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
 import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
-import getServerConfigsCommand = require("commands/database/studio/getServerConfigsCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
@@ -46,6 +44,7 @@ import requestExecution = require("common/notifications/requestExecution");
 import studioSettings = require("common/settings/studioSettings");
 import clientCertificateModel = require("models/auth/clientCertificateModel");
 import certificateModel = require("models/auth/certificateModel");
+import serverTime = require("common/helpers/database/serverTime");
 
 //TODO: extract cluster related logic to separate class
 //TODO: extract api key related logic to separate class 
@@ -316,7 +315,10 @@ class shell extends viewModelBase {
     fetchServerBuildVersion() {
         new getServerBuildVersionCommand()
             .execute()
-            .done((serverBuildResult: serverBuildVersionDto) => {
+            .done((serverBuildResult: serverBuildVersionDto, status: string,  response: JQueryXHR) => {            
+               
+                serverTime.default.calcTimeDifference(response.getResponseHeader("Date"));
+                
                 buildInfo.serverBuildVersion(serverBuildResult);
 
                 const currentBuildVersion = serverBuildResult.BuildVersion;
