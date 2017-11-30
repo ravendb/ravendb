@@ -84,6 +84,7 @@ class appUrl {
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
+        conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
         databaseStudioConfig: ko.pureComputed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
         statusDebug: ko.pureComputed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
@@ -388,6 +389,10 @@ class appUrl {
         const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
         
         return "#databases/settings/connectionStrings?" + databaseUrlPart + typeUrlPart + nameUrlPart;
+    }
+    
+    static forConflictResolution(db: database | databaseInfo): string {
+        return "#databases/settings/conflictResolution?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDatabaseStudioConfig(db: database | databaseInfo): string {

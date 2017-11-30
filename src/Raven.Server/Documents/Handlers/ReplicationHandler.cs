@@ -486,5 +486,38 @@ namespace Raven.Server.Documents.Handlers
                 return Task.CompletedTask;
             }
         }
+        
+        [RavenAction("/databases/*/replicaton/conflicts/solver", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetRevisionsConfig()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var databaseRecord = Server.ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                var solverConfig = databaseRecord?.ConflictSolverConfig;
+                if (solverConfig != null)
+                {
+                    var resolveByCollection = new DynamicJsonValue();
+                    foreach (var collection in solverConfig.ResolveByCollection)
+                    {
+                        resolveByCollection[collection.Key] = collection.Value.ToJson();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(solverConfig.ResolveToLatest)] = solverConfig.ResolveToLatest,
+                            [nameof(solverConfig.ResolveByCollection)] = resolveByCollection
+                        });
+                    }
+                }
+                else
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+            }
+            return Task.CompletedTask;
+        }
     }
 }
