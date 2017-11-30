@@ -136,6 +136,8 @@ namespace Raven.Client
 
                 public const string Attachments = "@attachments";
 
+                public const string LegacyAttachmentsMetadata = "@legacy-attachment-metadata";
+
                 public const string IndexScore = "@index-score";
 
                 public const string LastModified = "@last-modified";
