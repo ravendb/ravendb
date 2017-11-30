@@ -47,6 +47,21 @@ namespace Sparrow
                 }
                 while (value != 0);
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static void WriteNumber(StringBuilder sb, int offset, long value)
+            {
+                do
+                {
+                    // PERF: This is faster because the JIT cannot figure out the idiom: (x,y) = value \ c, value % c
+                    long div = value / 10;
+                    long v = value - div * 10;
+                    value = div;
+
+                    sb[offset--] = (char)((char)v + '0');
+                }
+                while (value != 0);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
