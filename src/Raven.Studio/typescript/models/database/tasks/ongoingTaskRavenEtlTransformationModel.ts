@@ -97,7 +97,7 @@ class ongoingTaskEtlTransformationModel {
     }
     
     addWithBlink(collectionName: string) {
-        if (collectionName === ongoingTaskEtlTransformationModel.applyToAllCollectionsText) {
+        if (ongoingTaskEtlTransformationModel.isApplyToAll(collectionName)) {
             this.applyScriptForAllCollections(true);
             this.transformScriptCollections([ongoingTaskEtlTransformationModel.applyToAllCollectionsText]);
         }
@@ -120,7 +120,7 @@ class ongoingTaskEtlTransformationModel {
         this.applyScriptForAllCollections(dto.ApplyToAllDocuments);
         
         if (this.applyScriptForAllCollections()) {
-            this.transformScriptCollections(["Apply to All Collections"]);
+            this.transformScriptCollections([ongoingTaskEtlTransformationModel.applyToAllCollectionsText]);
         }
         
         this.isNew(isNew);
