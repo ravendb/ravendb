@@ -854,7 +854,6 @@ namespace Raven.Client.Documents.Session
 #if FEATURE_SHOW_TIMINGS
                 ShowQueryTimings = ShowQueryTimings,
 #endif
-                LastEquality = LastEquality,
                 ShouldExplainScores = ShouldExplainScores,
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator

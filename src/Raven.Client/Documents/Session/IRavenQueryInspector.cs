@@ -22,11 +22,6 @@ namespace Raven.Client.Documents.Session
         InMemoryDocumentSessionOperations Session { get; }
 
         /// <summary>
-        /// The last term that we asked the query to use equals on
-        /// </summary>
-        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
-
-        /// <summary>
         /// Get the index query for this query
         /// </summary>
         IndexQuery GetIndexQuery(bool isAsync);

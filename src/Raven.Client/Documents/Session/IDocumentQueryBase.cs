@@ -471,12 +471,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
     public interface IDocumentQueryBase<T, TSelf> : IQueryBase<T, TSelf>, IFilterDocumentQueryBase<T, TSelf>, IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>
     {
         /// <summary>
-        ///  The last term that we asked the query to use equals on
-        /// </summary>
-        /// <param name="isAsync"></param>
-        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
-
-        /// <summary>
         ///     Adds an ordering for a specific field to the query
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>

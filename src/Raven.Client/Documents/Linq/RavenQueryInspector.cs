@@ -167,31 +167,6 @@ namespace Raven.Client.Documents.Linq
 
         public InMemoryDocumentSessionOperations Session => _session;
 
-        ///<summary>
-        /// Get the last equality term for the query
-        ///</summary>
-        public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
-        {
-            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(
-                _provider.QueryGenerator,
-                null,
-                null,
-                _indexName,
-                _collectionName,
-                new HashSet<FieldToFetch>(),
-                _isMapReduce,
-                _provider.OriginalQueryType);
-
-            if (isAsync)
-            {
-                var asyncDocumentQuery = ravenQueryProvider.GetAsyncDocumentQueryFor(_expression);
-                return asyncDocumentQuery.GetLastEqualityTerm(true);
-            }
-
-            var documentQuery = ravenQueryProvider.GetDocumentQueryFor(_expression);
-            return documentQuery.GetLastEqualityTerm();
-        }
-
         /// <summary>
         /// Set the fields to fetch
         /// </summary>
