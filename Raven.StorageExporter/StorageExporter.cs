@@ -384,13 +384,7 @@ namespace Raven.StorageExporter
 
         private bool ShouldSkipFile(FileHeader header)
         {
-            RavenJToken rjt;
-            if (header.Metadata.TryGetValue("Raven-Delete-Marker", out rjt))
-            {
-                if (rjt.Value<bool>())
-                    return true;
-            }
-            return header.Name.EndsWith(".deleting") || header.Name.EndsWith(".downloading");
+            return header.Name.EndsWith(".deleting") || header.Name.EndsWith(".downloading") || header.IsTombstone;
         }
 
         private MemoryStream _buffer = new MemoryStream();
