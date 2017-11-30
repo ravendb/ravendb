@@ -24,6 +24,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
+            route: 'databases/settings/conflictResolution',
+            moduleId: "viewmodels/database/settings/conflictResolution",
+            title: "Conflict Resolution",
+            nav: true,
+            css: 'icon-conflicts',
+            dynamicHash: appUrls.conflictResolution,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
             moduleId: 'viewmodels/database/settings/clientConfiguration',
             title: 'Client Configuration',

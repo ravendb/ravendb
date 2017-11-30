@@ -54,6 +54,7 @@ interface computedAppUrls {
     revisions: KnockoutComputed<string>;
     expiration: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
+    conflictResolution: KnockoutComputed<string>;
     databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;

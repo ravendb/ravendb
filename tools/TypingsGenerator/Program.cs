@@ -242,6 +242,7 @@ namespace TypingsGenerator
             // conflicts
             scripter.AddType(typeof(GetConflictsResult));
             scripter.AddType(typeof(ConflictResolverAdvisor.MergeResult));
+            scripter.AddType(typeof(ConflictSolver));
 
             // ongoing tasks - common
             scripter.AddType(typeof(OngoingTasksResult));

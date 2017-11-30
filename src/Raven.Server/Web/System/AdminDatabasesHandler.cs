@@ -1030,7 +1030,7 @@ namespace Raven.Server.Web.System
                         {
                             ["RaftCommandIndex"] = index,
                             ["Key"] = name,
-                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig.ToJson()
+                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig?.ToJson()
                         });
                         writer.Flush();
                     }

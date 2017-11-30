@@ -21,7 +21,6 @@ class getExpirationConfigurationCommand extends commandBase {
                     deferred.reject(xhr);
                     this.reportError("Failed to get expiration information", xhr.responseText, xhr.statusText);
                 }
-                
             });
 
         return deferred;
