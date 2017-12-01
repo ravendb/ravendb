@@ -15,7 +15,6 @@ namespace Raven.Server.Smuggler.Migration
         public bool IsRavenFs { get; set; }
         public bool IsCompressed { get; set; }      
         public string JournalsPath { get; set; }
-        public string DatabaseName { get; set; }
         public string EncryptionKey { get; set; }
         public string EncryptionAlgorithm { get; set; }
         public int? EncryptionKeyBitsSize { get; set; }
