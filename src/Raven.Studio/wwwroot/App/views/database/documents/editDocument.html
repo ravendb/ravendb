@@ -138,7 +138,7 @@
                         <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: _.partial(activateRevisions, false)">
                             <div class="icon-revisions"></div>
                             Revisions
-                            <div class="badge" data-bind="text: $root.connectedDocuments.revisionsCount() || ''"></div>
+                            <div class="badge" data-bind="text: $root.connectedDocuments.revisionsCount() || '+'"></div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
