@@ -8,7 +8,7 @@
                     </button>
                 </div>
                 
-                <h3>TODO: global config resolution options goes here</h3>
+                
                 <div class="flex-header">
                     <div class="flex-row">
                         <h3>Collection-specific conflict resolution scripts:</h3>
@@ -21,7 +21,7 @@
                     <div class="scripts-list" id="scriptsList" data-bind="with: model">
                         <div data-bind="if: perCollectionResolvers().length === 0 && !editedScriptSandbox()">
                             <div>
-                                <h3 class="text-center text-muted">No collection-specific conflict resolutions have been defined.</h3>
+                                <h3 class="text-center text-muted">No scripts have been defined</h3>
                             </div>
                         </div>
                         <div data-bind="foreach: perCollectionResolvers">
@@ -42,6 +42,12 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="toggle">
+                        <input id="resolveToLatest" type="checkbox" data-bind="checked: model().resolveToLatest">
+                        <label for="resolveToLatest">Resolve conflict using latest version, if no script was defined for a collection</label>
                     </div>
                 </div>
             </form>
