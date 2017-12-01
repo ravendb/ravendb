@@ -10,8 +10,8 @@ class migrateLegacyDatabaseFromDatafilesCommand extends commandBase {
     execute(): JQueryPromise<operationIdDto> {
         const url = endpoints.global.adminDatabases.adminMigrateOffline;
         return this.post(url, JSON.stringify(this.restoreConfiguration))
-            .done(() => this.reportSuccess(`Started migration of database named: ${this.restoreConfiguration.DatabaseName}`))
-            .fail((response: JQueryXHR) => this.reportError(`Failed to start migration of database named: ${this.restoreConfiguration.DatabaseName}`,
+            .done(() => this.reportSuccess(`Started migration of database named: ${this.restoreConfiguration.DatabaseRecord.DatabaseName}`))
+            .fail((response: JQueryXHR) => this.reportError(`Failed to start migration of database named: ${this.restoreConfiguration.DatabaseRecord.DatabaseName}`,
                 response.responseText, response.statusText));
     }
 }
