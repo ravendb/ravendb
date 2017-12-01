@@ -132,10 +132,7 @@ namespace Raven.Client.Documents.Linq
                 query = documentQuery.ToString();
             }
 
-            string fields = "";
-            if (ravenQueryProvider.FieldsToFetch.Count > 0)
-                fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.Select(x => x.Name).ToArray()) + ">: ";
-            return fields + query;
+            return query;
         }
 
         public IndexQuery GetIndexQuery(bool isAsync = true)
@@ -158,7 +155,7 @@ namespace Raven.Client.Documents.Linq
                 null,
                 _indexName,
                 _collectionName,
-                new HashSet<FieldToFetch>(),
+                new HashSet<FieldToFetch>(_provider.FieldsToFetch),
                 _isMapReduce,
                 _provider.OriginalQueryType);
         }
