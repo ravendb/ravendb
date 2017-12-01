@@ -30,7 +30,7 @@ define("jquery", () => jQuery);
 define("knockout", () => ko); 
 
 define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dialog", "durandal/composition"], (system: any, app: any, viewLocator: any, dialog: any, composition: any) => {
-    system.debug(true);
+    system.debug(!(window as any).ravenStudioRelease);
     
     app.title = "Raven.Studio";
     dialog.MessageBox.setViewUrl("views/dialog.html");

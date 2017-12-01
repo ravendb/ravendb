@@ -201,6 +201,7 @@ gulp.task('z_release:durandal', function () {
             return cfg;
         }
     })
+   .pipe(plugins.insert.prepend('window.ravenStudioRelease = true;'))
    .pipe(gulp.dest(PATHS.releaseTargetApp));
 });
 
