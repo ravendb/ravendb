@@ -639,6 +639,9 @@ namespace Raven.Database.FileSystem.Controllers
                         return;
 
                     filesystemDocument.Settings[Constants.FileSystem.DataDirectory] = documentDataDir;
+                    filesystemDocument.Settings.Remove(Constants.RavenIndexPath);
+                    filesystemDocument.Settings.Remove(Constants.RavenEsentLogsPath);
+                    filesystemDocument.Settings.Remove(Constants.RavenTxJournalPath);
 
                     if (restoreRequest.IndexesLocation != null)
                         filesystemDocument.Settings[Constants.RavenIndexPath] = restoreRequest.IndexesLocation;
