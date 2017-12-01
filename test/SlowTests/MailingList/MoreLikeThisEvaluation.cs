@@ -33,12 +33,12 @@ namespace SlowTests.MailingList
                 {
                     var list = session
                         .Query<Movie, MovieIndex>()
-                        .MoreLikeThis(x => x.Id == id, new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == id).WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Cast" },
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 2
-                        })
+                        }))
                         .ToList();
 
                     Assert.NotEmpty(list);

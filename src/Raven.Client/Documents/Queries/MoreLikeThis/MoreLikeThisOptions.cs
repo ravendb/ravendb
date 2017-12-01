@@ -12,7 +12,7 @@
         public const int DefaultMaximumWordLength = 0;
         public const int DefaultMaximumQueryTerms = 25;
 
-        public static MoreLikeThisOptions Default = new MoreLikeThisOptions();
+        internal static MoreLikeThisOptions Default = new MoreLikeThisOptions();
 
         /// <summary>
         ///     Ignore terms with less than this frequency in the source doc. Default is 2.

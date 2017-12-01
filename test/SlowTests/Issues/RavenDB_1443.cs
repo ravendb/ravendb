@@ -81,11 +81,11 @@ namespace SlowTests.Issues
                 var oldRequests = session.Advanced.NumberOfRequests;
 
                 var moreLikeThisLazy = session.Query<Article, ArticleIndex>()
-                    .MoreLikeThis(x => x.Id == "articles/0", new MoreLikeThisOptions
+                    .MoreLikeThis(f => f.UsingDocument(x => x.Id == "articles/0").WithOptions(new MoreLikeThisOptions
                     {
                         MinimumTermFrequency = 0,
                         MinimumDocumentFrequency = 0
-                    })
+                    }))
                     .Lazily();
 
                 Assert.Equal(oldRequests, session.Advanced.NumberOfRequests);

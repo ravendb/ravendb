@@ -132,11 +132,9 @@ namespace Raven.Client.Documents.Session
 
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
-        IAsyncDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null);
+        IAsyncDocumentQuery<T> MoreLikeThis(MoreLikeThisBase moreLikeThis);
 
-        IAsyncDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);
-
-        IAsyncDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
+        IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisFactoryForAsyncDocumentQuery<T>> factory);
 
         IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetFactory<T>> factory = null);
 

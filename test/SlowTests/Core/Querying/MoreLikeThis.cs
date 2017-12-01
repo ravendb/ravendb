@@ -32,11 +32,11 @@ namespace SlowTests.Core.Querying
                     WaitForIndexing(store);
 
                     var list = session.Query<Post, Posts_ByTitleAndContent>()
-                        .MoreLikeThis(x => x.Id == "posts/1", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == "posts/1").WithOptions(new MoreLikeThisOptions
                         {
                             MinimumDocumentFrequency = 1,
                             MinimumTermFrequency = 0
-                        })
+                        }))
                         .ToList();
 
                     Assert.Equal(3, list.Count);
@@ -71,11 +71,11 @@ namespace SlowTests.Core.Querying
 
                     var list = session.Query<User, Users_ByName>()
                         .Include(x => x.AddressId)
-                        .MoreLikeThis(x => x.Id == "users/1", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == "users/1").WithOptions(new MoreLikeThisOptions
                         {
                             MinimumDocumentFrequency = 1,
                             MinimumTermFrequency = 0
-                        })
+                        }))
                         .ToList();
 
                     Assert.Equal(1, list.Count);

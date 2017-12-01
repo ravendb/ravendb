@@ -5,34 +5,32 @@ namespace Raven.Client.Documents.Session
 {
     public partial class DocumentQuery<T>
     {
-        public IDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null)
+        IDocumentQuery<T> IDocumentQuery<T>.MoreLikeThis(MoreLikeThisBase moreLikeThis)
         {
-            using (var moreLikeThis = base.MoreLikeThis())
+            using (var mlt = MoreLikeThis())
             {
-                moreLikeThis.WithOptions(options);
+                mlt.WithOptions(moreLikeThis.Options);
+
+                if (moreLikeThis is MoreLikeThisUsingDocument document)
+                    mlt.WithDocument(document.DocumentJson);
             }
 
             return this;
         }
 
-        public IDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null)
+        IDocumentQuery<T> IDocumentQuery<T>.MoreLikeThis(Action<IMoreLikeThisFactoryForDocumentQuery<T>> factory)
         {
-            using (var moreLikeThis = base.MoreLikeThis())
+            var f = new MoreLikeThisFactory<T>();
+            factory.Invoke(f);
+
+            using (var moreLikeThis = MoreLikeThis())
             {
-                moreLikeThis.WithDocument(document);
-                moreLikeThis.WithOptions(options);
-            }
-
-            return this;
-        }
-
-        public IDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null)
-        {
-            using (var moreLikeThis = base.MoreLikeThis())
-            {
-                moreLikeThis.WithOptions(options);
-
-                predicate(this);
+                moreLikeThis.WithOptions(f.MoreLikeThis.Options);
+                
+                if (f.MoreLikeThis is MoreLikeThisUsingDocument document)
+                    moreLikeThis.WithDocument(document.DocumentJson);
+                else if (f.MoreLikeThis is MoreLikeThisUsingDocumentForDocumentQuery<T> query)
+                    query.ForDocumentQuery(this);
             }
 
             return this;

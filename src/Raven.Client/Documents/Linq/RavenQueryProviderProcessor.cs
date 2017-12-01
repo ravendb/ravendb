@@ -1030,26 +1030,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.MoreLikeThis):
                     VisitExpression(expression.Arguments[0]);
 
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments.Last(), out var moreLikeThisOptions);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments.Last(), out var moreLikeThisAsObject);
 
-                    using (var moreLikeThis = _documentQuery.MoreLikeThis())
+                    using (var mlt = _documentQuery.MoreLikeThis())
                     {
-                        moreLikeThis.WithOptions(moreLikeThisOptions as MoreLikeThisOptions);
+                        var moreLikeThis = (MoreLikeThisBase)moreLikeThisAsObject;
 
-                        if (expression.Arguments.Count > 2)
-                        {
-                            var moreLikeThisArgument = expression.Arguments[1];
-                            if (moreLikeThisArgument is UnaryExpression moreLikeThisExpression)
-                            {
-                                VisitExpression(moreLikeThisExpression.Operand);
-                            }
-                            else
-                            {
-                                LinqPathProvider.GetValueFromExpressionWithoutConversion(moreLikeThisArgument, out var moreLikeThisDocument);
+                        mlt.WithOptions(moreLikeThis.Options);
 
-                                moreLikeThis.WithDocument(moreLikeThisDocument as string);
-                            }
-                        }
+                        if (moreLikeThis is MoreLikeThisUsingDocumentForQuery<T> mltQuery)
+                            VisitExpression(mltQuery.ForQuery);
+                        else if (moreLikeThis is MoreLikeThisUsingDocument mltDocument)
+                            mlt.WithDocument(mltDocument.DocumentJson);
                     }
                     break;
                 case nameof(LinqExtensions.AggregateBy):
@@ -1927,7 +1919,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AddFromAlias(parameter?.Name);
             }
 
-            if (IsRaw(expression, name)) 
+            if (IsRaw(expression, name))
                 return;
 
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };

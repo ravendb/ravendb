@@ -41,16 +41,17 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session.Query<MockPost, Posts_ByPostCategory>()
-                        .MoreLikeThis(x => x.Id == "posts/123", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == "posts/123").WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" }
-                        }).ToList());
+                        }))
+                        .ToList());
 
                     Assert.Empty(session.Query<MockPost, Posts_ByPostCategory>()
-                        .MoreLikeThis(x => x.Id == "posts/123", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == "posts/123").WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" }
-                        })
+                        }))
                         .Where(x => x.Category == "IT")
                         .ToList());
                 }

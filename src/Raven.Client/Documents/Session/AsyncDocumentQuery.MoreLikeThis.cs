@@ -5,34 +5,32 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentQuery<T>
     {
-        public IAsyncDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null)
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.MoreLikeThis(MoreLikeThisBase moreLikeThis)
         {
-            using (var moreLikeThis = base.MoreLikeThis())
+            using (var mlt = MoreLikeThis())
             {
-                moreLikeThis.WithOptions(options);
+                mlt.WithOptions(moreLikeThis.Options);
+
+                if (moreLikeThis is MoreLikeThisUsingDocument document)
+                    mlt.WithDocument(document.DocumentJson);
             }
 
             return this;
         }
 
-        public IAsyncDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null)
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.MoreLikeThis(Action<IMoreLikeThisFactoryForAsyncDocumentQuery<T>> factory)
         {
-            using (var moreLikeThis = base.MoreLikeThis())
+            var f = new MoreLikeThisFactory<T>();
+            factory.Invoke(f);
+
+            using (var moreLikeThis = MoreLikeThis())
             {
-                moreLikeThis.WithDocument(document);
-                moreLikeThis.WithOptions(options);
-            }
+                moreLikeThis.WithOptions(f.MoreLikeThis.Options);
 
-            return this;
-        }
-
-        public IAsyncDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null)
-        {
-            using (var moreLikeThis = base.MoreLikeThis())
-            {
-                moreLikeThis.WithOptions(options);
-
-                predicate(this);
+                if (f.MoreLikeThis is MoreLikeThisUsingDocument document)
+                    moreLikeThis.WithDocument(document.DocumentJson);
+                else if (f.MoreLikeThis is MoreLikeThisUsingDocumentForDocumentQuery<T> query)
+                    query.ForAsyncDocumentQuery(this);
             }
 
             return this;
