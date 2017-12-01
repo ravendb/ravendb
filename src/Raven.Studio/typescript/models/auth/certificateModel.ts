@@ -61,7 +61,7 @@ class certificateModel {
     
     static clearanceLabelFor(input: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
         if (input === "ClusterNode") {
-            return "Cluster node";
+            return "Cluster Node";
         }
         return certificateModel.securityClearanceTypes.find(x => x.value === input).label;
     }
