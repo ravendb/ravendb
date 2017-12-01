@@ -1,9 +1,11 @@
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import conflictResolutionModel = require("models/database/settings/conflictResolutionModel");
 import perCollectionConflictResolutionModel = require("models/database/settings/perCollectionConflictResolutionModel");
 import collection = require("models/database/documents/collection");
+import conflictResolutionScriptSyntax = require("viewmodels/database/settings/conflictResolutionScriptSyntax");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
 
@@ -34,17 +36,14 @@ class conflictResolution extends viewModelBase {
                 if (config) {
                     this.model(new conflictResolutionModel(config));
                 } else {
-                    this.model(conflictResolutionModel.empty());
+                    const model = conflictResolutionModel.empty();
+                    // if configuration isn't available we assume default conflict resolution policy is: resolve to latest
+                    model.resolveToLatest(true);
+                    this.model(model);
                 }
                 
                 this.initObservables();
             });
-    }
-
-    compositionComplete() {
-        super.compositionComplete();
-
-        //TODO  $('.edit-raven-etl-task [data-toggle="tooltip"]').tooltip(); - update class write that collections are applied first then optionally resolve to latest 
     }
 
     private initObservables() {
@@ -151,10 +150,8 @@ class conflictResolution extends viewModelBase {
     }
 
     syntaxHelp() {
-        /* TODO
-        const viewmodel = new transformationScriptSyntax("Raven");
+        const viewmodel = new conflictResolutionScriptSyntax();
         app.showBootstrapDialog(viewmodel);
-         */
     }
 
 }

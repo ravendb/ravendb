@@ -14,7 +14,7 @@ class saveConflictSolverConfigurationCommand extends commandBase {
         const url = endpoints.global.adminDatabases.adminReplicationConflictsSolver + this.urlEncodeArgs(urlArgs);
         const args = ko.toJSON(this.configuration);
         return this.post<updateDatabaseConfigurationsResult>(url, args)
-            .done(() => this.reportSuccess("Conflict resolver configuration was saved"))
+            .done(() => this.reportSuccess("Conflict solver configuration was saved"))
             .fail((response: JQueryXHR) => this.reportError("Failed to save conflict solver configuration", response.responseText, response.statusText));
 
     }
