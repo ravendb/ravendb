@@ -172,11 +172,6 @@ class connectedDocuments {
             return connectedDocuments.emptyDocResult<connectedDocumentItem | attachmentItem>();
         }
 
-        if (connectedDocuments.currentTab() !== "revisions") {
-            // going to different tab - stop displaying revisions count
-            this.revisionsCount(null);
-        }
-
         switch (connectedDocuments.currentTab()) {
             case "related":
                 return this.fetchRelatedDocs(skip, take);
