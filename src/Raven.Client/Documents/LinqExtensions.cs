@@ -62,11 +62,7 @@ namespace Raven.Client.Documents
 
         private static MethodInfo _thenByDescendingMethod;
 
-        private static MethodInfo _moreLikeThisMethod1;
-
-        private static MethodInfo _moreLikeThisMethod2;
-
-        private static MethodInfo _moreLikeThisMethod3;
+        private static MethodInfo _moreLikeThisMethod;
 
         private static MethodInfo _aggregateByMethod;
 
@@ -1280,48 +1276,27 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
-        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisOptions options = null)
+        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, MoreLikeThisBase moreLikeThis)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetMoreLikeThisMethod(typeof(MoreLikeThisOptions));
+            var currentMethod = GetMoreLikeThisMethod();
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(options ?? MoreLikeThisOptions.Default)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(moreLikeThis)));
             return (IRavenQueryable<T>)queryable;
         }
 
-        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, string document, MoreLikeThisOptions options = null)
+        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Action<IMoreLikeThisFactory<T>> factory)
         {
-#if CURRENT
-            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMoreLikeThisMethod(typeof(string));
-#endif
+            var f = new MoreLikeThisFactory<T>();
+            factory.Invoke(f);
 
-            var expression = ConvertExpressionIfNecessary(source);
-
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(document), Expression.Constant(options ?? MoreLikeThisOptions.Default)));
-            return (IRavenQueryable<T>)queryable;
-        }
-
-        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, MoreLikeThisOptions options = null)
-        {
-#if CURRENT
-            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
-#endif
-#if LEGACY
-            var currentMethod = GetMoreLikeThisMethod(typeof(Expression<Func<T, bool>>));
-#endif
-
-            var expression = ConvertExpressionIfNecessary(source);
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(options ?? MoreLikeThisOptions.Default)));
-            return (IRavenQueryable<T>)queryable;
+            return source.MoreLikeThis(f.MoreLikeThis);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1395,17 +1370,15 @@ namespace Raven.Client.Documents
             }
         }
 
-        private static MethodInfo GetMoreLikeThisMethod(Type argumentType)
+        private static MethodInfo GetMoreLikeThisMethod()
         {
-            var moreLikeThisMethod = GetMoreLikeThisMethodInfo(argumentType);
-            if (moreLikeThisMethod != null)
-                return moreLikeThisMethod;
+            if (_moreLikeThisMethod != null)
+                return _moreLikeThisMethod;
 
             lock (Locker)
             {
-                moreLikeThisMethod = GetMoreLikeThisMethodInfo(argumentType);
-                if (moreLikeThisMethod != null)
-                    return moreLikeThisMethod;
+                if (_moreLikeThisMethod != null)
+                    return _moreLikeThisMethod;
 
                 foreach (var method in typeof(LinqExtensions).GetMethods())
                 {
@@ -1414,43 +1387,15 @@ namespace Raven.Client.Documents
 
                     var parameters = method.GetParameters();
 
-                    if (parameters[1].ParameterType.Name != argumentType.Name)
+                    if (parameters[1].ParameterType != typeof(MoreLikeThisBase))
                         continue;
 
-                    SetMoreLikeThisMethodInfo(argumentType, method);
+                    _moreLikeThisMethod = method;
                     break;
                 }
 
-                return GetMoreLikeThisMethodInfo(argumentType);
+                return _moreLikeThisMethod;
             }
-        }
-
-        private static void SetMoreLikeThisMethodInfo(Type argumentType, MethodInfo method)
-        {
-            if (argumentType == typeof(MoreLikeThisOptions))
-            {
-                _moreLikeThisMethod1 = method;
-                return;
-            }
-
-            if (argumentType == typeof(string))
-            {
-                _moreLikeThisMethod2 = method;
-                return;
-            }
-
-            _moreLikeThisMethod3 = method;
-        }
-
-        private static MethodInfo GetMoreLikeThisMethodInfo(Type argumentType)
-        {
-            if (argumentType == typeof(MoreLikeThisOptions))
-                return _moreLikeThisMethod1;
-
-            if (argumentType == typeof(string))
-                return _moreLikeThisMethod2;
-
-            return _moreLikeThisMethod3;
         }
 
         private static MethodInfo GetOrderByMethod(string methodName)

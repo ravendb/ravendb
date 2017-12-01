@@ -145,11 +145,9 @@ namespace Raven.Client.Documents.Session
 
         IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
-        IDocumentQuery<T> MoreLikeThis(MoreLikeThisOptions options = null);
+        IDocumentQuery<T> MoreLikeThis(MoreLikeThisBase moreLikeThis);
 
-        IDocumentQuery<T> MoreLikeThis(string document, MoreLikeThisOptions options = null);
-
-        IDocumentQuery<T> MoreLikeThis(Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> predicate, MoreLikeThisOptions options = null);
+        IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisFactoryForDocumentQuery<T>> factory);
 
         IAggregationDocumentQuery<T> AggregateBy(Action<IFacetFactory<T>> factory = null);
 

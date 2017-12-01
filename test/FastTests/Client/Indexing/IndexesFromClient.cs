@@ -510,11 +510,11 @@ namespace FastTests.Client.Indexing
                     WaitForIndexing(store);
 
                     var list = session.Query<Post>("Posts/ByTitleAndDesc")
-                        .MoreLikeThis(x => x.Id == "posts/1", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == "posts/1").WithOptions(new MoreLikeThisOptions
                         {
                             MinimumDocumentFrequency = 1,
                             MinimumTermFrequency = 0
-                        })
+                        }))
                         .ToList();
 
                     Assert.Equal(3, list.Count);

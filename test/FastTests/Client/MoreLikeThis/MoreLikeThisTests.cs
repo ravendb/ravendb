@@ -92,10 +92,10 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Advanced.DocumentQuery<Data, DataIndex>()
-                        .MoreLikeThis(x => x.WhereEquals(y => y.Id, id), new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.WhereEquals(y => y.Id, id)).WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" }
-                        })
+                        }))
                         .ToList();
 
                     Assert.NotEmpty(list);
@@ -252,10 +252,10 @@ namespace FastTests.Client.MoreLikeThis
                     var indexName = new DataIndex().IndexName;
 
                     var list = session.Query<Data>(indexName)
-                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" }
-                        })
+                        }))
                         .ToList();
 
                     WaitForIndexing(store);
@@ -312,7 +312,7 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(x => x.Id == key)
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key))
                         .ToList();
 
                     Assert.NotEmpty(list);
@@ -343,7 +343,7 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(x => x.Id == key)
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key))
                         .ToList();
 
                     Assert.Empty(list);
@@ -367,7 +367,7 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(x => x.Id == key)
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key))
                         .ToList();
 
                     Assert.NotEmpty(list);
@@ -403,11 +403,11 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" },
                             MinimumDocumentFrequency = 2
-                        })
+                        }))
                         .ToList();
 
                     Assert.NotEmpty(list);
@@ -442,13 +442,13 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" },
                             MinimumWordLength = 3,
                             MinimumDocumentFrequency = 1,
                             Boost = true
-                        })
+                        }))
                         .ToList();
 
                     Assert.NotEqual(0, list.Count);
@@ -493,11 +493,11 @@ namespace FastTests.Client.MoreLikeThis
                     var indexName = new DataIndex().IndexName;
 
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(x => x.Id == key, new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
                         {
                             StopWordsDocumentId = "Config/Stopwords",
                             MinimumDocumentFrequency = 1
-                        })
+                        }))
                         .ToList();
 
                     Assert.Equal(5, list.Count());
@@ -525,12 +525,12 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis("{ \"Body\": \"A test\" }", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument("{ \"Body\": \"A test\" }").WithOptions(new MoreLikeThisOptions
                         {
                             Fields = new[] { "Body" },
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 1
-                        })
+                        }))
                         .ToList();
 
                     Assert.Equal(7, list.Count());
@@ -562,11 +562,11 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<ComplexData, ComplexDataIndex>()
-                        .MoreLikeThis("{ \"Property\": { \"Body\": \"test\" } }", new MoreLikeThisOptions
+                        .MoreLikeThis(f => f.UsingDocument("{ \"Property\": { \"Body\": \"test\" } }").WithOptions(new MoreLikeThisOptions
                         {
                             MinimumTermFrequency = 1,
                             MinimumDocumentFrequency = 1
-                        })
+                        }))
                         .ToList();
 
                     Assert.Equal(1, list.Count);
@@ -581,10 +581,10 @@ namespace FastTests.Client.MoreLikeThis
             using (var session = store.OpenSession())
             {
                 var list = session.Query<T, TIndex>()
-                    .MoreLikeThis(x => x.Id == documentKey, new MoreLikeThisOptions
+                    .MoreLikeThis(f => f.UsingDocument(x => x.Id == documentKey).WithOptions(new MoreLikeThisOptions
                     {
                         Fields = new[] { "Body" }
-                    })
+                    }))
                     .ToList();
 
                 Assert.NotEmpty(list);
@@ -598,10 +598,10 @@ namespace FastTests.Client.MoreLikeThis
             using (var session = store.OpenAsyncSession())
             {
                 var list = await session.Query<T, TIndex>()
-                    .MoreLikeThis(x => x.Id == documentKey, new MoreLikeThisOptions
+                    .MoreLikeThis(f => f.UsingDocument(x => x.Id == documentKey).WithOptions(new MoreLikeThisOptions
                     {
                         Fields = new[] { "Body" }
-                    })
+                    }))
                     .ToListAsync();
 
                 Assert.NotEmpty(list);
