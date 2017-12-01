@@ -53,7 +53,7 @@ namespace Raven.Database.FileSystem.Storage.Esent.Backup
             Raven.Storage.Esent.TransactionalStorage.CreateInstance(out instance, "restoring " + Guid.NewGuid());
             try
             {
-                Configuration.Settings["Raven/Esent/LogsPath"] = journalLocation;
+                Configuration.Storage.Esent.JournalsStoragePath = journalLocation;
                 new TransactionalStorageConfigurator(Configuration).ConfigureInstance(instance, databaseLocation);
                 Api.JetRestoreInstance(instance, backupLocation, databaseLocation, RestoreStatusCallback);
                 var fileThatGetsCreatedButDoesntSeemLikeItShould =
