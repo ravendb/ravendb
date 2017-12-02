@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                 {
                     var results = session
                         .Query<Person, Index1>()
-                        .ProjectFromIndexFieldsInto<Index1.Result>()
+                        .ProjectInto<Index1.Result>()
                         .ToList();
 
                     Assert.Equal(2, results.Count);

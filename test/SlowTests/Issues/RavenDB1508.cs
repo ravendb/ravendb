@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                 {
                     var results = session.Query<BarViewModel, BarSearchIndex>()
                         .Where(x => x.Number >= 1.9f && x.Number <= 2.1f)
-                        .ProjectFromIndexFieldsInto<BarViewModel>()
+                        .ProjectInto<BarViewModel>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 

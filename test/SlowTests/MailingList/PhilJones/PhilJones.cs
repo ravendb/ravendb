@@ -85,7 +85,7 @@ namespace SlowTests.MailingList.PhilJones
 
                     var reminders = session.Query<Foo, Foos_BarProjection>()
                         .Where(x => x.Reminders.Any(y => y.ReminderDue == new DateTime(2011, 12, 12)))
-                        .ProjectFromIndexFieldsInto<FooListViewModel>()
+                        .ProjectInto<FooListViewModel>()
                         .ToList();
 
                     Assert.Equal(1, reminders.Count());

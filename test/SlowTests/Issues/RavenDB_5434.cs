@@ -68,7 +68,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<User, Users_ByName>()
-                        .ProjectFromIndexFieldsInto<Users_ByName.Result>()
+                        .ProjectInto<Users_ByName.Result>()
                         .ToList();
 
                     Assert.Equal(1, results.Count);

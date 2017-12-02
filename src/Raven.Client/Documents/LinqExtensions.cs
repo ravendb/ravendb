@@ -210,9 +210,9 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Project from index fields (must be stored) into different type. If fields are not stored in index, document fields will be used.
+        /// Project query results according to the specified type
         /// </summary>
-        public static IRavenQueryable<TResult> ProjectFromIndexFieldsInto<TResult>(this IQueryable queryable)
+        public static IRavenQueryable<TResult> ProjectInto<TResult>(this IQueryable queryable)
         {
             var ofType = queryable.OfType<TResult>();
             var results = queryable.Provider.CreateQuery<TResult>(ofType.Expression);

@@ -28,7 +28,7 @@ namespace SlowTests.Issues
 
                     var t = 0;
 
-                    using (var enumerator = session.Advanced.Stream(rq.ProjectFromIndexFieldsInto<Event>()))
+                    using (var enumerator = session.Advanced.Stream(rq.ProjectInto<Event>()))
                     {
                         while (enumerator.MoveNext())
                         {
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                     var rq = session.Query<Events_SpatialIndex.ReduceResult, Events_SpatialIndex>()
                         .Statistics(out stats);
 
-                    using (var enumerator = session.Advanced.Stream(rq.ProjectFromIndexFieldsInto<Event>()))
+                    using (var enumerator = session.Advanced.Stream(rq.ProjectInto<Event>()))
                     {
                         var t = 0;
                         while (enumerator.MoveNext())

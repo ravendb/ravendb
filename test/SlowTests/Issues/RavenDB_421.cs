@@ -152,7 +152,7 @@ namespace SlowTests.Issues
                 {
                     var results = session.Query<Family_MultiMap.Result, Family_MultiMap>()
                         .Where(x => x.PersonId == "people/1")
-                        .ProjectFromIndexFieldsInto<Family_MultiMap.Result>()
+                        .ProjectInto<Family_MultiMap.Result>()
                         .ToList();
 
                     RavenTestHelper.AssertNoIndexErrors(store);

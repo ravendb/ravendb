@@ -98,7 +98,7 @@ namespace SlowTests.MailingList
                     var results = session.Query<VacancyCampaignsIndex.ReduceResult, VacancyCampaignsIndex>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Active)
-                        .ProjectFromIndexFieldsInto<VacancyCampaignsIndex.ReduceResult>()
+                        .ProjectInto<VacancyCampaignsIndex.ReduceResult>()
                         .ToList();
                     Assert.Equal(2, results.Count());
                 }

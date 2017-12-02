@@ -89,7 +89,7 @@ namespace SlowTests.Issues
                         .Statistics(out stats)
                         .Where(x => x.CriticalTime != null)
                         .OrderBy(x => x.CriticalTime)
-                        .ProjectFromIndexFieldsInto<ProcessedMessage>()
+                        .ProjectInto<ProcessedMessage>()
                         .First();
                     Assert.Equal("1", firstByCriticalTime.Id);
                 }

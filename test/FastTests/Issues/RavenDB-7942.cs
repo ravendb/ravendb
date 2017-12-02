@@ -30,7 +30,7 @@ namespace FastTests.Issues
                 {
                     var results = session
                         .Query<TestDoubleView, DoubleIndex>()
-                        .ProjectFromIndexFieldsInto<TestDoubleView>()
+                        .ProjectInto<TestDoubleView>()
                         .ToArray();
 
                     Assert.Equal(1, results[0].DoubleValue);
@@ -64,7 +64,7 @@ namespace FastTests.Issues
                 {
                     var results = session
                         .Query<TestFloatView, FloatIndex>()
-                        .ProjectFromIndexFieldsInto<TestFloatView>()
+                        .ProjectInto<TestFloatView>()
                         .ToArray();
 
                     Assert.Equal(float.NaN, results[0].FloatValue);
@@ -95,7 +95,7 @@ namespace FastTests.Issues
                 {
                     var results = session
                         .Query<TestFloatView, FloatIndex>()
-                        .ProjectFromIndexFieldsInto<TestFloatView>()
+                        .ProjectInto<TestFloatView>()
                         .ToArray();
 
                     Assert.Equal(1, results[0].FloatValue);

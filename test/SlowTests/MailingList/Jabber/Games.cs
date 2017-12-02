@@ -76,7 +76,7 @@ namespace SlowTests.MailingList.Jabber
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.PlayerName.StartsWith("p"))
                             .OrderBy(x => x.Id).ThenBy(x => x.PlayerName)
-                            .ProjectFromIndexFieldsInto<GameServers_ConnectedPlayers.IndexQuery>()
+                            .ProjectInto<GameServers_ConnectedPlayers.IndexQuery>()
                             .ToList();
 
 

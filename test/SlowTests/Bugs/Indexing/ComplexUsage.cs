@@ -54,7 +54,7 @@ namespace SlowTests.Bugs.Indexing
                 {
                     var objects = session.Query<object, Accounts_Search>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<AccountIndex>()
+                        .ProjectInto<AccountIndex>()
                         .OrderBy(x => x.AccountId) //this is just to make sure the second result is last for the test
                         .ToArray();
 

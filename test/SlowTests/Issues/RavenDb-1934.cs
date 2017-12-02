@@ -415,7 +415,7 @@ namespace SlowTests.Issues
                 {
                     var results = session.Query<Foo, TimeSpanTestMultiMapIndex>()
                         .OrderBy(x => x.Start)
-                        .ProjectFromIndexFieldsInto<Foo>()
+                        .ProjectInto<Foo>()
                         .ToArray();
 
                     Assert.Equal("4", results[0].Id);
@@ -428,7 +428,7 @@ namespace SlowTests.Issues
                 {
                     var results = session.Query<Foo, TimeSpanTestMultiMapIndex>()
                         .OrderByDescending(x => x.Start)
-                        .ProjectFromIndexFieldsInto<Foo>()
+                        .ProjectInto<Foo>()
                         .ToArray();
 
                     Assert.Equal("4", results[3].Id);

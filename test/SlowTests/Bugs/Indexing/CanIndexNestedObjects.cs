@@ -96,7 +96,7 @@ namespace SlowTests.Bugs.Indexing
                     var result = s
                         .Query<ContainerObject, NestedObjectIndex>()
                         .Customize(q => q.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<IndexEntry>()
+                        .ProjectInto<IndexEntry>()
                         .Single(o => o.Name == expectedItemName);
 
                     Assert.Equal(expectedContainerName, result.ContainerName);

@@ -32,7 +32,7 @@ namespace SlowTests.Tests.Linq
                 {
                     var item = session.Query<Index.Result, Index>()
                                       .Customize(c => c.WaitForNonStaleResults())
-                                      .ProjectFromIndexFieldsInto<Index.Result>()
+                                      .ProjectInto<Index.Result>()
                                       .Single();
 
                     Assert.NotNull(item.Strings);
