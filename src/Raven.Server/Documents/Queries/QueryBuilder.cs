@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var value = GetValue(query, metadata, parameters, moreLikeThisExpression.Arguments[1], allowObjectsInParameters: true);
                 if (value.Type == ValueTokenType.String)
-                    options = IndexReadOperation.ParseJsonStringIntoBlittable((string)value.Value, context);
+                    options = IndexReadOperation.ParseJsonStringIntoBlittable(GetValueAsString(value.Value), context);
                 else
                     options = value.Value as BlittableJsonReaderObject;
             }
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries
             if (firstArgument is BinaryExpression binaryExpression)
                 return ToLuceneQuery(query, binaryExpression, metadata, parameters, analyzer, factories);
 
-            var firstArgumentValue = GetValue(query, metadata, parameters, firstArgument).Value as string;
+            var firstArgumentValue = GetValueAsString(GetValue(query, metadata, parameters, firstArgument).Value);
             if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
             {
                 if (firstArgumentBool)

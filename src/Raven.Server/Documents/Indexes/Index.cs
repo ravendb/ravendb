@@ -1864,7 +1864,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             includeDocumentsCommand.Fill(resultToFill.Includes);
-                            resultToFill.TotalResults = totalResults.Value;
+                            resultToFill.TotalResults = Math.Max(totalResults.Value, resultToFill.Results.Count);
                             resultToFill.SkippedResults = skippedResults.Value;
                             resultToFill.IncludedPaths = query.Metadata.Includes;
                         }
