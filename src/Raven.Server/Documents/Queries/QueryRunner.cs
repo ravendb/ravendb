@@ -21,13 +21,14 @@ namespace Raven.Server.Documents.Queries
     public class QueryRunner : AbstractQueryRunner
     {
         private readonly StaticIndexQueryRunner _static;
-        private readonly DynamicQueryRunner _dynamic;
+        private readonly AbstractQueryRunner _dynamic;
         private readonly CollectionQueryRunner _collection;
 
         public QueryRunner(DocumentDatabase database) : base(database)
         {
             _static = new StaticIndexQueryRunner(database);
-            _dynamic = new DynamicQueryRunner(database);
+            _dynamic =
+                database.Configuration.Indexing.DisableQueryOptimizerGeneratedIndexes ? (AbstractQueryRunner)new InvalidQueryRunner(database) : new DynamicQueryRunner(database);
             _collection = new CollectionQueryRunner(database);
         }
 
@@ -140,10 +141,13 @@ namespace Raven.Server.Documents.Queries
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query)
         {
-            if (query.Metadata.IsDynamic == false)
+            if (query.Metadata.IsDynamic == false )
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
-            return _dynamic.ExplainIndexSelection(query);
+            if (_dynamic is DynamicQueryRunner d)
+                return d.ExplainIndexSelection(query);
+            
+            throw new NotSupportedException("Dynamic queries are not supported by this database because the configuration 'Indexing.DisableQueryOptimizerGeneratedIndexes' is set to ture and the query optimizer needs an index for this query");
         }
 
     }

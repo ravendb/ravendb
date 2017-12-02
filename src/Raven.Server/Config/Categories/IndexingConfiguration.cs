@@ -71,6 +71,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdleInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting TimeToWaitBeforeMarkingAutoIndexAsIdle { get; protected set; }
 
+        [Description("EXPERT ONLY")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.DisableQueryOptimizerGeneratedIndexes", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public bool DisableQueryOptimizerGeneratedIndexes { get; protected set; }
+
         [Description("How long the database should wait before deleting an auto index with the idle flag")]
         [DefaultValue(72)]
         [TimeUnit(TimeUnit.Hours)]
