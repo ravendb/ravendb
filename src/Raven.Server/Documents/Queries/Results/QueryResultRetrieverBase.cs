@@ -193,7 +193,17 @@ namespace Raven.Server.Documents.Queries.Results
                     }
 
                     if (fieldVal is List<object> list)
-                        fieldVal = new DynamicJsonArray(list);
+                    {
+                        var array= new DynamicJsonArray();
+                        for (int i = 0; i < list.Count; i++)
+                        {
+                            if (list[i] is Document d3)
+                                array.Add(d3.Data);
+                            else
+                                array.Add(list[i]);
+                        }
+                        fieldVal = array;
+                    }
                     if (fieldVal is Document d2)
                         fieldVal = d2.Data;
                     var key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
@@ -431,14 +441,27 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     _loadedDocumentsByAliasName[fieldToFetch.QueryField.Alias] = doc;
                 }
-                
+
                 if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
                 {
                     buffer.Add(doc);
                     continue;
                 }
                 if (TryGetFieldValueFromDocument(doc, fieldToFetch, out var val))
-                    buffer.Add(val);
+                {
+                    if (val is string == false && val is System.Collections.IEnumerable items)
+                    {
+                        // we flatten arrays in projections
+                        foreach (var item in items)
+                        {
+                            buffer.Add(item);
+                        }
+                    }
+                    else
+                    {
+                        buffer.Add(val);
+                    }
+                }
             }
 
             if (fieldToFetch.QueryField.SourceIsArray)
