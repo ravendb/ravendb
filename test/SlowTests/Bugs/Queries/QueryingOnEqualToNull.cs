@@ -55,7 +55,7 @@ namespace SlowTests.Bugs.Queries
 
                 using (var s = store.OpenSession())
                 {
-                    int actual = s.Query<Company>().Where(x => x.Id != "companies/1").Count();
+                    int actual = s.Query<Company>().Where(x => x.Id != "companies/1-A").Count();
                     Assert.Equal(0, actual);
                 }
             }
