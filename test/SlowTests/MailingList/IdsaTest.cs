@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
                         Where(x => x.CityId == "cities/1").
                         OrderByDescending(x => x.DateTime).
                         Take(10).
-                        ProjectFromIndexFieldsInto<CasinosSuspensionsIndex.IndexResult>().
+                        ProjectInto<CasinosSuspensionsIndex.IndexResult>().
                         ToList();
 
                     // note that suspensions[0].Exemptions will be null, because we don't have

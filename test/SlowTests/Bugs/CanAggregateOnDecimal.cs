@@ -72,7 +72,7 @@ namespace SlowTests.Bugs
                 {
                     var bankTotal = session.Query<BankTotal, DecimalAggregationMap>()
                         .Customize(x=>x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<BankTotal>()
+                        .ProjectInto<BankTotal>()
                         .Single();
 
                     Assert.Equal(321.412m, bankTotal.Total);

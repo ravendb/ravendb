@@ -194,7 +194,7 @@ namespace SlowTests.Bugs.MapRedue
                 IRavenQueryable<DocumentView> query =
                     session.Query<Document, VersionedDocuments>()
                         .Customize(aCustomization => aCustomization.WaitForNonStaleResults(TimeSpan.FromMinutes(10)))
-                        .ProjectFromIndexFieldsInto<DocumentView>();
+                        .ProjectInto<DocumentView>();
 
                 foreach (DocumentView document in query)
                 {

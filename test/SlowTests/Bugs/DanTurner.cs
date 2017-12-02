@@ -56,7 +56,7 @@ namespace SlowTests.Bugs
                     var results = session
                         .Query<Person, DriversIndex>()
                         .Customize(c => c.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<Driver>()
+                        .ProjectInto<Driver>()
                         .ToList();
 
                     Assert.Equal(4, results.Count);

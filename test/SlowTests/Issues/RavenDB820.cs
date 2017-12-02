@@ -60,7 +60,7 @@ namespace SlowTests.Issues
                     var a = session.Query<TestIndex.QueryResult, TestIndex>()
                                    .Customize(c => c.WaitForNonStaleResults())
                                    .Where(r => r.Query.StartsWith("foo"))
-                                   .ProjectFromIndexFieldsInto<TestIndex.ActualResult>()
+                                   .ProjectInto<TestIndex.ActualResult>()
                                    .ToList();
                     Assert.NotEmpty(a);
                 }

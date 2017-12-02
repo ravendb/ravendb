@@ -42,7 +42,7 @@ namespace SlowTests.MailingList
                     var items = session
                         .Query<Index.Result, Index>()
                         .Customize(c => c.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<Index.Result>()
+                        .ProjectInto<Index.Result>()
                         .ToList();
 
                     Assert.Equal(1, items.Count);

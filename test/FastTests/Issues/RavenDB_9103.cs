@@ -26,7 +26,7 @@ namespace FastTests.Issues
                     session.SaveChanges();
                     WaitForIndexing(store);
                     var infos = session.Query<ModelInfo, Model_Info>()
-                        .ProjectFromIndexFieldsInto<ModelInfo>()
+                        .ProjectInto<ModelInfo>()
                         .ToList();
                 }
             }

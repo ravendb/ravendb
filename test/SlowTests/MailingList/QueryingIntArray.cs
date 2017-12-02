@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Search(o => o.Name, "Test")
                         .Where(o => o.Resolutions.Any(x => x >= 5 && x <= 9))
-                        .ProjectFromIndexFieldsInto<IndexEntry>()
+                        .ProjectInto<IndexEntry>()
                         .ToList();
 
                     Assert.Equal(2, results.Count);

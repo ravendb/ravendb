@@ -30,7 +30,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     var query = session.Query<Company, Companies_ByContact>()
-                        .ProjectFromIndexFieldsInto<ContactDetails>()
+                        .ProjectInto<ContactDetails>()
                         .Customize(x => x.WaitForNonStaleResults());
 
                     Assert.Equal("FROM INDEX 'Companies/ByContact' SELECT Name, Phone",  RavenTestHelper.GetIndexQuery(query).Query);

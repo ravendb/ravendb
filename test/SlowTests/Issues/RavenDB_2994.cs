@@ -116,7 +116,7 @@ namespace SlowTests.Issues
                 {
                     var items = session
                         .Query<Items_Numbers.Result, Items_Numbers>()
-                        .ProjectFromIndexFieldsInto<Items_Numbers.Result>()
+                        .ProjectInto<Items_Numbers.Result>()
                         .ToList();
 
                     Assert.Equal(2, items.Count);

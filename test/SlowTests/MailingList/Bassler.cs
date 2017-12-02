@@ -36,7 +36,7 @@ namespace SlowTests.MailingList
                     var list = session.Query<App_WaiverWaitlistItemSearch.IndexResult, App_WaiverWaitlistItemSearch>()
                         .Statistics(out stats)
                         .Customize(x=>x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<App_WaiverWaitlistItemSearch.IndexResult>()
+                        .ProjectInto<App_WaiverWaitlistItemSearch.IndexResult>()
                         .ToList();
 
                     Assert.False(list.Any(result => result.GroupNumber == null));

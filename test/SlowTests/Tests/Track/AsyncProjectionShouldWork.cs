@@ -48,7 +48,7 @@ namespace SlowTests.Tests.Track
                 {
                     var q = session.Query<Summary>("TestObjs/Summary")
                         .Customize(x => x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<Summary>()
+                        .ProjectInto<Summary>()
                         .ToList();
 
                     AssertResult(q);
@@ -67,7 +67,7 @@ namespace SlowTests.Tests.Track
                 {
                     var q = session.Query<Summary>("TestObjs/Summary")
                         .Customize(x => x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<Summary>()
+                        .ProjectInto<Summary>()
                         .ToListAsync();
 
                     AssertResult(await q);

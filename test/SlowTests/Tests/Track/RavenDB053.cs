@@ -93,7 +93,7 @@ namespace SlowTests.Tests.Track
                         .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(100)))
                         .OrderBy(x => x.TransportId)
                         .OrderBy(x => x.ChildId)
-                        .ProjectFromIndexFieldsInto<JoinedChildTransport>()
+                        .ProjectInto<JoinedChildTransport>()
                         .ToList();
 
                     RavenTestHelper.AssertNoIndexErrors(store);

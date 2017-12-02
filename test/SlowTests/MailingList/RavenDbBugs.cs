@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Animal, TestIndex>()
-                        .ProjectFromIndexFieldsInto<Animal>()
+                        .ProjectInto<Animal>()
                         .Customize(t => t.WaitForNonStaleResults())
                         .ToList();
                     Assert.NotEmpty(result);

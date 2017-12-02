@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Queries
                 {
                     var array = session.Query<User>()
                         .Customize(x=>x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<AgeAndEmail>()
+                        .ProjectInto<AgeAndEmail>()
                         .ToArray();
 
                     Assert.Equal(1, array.Length);

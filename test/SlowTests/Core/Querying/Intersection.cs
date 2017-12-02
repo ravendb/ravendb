@@ -74,7 +74,7 @@ namespace SlowTests.Core.Querying
                     WaitForIndexing(store);
 
                     var tshirts = session.Query<TShirt, TShirtIndex>()
-                        .ProjectFromIndexFieldsInto<TShirtIndex.Result>()
+                        .ProjectInto<TShirtIndex.Result>()
                         .Where(x => x.Manufacturer == "Raven")
                         .Intersect()
                         .Where(x => x.Color == "Blue" && x.Size == "Small")

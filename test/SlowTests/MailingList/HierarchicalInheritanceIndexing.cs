@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
                     var examples =
                         session.Query<ExampleProjection, ExampleIndexCreationTask>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .ProjectFromIndexFieldsInto<ExampleProjection>()
+                        .ProjectInto<ExampleProjection>()
                         .Take(1024)
                         .ToList();
 
