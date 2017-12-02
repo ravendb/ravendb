@@ -1340,8 +1340,20 @@ namespace Raven.Server.Documents.Queries
                 switch (methodType)
                 {
                     case MethodType.Id:
-                        if (arguments.Count < 1 || arguments.Count > 2)
-                            throw new InvalidQueryException($"Method {methodName}() expects one argument to be provided", QueryText, parameters);
+
+                        if (arguments.Count == 0)
+                        {
+                            if (_fromAlias == null)
+                            {
+                                _metadata.AddWhereField(QueryFieldName.DocumentId, parameters);
+                                break;
+                            }
+                            
+                            throw new InvalidQueryException($"Method {methodName}() was called, but as the query is using an alias ({_fromAlias}), must also be provided to this method.", QueryText, parameters);
+                        }
+                        
+                        if (arguments.Count > 2)
+                            throw new InvalidQueryException($"Method {methodName}() expects not more than two arguments to be provided", QueryText, parameters);
 
                         var idExpression = arguments[arguments.Count - 1];
                         if (idExpression == null)

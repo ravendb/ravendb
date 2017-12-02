@@ -10,6 +10,33 @@ namespace FastTests.Issues
     public class RavenDB_9492: RavenTestBase
     {
         [Fact]
+        public void BetweenQueryOnIds()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Bunny { Name = "what" }, "bunny/1");
+                    session.Store(new Bunny { Name = "is" }, "bunny/2");
+                    session.Store(new Bunny { Name = "your" }, "bunny/3");
+                    session.SaveChanges();
+
+                    // passing
+                    var results = session.Advanced.RawQuery<Bunny>("from Bunnies as b where id(b) between 'bunny/1' and 'bunny/2'").ToList();
+
+                    Assert.Equal(2, results.Count);
+                    var indexNames = store.Maintenance.Send(new GetIndexNamesOperation(0, 10));
+                    Assert.Equal(1, indexNames.Length);
+                 
+                    // fails
+                    results = session.Advanced.DocumentQuery<Bunny>().WhereBetween(x => x.Id, "bunny/1", "bunny/2").WaitForNonStaleResults().ToList();
+
+                    Assert.Equal(2, results.Count);
+                }
+            }
+        }
+        
+        [Fact]
         public void CanQueryIdWithNegate()
         {
             using (var store = GetDocumentStore())
