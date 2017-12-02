@@ -24,9 +24,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -41,11 +39,6 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Documents;
 using Raven.Client.Extensions;
-using Raven.Client.Json.Converters;
-using Raven.Server.Documents.PeriodicBackup.Aws;
-using Raven.Server.Documents.PeriodicBackup.Azure;
-using Raven.Server.Config;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -562,87 +555,6 @@ namespace Raven.Server.Web.System
                     var blittable = EntityToBlittable.ConvertEntityToBlittable(restorePoints, DocumentConventions.Default, context);
                     context.Write(writer, blittable);
                     writer.Flush();
-                }
-            }
-        }
-
-        [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.ValidUser)]
-        public async Task TestPeriodicBackupCredentials()
-        {
-            // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
-
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-
-            if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
-                throw new ArgumentException($"Unkown backup connection: {type}");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                DynamicJsonValue result;
-                try
-                {
-                    var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
-                    switch (connectionType)
-                    {
-                        case PeriodicBackupTestConnectionType.S3:
-                            var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(
-                                s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.BucketName,
-                                s3Settings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                await awsClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.Glacier:
-                            var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var galcierClient = new RavenAwsGlacierClient(
-                                glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
-                                glacierSettings.AwsRegionName, glacierSettings.VaultName,
-                                cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                await galcierClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.Azure:
-                            var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(
-                                azureSettings.AccountName, azureSettings.AccountKey,
-                                azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                await azureClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.FTP:
-                            var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                            using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
-                                ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
-                            {
-                                await ftpClient.TestConnection();
-                            }
-                            break;
-                        case PeriodicBackupTestConnectionType.Local:
-                        case PeriodicBackupTestConnectionType.None:
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
-
-                    result = new DynamicJsonValue
-                    {
-                        [nameof(NodeConnectionTestResult.Success)] = true,
-                    };
-                }
-                catch (Exception e)
-                {
-                    result = new DynamicJsonValue
-                    {
-                        [nameof(NodeConnectionTestResult.Success)] = false,
-                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
-                    };
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, result);
                 }
             }
         }

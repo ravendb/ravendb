@@ -10,9 +10,8 @@ class testPeriodicBackupCredentialsCommand extends commandBase {
     }
  
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
-        const url = endpoints.global.adminDatabases.adminPeriodicBackupTestCredentials +
+        const url = endpoints.databases.ongoingTasks.adminPeriodicBackupTestCredentials +
             this.urlEncodeArgs({
-                name: this.db.name,
                 type: this.type
             });
 
