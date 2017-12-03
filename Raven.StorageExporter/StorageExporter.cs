@@ -555,7 +555,8 @@ namespace Raven.StorageExporter
                     storage = ravenConfiguration.CreateTransactionalStorage(InMemoryRavenConfiguration.VoronTypeName, () => { }, () => { });
                 }
             }
-            else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data.jfm")))
+            else if (File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data.ravenfs"))||
+                     File.Exists(Path.Combine(ravenConfiguration.DataDirectory, "Data")))
             {
                 if (isRavenFs)
                 {
@@ -594,7 +595,8 @@ namespace Raven.StorageExporter
         public static bool ValidateStorageExists(string dataDir)
         {
             return File.Exists(Path.Combine(dataDir, Voron.Impl.Constants.DatabaseFilename))
-                   || File.Exists(Path.Combine(dataDir, "Data.jfm"));
+                   || File.Exists(Path.Combine(dataDir, "Data.ravenfs")) 
+                   || File.Exists(Path.Combine(dataDir, "Data"));
         }
 
         private static readonly string indexDefinitionFolder = "IndexDefinitions";
