@@ -13,11 +13,13 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
+using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
 {
     public class DatabaseSmuggler
     {
+        private readonly DocumentDatabase _database;
         private readonly ISmugglerSource _source;
         private readonly ISmugglerDestination _destination;
         private readonly DatabaseSmugglerOptionsServerSide _options;
@@ -32,6 +34,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
         {
+            _database = database;
             _source = source;
             _destination = destination;
             _options = options ?? new DatabaseSmugglerOptionsServerSide();
@@ -71,6 +74,7 @@ namespace Raven.Server.Smuggler.Documents
                     EnsureStepProcessed(result.Conflicts);
                     EnsureStepProcessed(result.Indexes);
                     EnsureStepProcessed(result.Identities);
+                    EnsureStepProcessed(result.CmpXchg);
                 }
 
                 return result;
@@ -121,6 +125,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyAttachments:
                     counts = ProcessLegacyAttachments(result);
                     break;
+                    case DatabaseItemType.CmpXchg:
+                    counts = ProcessCmpXchg(result);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -159,6 +166,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Identities:
                     counts = result.Identities;
+                    break;
+                case DatabaseItemType.CmpXchg:
+                    counts = result.CmpXchg;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -205,15 +215,9 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (OnIdentityAction != null)
-                    {
-                        OnIdentityAction(kvp);
-                        continue;
-                    }
-
                     try
                     {
-                        actions.WriteIdentity(kvp.Prefix, kvp.Value);
+                        actions.WriteKeyValue(kvp.Prefix, kvp.Value);
                     }
                     catch (Exception e)
                     {
@@ -419,6 +423,37 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
+        private SmugglerProgressBase.Counts ProcessCmpXchg(SmugglerResult result)
+        {
+            using (var actions = _destination.CmpXchg())
+            using (_source.GetCmpXchg(out var cmpXchg))
+            {
+                foreach (var kvp in cmpXchg)
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.CmpXchg.ReadCount++;
+
+                    if (kvp.Equals(default((string, long, BlittableJsonReaderObject))))
+                    {
+                        result.CmpXchg.ErroredCount++;
+                        continue;
+                    }
+
+                    try
+                    {
+                        actions.WriteKeyValue(kvp.key, kvp.value);
+                    }
+                    catch (Exception e)
+                    {
+                        result.CmpXchg.ErroredCount++;
+                        result.AddError($"Could not write compare exhcnage '{kvp.key}->{kvp.value}': {e.Message}");
+                    }
+                }
+            }
+
+            return result.CmpXchg;
+        }
+        
         private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)
         {
             using (var actions = _destination.Documents())

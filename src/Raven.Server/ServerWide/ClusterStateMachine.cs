@@ -121,6 +121,16 @@ namespace Raven.Server.ServerWide
                 string errorMessage;
                 switch (type)
                 {
+                    case nameof(ClusterBatchCommand):
+                        if (cmd.TryGet(nameof(ClusterBatchCommand.CommandsList), out BlittableJsonReaderArray batch) == false)
+                        {
+                            throw new InvalidDataException($"'{nameof(ClusterBatchCommand.CommandsList)}' is missing in 'ClusterBatchCommand'.");
+                        }
+                        foreach (BlittableJsonReaderObject command in batch)
+                        {
+                            Apply(context, command, index, leader, serverStore);
+                        }
+                        break;
                     //The reason we have a separate case for removing node from database is because we must 
                     //actually delete the database before we notify about changes to the record otherwise we 
                     //don't know that it was us who needed to delete the database.
@@ -975,7 +985,7 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCmpXchgByPrefix(TransactionOperationContext context, string prefix, 
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCmpXchgByPrefix(TransactionOperationContext context, string dbName, string prefix, 
             int currentPage = 0, int pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
@@ -985,7 +995,7 @@ namespace Raven.Server.ServerWide
                 foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, currentPage * pageSize))
                 {
                     pageSize--;
-                    var key = ReadCmpXchgKey(item.Value.Reader);
+                    var key = ReadCmpXchgKey(item.Value.Reader, dbName);
                     var index = ReadCmpXchgIndex(item.Value.Reader);
                     var value = ReadCmpXchgValue(context, item.Value.Reader);
                     yield return (key, index, value);
@@ -996,10 +1006,10 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe string ReadCmpXchgKey(TableValueReader reader)
+        private static unsafe string ReadCmpXchgKey(TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)UniqueItems.Key, out var size);
-            return Encodings.Utf8.GetString(ptr, size);
+            return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 1);
         }
 
         private static unsafe BlittableJsonReaderObject ReadCmpXchgValue(TransactionOperationContext context, TableValueReader reader)

@@ -100,6 +100,51 @@ namespace Raven.Server.Smuggler.Documents
             return GetType(type);
         }
 
+        public IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg)
+        {
+            cmpXchg = InternalGetCmpXchg();
+            return null;
+        }
+
+        private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
+        {
+            parser.SetBuffer(value.Buffer, value.Size);
+        }
+
+        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCmpXchg()
+        {
+            var state = new JsonParserState();
+            using (var parser = new UnmanagedJsonParser(_context, state, "import/cmpxchg"))
+            using (var builder = new BlittableJsonDocumentBuilder(_context,
+                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/cmpxchg", parser, state))
+            {
+                foreach (var reader in ReadArray())
+                {
+                    using (reader)
+                    {
+
+                        if (reader.TryGet("Key", out string key) == false ||
+                            reader.TryGet("Value", out LazyStringValue value) == false)
+                        {
+                            _result.CmpXchg.ErroredCount++;
+                            _result.AddWarning("Could not read compare exchange entry.");
+
+                            continue;
+                        }
+
+                        builder.ReadNestedObject();
+                        SetBuffer(parser, value);
+                        parser.Read();
+                        builder.Read();
+                        builder.FinalizeDocument();
+                        yield return (key, 0, builder.CreateReader());
+
+                        builder.Renew("import/cmpxchg", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    }
+                }
+            }
+        }
+        
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             switch (type)
@@ -112,6 +157,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Conflicts:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
+                case DatabaseItemType.CmpXchg:
                     return SkipArray(onSkipped);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -762,6 +808,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
+            
+            if (type.Equals(nameof(DatabaseItemType.CmpXchg), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.CmpXchg;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

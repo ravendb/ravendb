@@ -1,8 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -56,6 +58,41 @@ namespace FastTests.Client
         }
 
         [Fact]
+        public async Task CanExportAndImportCmpXchg()
+        {
+            var file = Path.GetTempFileName();
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            var store2 = GetDocumentStore();
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", new User
+            {
+                Name = "Karmel"
+            }, 0));
+            var res2 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test2", new User
+            {
+                Name = "Karmel"
+            }, 0));
+
+            Assert.Equal("Karmel", res.Value.Name);
+            Assert.True(res.Successful);
+            Assert.Equal("Karmel", res2.Value.Name);
+            Assert.True(res2.Successful);
+
+            WaitForUserToContinueTheTest(store);
+
+            await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+            await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+
+            res = await store2.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("test"));
+            Assert.Equal("Karmel", res.Value.Name);
+            Assert.True(res.Successful);
+
+            res = await store2.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("test2"));
+            Assert.Equal("Karmel", res.Value.Name);
+            Assert.True(res.Successful);
+        }
+
+        [Fact]
         public async Task CanListCompareExchange()
         {
             DoNotReuseServer();
@@ -76,11 +113,10 @@ namespace FastTests.Client
             
             var list = (await store.Operations.SendAsync(new ListCompareExchangeValuesOperation("test"))).ToList();
             Assert.Equal(2, list.Count);
-            Assert.Equal($"{store.Database.ToLower()}/test", list[0].Key);
+            Assert.Equal("test", list[0].Key);
             Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
-            Assert.Equal($"{store.Database.ToLower()}/test2", list[1].Key);
+            Assert.Equal("test2", list[1].Key);
             Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
-
         }
         
         [Fact]

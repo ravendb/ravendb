@@ -5,7 +5,7 @@
         private const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |
                                                                DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
                                                                DatabaseItemType.Conflicts |
-                                                               DatabaseItemType.Identities;
+                                                               DatabaseItemType.Identities | DatabaseItemType.CmpXchg;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
