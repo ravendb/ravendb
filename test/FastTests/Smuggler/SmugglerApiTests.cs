@@ -362,7 +362,7 @@ namespace FastTests.Smuggler
             {
                 var config = new ExpirationConfiguration
                 {
-                    Active = true,
+                    Disabled = false,
                     DeleteFrequencyInSec = 100,
                 };
                 await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));

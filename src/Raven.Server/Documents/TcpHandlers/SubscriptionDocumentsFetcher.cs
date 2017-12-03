@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_revisions)
             {
                 if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
-                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(_collection).Active == false)
+                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(_collection).Disabled)
                     throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
 
                 return GetRevisionsToSend(docsContext, startEtag);

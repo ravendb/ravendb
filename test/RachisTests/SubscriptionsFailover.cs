@@ -386,14 +386,14 @@ namespace RachisTests
                 {
                     Default = new RevisionsCollectionConfiguration
                     {
-                        Active = true,
+                        Disabled = false,
                         MinimumRevisionsToKeep = 10,
                     },
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
                         ["Users"] = new RevisionsCollectionConfiguration
                         {
-                            Active = true,
+                            Disabled = false,
                             MinimumRevisionsToKeep = 10
                         }
                     }

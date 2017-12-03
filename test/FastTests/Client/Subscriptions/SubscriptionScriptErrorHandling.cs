@@ -90,18 +90,18 @@ select project(d)
                     {
                         Default = new RevisionsCollectionConfiguration
                         {
-                            Active = true,
+                            Disabled = false,
                             MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
                             ["Users"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true
+                                Disabled = false
                             },
                             ["Dons"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true,
+                                Disabled = false
                             }
                         }
                     };

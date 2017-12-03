@@ -4,7 +4,7 @@ namespace Raven.Client.ServerWide.Expiration
 {
     public class ExpirationConfiguration : IDynamicJson
     {
-        public bool Active { get; set; }
+        public bool Disabled { get; set; }
 
         public long? DeleteFrequencyInSec { get; set; }
 
@@ -12,7 +12,7 @@ namespace Raven.Client.ServerWide.Expiration
         {
             unchecked
             {
-                return (Active.GetHashCode() * 397) ^ DeleteFrequencyInSec.GetHashCode();
+                return (Disabled.GetHashCode() * 397) ^ DeleteFrequencyInSec.GetHashCode();
             }
         }
 
@@ -26,14 +26,14 @@ namespace Raven.Client.ServerWide.Expiration
 
         protected bool Equals(ExpirationConfiguration other)
         {
-            return Active == other.Active && DeleteFrequencyInSec == other.DeleteFrequencyInSec;
+            return Disabled == other.Disabled && DeleteFrequencyInSec == other.DeleteFrequencyInSec;
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Active)] = Active,
+                [nameof(Disabled)] = Disabled,
                 [nameof(DeleteFrequencyInSec)] = DeleteFrequencyInSec
             };
         }

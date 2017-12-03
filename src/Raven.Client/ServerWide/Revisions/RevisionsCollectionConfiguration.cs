@@ -9,7 +9,7 @@ namespace Raven.Client.ServerWide.Revisions
 
         public TimeSpan? MinimumRevisionAgeToKeep { get; set; }
 
-        public bool Active { get; set; }
+        public bool Disabled { get; set; }
 
         public bool PurgeOnDelete { get; set; }
 
@@ -17,7 +17,7 @@ namespace Raven.Client.ServerWide.Revisions
         {
             return MinimumRevisionsToKeep == other.MinimumRevisionsToKeep && 
                 MinimumRevisionAgeToKeep == other.MinimumRevisionAgeToKeep && 
-                Active == other.Active && 
+                   Disabled == other.Disabled && 
                 PurgeOnDelete == other.PurgeOnDelete;
         }
 
@@ -35,7 +35,7 @@ namespace Raven.Client.ServerWide.Revisions
             {
                 var hashCode = MinimumRevisionsToKeep?.GetHashCode() ?? 0;
                 hashCode = (hashCode * 397) ^ MinimumRevisionAgeToKeep?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ Active.GetHashCode();
+                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 hashCode = (hashCode * 397) ^ PurgeOnDelete.GetHashCode();
                 return hashCode;
             }
@@ -45,7 +45,7 @@ namespace Raven.Client.ServerWide.Revisions
         {
             return new DynamicJsonValue
             {
-                [nameof(Active)] = Active,
+                [nameof(Disabled)] = Disabled,
                 [nameof(MinimumRevisionsToKeep)] = MinimumRevisionsToKeep,
                 [nameof(MinimumRevisionAgeToKeep)] = MinimumRevisionAgeToKeep,
                 [nameof(PurgeOnDelete)] = PurgeOnDelete

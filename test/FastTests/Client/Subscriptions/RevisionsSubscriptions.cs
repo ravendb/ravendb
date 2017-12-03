@@ -30,18 +30,18 @@ namespace FastTests.Client.Subscriptions
                     {
                         Default = new RevisionsCollectionConfiguration
                         {
-                            Active = true,
+                            Disabled = false,
                             MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
                             ["Users"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true
+                                Disabled = false
                             },
                             ["Dons"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true,
+                                Disabled = false
                             }
                         }
                     };
@@ -109,18 +109,18 @@ namespace FastTests.Client.Subscriptions
                     {
                         Default = new RevisionsCollectionConfiguration
                         {
-                            Active = true,
+                            Disabled = false,
                             MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
                             ["Users"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true
+                                Disabled = false
                             },
                             ["Dons"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true,
+                                Disabled = false
                             }
                         }
                     };
@@ -207,18 +207,18 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     {
                         Default = new RevisionsCollectionConfiguration
                         {
-                            Active = true,
+                            Disabled = false,
                             MinimumRevisionsToKeep = 5,
                         },
                         Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
                             ["Users"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true
+                                Disabled = false
                             },
                             ["Dons"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true,
+                                Disabled = false
                             }
                         }
                     };
@@ -296,18 +296,18 @@ select { Id: id(d.Current), Age: d.Current.Age }
                     {
                         Default = new RevisionsCollectionConfiguration
                         {
-                            Active = true,
-                            MinimumRevisionsToKeep = 5,
+                            Disabled = false,
+                            MinimumRevisionsToKeep = 5
                         },
                         Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                         {
                             ["Users"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true
+                                Disabled = false
                             },
                             ["Dons"] = new RevisionsCollectionConfiguration
                             {
-                                Active = true,
+                                Disabled = false
                             }
                         }
                     };
