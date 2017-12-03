@@ -19,9 +19,9 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public List<T> GetFor<T>(string id, int start = 0, int pageSize = 25, bool metadataOnly = false)
+        public List<T> GetFor<T>(string id, int start = 0, int pageSize = 25)
         {
-            var operation = new GetRevisionOperation(Session, id, start, pageSize, metadataOnly);
+            var operation = new GetRevisionOperation(Session, id, start, pageSize);
 
             var command = operation.CreateRequest();
             RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);

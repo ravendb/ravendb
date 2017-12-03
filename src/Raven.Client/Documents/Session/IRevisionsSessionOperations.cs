@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns all previous document revisions for specified document (with paging) ordered by most recent reivions first.
         /// </summary>
-        List<T> GetFor<T>(string id, int start = 0, int pageSize = 25, bool metadataOnly = false);
+        List<T> GetFor<T>(string id, int start = 0, int pageSize = 25);
 
         /// <summary>
         /// Returns all previous document revisions metadata for specified document (with paging).
