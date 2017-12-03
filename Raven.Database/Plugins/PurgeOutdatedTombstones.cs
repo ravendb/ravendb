@@ -34,6 +34,10 @@ namespace Raven.Database.Plugins.Builtins
                     return;
                 Database.PurgeOutdatedTombstones();
             }
+            catch 
+            {
+                //Probably the transaction failed, we will try again tomorrow.
+            }
             finally
             {
                 if (tryEnter)
