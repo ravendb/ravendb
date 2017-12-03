@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
-                            const string msg = "Failed to parse initial server response. This is definitely not supposed to happen.";
+                            string msg = $"{OutgoingReplicationThreadName} got an unexpected exception during initial handshake error:{e}";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
