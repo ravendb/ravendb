@@ -141,14 +141,13 @@ namespace Raven.Server.Documents.Queries
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query)
         {
-            if (query.Metadata.IsDynamic == false )
+            if (query.Metadata.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             if (_dynamic is DynamicQueryRunner d)
                 return d.ExplainIndexSelection(query);
-            
-            throw new NotSupportedException("Dynamic queries are not supported by this database because the configuration 'Indexing.DisableQueryOptimizerGeneratedIndexes' is set to ture and the query optimizer needs an index for this query");
-        }
 
+            throw new NotSupportedException(InvalidQueryRunner.ErrorMessage);
+        }
     }
 }
