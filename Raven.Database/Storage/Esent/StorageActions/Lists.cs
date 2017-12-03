@@ -72,7 +72,9 @@ namespace Raven.Storage.Esent.StorageActions
 
 				Api.JetDelete(session, Lists);
 
-			} while (Api.TryMovePrevious(session, Lists));
+			    MaybePulseTransaction();
+
+            } while (Api.TryMovePrevious(session, Lists));
 
 		}
 
