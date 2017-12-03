@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System;
 using System.Threading;
+using Raven.Abstractions.Logging;
 
 namespace Raven.Database.Plugins.Builtins
 {
@@ -12,6 +13,7 @@ namespace Raven.Database.Plugins.Builtins
     {
         private object locker = new object();
         public DocumentDatabase Database { get; private set; }
+        private readonly ILog logger = LogManager.GetCurrentClassLogger();
 
         public void Execute(DocumentDatabase database)
         {
@@ -34,9 +36,12 @@ namespace Raven.Database.Plugins.Builtins
                     return;
                 Database.PurgeOutdatedTombstones();
             }
-            catch 
+            catch (Exception e)
             {
                 //Probably the transaction failed, we will try again tomorrow.
+                logger.Error("Daily purge of tombstone failed",
+                    e);
+
             }
             finally
             {
