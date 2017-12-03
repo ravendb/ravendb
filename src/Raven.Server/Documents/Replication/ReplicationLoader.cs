@@ -13,6 +13,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
@@ -345,6 +346,26 @@ namespace Raven.Server.Documents.Replication
         {
             HandleConflictResolverChange(newRecord);
             HandleTopologyChange(newRecord);
+            UpdateConnectionStrings(newRecord);
+        }
+
+        private void UpdateConnectionStrings(DatabaseRecord newRecord)
+        {
+            if (newRecord == null)
+            {
+                // we drop the connections in the handle topology change method 
+                return;
+            }
+            foreach (var connection in OutgoingFailureInfo)
+            {
+                if (connection.Key is ExternalReplication external)
+                {
+                    if (ValidateConnectionString(newRecord, external, out var connectionString))
+                    {
+                        external.ConnectionString = connectionString;
+                    }
+                }
+            }
         }
 
         private void HandleConflictResolverChange(DatabaseRecord newRecord)
@@ -433,34 +454,8 @@ namespace Raven.Server.Documents.Replication
             var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, _server.Engine.CurrentState) == _server.NodeTag).ToList();
             foreach (var externalReplication in newDestinations.ToList())
             {
-                if (string.IsNullOrEmpty(externalReplication.ConnectionStringName))
+                if (ValidateConnectionString(newRecord, externalReplication, out var connectionString) == false)
                 {
-                    var msg = $"The external replication {externalReplication.Name} to the database '{externalReplication.Database}' " +
-                              "has an empty connection string name.";
-
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info(msg);
-                    }
-                    
-                    _server.NotificationCenter.Add(AlertRaised.Create(
-                        Database.Name,
-                        "Connection string name is empty",
-                        msg,
-                        AlertType.Replication,
-                        NotificationSeverity.Error));
-                    
-                    newDestinations.Remove(externalReplication);
-                    continue; 
-                }
-                
-                if (newRecord.RavenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out var connectionString) == false)
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Could not find connection string with name {externalReplication.ConnectionStringName} " +
-                                  $"for the external replication task '{externalReplication.Name}' to '{externalReplication.Database}'.");
-                    }
                     newDestinations.Remove(externalReplication);
                     continue;
                 }
@@ -473,6 +468,50 @@ namespace Raven.Server.Documents.Replication
             {
                 _externalDestinations.Add(newDestination);
             }
+        }
+
+        private bool ValidateConnectionString(DatabaseRecord newRecord, ExternalReplication externalReplication, out RavenConnectionString connectionString)
+        {
+            connectionString = null;
+            if (string.IsNullOrEmpty(externalReplication.ConnectionStringName))
+            {
+                var msg = $"The external replication {externalReplication.Name} to the database '{externalReplication.Database}' " +
+                          "has an empty connection string name.";
+
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info(msg);
+                }
+
+                _server.NotificationCenter.Add(AlertRaised.Create(
+                    Database.Name,
+                    "Connection string name is empty",
+                    msg,
+                    AlertType.Replication,
+                    NotificationSeverity.Error));
+                return false;
+            }
+
+            if (newRecord.RavenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out connectionString) == false)
+            {
+                var msg = $"Could not find connection string with name {externalReplication.ConnectionStringName} " +
+                          $"for the external replication task '{externalReplication.Name}' to '{externalReplication.Database}'.";
+
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info(msg);
+                }
+
+                _server.NotificationCenter.Add(AlertRaised.Create(
+                    Database.Name,
+                    "Connection string not found",
+                    msg,
+                    AlertType.Replication,
+                    NotificationSeverity.Error));
+
+                return false;
+            }
+            return true;
         }
 
         private void HandleInternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
@@ -568,7 +607,7 @@ namespace Raven.Server.Documents.Replication
 
             if (info == null)
             {
-                // this means that we were unable to retrive the tcp connection info and will try it again later
+                // this means that we were unable to retrieve the tcp connection info and will try it again later
                 return;
             }
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
