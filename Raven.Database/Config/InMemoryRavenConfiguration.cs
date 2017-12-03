@@ -908,11 +908,11 @@ namespace Raven.Database.Config
         /// </summary>
 	    public int SqlCommandTimeoutInSec { get; set; }
 
-	    /// <summary>
-	    /// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
-	    /// purged on next database startup. Default: 14 days.
-	    /// </summary>
-	    public TimeSpan TombstoneRetentionTime { get; set; }
+        /// <summary>
+        /// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
+        /// purged, on a daily basis. Default: 14 days.
+        /// </summary>
+        public TimeSpan TombstoneRetentionTime { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
