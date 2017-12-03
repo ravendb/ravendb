@@ -22,6 +22,13 @@ namespace Orders
         public string Region { get; set; }
         public string PostalCode { get; set; }
         public string Country { get; set; }
+        public Location Location { get; set; }
+    }
+
+    public class Location
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 
     public class Contact
@@ -112,6 +119,7 @@ namespace Orders
     {
         public string Code { get; set; }
         public string Name { get; set; }
+	public string Area { get; set; }
     }
 
     public class Shipper
