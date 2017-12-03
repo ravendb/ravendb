@@ -230,7 +230,8 @@ namespace Raven.Server.Documents.Queries.Results
 
             try
             {
-                doc.Data?.Dispose();
+                if (ReferenceEquals(newData, doc.Data) == false)
+                    doc.Data?.Dispose();
             }
             catch (Exception)
             {

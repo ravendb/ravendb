@@ -866,7 +866,10 @@ namespace Raven.Server.Json
                 return;
             }
 
-            using (document.Data)
+            // Explicitly not disposing it, a single document can be 
+            // used multiple times in a single query, for example, due to projections
+            // so we will let the context handle it, rather than handle it directly ourselves
+            //using (document.Data)
             {
                 if (metadataOnly == false)
                     writer.WriteDocumentInternal(context, document);

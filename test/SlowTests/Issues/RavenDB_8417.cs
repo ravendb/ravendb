@@ -20,7 +20,7 @@ namespace SlowTests.Issues
                 {
                     var results = session.Query<Employee>()
                         .Statistics(out var stats)
-                        .Where(x => x.Id == "employees/1")
+                        .Where(x => x.Id == "employees/1-A")
                         .ToList();
 
                     Assert.Equal(1, results.Count);
@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
                     results = session.Query<Employee>()
                         .Statistics(out stats)
-                        .Where(x => x.Id == "employees/1")
+                        .Where(x => x.Id == "employees/1-A")
                         .Skip(1)
                         .ToList();
 
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
 
                     results = session.Query<Employee>()
                         .Statistics(out stats)
-                        .Where(x => x.Id.In("employees/1", "do-not-exist"))
+                        .Where(x => x.Id.In("employees/1-A", "do-not-exist"))
                         .Skip(1)
                         .ToList();
 
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
                     results = session.Query<Employee>()
                         .Statistics(out stats)
-                        .Where(x => x.Id.In("employees/1", "employees/2", "employees/3", "do-not-exist"))
+                        .Where(x => x.Id.In("employees/1-A", "employees/2-A", "employees/3-A", "do-not-exist"))
                         .Skip(0)
                         .Take(1)
                         .ToList();

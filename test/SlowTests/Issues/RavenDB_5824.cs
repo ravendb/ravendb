@@ -37,17 +37,17 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var order = session.Load<Order>("orders/1");
-                    var company = session.Load<Company>("companies/1");
-                    var product = session.Load<Product>("products/1");
-                    var supplier = session.Load<Supplier>("suppliers/1");
+                    var order = session.Load<Order>("orders/1-A");
+                    var company = session.Load<Company>("companies/1-A");
+                    var product = session.Load<Product>("products/1-A");
+                    var supplier = session.Load<Supplier>("suppliers/1-A");
 
                     order.Freight = 10;
                     company.ExternalId = "1234";
                     product.PricePerUnit = 10;
                     supplier.Fax = "1234";
 
-                    session.Delete("orders/2");
+                    session.Delete("orders/2-A");
 
                     session.SaveChanges();
                 }

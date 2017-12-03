@@ -17,14 +17,14 @@ namespace SlowTests.Issues
                 var queries = new[]
                 {
                     @"from Orders as o
-where id() == 'orders/830'
+where id() == 'orders/830-A'
 select {
     TopLines: o.Lines.sort((a,b)=> b.PricePerUnit - a.PricePerUnit)
         .map(a=>{ return { Name: a.ProductName } })
         .splice(0, 2)
 }",
                     @"from Orders as o
-where id() == 'orders/830'
+where id() == 'orders/830-A'
 select {
     Cost: o.Lines.reduce((a,l) => a + l.PricePerUnit, 0)
 }"
