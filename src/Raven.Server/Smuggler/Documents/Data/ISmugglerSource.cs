@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
+using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
@@ -17,6 +18,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities);
+        IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg);
         long SkipType(DatabaseItemType type, Action<long> onSkipped);
     }
 

@@ -62,9 +62,14 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseDocumentActions(_database, _buildType, isRevision: false, log: _log);
         }
 
-        public IIdentityActions Identities()
+        public IKeyValueActions<long> Identities()
         {
-            return new DatabaseIdentityActions(_database);
+            return new DatabaseKeyValueActions(_database);
+        }
+
+        public IKeyValueActions<BlittableJsonReaderObject> CmpXchg()
+        {
+            return new DatabaseCmpXchgActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -219,18 +224,64 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class DatabaseIdentityActions : IIdentityActions
+        private class DatabaseCmpXchgActions : IKeyValueActions<BlittableJsonReaderObject>
+        {
+            private readonly DocumentDatabase _database;
+            private readonly List<CommandBase> _cmpXchgCommands = new List<CommandBase>();
+            public DatabaseCmpXchgActions(DocumentDatabase database)
+            {
+                _database = database;
+            }
+
+            public void WriteKeyValue(string key, BlittableJsonReaderObject value)
+            {
+                const int batchSize = 1024;
+                string prefix = _database.Name + "/";
+                _cmpXchgCommands.Add(new AddOrUpdateCompareExchangeCommand
+                {
+                    Key = prefix + key,
+                    Index = 0,
+                    Value = value
+                });
+
+                if (_cmpXchgCommands.Count < batchSize)
+                    return;
+
+                SendCommands();
+            }
+
+            public void Dispose()
+            {
+                if (_cmpXchgCommands.Count == 0)
+                    return;
+
+                SendCommands();
+            }
+
+            private void SendCommands()
+            {
+                //fire and forget, do not hold-up smuggler operations waiting for Raft command
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new ClusterBatchCommand
+                {
+                    CommandsList = _cmpXchgCommands
+                }));
+
+                _cmpXchgCommands.Clear();
+            }
+        }
+        
+        private class DatabaseKeyValueActions : IKeyValueActions<long>
         {
             private readonly DocumentDatabase _database;
             private readonly Dictionary<string, long> _identities;
 
-            public DatabaseIdentityActions(DocumentDatabase database)
+            public DatabaseKeyValueActions(DocumentDatabase database)
             {
                 _database = database;
                 _identities = new Dictionary<string, long>();
             }
 
-            public void WriteIdentity(string key, long value)
+            public void WriteKeyValue(string key, long value)
             {
                 const int batchSize = 1024;
 

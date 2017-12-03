@@ -119,7 +119,7 @@ namespace Raven.Server.Web.System
                 {
                     writer.WriteStartObject();
                     using (context.OpenReadTransaction())
-                    writer.WriteArray(context, "Results", ServerStore.Cluster.GetCmpXchgByPrefix(context, key, page, size), 
+                    writer.WriteArray(context, "Results", ServerStore.Cluster.GetCmpXchgByPrefix(context, Database.Name, key, page, size), 
                         (textWriter, operationContext, item) =>
                     {
                         operationContext.Write(textWriter,new DynamicJsonValue

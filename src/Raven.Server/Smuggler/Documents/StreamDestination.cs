@@ -70,11 +70,15 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamDocumentActions(_writer, _context, _source, nameof(DatabaseItemType.Conflicts));
         }
 
-        public IIdentityActions Identities()
+        public IKeyValueActions<long> Identities()
         {
-            return new StreamIdentityActions(_writer);
+            return new StreamKeyValueActions<long>(_writer, nameof(DatabaseItemType.Identities));
         }
 
+        public IKeyValueActions<BlittableJsonReaderObject> CmpXchg()
+        {
+            return new StreamKeyValueActions<BlittableJsonReaderObject>(_writer, nameof(DatabaseItemType.CmpXchg));
+        }
 
         public IIndexActions Indexes()
         {
@@ -274,14 +278,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }        
         
-        private class StreamIdentityActions : StreamActionsBase, IIdentityActions
+        private class StreamKeyValueActions<T> : StreamActionsBase, IKeyValueActions<T>
         {
-            public StreamIdentityActions(BlittableJsonTextWriter writer)
-                : base(writer, "Identities")
+            public StreamKeyValueActions(BlittableJsonTextWriter writer, string name)
+                : base(writer, name)
             {
             }
 
-            public void WriteIdentity(string key, long value)
+            public void WriteKeyValue(string key, T value)
             {
                 if (First == false)
                     Writer.WriteComma();

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -28,6 +29,8 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Smuggler.Documents;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;
@@ -39,6 +42,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Backup;
 using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
+using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using DiskSpaceResult = Raven.Client.ServerWide.Operations.DiskSpaceResult;
 using Size = Raven.Client.Util.Size;
 
@@ -596,7 +600,29 @@ namespace Raven.Server.Documents
                 var databaseRecord = _serverStore.Cluster.ReadDatabase(context, Name);
                 Debug.Assert(databaseRecord != null);
 
-                var zipArchiveEntry = package.CreateEntry(RestoreSettings.FileName, CompressionLevel.Optimal);
+                var zipArchiveEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, CompressionLevel.Optimal);
+                using (var zipStream = zipArchiveEntry.Open())
+                {
+                    var smugglerSource = new DatabaseSource(this, 0);
+                    using (DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var smugglerDestination = new StreamDestination(zipStream, ctx, smugglerSource);
+                        var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+                        {
+                            OperateOnTypes = DatabaseItemType.CmpXchg | DatabaseItemType.Identities
+                        };
+                        var smuggler = new DatabaseSmuggler(this,
+                            smugglerSource,
+                            smugglerDestination,
+                            this.Time,
+                            options: databaseSmugglerOptionsServerSide);
+
+                        smuggler.Execute();
+                    } 
+                }
+
+                zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
                 using (var zipStream = zipArchiveEntry.Open())
                 using (var writer = new BlittableJsonTextWriter(context, zipStream))
                 {
@@ -631,23 +657,6 @@ namespace Raven.Server.Documents
 
                     writer.WriteEndObject();
                     // end of values
-
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(RestoreSettings.Identities));
-                    writer.WriteStartObject();
-
-                    first = true;
-                    foreach (var identity in ServerStore.Cluster.ReadIdentities(context, Name, 0, long.MaxValue))
-                    {
-                        if (first == false)
-                            writer.WriteComma();
-
-                        first = false;
-                        writer.WritePropertyName(identity.Prefix);
-                        writer.WriteInteger(identity.Value);
-                    }
-                    writer.WriteEndObject();
-                    // end of identities
 
                     writer.WriteEndObject();
                 }

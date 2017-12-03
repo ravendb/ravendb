@@ -35,6 +35,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Conflicts,
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
+            DatabaseItemType.CmpXchg,
             DatabaseItemType.None
         };
 
@@ -176,6 +177,19 @@ namespace Raven.Server.Smuggler.Documents
                 scope.EnsureDispose(context.OpenReadTransaction());
 
                 identities = _database.ServerStore.Cluster.ReadIdentities(context, _database.Name, 0, long.MaxValue);
+
+                return scope.Delay();
+            }
+        }
+
+        public IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg)
+        {
+            using (var scope = new DisposableScope())
+            {
+                scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
+                scope.EnsureDispose(context.OpenReadTransaction());
+
+                cmpXchg = _database.ServerStore.Cluster.GetCmpXchgByPrefix(context, _database.Name, _database.Name, 0, int.MaxValue);
 
                 return scope.Delay();
             }

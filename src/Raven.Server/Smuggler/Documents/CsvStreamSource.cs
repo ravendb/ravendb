@@ -304,6 +304,12 @@ namespace Raven.Server.Smuggler.Documents
             return new DisposableAction(() => { });
         }
 
+        public IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg)
+        {
+            cmpXchg = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
+            return new DisposableAction(() => { });
+        }
+
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             return 0;

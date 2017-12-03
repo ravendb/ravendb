@@ -9,15 +9,14 @@ namespace Raven.Server.Documents.PeriodicBackup
         public RestoreSettings()
         {
             DatabaseValues = new Dictionary<string, ExpandoObject>();
-            Identities = new Dictionary<string, long>();
         }
 
-        public static string FileName = "Settings.json";
+        public static string SettingsFileName = "Settings.json";
+
+        public static string SmugglerValuesFileName = "SmugglerValues.ravendump";
 
         public DatabaseRecord DatabaseRecord { get; set; }
 
         public Dictionary<string, ExpandoObject> DatabaseValues { get; set; }
-
-        public Dictionary<string, long> Identities { get; set; }
     }
 }

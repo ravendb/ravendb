@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Config;
@@ -71,6 +72,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 Stopwatch sw = null;
                 RestoreSettings restoreSettings = null;
                 var firstFile = _filesToRestore[0];
+                var lastFile = _filesToRestore.Last();
+
                 var extension = Path.GetExtension(firstFile);
                 var snapshotRestore = false;
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
@@ -152,37 +155,40 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (snapshotRestore)
                     {
                         result.SnapshotRestore.Processed = true;
-                        
+
                         var summary = database.GetDatabaseSummary();
                         result.Documents.ReadCount += summary.DocumentsCount;
                         result.Documents.Attachments.ReadCount += summary.AttachmentsCount;
                         result.RevisionDocuments.ReadCount += summary.RevisionsCount;
                         result.Conflicts.ReadCount += summary.ConflictsCount;
                         result.Indexes.ReadCount += databaseRecord.GetIndexesCount();
-                        result.Identities.ReadCount += restoreSettings.Identities.Count;
                         result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} " +
                                        $"files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                         onProgress.Invoke(result.Progress);
                     }
+                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
 
-                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, restoreSettings, onProgress, result);
+                        result.Documents.Processed = true;
+                        result.RevisionDocuments.Processed = true;
+                        result.Conflicts.Processed = true;
+                        result.Indexes.Processed = true;
+                        onProgress.Invoke(result.Progress);
+
+                        databaseRecord.Topology = new DatabaseTopology();
+                        // restoring to the current node only
+                        databaseRecord.Topology.Members.Add(_nodeTag);
+
+                        _serverStore.EnsureNotPassive();
+
+                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
+                        await _serverStore.Cluster.WaitForIndexNotification(index);
+
+                        // restore identities & cmpXchg values
+                        RestoreFromLastFile(onProgress, database, lastFile, context, result);
+                    }
                 }
-
-                result.Documents.Processed = true;
-                result.RevisionDocuments.Processed = true;
-                result.Conflicts.Processed = true;
-                result.Indexes.Processed = true;
-                result.Identities.Processed = true;
-                onProgress.Invoke(result.Progress);
-
-                databaseRecord.Topology = new DatabaseTopology();
-                // restoring to the current node only
-                databaseRecord.Topology.Members.Add(_nodeTag);
-
-                await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
-                var index = await WriteIdentitiesAsync(databaseName, restoreSettings.Identities);
-                await _serverStore.Cluster.WaitForIndexNotification(index);
-
                 return result;
             }
             catch (Exception e)
@@ -219,6 +225,44 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 _operationCancelToken.Dispose();
             }
+        }
+
+        private void RestoreFromLastFile(Action<IOperationProgress> onProgress, DocumentDatabase database, string lastFile, DocumentsOperationContext context, RestoreResult result)
+        {
+            var destination = new DatabaseDestination(database);
+            var smugglerOptions = new DatabaseSmugglerOptionsServerSide
+            {
+                OperateOnTypes = DatabaseItemType.CmpXchg | DatabaseItemType.Identities
+            };
+            var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, lastFile);
+
+            if (Path.GetExtension(lastPath) == Constants.Documents.PeriodicBackup.SnapshotExtension)
+            {
+                using (var zip = ZipFile.Open(lastPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+                {
+                    foreach (var entry in zip.Entries)
+                    {
+                        if (entry.Name == RestoreSettings.SmugglerValuesFileName)
+                        {
+                            using (var input = entry.Open())
+                            {
+                                var source = new StreamSource(input, context, database);
+                                var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
+                                    database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
+
+                                smuggler.Execute();
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                ImportSingleBackupFile(database, onProgress, null, lastPath, context, destination, smugglerOptions);
+            }
+            result.Identities.Processed = true;
+            result.CmpXchg.Processed = true;
         }
 
         private async Task<long> WriteIdentitiesAsync(string databaseName, Dictionary<string, long> identities)
@@ -337,8 +381,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         private void SmugglerRestore(
             string backupDirectory,
             DocumentDatabase database,
+            DocumentsOperationContext context,
             DatabaseRecord databaseRecord,
-            RestoreSettings restoreSettings,
             Action<IOperationProgress> onProgress,
             RestoreResult result)
         {
@@ -363,57 +407,55 @@ namespace Raven.Server.Documents.PeriodicBackup
             // we do have at least one smuggler backup
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
-            restoreSettings.Identities = new Dictionary<string, long>();
 
             // restore the smuggler backup
-            var options = new DatabaseSmugglerOptionsServerSide();
-            var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
+            var options = new DatabaseSmugglerOptionsServerSide
+            {
+                OperateOnTypes = ~(DatabaseItemType.CmpXchg | DatabaseItemType.Identities)
+            };
+            var oldOperateOnTypes = options.OperateOnTypes;
+            options.OperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
 
             var destination = new DatabaseDestination(database);
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            for (var i = 0; i < _filesToRestore.Count - 1; i++)
             {
-                for (var i = 0; i < _filesToRestore.Count - 1; i++)
-                {
-                    var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
-                    ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options);
-                }
-
-                options.OperateOnTypes = oldOperateOnTypes;
-                var lastFilePath = Path.Combine(backupDirectory, _filesToRestore.Last());
-
-                ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
-                    onIndexAction: indexAndType =>
-                    {
-                        switch (indexAndType.Type)
-                        {
-                            case IndexType.AutoMap:
-                            case IndexType.AutoMapReduce:
-                                var autoIndexDefinition = (AutoIndexDefinitionBase)indexAndType.IndexDefinition;
-                                databaseRecord.AutoIndexes[autoIndexDefinition.Name] =
-                                    PutAutoIndexCommand.GetAutoIndexDefinition(autoIndexDefinition, indexAndType.Type);
-                                break;
-                            case IndexType.Map:
-                            case IndexType.MapReduce:
-                                var indexDefinition = (IndexDefinition)indexAndType.IndexDefinition;
-                                databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
-                                break;
-                            case IndexType.None:
-                            case IndexType.Faulty:
-                                break;
-                            default:
-                                throw new ArgumentOutOfRangeException();
-                        }
-                    },
-                    onIdentityAction: identity => restoreSettings.Identities[identity.Prefix] = identity.Value);
+                var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
+                ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options);
             }
+
+            options.OperateOnTypes = oldOperateOnTypes;
+            var lastFilePath = Path.Combine(backupDirectory, _filesToRestore.Last());
+
+            ImportSingleBackupFile(database, onProgress, result, lastFilePath, context, destination, options,
+                onIndexAction: indexAndType =>
+                {
+                    switch (indexAndType.Type)
+                    {
+                        case IndexType.AutoMap:
+                        case IndexType.AutoMapReduce:
+                            var autoIndexDefinition = (AutoIndexDefinitionBase)indexAndType.IndexDefinition;
+                            databaseRecord.AutoIndexes[autoIndexDefinition.Name] =
+                                PutAutoIndexCommand.GetAutoIndexDefinition(autoIndexDefinition, indexAndType.Type);
+                            break;
+                        case IndexType.Map:
+                        case IndexType.MapReduce:
+                            var indexDefinition = (IndexDefinition)indexAndType.IndexDefinition;
+                            databaseRecord.Indexes[indexDefinition.Name] = indexDefinition;
+                            break;
+                        case IndexType.None:
+                        case IndexType.Faulty:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                });
         }
 
         private void ImportSingleBackupFile(DocumentDatabase database,
             Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options,
-            Action<IndexDefinitionAndType> onIndexAction = null,
-            Action<(string Prefix, long Value)> onIdentityAction = null)
+            Action<IndexDefinitionAndType> onIndexAction = null)
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
             using (var stream = new GZipStream(new BufferedStream(fileStream, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
@@ -423,7 +465,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
                     OnIndexAction = onIndexAction,
-                    OnIdentityAction = onIdentityAction
                 };
 
                 smuggler.Execute();
@@ -443,8 +484,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             BackupMethods.Full.Restore(
                 backupPath,
                 dataDirectory,
-                journalDir: null,
-                settingsKey: RestoreSettings.FileName,
+                journalDir: Path.Combine(dataDirectory, "Journal"),
+                settingsKey: RestoreSettings.SettingsFileName,
                 onSettings: settingsStream =>
                 {
                     //TODO: decrypt this file using the _restoreConfiguration.EncryptionKey

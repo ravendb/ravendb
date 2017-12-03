@@ -25,6 +25,7 @@ namespace Raven.Client.Documents.Smuggler
             Conflicts = new CountsWithLastEtag();
             Identities = new Counts();
             Indexes = new Counts();
+            CmpXchg = new Counts();
         }
 
         public string Message { get; private set; }
@@ -131,6 +132,8 @@ namespace Raven.Client.Documents.Smuggler
         public virtual Counts Identities { get; set; }
 
         public virtual Counts Indexes { get; set; }
+        
+        public virtual Counts CmpXchg { get; set; }
 
         public virtual DynamicJsonValue ToJson()
         {
@@ -142,6 +145,7 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Conflicts)] = Conflicts.ToJson(),
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
+                [nameof(CmpXchg)] = CmpXchg.ToJson(),
             };
         }
 

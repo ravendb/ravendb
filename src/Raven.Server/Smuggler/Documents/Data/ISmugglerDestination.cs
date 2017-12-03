@@ -5,6 +5,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
@@ -16,7 +17,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         IDocumentActions Tombstones();
         IDocumentActions Conflicts();
         IIndexActions Indexes();
-        IIdentityActions Identities();
+        IKeyValueActions<long> Identities();
+        IKeyValueActions<BlittableJsonReaderObject> CmpXchg();
     }
 
     public interface IDocumentActions : INewDocumentActions, IDisposable
@@ -38,8 +40,8 @@ namespace Raven.Server.Smuggler.Documents.Data
         void WriteIndex(IndexDefinition indexDefinition);
     }
 
-    public interface IIdentityActions : IDisposable
+    public interface IKeyValueActions<in T> : IDisposable
     {
-        void WriteIdentity(string key, long value);
+        void WriteKeyValue(string key, T value);
     }
 }
