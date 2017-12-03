@@ -79,13 +79,13 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             var multiLoadResult = response.Result != null
-                ? JsonDeserializationClient.GetDocumentResult((BlittableJsonReaderObject)response.Result)
+                ? JsonDeserializationClient.GetDocumentsResult((BlittableJsonReaderObject)response.Result)
                 : null;
 
             HandleResponse(multiLoadResult);
         }
 
-        private void HandleResponse(GetDocumentResult loadResult)
+        private void HandleResponse(GetDocumentsResult loadResult)
         {
             _loadOperation.SetResult(loadResult);
             if (RequiresRetry == false)

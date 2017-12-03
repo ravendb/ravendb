@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session.Operations
             _session = session;
         }
 
-        public GetDocumentCommand CreateRequest()
+        public GetDocumentsCommand CreateRequest()
         {
             if (_idsToCheckOnServer.Count == 0)
                 return null;
@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Session.Operations
             _session.IncrementRequestCount();
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Requesting the following ids '{string.Join(", ", _idsToCheckOnServer)}' from {_session.StoreIdentifier}");
-            return new GetDocumentCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
+            return new GetDocumentsCommand(_idsToCheckOnServer.ToArray(), _includes, metadataOnly: false);
         }
 
         public LoadOperation ById(string id)
@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Session.Operations
             return finalResults;
         }
 
-        public void SetResult(GetDocumentResult result)
+        public void SetResult(GetDocumentsResult result)
         {
             if (result == null)
                 return;

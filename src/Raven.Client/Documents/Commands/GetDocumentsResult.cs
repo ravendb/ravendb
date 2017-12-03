@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetDocumentResult
+    public class GetDocumentsResult
     {
         public BlittableJsonReaderObject Includes { get; set; }
 

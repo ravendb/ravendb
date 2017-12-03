@@ -203,11 +203,11 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
                 writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
 
                 writer.WriteComma();
-                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
+                writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
                 if (includes.Count > 0)
                 {
                     writer.WriteIncludes(context, includes);
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.StartWriteObjectDocument();
 
                 writer.StartWriteObject();
-                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
 
                 writer.StartWriteArray();
 
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteArrayEnd();
 
-                writer.WritePropertyName(nameof(GetDocumentResult.Includes));
+                writer.WritePropertyName(nameof(GetDocumentsResult.Includes));
 
                 writer.StartWriteObject();
 

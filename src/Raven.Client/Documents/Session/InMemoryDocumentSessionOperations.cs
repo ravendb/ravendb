@@ -1220,7 +1220,7 @@ more responsive application.
             return true;
         }
 
-        protected void RefreshInternal<T>(T entity, RavenCommand<GetDocumentResult> cmd, DocumentInfo documentInfo)
+        protected void RefreshInternal<T>(T entity, RavenCommand<GetDocumentsResult> cmd, DocumentInfo documentInfo)
         {
             var document = (BlittableJsonReaderObject)cmd.Result.Results[0];
             if (document == null)
