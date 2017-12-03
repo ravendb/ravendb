@@ -707,7 +707,7 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 2)
                 spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueExpression, metadata, parameters, fieldName);
 
-            return spatialField.ReadShape((string)wktValue.Value, spatialUnits);
+            return spatialField.ReadShape(GetValueAsString(wktValue.Value), spatialUnits);
         }
 
         private static Shape HandleCircle(Query query, MethodExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName,
@@ -737,7 +737,7 @@ namespace Raven.Server.Documents.Queries
             var spatialUnitsValue = GetValue(query, metadata, parameters, value);
             AssertValueIsString(fieldName, spatialUnitsValue.Type);
 
-            var spatialUnitsValueAsString = spatialUnitsValue.Value.ToString();
+            var spatialUnitsValueAsString = GetValueAsString(spatialUnitsValue.Value);
             if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
                 throw new InvalidOperationException(
                     $"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");
