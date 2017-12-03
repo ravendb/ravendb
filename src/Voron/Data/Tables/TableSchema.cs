@@ -417,7 +417,7 @@ namespace Voron.Data.Tables
                     if (_primaryKey.IsGlobal == false)
                     {
                         
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, _primaryKey.Name, isIndexTree:true, newPageAllocator: tablePageAllocator))
                         {
                             using (tableTree.DirectAdd(_primaryKey.Name, sizeof(TreeRootHeader),out ptr))
                             {
@@ -427,7 +427,7 @@ namespace Voron.Data.Tables
                     }
                     else
                     {
-                        tx.CreateTree(_primaryKey.Name.ToString(),newPageAllocator: globalPageAllocator);
+                        tx.CreateTree(_primaryKey.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
                     }
                 }
 
@@ -435,7 +435,7 @@ namespace Voron.Data.Tables
                 {
                     if (indexDef.IsGlobal == false)
                     {
-                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, newPageAllocator: tablePageAllocator))
+                        using (var indexTree = Tree.Create(tx.LowLevelTransaction, tx, indexDef.Name, isIndexTree:true, newPageAllocator: tablePageAllocator))
                         {
                             using (tableTree.DirectAdd(indexDef.Name, sizeof(TreeRootHeader),out ptr))
                             {
@@ -445,7 +445,7 @@ namespace Voron.Data.Tables
                     }
                     else
                     {
-                        tx.CreateTree(indexDef.Name.ToString(), newPageAllocator: globalPageAllocator);
+                        tx.CreateTree(indexDef.Name.ToString(), isIndexTree: true, newPageAllocator: globalPageAllocator);
                     }
                 }
 

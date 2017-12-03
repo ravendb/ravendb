@@ -51,7 +51,10 @@ namespace Voron.Data.BTrees
             Name = name;
 
             if (newPageAllocator != null)
+            {
+                Debug.Assert(isIndexTree, "If newPageAllocator is set, we must be in a isIndexTree = true");
                 SetNewPageAllocator(newPageAllocator);
+            }
 
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2); 
 

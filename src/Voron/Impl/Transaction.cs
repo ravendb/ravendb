@@ -352,7 +352,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("No such tree: '" + name +
                                                     "' and cannot create trees in read transactions");
 
-            tree = Tree.Create(_lowLevelTransaction, this, name, flags);
+            tree = Tree.Create(_lowLevelTransaction, this, name, flags, type, isIndexTree, newPageAllocator);
             tree.State.RootObjectType = type;
 
             using (_lowLevelTransaction.RootObjects.DirectAdd(name, sizeof(TreeRootHeader), out byte* ptr))
