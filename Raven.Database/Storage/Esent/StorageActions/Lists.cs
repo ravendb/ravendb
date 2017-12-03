@@ -72,11 +72,47 @@ namespace Raven.Storage.Esent.StorageActions
 
 				Api.JetDelete(session, Lists);
 
-			} while (Api.TryMovePrevious(session, Lists));
+			    MaybePulseTransaction();
+
+            } while (Api.TryMovePrevious(session, Lists));
 
 		}
 
-		public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
+	    public void RemoveAllOlderThan(string name, DateTime time)
+	    {
+	        var fromStart = Etag.Empty;
+	        Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
+	        Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
+	        Api.MakeKey(session, Lists, fromStart.TransformToValueForEsentSorting(), MakeKeyGrbit.None);
+	        if (Api.TrySeek(session, Lists, SeekGrbit.SeekGE) == false)
+	            return;
+	        do
+	        {
+	            var nameFromDb = Api.RetrieveColumnAsString(session, Lists, tableColumnsCache.ListsColumns["name"], Encoding.Unicode);
+	            if (string.Equals(name, nameFromDb, StringComparison.OrdinalIgnoreCase) == false)
+	                break;
+	            using (Stream stream = new BufferedStream(new ColumnStream(session, Lists, tableColumnsCache.ListsColumns["data"])))
+	            {
+	                var data = stream.ToJObject();
+	                RavenJToken lastModified;
+	                if (data.TryGetValue("Last-Modified", out lastModified) == false)
+	                {
+	                    Api.JetDelete(session, Lists);
+	                    MaybePulseTransaction(); //If we have alot of those in a raw
+                        continue;
+	                }
+	                if (lastModified.Value<DateTime>("Last-Modified") > time)
+	                    break;
+	            }
+                Api.JetDelete(session, Lists);
+
+	            MaybePulseTransaction();
+
+	        } while (Api.TryMoveNext(session, Lists));
+
+	    }
+
+        public IEnumerable<ListItem> Read(string name, Etag start, Etag end, int take)
 		{
 			Api.JetSetCurrentIndex(session, Lists, "by_name_and_etag");
 			Api.MakeKey(session, Lists, name, Encoding.Unicode, MakeKeyGrbit.NewKey);
