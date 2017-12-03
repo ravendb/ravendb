@@ -2644,5 +2644,20 @@ namespace Raven.Database
             return IndexDefinitionStorage.GetTransformerDefinition(name);
         }
 
+        public void PurgeOutdatedTombstones()
+        {
+            var tomstoneLists = new[]
+            {
+                Constants.RavenReplicationAttachmentsTombstones,
+                Constants.RavenReplicationDocsTombstones
+            };
+            var tombstoneRetentionTime = configuration.TombstoneRetentionTime;
+            var olderThan = SystemTime.UtcNow.Subtract(tombstoneRetentionTime);
+
+            foreach (var listName in tomstoneLists)
+            {
+                TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllOlderThan(listName, olderThan));
+            }
+        }
     }
 }

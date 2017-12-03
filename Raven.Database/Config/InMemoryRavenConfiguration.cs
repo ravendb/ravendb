@@ -248,6 +248,7 @@ namespace Raven.Database.Config
 
 		    SqlCommandTimeoutInSec = ravenSettings.SqlCommandTimeoutInSec.Value;
 
+		    TombstoneRetentionTime = ravenSettings.TombstoneRetentionTime.Value;
             PostInit();
 		}
 
@@ -906,6 +907,12 @@ namespace Raven.Database.Config
         /// Number of seconds after which SQL command will timeout. Default: -1 (use provider default). Can be overriden by setting CommandTimeout property value in SQL Replication configuration.
         /// </summary>
 	    public int SqlCommandTimeoutInSec { get; set; }
+
+	    /// <summary>
+	    /// Determines how long replication and periodic backup tombstones will be kept by a database. After the specified time they will be automatically
+	    /// purged on next database startup. Default: 14 days.
+	    /// </summary>
+	    public TimeSpan TombstoneRetentionTime { get; set; }
 
 	    [Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]

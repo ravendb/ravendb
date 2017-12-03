@@ -89,7 +89,12 @@ namespace Raven.Storage.Managed
 			}
 		}
 
-		public ListItem Read(string name, string key)
+	    public void RemoveAllOlderThan(string name, DateTime time)
+	    {
+	        throw new NotImplementedException();
+	    }
+
+	    public ListItem Read(string name, string key)
 		{
 			var readResult = storage.Lists.Read(new RavenJObject
 			{
