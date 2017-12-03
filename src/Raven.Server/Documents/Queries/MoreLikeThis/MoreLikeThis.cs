@@ -805,47 +805,55 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
         private void RetrieveTerms(BlittableJsonReaderObject json, IDictionary<string, Int> words)
         {
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
             for (int i = 0; i < json.Count; i++)
             {
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
                 json.GetPropertyByIndex(i, ref prop);
 
-                switch (prop.Token)
-                {
-                    case BlittableJsonToken.String:
-                        var str = (LazyStringValue)prop.Value;
-                        AddTermFrequencies(new StringReader(str),words, prop.Name);
-                        continue;
-                    case BlittableJsonToken.CompressedString:
-                        var cstr = (LazyCompressedStringValue)prop.Value;
-                        AddTermFrequencies(new StringReader(cstr), words, prop.Name);
-                        continue;
-                    case BlittableJsonToken.Integer:
-                        AddTermFrequencies(new StringReader(((long)prop.Value).ToString()), words, prop.Name);
-                        continue;
-                    case BlittableJsonToken.LazyNumber:
-                        AddTermFrequencies(new StringReader(((LazyNumberValue)prop.Value).ToString(CultureInfo.InvariantCulture)), words, prop.Name);
-                        continue;
-                    case BlittableJsonToken.Boolean:
-                        AddTermFrequencies(new StringReader(((bool)prop.Value).ToString()), words, prop.Name);
-                        continue;
-                    case BlittableJsonToken.StartArray:
-                        foreach (BlittableJsonReaderObject item in (BlittableJsonReaderArray)prop.Value)
-                        {
-                            RetrieveTerms(item, words);
-                        }
-                        continue;
-                    case BlittableJsonToken.EmbeddedBlittable:
-                    case BlittableJsonToken.StartObject:
-                        RetrieveTerms((BlittableJsonReaderObject)prop.Value, words);
-                        continue;
-                }
+                ProcessTerms(prop.Token, prop.Name, prop.Value, words);
+            }
+        }
 
-                if (HasFlagWithBitPacking(BlittableJsonToken.StartObject) ||
-                    HasFlagWithBitPacking(BlittableJsonToken.EmbeddedBlittable))
-                {
-                    RetrieveTerms((BlittableJsonReaderObject)prop.Value, words);
-                }
+        private void ProcessTerms(BlittableJsonToken token, LazyStringValue name, object value, IDictionary<string, Int> words)
+        {
+            switch (token & BlittableJsonReaderBase.TypesMask)
+            {
+                case BlittableJsonToken.String:
+                    var str = (LazyStringValue)value;
+                    AddTermFrequencies(new StringReader(str), words, name);
+                    return;
+                case BlittableJsonToken.CompressedString:
+                    var cstr = (LazyCompressedStringValue)value;
+                    AddTermFrequencies(new StringReader(cstr), words, name);
+                    return;
+                case BlittableJsonToken.Integer:
+                    AddTermFrequencies(new StringReader(((long)value).ToString()), words, name);
+                    return;
+                case BlittableJsonToken.LazyNumber:
+                    AddTermFrequencies(new StringReader(((LazyNumberValue)value).ToString(CultureInfo.InvariantCulture)), words, name);
+                    return;
+                case BlittableJsonToken.Boolean:
+                    AddTermFrequencies(new StringReader(((bool)value).ToString()), words, name);
+                    return;
+                case BlittableJsonToken.StartArray:
+                    var array = (BlittableJsonReaderArray)value;
+                    for (var j = 0; j < array.Length; j++)
+                    {
+                        var tuple = array.GetValueTokenTupleByIndex(j);
+                        ProcessTerms(tuple.Item2, name, tuple.Item1, words);
+                    }
+                    return;
+                case BlittableJsonToken.EmbeddedBlittable:
+                case BlittableJsonToken.StartObject:
+                    RetrieveTerms((BlittableJsonReaderObject)value, words);
+                    return;
+            }
+
+            if (HasFlagWithBitPacking(BlittableJsonToken.StartObject) ||
+                HasFlagWithBitPacking(BlittableJsonToken.EmbeddedBlittable))
+            {
+                RetrieveTerms((BlittableJsonReaderObject)value, words);
             }
         }
 
