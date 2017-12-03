@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session
             LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, startAfter);
         }
 
-        private GetDocumentCommand LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
+        private GetDocumentsCommand LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
             int start = 0, int pageSize = 25, string exclude = null, 
             string startAfter = null)
         {

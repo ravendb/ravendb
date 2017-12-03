@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
                 writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
                 writer.WriteEndObject();
             }
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.StartWriteObjectDocument();
 
                 writer.StartWriteObject();
-                writer.WritePropertyName(nameof(GetDocumentResult.Results));
+                writer.WritePropertyName(nameof(GetDocumentsResult.Results));
 
                 writer.StartWriteArray();
                 foreach (var document in documentsToWrite)

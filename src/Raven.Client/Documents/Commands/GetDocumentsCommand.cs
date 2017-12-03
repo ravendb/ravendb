@@ -11,7 +11,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class GetDocumentCommand : RavenCommand<GetDocumentResult>
+    public class GetDocumentsCommand : RavenCommand<GetDocumentsResult>
     {
         private readonly string _id;
 
@@ -27,20 +27,20 @@ namespace Raven.Client.Documents.Commands
         private readonly string _exclude;
         private readonly string _startAfter;
 
-        public GetDocumentCommand(int start, int pageSize)
+        public GetDocumentsCommand(int start, int pageSize)
         {
             _start = start;
             _pageSize = pageSize;
         }
 
-        public GetDocumentCommand(string id, string[] includes, bool metadataOnly)
+        public GetDocumentsCommand(string id, string[] includes, bool metadataOnly)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _includes = includes;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string[] ids, string[] includes, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)
+        public GetDocumentsCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize, bool metadataOnly)
         {
             _startWith = startWith ?? throw new ArgumentNullException(nameof(startWith));
             _startAfter = startAfter;
@@ -147,7 +147,7 @@ namespace Raven.Client.Documents.Commands
                 return;
             }
 
-            Result = JsonDeserializationClient.GetDocumentResult(response);
+            Result = JsonDeserializationClient.GetDocumentsResult(response);
         }
 
         public override bool IsReadRequest => true;

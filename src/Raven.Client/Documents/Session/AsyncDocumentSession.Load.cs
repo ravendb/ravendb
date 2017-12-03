@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session
         }
 
 
-        private async Task<GetDocumentCommand> LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
+        private async Task<GetDocumentsCommand> LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
             int start = 0, int pageSize = 25, string exclude = null, 
             string startAfter = null, CancellationToken token = default(CancellationToken))
         {
