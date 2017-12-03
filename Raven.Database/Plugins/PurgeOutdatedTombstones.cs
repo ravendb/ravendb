@@ -10,7 +10,7 @@ namespace Raven.Database.Plugins.Builtins
 {
     public class PurgeOutdatedTombstones : IStartupTask
     {
-        private object locker;
+        private object locker = new object();
         public DocumentDatabase Database { get; private set; }
 
         public void Execute(DocumentDatabase database)
