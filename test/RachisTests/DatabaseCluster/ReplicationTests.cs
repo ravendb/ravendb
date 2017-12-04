@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -217,6 +218,99 @@ namespace RachisTests.DatabaseCluster
             var count = (await GetOngoingTasks(databaseName)).Count(t => t is OngoingTaskReplication);
 
             Assert.Equal(5, count);
+        }
+                
+        [Fact]        
+        public async Task WaitForReplicaitonShouldWaitOnlyForInternalNodes()
+        {
+            var clusterSize = 5;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var mainTopology = leader.ServerStore.GetClusterTopology();
+
+            var secondLeader = await CreateRaftClusterAndGetLeader(1);
+            var secondTopology = secondLeader.ServerStore.GetClusterTopology();
+
+            var watchers = new List<ExternalReplication>();
+
+            var watcherUrls = new Dictionary<string, string[]>();
+
+            using (var store = new DocumentStore()
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = databaseName,
+                Conventions =
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            using (var secondStore = new DocumentStore()
+            {
+                Urls = new[] { secondLeader.WebUrl },
+                Database = databaseName,
+                Conventions =
+                {
+                    DisableTopologyUpdates = true
+                }
+            }.Initialize())
+            {
+                var doc = new DatabaseRecord(databaseName);
+                var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
+                Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
+                foreach (var node in mainTopology.AllNodes)
+                {
+                    var server = Servers.First(x => x.WebUrl == node.Value);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
+                }
+
+                for (var i = 0; i < 5; i++)
+                {
+                    var dbName = $"Watcher{i}";
+                    doc = new DatabaseRecord(dbName);
+                    var res = await secondStore.Maintenance.Server.SendAsync(
+                        new CreateDatabaseOperation(doc));
+                    watcherUrls.Add(dbName, res.NodesAddedTo.ToArray());
+                    var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
+                    await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
+                    await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+
+                    var watcher = new ExternalReplication(dbName, $"{dbName}-Connection");
+                    await AddWatcherToReplicationTopology((DocumentStore)store, watcher, secondStore.Urls);
+                    watchers.Add(watcher);
+                }
+
+                var notLeadingNode = mainTopology.AllNodes.Select(x => Servers.First(y => y.WebUrl == x.Value)).First(x => x.ServerStore.IsLeader() == false);
+                notLeadingNode.Dispose();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(clusterSize + 15), true, clusterSize - 1);
+                    Task saveChangesTask = session.SaveChangesAsync();
+                    WaitForDocumentInExternalReplication(watchers, watcherUrls);
+                    await Assert.ThrowsAsync<RavenException>(() => saveChangesTask);
+                    Assert.IsType<TimeoutException>(saveChangesTask.Exception?.InnerException?.InnerException);
+                }
+            }            
+        }
+
+        private void WaitForDocumentInExternalReplication(List<ExternalReplication> watchers, Dictionary<string, string[]> watcherUrls)
+        {
+            foreach (var watcher in watchers)
+            {
+                using (var store = new DocumentStore
+                {
+                    Urls = watcherUrls[watcher.Database],
+                    Database = watcher.Database,
+                    Conventions =
+                    {
+                        DisableTopologyUpdates = true
+                    }
+                }.Initialize())
+                {
+                    Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel", 100_000));
+                }
+            }
         }
 
         private async Task<List<OngoingTask>> GetOngoingTasks(string name)

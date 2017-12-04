@@ -737,6 +737,8 @@ namespace Raven.Server.Documents.Replication
 
             if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo))
                 failureInfo.Reset();
+
+            
             while (_waitForReplicationTasks.TryDequeue(out TaskCompletionSource<object> result))
             {
                 TaskExecutor.Complete(result);
@@ -879,15 +881,14 @@ namespace Raven.Server.Documents.Replication
 
         public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
         {
-            var numberOfSiblings = _destinations.Count;
+            var topology = GetClusterTopology();
+            var numberOfSiblings = _destinations.Select(x=>x.Url).Intersect(topology.AllNodes.Select(x=>x.Value)).Count();
             if (numberOfSiblings == 0)
             {
              
                 if (_log.IsInfoEnabled)
                     _log.Info("Was asked to get write assurance on a database without replication, ignoring the request. " +
-                              $"InternalDestinations: {_internalDestinations.Count}. " +
-                              $"ExternalDestinations: {_externalDestinations.Count}. " +
-                              $"Destinations: {_destinations.Count}.");
+                              $"InternalDestinations: {_internalDestinations.Count}. ");
 
                 return numberOfReplicasToWaitFor;
             }
@@ -896,9 +897,7 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Was asked to get write assurance on a database with {numberOfReplicasToWaitFor} servers " +
                               $"but we have only {numberOfSiblings} servers, reducing request to {numberOfSiblings}. " +
-                              $"InternalDestinations: {_internalDestinations.Count}. " +
-                              $"ExternalDestinations: {_externalDestinations.Count}. " +
-                              $"Destinations: {_destinations.Count}.");
+                              $"InternalDestinations: {_internalDestinations.Count}. " );
 
                 numberOfReplicasToWaitFor = numberOfSiblings;
             }
@@ -906,19 +905,19 @@ namespace Raven.Server.Documents.Replication
             while (true)
             {
                 var waitForNextReplicationAsync = WaitForNextReplicationAsync();
-                var past = ReplicatedPast(lastChangeVector);
+                var past = ReplicatedPastInternalDestinations(lastChangeVector);
                 if (past >= numberOfReplicasToWaitFor)
                     return past;
 
                 var remaining = waitForReplicasTimeout - sp.Elapsed;
                 if (remaining < TimeSpan.Zero)
-                    return ReplicatedPast(lastChangeVector);
+                    return ReplicatedPastInternalDestinations(lastChangeVector);
 
                 var timeout = TimeoutManager.WaitFor(remaining);
                 try
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
-                        return ReplicatedPast(lastChangeVector);
+                        return ReplicatedPastInternalDestinations(lastChangeVector);
                 }
                 catch (OperationCanceledException e)
                 {
@@ -926,7 +925,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Get exception while trying to get write assurance on a database with {numberOfReplicasToWaitFor} servers. " +
                                   $"Written so far to {past} servers only. " +
                                   $"LastChangeVector is: {lastChangeVector}.", e);
-                    return ReplicatedPast(lastChangeVector);
+                    return ReplicatedPastInternalDestinations(lastChangeVector);
                 }
             }
         }
@@ -945,6 +944,18 @@ namespace Raven.Server.Documents.Replication
         {
             var count = 0;
             foreach (var destination in _outgoing)
+            {
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
+                if (conflictStatus == ConflictStatus.AlreadyMerged)
+                    count++;
+            }
+            return count;
+        }
+
+        private int ReplicatedPastInternalDestinations(string changeVector)
+        {
+            var count = 0;
+            foreach (var destination in _outgoing.Where(x=>_internalDestinations.Select(y=>y.Url).Contains(x.Destination.Url)))
             {
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
