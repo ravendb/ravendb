@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Queries.Facets
         IFacetOperations<T> AverageOn(Expression<Func<T, object>> path);
     }
 
-    public interface IFacetFactory<T>
+    public interface IFacetBuilder<T>
     {
         IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths);
 
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Queries.Facets
         IFacetOperations<T> ByField(string fieldName);
     }
 
-    internal class FacetFactory<T> : IFacetFactory<T>, IFacetOperations<T>
+    internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>
     {
         private RangeFacet _range;
         private Facet _default;

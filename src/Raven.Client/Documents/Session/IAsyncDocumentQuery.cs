@@ -134,9 +134,9 @@ namespace Raven.Client.Documents.Session
 
         IAsyncDocumentQuery<T> MoreLikeThis(MoreLikeThisBase moreLikeThis);
 
-        IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisFactoryForAsyncDocumentQuery<T>> factory);
+        IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 
-        IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetFactory<T>> factory = null);
+        IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder = null);
 
         IAsyncAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
@@ -146,6 +146,6 @@ namespace Raven.Client.Documents.Session
 
         IAsyncSuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
-        IAsyncSuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionFactory<T>> factory);
+        IAsyncSuggestionDocumentQuery<T> SuggestUsing(Action<ISuggestionBuilder<T>> builder);
     }
 }

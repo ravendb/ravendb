@@ -4,24 +4,24 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public interface IMoreLikeThisFactoryBase<T>
+    public interface IMoreLikeThisBuilderBase<T>
     {
         IMoreLikeThisOperations<T> UsingAnyDocument();
 
         IMoreLikeThisOperations<T> UsingDocument(string documentJson);
     }
 
-    public interface IMoreLikeThisFactory<T> : IMoreLikeThisFactoryBase<T>
+    public interface IMoreLikeThisBuilder<T> : IMoreLikeThisBuilderBase<T>
     {
         IMoreLikeThisOperations<T> UsingDocument(Expression<Func<T, bool>> predicate);
     }
 
-    public interface IMoreLikeThisFactoryForDocumentQuery<T> : IMoreLikeThisFactoryBase<T>
+    public interface IMoreLikeThisBuilderForDocumentQuery<T> : IMoreLikeThisBuilderBase<T>
     {
         IMoreLikeThisOperations<T> UsingDocument(Action<IFilterDocumentQueryBase<T, IDocumentQuery<T>>> predicate);
     }
 
-    public interface IMoreLikeThisFactoryForAsyncDocumentQuery<T> : IMoreLikeThisFactoryBase<T>
+    public interface IMoreLikeThisBuilderForAsyncDocumentQuery<T> : IMoreLikeThisBuilderBase<T>
     {
         IMoreLikeThisOperations<T> UsingDocument(Action<IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>> predicate);
     }
@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         IMoreLikeThisOperations<T> WithOptions(MoreLikeThisOptions options);
     }
 
-    internal class MoreLikeThisFactory<T> : IMoreLikeThisFactory<T>, IMoreLikeThisFactoryForDocumentQuery<T>, IMoreLikeThisFactoryForAsyncDocumentQuery<T>, IMoreLikeThisOperations<T>
+    internal class MoreLikeThisBuilder<T> : IMoreLikeThisBuilder<T>, IMoreLikeThisBuilderForDocumentQuery<T>, IMoreLikeThisBuilderForAsyncDocumentQuery<T>, IMoreLikeThisOperations<T>
     {
         public IMoreLikeThisOperations<T> UsingAnyDocument()
         {

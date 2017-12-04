@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Queries.Facets
 {
     public interface IAggregationQuery<T>
     {
-        IAggregationQuery<T> AndAggregateBy(Action<IFacetFactory<T>> factory = null);
+        IAggregationQuery<T> AndAggregateBy(Action<IFacetBuilder<T>> builder = null);
         IAggregationQuery<T> AndAggregateBy(FacetBase facet);
         Dictionary<string, FacetResult> Execute();
         Task<Dictionary<string, FacetResult>> ExecuteAsync();

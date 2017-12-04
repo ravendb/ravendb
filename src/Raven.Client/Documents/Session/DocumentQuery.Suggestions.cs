@@ -11,10 +11,10 @@ namespace Raven.Client.Documents.Session
             return new SuggestionDocumentQuery<T>(this);
         }
 
-        ISuggestionDocumentQuery<T> IDocumentQuery<T>.SuggestUsing(Action<ISuggestionFactory<T>> factory)
+        ISuggestionDocumentQuery<T> IDocumentQuery<T>.SuggestUsing(Action<ISuggestionBuilder<T>> builder)
         {
-            var f = new SuggestionFactory<T>();
-            factory.Invoke(f);
+            var f = new SuggestionBuilder<T>();
+            builder.Invoke(f);
 
             SuggestUsing(f.Suggestion);
 

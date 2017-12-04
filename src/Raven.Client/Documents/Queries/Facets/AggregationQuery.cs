@@ -30,10 +30,10 @@ namespace Raven.Client.Documents.Queries.Facets
             _aggregateByMethod = aggregateByMethod;
         }
 
-        public IAggregationQuery<T> AndAggregateBy(Action<IFacetFactory<T>> factory = null)
+        public IAggregationQuery<T> AndAggregateBy(Action<IFacetBuilder<T>> builder = null)
         {
-            var f = new FacetFactory<T>();
-            factory?.Invoke(f);
+            var f = new FacetBuilder<T>();
+            builder?.Invoke(f);
 
             return AndAggregateBy(f.Facet);
         }
