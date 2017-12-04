@@ -61,23 +61,18 @@ class indexFieldOptions {
 
     indexing = ko.observable<Raven.Client.Documents.Indexes.FieldIndexing>();
     effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
-    defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
 
     storage = ko.observable<Raven.Client.Documents.Indexes.FieldStorage>();
     effectiveStorage = this.effectiveComputed(x => x.storage());
-    defaultStorage = this.defaultComputed(x => x.storage());
 
     suggestions = ko.observable<boolean>();
     effectiveSuggestions = this.effectiveComputed(x => x.suggestions(), yesNoLabelProvider);
-    defaultSuggestions = this.defaultComputed(x => x.suggestions(), yesNoLabelProvider);
 
     termVector = ko.observable<Raven.Client.Documents.Indexes.FieldTermVector>();
     effectiveTermVector = this.effectiveComputed(x => x.termVector(), labelMatcher(indexFieldOptions.TermVectors));
-    defaultTermVector = this.defaultComputed(x => x.termVector(), labelMatcher(indexFieldOptions.TermVectors));
 
     fullTextSearch = ko.observable<boolean>();
     effectiveFullTextSearch = this.effectiveComputed(x => x.fullTextSearch(), yesNoLabelProvider);
-    defaultFullTextSearch = this.defaultComputed(x => x.fullTextSearch(), yesNoLabelProvider);
 
     spatial = ko.observable<spatialOptions>();
 
@@ -151,10 +146,6 @@ class indexFieldOptions {
         return ko.pureComputed(() => this.extractEffectiveValue(x => extractor(x), true, labelProvider));
     }
 
-    private defaultComputed<T>(extractor: (field: indexFieldOptions) => T, labelProvider?: (arg: T) => string): KnockoutComputed<string> {
-        return ko.pureComputed(() => "Default (" + this.parent().extractEffectiveValue(x => extractor(x), false, labelProvider) + ")");
-    }
-
     private extractEffectiveValue<T>(extractor: (field: indexFieldOptions) => T, wrapWithDefault: boolean, labelProvider?: (arg: T) => string): string {
         const candidates = [] as T[];
 
@@ -170,7 +161,7 @@ class indexFieldOptions {
 
         const label = labelProvider ? labelProvider(value) : value;
 
-        return (index > 0 && wrapWithDefault) ? "Default (" + label + ")" : <any>label;
+        return (index > 0 && wrapWithDefault) ? "Default" : <any>label;
     }
 
     private initValidation() {

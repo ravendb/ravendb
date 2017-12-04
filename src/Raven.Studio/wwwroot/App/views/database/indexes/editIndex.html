@@ -369,7 +369,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                                 <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: storage.bind(storage, null)"><span data-bind="text: defaultStorage"></span></a></li>
+                                <li><a href="#" data-bind="click: storage.bind(storage, null)"><span>Default</span></a></li>
                                 <li><a href="#" data-bind="click: storage.bind(storage, 'Yes')"><span>Yes</span></a></li>
                                 <li><a href="#" data-bind="click: storage.bind(storage, 'No')"><span>No</span></a></li>
                             </ul>
@@ -383,7 +383,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                                 <span data-bind="text: effectiveFullTextSearch"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, null)"><span data-bind="text: defaultFullTextSearch"></span></a></li>
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, null)"><span>Default</span></a></li>
                                 <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, true)"><span>Yes</span></a></li>
                                 <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, false)"><span>No</span></a></li>
                             </ul>
@@ -411,7 +411,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                                 <span data-bind="text: effectiveSuggestions"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, null)"><span data-bind="text: defaultSuggestions"></span></a></li>
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, null)"><span>Default</span></a></li>
                                 <li><a href="#" data-bind="click: suggestions.bind(suggestions, true)"><span>Yes</span></a></li>
                                 <li><a href="#" data-bind="click: suggestions.bind(suggestions, false)"><span>No</span></a></li>
                             </ul>
@@ -440,7 +440,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                                 <span data-bind="text: effectiveTermVector"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: termVector.bind(termVector, null)"><span data-bind="text: defaultTermVector"></span></a></li>
+                                <li><a href="#" data-bind="click: termVector.bind(termVector, null)"><span>Default</span></a></li>
                                 <!-- ko foreach: $data.constructor.TermVectors -->
                                 <li><a href="#" data-bind="click: $parent.termVector.bind($parent.termVector, value)"><span data-bind="text: label"></span></a></li>
                                 <!-- /ko -->
@@ -455,7 +455,7 @@ docs<span class="token punctuation">.</span>People<span class="token punctuation
                                 <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a></li>
+                                <li><a href="#" data-bind="click: indexing.bind(indexing, null)"><span>Default</span></a></li>
                                 <!-- ko foreach: $data.constructor.Indexing -->
                                 <li><a href="#" data-bind="click: $parent.indexing.bind($parent.indexing, value)"><span data-bind="text: label"></span></a></li>
                                 <!-- /ko -->
