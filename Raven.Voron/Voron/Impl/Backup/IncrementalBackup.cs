@@ -136,17 +136,16 @@ namespace Voron.Impl.Backup
                                 numberOfBackedUpPages += pagesToCopy;
                             }
 
-
                             env.HeaderAccessor.Modify(header =>
                             {
                                 header->IncrementalBackup.LastBackedUpJournal = lastBackedUpFile;
                                 header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
                             });
                         }
-                        catch (Exception)
+                        catch (Exception e)
                         {
                             backupSuccess = false;
-                            throw;
+                            throw e;
                         }
                         finally
                         {

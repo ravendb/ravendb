@@ -384,7 +384,7 @@ namespace Voron.Impl.Journal
         {
             private const long DelayedDataFileSynchronizationBytesLimit = 128L * 1024 * 1024; //128MB
             private readonly TimeSpan _delayedDataFileSynchronizationTimeLimit = TimeSpan.FromMinutes(1);
-            private readonly Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
+            private Dictionary<long, JournalFile> _journalsToDelete = new Dictionary<long, JournalFile>();
             private readonly object _flushingLock = new object();
             private readonly WriteAheadJournal _waj;
             private long _lastSyncedTransactionId;
@@ -595,15 +595,21 @@ namespace Voron.Impl.Journal
 
                 UpdateFileHeaderAfterDataFileSync(_lastFlushedJournal, _lastSyncedTransactionId);
 
+                var lastBackedUpJournal = _waj._env.HeaderAccessor.Get(header => header->IncrementalBackup).LastBackedUpJournal;
                 foreach (var toDelete in _journalsToDelete.Values)
                 {
-                    if (_waj._env.Options.IncrementalBackupEnabled == false)
-                        toDelete.DeleteOnClose = true;
+                    if (_waj._env.Options.IncrementalBackupEnabled &&
+                        toDelete.Number > lastBackedUpJournal)
+                        continue;
 
+                    toDelete.DeleteOnClose = true;
                     toDelete.Release();
                 }
 
-                _journalsToDelete.Clear();
+                //we marked for deletion all journals which were backed up, the rest need to be deleted in the future
+                _journalsToDelete = _journalsToDelete.Where(kvp => kvp.Key > lastBackedUpJournal)
+                                                     .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                
                 _totalWrittenButUnsyncedBytes = 0;
                 _lastDataFileSyncTime = DateTime.UtcNow;
             }
@@ -812,8 +818,13 @@ namespace Voron.Impl.Journal
 
             internal void DeleteCurrentAlreadyFlushedJournal()
             {
+                var current = _waj._files.First();
                 if (_waj._env.Options.IncrementalBackupEnabled)
-                    return;
+                {
+                    var lastBackedUpJournal = _waj._env.HeaderAccessor.Get(header => header->IncrementalBackup).LastBackedUpJournal;
+                    if(current.Number <= lastBackedUpJournal)
+                        return;
+                }
 
                 if (_waj._files.Count == 0)
                     return;
@@ -821,7 +832,6 @@ namespace Voron.Impl.Journal
                 if (_waj._files.Count != 1)
                     throw new InvalidOperationException("Cannot delete current journal because there is more journals being in use");
 
-                var current = _waj._files.First();
 
                 if (current.Number != _lastSyncedJournal)
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
