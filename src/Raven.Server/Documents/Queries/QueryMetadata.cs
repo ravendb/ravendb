@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException("Unable to figure out how to deal with include of type " + include.Type, QueryText, parameters);
                 }
 
-                var expressionPath = ParseExpressionPath(include, path, parameters);
+                var expressionPath = ParseExpressionPath("INCLUDE", include, path, parameters);
                 includes.Add(expressionPath.Path);
             }
             Includes = includes.ToArray();
@@ -371,13 +371,13 @@ namespace Raven.Server.Documents.Queries
                 parameters);
         }
 
-        private (string Path, string LoadFromAlias) ParseExpressionPath(QueryExpression expr, string path, BlittableJsonReaderObject parameters)
+        private (string Path, string LoadFromAlias) ParseExpressionPath(string clause, QueryExpression expr, string path, BlittableJsonReaderObject parameters)
         {
             var indexOf = path.IndexOf('.');
             if (indexOf == -1)
                 return (path, null);
             if (Query.From.Alias == null)
-                ThrowInvalidWith(expr, "LOAD clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
+                ThrowInvalidWith(expr, clause + " clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
             Debug.Assert(Query.From.Alias != null);
 
             var compare = string.Compare(
@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 string loadFromAlias;
-                (path, loadFromAlias) = ParseExpressionPath(load.Expression, path, parameters);
+                (path, loadFromAlias) = ParseExpressionPath("LOAD", load.Expression, path, parameters);
 
                 if (RootAliasPaths.TryAdd(alias, (path, array, parameter, quoted, loadFromAlias)) == false)
                 {
