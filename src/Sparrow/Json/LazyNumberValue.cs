@@ -12,7 +12,7 @@ namespace Sparrow.Json
         private decimal? _decimalVal;
         private long? _longVal;
         private ulong? _ulongVal;
-
+                
         public LazyNumberValue(LazyStringValue inner)
         {
             Inner = inner;
@@ -55,6 +55,9 @@ namespace Sparrow.Json
                 return self._val.Value;
 
             var val = double.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+                    
+            
+            
             self._val = val;
             return val;
         }

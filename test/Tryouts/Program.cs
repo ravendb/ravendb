@@ -9,6 +9,7 @@ using FastTests.Server.Documents.Indexing.MapReduce;
 using Raven.Server.Utils;
 using SlowTests.Issues;
 using SlowTests.Voron.Issues;
+using FastTests.Server.Documents.Indexing.Static;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -35,16 +36,8 @@ namespace Tryouts
             for (int i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var test = new RavenDB_9104())
-                    test.EmptyListAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.ListContainingNullAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.ListWithRatingAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.ListWithRatingNullAsync().Wait();
-                using (var test = new RavenDB_9104())
-                    test.NullListAsync().Wait();
+                using (var test = new RavenDB_7691())
+                    test.CanIndexBigNumbersEdgeCases().Wait();                
             }
         }
 
