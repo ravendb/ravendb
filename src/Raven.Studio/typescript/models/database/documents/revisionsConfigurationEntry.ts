@@ -34,7 +34,7 @@ class revisionsConfigurationEntry {
         this.limitRevisionsByAge(dto.MinimumRevisionAgeToKeep != null);
         this.minimumRevisionAgeToKeep(dto.MinimumRevisionAgeToKeep ? generalUtils.timeSpanToSeconds(dto.MinimumRevisionAgeToKeep) : null);
 
-        this.disabled(!dto.Active);
+        this.disabled(dto.Disabled);
         this.purgeOnDelete(dto.PurgeOnDelete);
         this.isDefault = ko.pureComputed<boolean>(() => this.collection() === revisionsConfigurationEntry.DefaultConfiguration);
 
@@ -95,7 +95,7 @@ class revisionsConfigurationEntry {
 
     toDto(): Raven.Client.ServerWide.Revisions.RevisionsCollectionConfiguration {
         return {
-            Active: !this.disabled(),
+            Disabled: this.disabled(),
             MinimumRevisionsToKeep: this.limitRevisions() ? this.minimumRevisionsToKeep() : null,
             MinimumRevisionAgeToKeep: this.limitRevisionsByAge() ? generalUtils.formatAsTimeSpan(this.minimumRevisionAgeToKeep() * 1000) : null,
             PurgeOnDelete: this.purgeOnDelete()
@@ -105,7 +105,7 @@ class revisionsConfigurationEntry {
     static empty() {
         return new revisionsConfigurationEntry("",
         {
-            Active: true,
+            Disabled: false,
             MinimumRevisionsToKeep: null,
             MinimumRevisionAgeToKeep: null,
             PurgeOnDelete: false
