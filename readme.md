@@ -63,8 +63,8 @@ Prerequsites:
 Windows
 -------
 Microsoft Visual C++ 2015 Redistributable Package should be installed prior to RavenDB launch.
-https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads
-See also: https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites
+[Visual C++ Downloads](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+See also: [Windows Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites)
 
 
 Linux/MacOS
@@ -81,8 +81,8 @@ You might need to also install additional packages, for example,
 apt-get install libunwind8 liblttng-ust0 libcurl3 libssl1.0.0 libuuid1 libkrb5 zlib1g libicu55
 ```
 
-See also: https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites or 
-https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites
+See also: [Linux Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites) or 
+[MacOS Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites)
 
 Lauch RavenDB:
 -------------
@@ -108,7 +108,7 @@ Hello World Example:
 ```
    <path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
 ```
-2. Install dotnet core sdk. See : https://www.microsoft.com/net/download and https://github.com/PowerShell/PowerShell/releases
+2. Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
 3. Open terminal and type:
 
 ```
@@ -118,8 +118,8 @@ Hello World Example:
 ```
 
 4. Replace the following files content:
- - replace https://github.com/ravendb/ravendb/blob/v4.0/Program.cs content with the content of example.cs 
- - replace https://github.com/ravendb/ravendb/blob/v4.0/HelloWorld.csproj content with the content of example.csproj 
+ - replace [Program.cs](https://github.com/ravendb/ravendb/blob/v4.0/Program.cs) content with the content of example.cs 
+ - replace [HelloWorld.csproj](https://github.com/ravendb/ravendb/blob/v4.0/HelloWorld.csproj) content with the content of example.csproj 
 
 5. Type:
 ```
