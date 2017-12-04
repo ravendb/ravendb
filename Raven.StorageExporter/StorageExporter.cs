@@ -320,7 +320,7 @@ namespace Raven.StorageExporter
 
         private List<string> _filteredFilesystemProperties = new List<string>
             {
-                "Raven-Synchronization-History" , "Raven-Synchronization-Version", "Raven-Synchronization-Source", "ETag", "Raven-Creation-Date" , "Raven-Last-Modified" , "Origin" , "Content-MD5" 
+                "Raven-Synchronization-History" , "Raven-Synchronization-Version", "Raven-Synchronization-Source", "ETag", "Raven-Creation-Date" , "Raven-Last-Modified" , "Origin" , "Content-MD5", "RavenFS-Size"
             };
 
         private void WriteFilesAsAttachments(JsonTextWriter jsonWriter)
@@ -341,11 +341,16 @@ namespace Raven.StorageExporter
                 try
                 {
                     previousFilesCount = currentFilesCount;
+                    var hadFiles = false;
+
                     fileStorage.Batch(accsesor =>
                     {
                         var fileHeaders = accsesor.GetFilesAfter(lastEtag, batchSize);
+
                         foreach (var header in fileHeaders)
                         {      
+                            hadFiles = true;
+
                             if(ShouldSkipFile(header))
                                 continue;
                             var file = StorageStream.Reading(fileStorage, header.FullPath);
@@ -353,6 +358,7 @@ namespace Raven.StorageExporter
                             jsonWriter.WritePropertyName("Data");
                             WriteFileAsBase64(jsonWriter, file);
                             jsonWriter.WritePropertyName("Metadata");
+                            var fileEtag = header.Etag;
                             var metadata = FilterMetadataProperties(header.Metadata);
                             metadata.WriteTo(jsonWriter);
                             jsonWriter.WritePropertyName("Key");
@@ -361,12 +367,15 @@ namespace Raven.StorageExporter
                             jsonWriter.WritePropertyName("Etag");
                             jsonWriter.WriteNull();
                             jsonWriter.WriteEndObject();
-                            lastEtag = header.Etag;
+                            lastEtag = fileEtag;
                             currentFilesCount++;
                             if (currentFilesCount % batchSize == 0)
                                 ReportProgress("files", currentFilesCount, totalFilesCount);
                         }
                     });
+
+                    if (hadFiles == false)
+                        break;
                 }
                 catch (Exception e)
                 {
