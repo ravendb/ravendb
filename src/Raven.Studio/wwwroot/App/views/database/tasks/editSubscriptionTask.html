@@ -81,7 +81,7 @@
                             <div class="form-group" data-bind="visible: startingPointChangeVector() && setStartingPoint(), validationElement: startingChangeVector">
                                 <label class="control-label">Change Vector :</label>
                                 <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }">
-                                    <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, enable: setStartingPoint }"></textarea>
+                                    <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, enable: setStartingPoint"></textarea>
                                     <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
                                     <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>
                                 </div>
