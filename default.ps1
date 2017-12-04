@@ -19,6 +19,7 @@ properties {
 	$release_dir = "$base_dir\Release"
 	$uploader = "..\Uploader\S3Uploader.exe"
 	$global:configuration = "Release"
+	$msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
 	
 	$core_db_dlls = @(
         "Raven.Abstractions.???", 
@@ -103,9 +104,7 @@ task Compile -depends Init {
 	
 	"Dummy file so msbuild knows there is one here before embedding as resource." | Out-File "$base_dir\Raven.Database\Server\WebUI\Raven.Studio.xap"
 	
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"$msbuild" "$base_dir\Utilities\Raven.ProjectRewriter\Raven.ProjectRewriter.csproj" /p:OutDir="$buildartifacts_dir\" }
 	exec { &"$build_dir\Raven.ProjectRewriter.exe" }
 	
 	$dat = "$base_dir\..\BuildsInfo\RavenDB\Settings.dat"
@@ -119,7 +118,7 @@ task Compile -depends Init {
 	}
 	
 	Write-Host "Compiling with '$global:configuration' configuration" -ForegroundColor Yellow
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
+	exec { &"$msbuild" "$sln_file" /p:Configuration=$global:configuration /p:nowarn="1591 1573" }
 	remove-item "$build_dir\nlog.config" -force  -ErrorAction SilentlyContinue
 }
 
@@ -278,8 +277,7 @@ task CopySamples {
 		Remove-Item "$sample_dir\Servers\Shard2\RavenDB.exe" -force -recurse -ErrorAction SilentlyContinue 
 	}
 	
-	$v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
-	exec { &"C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
+	exec { &"$msbuild" "$base_dir\Utilities\Raven.Samples.PrepareForRelease\Raven.Samples.PrepareForRelease.csproj" /p:OutDir="$buildartifacts_dir\" }
 	exec { &"$build_dir\Raven.Samples.PrepareForRelease.exe" "$build_dir\Output\Samples\Raven.Samples.sln" "$build_dir\Output" }
 }
 
