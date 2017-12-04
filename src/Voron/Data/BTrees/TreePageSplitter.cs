@@ -102,7 +102,7 @@ namespace Voron.Data.BTrees
                     if (_page.LastSearchPosition >= _page.NumberOfEntries)
                     {
                         var pos = OptimizedOnlyMoveNewValueToTheRightPage(rightPage);
-                        RecompressPageIfNeeded();
+                        RecompressPageIfNeeded(wasModified: false);
 
                         return pos;
                     }
@@ -112,11 +112,11 @@ namespace Voron.Data.BTrees
             }
         }
 
-        private void RecompressPageIfNeeded()
+        private void RecompressPageIfNeeded(bool wasModified)
         {
             if (_pageDecompressed == null)
                 return;
-            _pageDecompressed.CopyToOriginal(_tx, defragRequired: false);
+            _pageDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: wasModified);
             _tree.DecompressionsCache.Invalidate(_pageDecompressed.PageNumber, DecompressionUsage.Read);
             _page = _pageDecompressed.Original;
         }
@@ -275,14 +275,14 @@ namespace Voron.Data.BTrees
 
                     if (rightDecompressed != null)
                     {
-                        rightDecompressed.CopyToOriginal(_tx, defragRequired: false);
+                        rightDecompressed.CopyToOriginal(_tx, defragRequired: false, wasModified: true);
                         rightPage = rightDecompressed.Original;
                     }
                 }
 
                 _page.Truncate(_tx, splitIndex);
 
-                RecompressPageIfNeeded();
+                RecompressPageIfNeeded(wasModified: true);
 
                 byte* pos;
 

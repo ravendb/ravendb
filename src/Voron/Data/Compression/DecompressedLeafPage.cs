@@ -42,7 +42,7 @@ namespace Voron.Data.Compression
             _disposed = true;
         }
 
-        public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired)
+        public void CopyToOriginal(LowLevelTransaction tx, bool defragRequired, bool wasModified)
         {
             if (CalcSizeUsed() < Original.PageMaxSpace)
             {
@@ -54,22 +54,30 @@ namespace Voron.Data.Compression
                 for (var i = 0; i < NumberOfEntries; i++)
                 {
                     var node = GetNode(i);
-                    Slice slice;
-                    using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out slice))
+                    using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out var slice))
                         Original.CopyNodeDataToEndOfPage(node, slice);
                 }
             }
             else
             {
-                CompressionResult compressed;
-                using (LeafPageCompressor.TryGetCompressedTempPage(tx, this, out compressed, defrag: defragRequired))
+                using (LeafPageCompressor.TryGetCompressedTempPage(tx, this, out var compressed, defrag: defragRequired))
                 {
                     if (compressed == null)
-                        throw new InvalidOperationException("Could not compress a page which was already compressed. Should never happen");
+                    {
+                        if (wasModified == false)
+                            return;
+
+                        ThrowCouldNotCompressDecompressedPage(PageNumber);
+                    } 
 
                     LeafPageCompressor.CopyToPage(compressed, Original);
                 }
             }
+        }
+
+        private static void ThrowCouldNotCompressDecompressedPage(long pageNumber)
+        {
+            throw new InvalidOperationException($"Decompressed page #{pageNumber} could not be compressed back. Should never happen");
         }
     }
 }
