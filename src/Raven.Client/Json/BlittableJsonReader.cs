@@ -118,10 +118,14 @@ namespace Raven.Client.Json
                 return BlittableJsonToken.Null;
             if (val is int || val is long)
                 return BlittableJsonToken.Integer;
-            if (val is float || val is double || val is decimal || val is LazyNumberValue)
+            if (val is float || val is double || val is LazyNumberValue)
                 return BlittableJsonToken.LazyNumber;
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
+            if (val is decimal)
+            {
+                ThrowDoesNotSupportDeciamlValues();
+            }
             return BlittableJsonToken.StartObject;
         }
 
@@ -151,7 +155,7 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.LazyNumber:
-                    SetToken(JsonToken.Float, (double)((LazyNumberValue)value));
+                    SetToken(JsonToken.Float, (double)(LazyNumberValue)value);
                     return true;
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:
@@ -176,6 +180,9 @@ namespace Raven.Client.Json
                 return null;
             }
 
+            if (Value is LazyNumberValue lazyNumber)
+                return (int)lazyNumber;
+
             if (Value is int)
                 return (int)Value;
 
@@ -197,7 +204,7 @@ namespace Raven.Client.Json
                 return null;
             }
             return Value?.ToString();
-        }
+        }               
 
         public override byte[] ReadAsBytes()
         {
@@ -209,19 +216,29 @@ namespace Raven.Client.Json
 
         public override decimal? ReadAsDecimal()
         {
+            ThrowDoesNotSupportDeciamlValues();
+            return null;
+        }
+        
+        private static void ThrowDoesNotSupportDeciamlValues()
+        {
+            throw new NotSupportedException(
+                "RavenDB supports up to double percision floating point types, therefore it does not support decimal. Please use double type, or store value as string");
+        }
+
+        public override double? ReadAsDouble()
+        {
             if (!Read())
             {
                 SetToken(JsonToken.None);
                 return null;
             }
-            if (Value is double)
-                return (decimal)(double)Value;
-            if (Value is decimal)
-                return (decimal)Value;
             if (Value == null)
                 return null;
-            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);
-        }
+            if (Value is double)
+                return (double)Value;
+            return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
+        }                
 
         public override DateTime? ReadAsDateTime()
         {

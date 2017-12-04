@@ -147,9 +147,21 @@ namespace Raven.Client.Documents.Queries
             {
                 Write(b);
             }
+            else if (value is double d)
+            {
+                Write(d.ToString("G17"));
+            }
+            else if (value is float f)
+            {
+                Write(f.ToString("G9"));
+            }
             else if (value == null)
             {
                 // write nothing
+            }
+            else if (value is DateTimeOffset dto)
+            {
+                Write(dto.ToString("o"));
             }
             else if (value is IEnumerable e)
             {

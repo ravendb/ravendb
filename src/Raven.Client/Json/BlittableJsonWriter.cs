@@ -66,7 +66,7 @@ namespace Raven.Client.Json
                     else if (value is double)
                         _manualBlittableJsonDocumentBuilder.WriteValue((double)value);
                     else if (value is decimal)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((decimal)value);
+                        ThrowDoesNotSupportDecimalValues();
                     else if (value is float)
                         _manualBlittableJsonDocumentBuilder.WriteValue((float)value);
                     else if (value is bool)
@@ -184,6 +184,12 @@ namespace Raven.Client.Json
             }
         }
 
+        private static void ThrowDoesNotSupportDecimalValues()
+        {
+            throw new NotSupportedException(
+                "RavenDB supports up to double percision floating point types, therefore it does not support decimal. Please use double type, or store value as string");
+        }
+
         public override void WriteEndObject()
         {
             _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
@@ -261,7 +267,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(decimal value)
         {
-            _manualBlittableJsonDocumentBuilder.WriteValue(value);
+            ThrowDoesNotSupportDecimalValues();
         }
 
         public override void WriteValue(DateTime value)
@@ -337,10 +343,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(decimal? value)
         {
-            if (value != null)
-                _manualBlittableJsonDocumentBuilder.WriteValue((float)value.Value);
-            else
-                _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            throw new InvalidCastException("RavenDB supports up to double percision floating point types, therefore it does not support decimal. Please use double type, or store value as string");
         }
 
         public override void WriteValue(DateTime? value)

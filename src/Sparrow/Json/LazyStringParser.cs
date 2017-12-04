@@ -104,9 +104,15 @@ namespace Sparrow.Json
                 }
             }
 
-            ts = new TimeSpan(days, hours, minutes, seconds).Add(TimeSpan.FromTicks(ticks));
+            
             if (negate)
-                ts = -ts;
+            {
+                ts = new TimeSpan(days*-1, hours * -1, minutes * -1, seconds * -1).Add(TimeSpan.FromTicks(ticks * -1));
+            }
+            else
+            {
+                ts = new TimeSpan(days, hours, minutes, seconds).Add(TimeSpan.FromTicks(ticks));
+            }                
             return true;
         }
 
