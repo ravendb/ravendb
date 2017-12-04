@@ -59,14 +59,21 @@
                             <label class="control-label">Connection String</label>
                             <div class="flex-grow">
                                 <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsNames().length === 0">
+                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsDetails().length === 0,
+                                                   attr: { 'title': $root.ravenEtlConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
                                     <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 </button>
                                 <ul class="dropdown-menu max-height"
-                                    data-bind="foreach: $root.ravenEtlConnectionStringsNames">
-                                    <li data-bind="click: _.partial($root.useConnectionString, $data)">
-                                        <a href="#" data-bind="text: $data"></a>
+                                    data-bind="foreach: $root.ravenEtlConnectionStringsDetails">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">                                       
+                                        <a href="#">
+                                            <div class="row">                                               
+                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>                                                
+                                                <small class="col-xs-2">Destination DB:</small>
+                                                <small class="col-xs-3" data-bind="text: $data.Database"></small>
+                                            </div>
+                                        </a>
                                     </li>
                                 </ul>
                                 <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
@@ -87,7 +94,7 @@
                                 </div>
                             </div>
                         </div>    
-                        <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsNames().length === 0 && !createNewConnectionString()">
+                        <div class="panel-addon" data-bind="visible: ravenEtlConnectionStringsDetails().length === 0 && !createNewConnectionString()">
                             <div class="padding bg-warning small">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
                                 <a data-bind="attr: { href: connectionStringsUrl }"> - Click here to define a new connection string</a>

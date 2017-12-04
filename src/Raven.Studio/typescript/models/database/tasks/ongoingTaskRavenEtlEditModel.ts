@@ -5,8 +5,6 @@ import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     
-    destinationDB = ko.observable<string>();        // Read-only data. Input data is through the connection string.
-    destinationURL = ko.observable<string>();       // Actual destination url where the targeted database is located. Read-only data.
     connectionStringName = ko.observable<string>(); // Contains list of discovery urls in the targeted cluster. The task communicates with these urls.
         
     allowEtlOnNonEncryptedChannel = ko.observable<boolean>(false);
@@ -88,7 +86,6 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
 
         if (dto.Configuration) {
             this.connectionStringName(dto.Configuration.ConnectionStringName);
-            this.destinationURL(dto.DestinationUrl || 'N/A');
             this.transformationScripts(dto.Configuration.Transforms.map(x => new ongoingTaskRavenEtlTransformationModel(x, false, false)));
             this.manualChooseMentor(!!dto.Configuration.MentorNode);
             this.preferredMentor(dto.Configuration.MentorNode);
