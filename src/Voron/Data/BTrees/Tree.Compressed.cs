@@ -299,7 +299,7 @@ namespace Voron.Data.BTrees
             }
             finally
             {
-                decompressed.CopyToOriginal(_llt, defragRequired: true);
+                decompressed.CopyToOriginal(_llt, defragRequired: true, wasModified: true);
             }
         }
 
