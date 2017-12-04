@@ -155,7 +155,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                     throw new IndexInvalidException($"In order to create the '{definition.Name}' index " +
                                                     $"which would output reduce results to documents in the '{outputReduceToCollection}' collection, " +
                                                     $"you firstly need to delete all of the documents in the '{stats.Name}' collection " +
-                                                    $"(currenlty have {stats.Count} document{(stats.Count == 1 ? "" : "s")}).");
+                                                    $"(currently have {stats.Count} document{(stats.Count == 1 ? "" : "s")}).");
                 }
             }
         }
