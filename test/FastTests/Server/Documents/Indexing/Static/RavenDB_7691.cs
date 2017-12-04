@@ -54,10 +54,8 @@ namespace FastTests.Server.Documents.Indexing.Static
         }
 
         [Fact]
-        public async Task ClientAPIDoesNotSupportDecimal()
+        public async Task ClientAPIDoesNotSupportDecimalBiggerThenDouble()
         {
-            const string documentId = "doubleValues/1";
-
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -67,7 +65,30 @@ namespace FastTests.Server.Documents.Indexing.Static
                         DecimalVal = decimal.MaxValue
                     });
                     await Assert.ThrowsAsync<NotSupportedException>(() => session.SaveChangesAsync());
-                }              
+                }
+                using (var session = store.OpenAsyncSession())
+                { 
+                    decimal minDoublePercisionDecimal = (decimal)(double.MinValue / Math.Pow(10, 308));
+                    decimal maxDoublePercisionDecimal = (decimal)(double.MaxValue / Math.Pow(10, 308));
+                    
+                    await session.StoreAsync(new TypeWithDecimal()
+                    {
+                        DecimalVal = minDoublePercisionDecimal
+                    }, "docs/1");
+                    await session.SaveChangesAsync();
+
+                    await session.StoreAsync(new TypeWithDecimal()
+                    {
+                        DecimalVal = maxDoublePercisionDecimal
+                    }, "docs/2");
+                    await session.SaveChangesAsync();
+
+                    var typeWithDecimal = await session.LoadAsync<TypeWithDecimal>("docs/1");
+                    Assert.Equal(minDoublePercisionDecimal, typeWithDecimal.DecimalVal);
+
+                    typeWithDecimal = await session.LoadAsync<TypeWithDecimal>("docs/2");
+                    Assert.Equal(maxDoublePercisionDecimal, typeWithDecimal.DecimalVal);
+                }
             }
         }
 

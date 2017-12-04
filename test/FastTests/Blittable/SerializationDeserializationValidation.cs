@@ -28,10 +28,7 @@ namespace FastTests.Blittable
             public double doubleNegativeInfinity;
             public double doublePositiveInfinity;
             public double doubleNan;
-            public double doubleEpsilon;
-            public decimal decimalMinVal;
-            public decimal deciamlMaxVal;
-            public decimal decimalMaxPercision;
+            public double doubleEpsilon;                        
             public float floatMinVal;
             public float floatMaxVal;
             public float floatMaxPercision;
@@ -69,10 +66,7 @@ namespace FastTests.Blittable
                 doubleNegativeInfinity = double.NegativeInfinity,
                 doublePositiveInfinity = double.PositiveInfinity,
                 doubleNan = double.NaN,
-                doubleEpsilon = double.Epsilon,
-                decimalMinVal = decimal.MinValue,
-                deciamlMaxVal = decimal.MaxValue,
-                decimalMaxPercision = decimal.Parse(string.Join("", Enumerable.Repeat(1, 28))),
+                doubleEpsilon = double.Epsilon,                                
                 floatMinVal = float.MinValue,
                 floatMaxVal = float.MaxValue,
                 floatMaxPercision = float.Epsilon,
@@ -109,11 +103,8 @@ namespace FastTests.Blittable
                 Assert.Equal(values.doubleMaxVal, valuesDeserialized.doubleMaxVal);
                 Assert.Equal(values.doubleNegativeInfinity, valuesDeserialized.doubleNegativeInfinity);
                 Assert.Equal(values.doublePositiveInfinity, valuesDeserialized.doublePositiveInfinity);
-                Assert.Equal(values.doubleNan, valuesDeserialized.doubleNan); //todo: we do not support this
-                Assert.Equal(values.doubleEpsilon, valuesDeserialized.doubleEpsilon);
-                Assert.Equal(values.decimalMinVal, valuesDeserialized.decimalMinVal); //todo: we do not support this
-                Assert.Equal(values.deciamlMaxVal, valuesDeserialized.deciamlMaxVal); //todo: we do not support this
-                Assert.Equal(values.decimalMaxPercision, valuesDeserialized.decimalMaxPercision); //todo: we do not support this
+                Assert.Equal(values.doubleNan, valuesDeserialized.doubleNan); 
+                Assert.Equal(values.doubleEpsilon, valuesDeserialized.doubleEpsilon);                                
                 Assert.Equal(values.floatMinVal, valuesDeserialized.floatMinVal);
                 Assert.Equal(values.floatMaxVal, valuesDeserialized.floatMaxVal);
                 Assert.Equal(values.floatMaxPercision, valuesDeserialized.floatMaxPercision);
