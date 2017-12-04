@@ -150,7 +150,6 @@ namespace Raven.Client.Http
             if (certificate != null)
                 thumbprint = certificate.Thumbprint;
 
-
             if (GlobalHttpClient.TryGetValue(thumbprint, out var lazyClient) == false)
             {
                 lazyClient = GlobalHttpClient.GetOrAdd(thumbprint, new Lazy<HttpClient>(CreateClient));
@@ -432,8 +431,7 @@ namespace Raven.Client.Http
                     {
                         Url = url,
                         Database = _databaseName
-                    }, Timeout.Infinite)
-                        .ConfigureAwait(false);
+                    }, Timeout.Infinite).ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
                     return;
@@ -1105,12 +1103,28 @@ namespace Raven.Client.Http
             }
             else
             {
-                httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+                try
+                {
+                    httpMessageHandler.ServerCertificateCustomValidationCallback += OnServerCertificateCustomValidationCallback;
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    // The user can set the following manually:
+                    // ServicePointManager.ServerCertificateValidationCallback += OnServerCertificateCustomValidationCallback;
+                }
             }
             if (Certificate != null)
             {
                 httpMessageHandler.ClientCertificates.Add(Certificate);
-                httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+                try
+                {
+                    httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    // The user can set the following manually:
+                    // ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                }
 
                 ValidateClientKeyUsages(Certificate);
             }
