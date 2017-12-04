@@ -13,6 +13,7 @@ namespace Raven.Client.ServerWide
         public string Name;
         public string ConnectionStringName;
         public string MentorNode;
+        public long DelayReplicationFor; 
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
@@ -49,6 +50,7 @@ namespace Raven.Client.ServerWide
             json[nameof(Name)] = Name;
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(DelayReplicationFor)] = DelayReplicationFor;
             return json;
         }
 
