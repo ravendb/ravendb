@@ -338,14 +338,14 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var newIndexId = Database.IndexStore.ResetIndex(name);
+            var index = Database.IndexStore.ResetIndex(name);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
-                writer.WritePropertyName("IndexId");
-                writer.WriteInteger(newIndexId);
+                writer.WritePropertyName("Index");
+                writer.WriteIndexDefinition(context, index.GetIndexDefinition());
                 writer.WriteEndObject();
             }
 
@@ -607,7 +607,6 @@ namespace Raven.Server.Documents.Handlers
                 .Select(x => new IndexPerformanceStats
                 {
                     Name = x.Name,
-                    Etag = x.Etag,
                     Performance = x.GetIndexingPerformance()
                 })
                 .ToArray();
@@ -698,8 +697,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (names.Count == 0)
                 indexes = Database.IndexStore
-                    .GetIndexes()
-                    .OrderBy(x => x.Etag);
+                    .GetIndexes();
             else
             {
                 indexes = Database.IndexStore

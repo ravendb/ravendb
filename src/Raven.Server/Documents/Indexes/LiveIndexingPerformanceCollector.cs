@@ -54,7 +54,6 @@ namespace Raven.Server.Documents.Indexes
                     .Select(x => new IndexPerformanceStats
                     {
                         Name = x.Value.Index.Name,
-                        Etag = x.Value.Index.Etag,
                         Performance = x.Value.Index.GetIndexingPerformance()
                     })
                     .ToList();
@@ -110,7 +109,6 @@ namespace Raven.Server.Documents.Indexes
                     preparedStats.Add(new IndexPerformanceStats
                     {
                         Name = index.Name,
-                        Etag = index.Etag,
                         Performance = itemsToSend.Select(item => item.ToIndexingPerformanceLiveStatsWithDetails()).ToArray()
                     });
                 }
@@ -164,5 +162,4 @@ namespace Raven.Server.Documents.Indexes
             }
         }
     }
-
 }

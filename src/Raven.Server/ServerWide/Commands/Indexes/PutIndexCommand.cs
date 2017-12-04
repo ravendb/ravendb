@@ -22,7 +22,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Definition.Etag = etag;
             record.AddIndex(Definition);
             return null;
         }

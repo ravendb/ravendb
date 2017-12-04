@@ -12,10 +12,5 @@ namespace Raven.Client.Documents.Indexes
         /// Gets or sets the total results for this query
         /// </summary>
         public string Index { get; set; }
-
-        /// <summary>
-        /// Gets or sets the total results for this query
-        /// </summary>
-        public int IndexId { get; set; }
     }
 }

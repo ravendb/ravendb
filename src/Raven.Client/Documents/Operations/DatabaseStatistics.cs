@@ -92,7 +92,6 @@ namespace Raven.Client.Documents.Operations
 
     public class IndexInformation
     {
-        public long Etag { get; set; }
 
         public string Name { get; set; }
 

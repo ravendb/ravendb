@@ -68,7 +68,7 @@ namespace FastTests.Server.Documents.Tombstones
         public async Task Cleanup()
         {
             using (var database = CreateDocumentDatabase())
-            using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[]
+            using (var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {

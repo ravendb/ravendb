@@ -10,13 +10,11 @@ namespace Raven.Server.Documents.Indexes
 {
     public class CollectionOfIndexes : IEnumerable<Index>
     {
-        private readonly ConcurrentDictionary<long, Index> _indexesByEtag = new ConcurrentDictionary<long, Index>();
         private readonly ConcurrentDictionary<string, Index> _indexesByName = new ConcurrentDictionary<string, Index>(StringComparer.OrdinalIgnoreCase);
         private readonly ConcurrentDictionary<string, ConcurrentSet<Index>> _indexesByCollection = new ConcurrentDictionary<string, ConcurrentSet<Index>>(StringComparer.OrdinalIgnoreCase);
 
         public void Add(Index index)
         {
-            _indexesByEtag[index.Etag] = index;
             _indexesByName[index.Name] = index;
 
             foreach (var collection in index.Definition.Collections)
@@ -44,34 +42,13 @@ namespace Raven.Server.Documents.Indexes
 
                 indexes.TryRemove(oldIndex);
             }
-            _indexesByEtag.TryRemove(oldIndex.Etag, out oldIndex);
-            _indexesByEtag.TryAdd(newIndex.Etag, newIndex);
         }
 
-        public void UpdateIndexEtag(long oldEtag, long newEtag)
+        public bool TryRemoveByName(string name, out Index index)
         {
-            _indexesByEtag.TryRemove(oldEtag, out Index value);
-            _indexesByEtag.TryAdd(newEtag, value);
-            value.Etag = newEtag;
-        }
-
-        public bool TryGetByEtag(long etag, out Index index)
-        {
-            return _indexesByEtag.TryGetValue(etag, out index);
-        }
-
-        public bool TryGetByName(string name, out Index index)
-        {
-            return _indexesByName.TryGetValue(name, out index);
-        }
-
-        public bool TryRemoveByEtag(long etag, out Index index)
-        {
-            var result = _indexesByEtag.TryRemove(etag, out index);
+            var result = _indexesByName.TryRemove(name, out index);
             if (result == false)
                 return false;
-
-            _indexesByName.TryRemove(index.Name, out index);
 
             foreach (var collection in index.Definition.Collections)
             {
@@ -82,6 +59,12 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return true;
+        }
+
+
+        public bool TryGetByName(string name, out Index index)
+        {
+            return _indexesByName.TryGetValue(name, out index);
         }
 
         public IEnumerable<Index> GetForCollection(string collection)
@@ -107,6 +90,6 @@ namespace Raven.Server.Documents.Indexes
         /// <summary>
         /// This value should be used sparingly: fetching it locks the cache.
         /// </summary>
-        public int Count => _indexesByEtag.Count;
+        public int Count => _indexesByName.Count;
     }
 }

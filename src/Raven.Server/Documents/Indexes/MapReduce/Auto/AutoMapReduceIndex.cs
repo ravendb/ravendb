@@ -30,27 +30,26 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
         private readonly MapOutput _output;
 
-        private AutoMapReduceIndex(long etag, AutoMapReduceIndexDefinition definition)
-            : base(etag, IndexType.AutoMapReduce, definition)
+        private AutoMapReduceIndex(AutoMapReduceIndexDefinition definition)
+            : base(IndexType.AutoMapReduce, definition)
         {
             _isFanout = definition.GroupByFields.Any(x => x.Value.GroupByArrayBehavior == GroupByArrayBehavior.ByIndividualValues);
            _output = new MapOutput(_isFanout);
         }
 
-        public static AutoMapReduceIndex CreateNew(long etag, AutoMapReduceIndexDefinition definition,
-            DocumentDatabase documentDatabase)
+        public static AutoMapReduceIndex CreateNew(AutoMapReduceIndexDefinition definition, DocumentDatabase documentDatabase)
         {
-            var instance = new AutoMapReduceIndex(etag, definition);
+            var instance = new AutoMapReduceIndex(definition);
             instance.Initialize(documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
 
             return instance;
         }
 
-        public static AutoMapReduceIndex Open(long etag, StorageEnvironment environment,
+        public static AutoMapReduceIndex Open(StorageEnvironment environment,
             DocumentDatabase documentDatabase)
         {
             var definition = AutoMapReduceIndexDefinition.Load(environment);
-            var instance = new AutoMapReduceIndex(etag, definition);
+            var instance = new AutoMapReduceIndex(definition);
             instance.Initialize(environment, documentDatabase, documentDatabase.Configuration.Indexing, documentDatabase.Configuration.PerformanceHints);
 
             return instance;

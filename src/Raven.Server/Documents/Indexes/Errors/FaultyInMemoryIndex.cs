@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly Exception _e;
 
-        public FaultyInMemoryIndex(Exception e, long etag, string name, IndexingConfiguration configuration)
-            : base(etag, IndexType.Faulty, new FaultyIndexDefinition(name ?? $"Faulty/Indexes/{etag}", new HashSet<string> { "@FaultyIndexes" },
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration)
+            : base(IndexType.Faulty, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" },
                    IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0]))
         {
             _e = e;
@@ -34,27 +34,27 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         protected override IIndexingWork[] CreateIndexWorkExecutors()
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override int HandleMap(LazyStringValue lowerId, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes.Errors
                 new IndexingError
                 {
                     Error = _e?.ToString(),
-                    Action = $"Index with etag {Etag} is in-memory implementation of a faulty index"
+                    Action = $"Index {Name} is in-memory implementation of a faulty index"
                 }
             };
         }
@@ -79,17 +79,15 @@ namespace Raven.Server.Documents.Indexes.Errors
             return new IndexProgress
             {
                 Name = Name,
-                Etag = Etag,
                 Type = Type
             };
         }
 
         public override IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false, DocumentsOperationContext documentsContext = null)
         {
-            return new IndexStats
+            return new IndexStats()
             {
                 Name = Name,
-                Etag = Etag,
                 Type = Type
             };
         }
@@ -108,47 +106,47 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         public override void SetPriority(IndexPriority priority)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override void SetState(IndexState state)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override void Enable()
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override void Disable()
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override void SetLock(IndexLockMode mode)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override Task StreamQuery(HttpResponse response, IStreamDocumentQueryResultWriter writer, IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override Task<DocumentQueryResult> Query(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
 
         public override TermsQueryResultServerSide GetTerms(string field, string fromValue, int pageSize, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
+            throw new NotSupportedException($"Index {Name} is in-memory implementation of a faulty index", _e);
         }
     }
 }

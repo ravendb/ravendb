@@ -13,11 +13,6 @@ namespace Raven.Client.Documents.Indexes
     public class IndexStats
     {
         /// <summary>
-        /// Index identifier.
-        /// </summary>
-        public long Etag { get; set; }
-
-        /// <summary>
         /// Index name.
         /// </summary>
         public string Name { get; set; }

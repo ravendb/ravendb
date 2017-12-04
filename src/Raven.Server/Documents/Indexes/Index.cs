@@ -64,8 +64,8 @@ namespace Raven.Server.Documents.Indexes
     {
         public new TIndexDefinition Definition => (TIndexDefinition)base.Definition;
 
-        protected Index(long etag, IndexType type, TIndexDefinition definition)
-            : base(etag, type, definition)
+        protected Index(IndexType type, TIndexDefinition definition)
+            : base(type, definition)
         {
         }
     }
@@ -180,12 +180,8 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
-        protected Index(long etag, IndexType type, IndexDefinitionBase definition)
+        protected Index(IndexType type, IndexDefinitionBase definition)
         {
-            if (etag <= 0)
-                throw new ArgumentException("Index etag must be greater than zero.", nameof(etag));
-
-            Etag = etag;
             Type = type;
             Definition = definition;
             Collections = new HashSet<string>(Definition.Collections, StringComparer.OrdinalIgnoreCase);
@@ -201,7 +197,7 @@ namespace Raven.Server.Documents.Indexes
             };
         }
 
-        public static Index Open(long etag, string path, DocumentDatabase documentDatabase)
+        public static Index Open(string path, DocumentDatabase documentDatabase)
         {
             StorageEnvironment environment = null;
 
@@ -230,7 +226,7 @@ namespace Raven.Server.Documents.Indexes
                 IndexType type;
                 try
                 {
-                    type = IndexStorage.ReadIndexType(etag, environment);
+                    type = IndexStorage.ReadIndexType(name, environment);
                 }
                 catch (Exception e)
                 {
@@ -242,15 +238,15 @@ namespace Raven.Server.Documents.Indexes
                 switch (type)
                 {
                     case IndexType.AutoMap:
-                        return AutoMapIndex.Open(etag, environment, documentDatabase);
+                        return AutoMapIndex.Open(environment, documentDatabase);
                     case IndexType.AutoMapReduce:
-                        return AutoMapReduceIndex.Open(etag, environment, documentDatabase);
+                        return AutoMapReduceIndex.Open(environment, documentDatabase);
                     case IndexType.Map:
-                        return MapIndex.Open(etag, environment, documentDatabase);
+                        return MapIndex.Open(environment, documentDatabase);
                     case IndexType.MapReduce:
-                        return MapReduceIndex.Open(etag, environment, documentDatabase);
+                        return MapReduceIndex.Open(environment, documentDatabase);
                     default:
-                        throw new ArgumentException($"Unknown index type {type} for index {etag}");
+                        throw new ArgumentException($"Unknown index type {type} for index {name}");
                 }
             }
             catch (Exception e)
@@ -266,8 +262,6 @@ namespace Raven.Server.Documents.Indexes
                 throw new IndexOpenException($"Could not open index from '{path}'.", e);
             }
         }
-
-        public long Etag { get; set; }
 
         public IndexType Type { get; }
 
@@ -318,7 +312,7 @@ namespace Raven.Server.Documents.Indexes
             using (DrainRunningQueries())
             {
                 if (_initialized)
-                    throw new InvalidOperationException($"Index '{Name} ({Etag})' was already initialized.");
+                    throw new InvalidOperationException($"Index '{Name}' was already initialized.");
 
                 var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
 
@@ -374,12 +368,12 @@ namespace Raven.Server.Documents.Indexes
             PerformanceHintsConfiguration performanceHints)
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
+                throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             using (DrainRunningQueries())
             {
                 if (_initialized)
-                    throw new InvalidOperationException($"Index '{Name} ({Etag})' was already initialized.");
+                    throw new InvalidOperationException($"Index '{Name}' was already initialized.");
 
                 try
                 {
@@ -390,7 +384,8 @@ namespace Raven.Server.Documents.Indexes
                     PerformanceHints = performanceHints;
 
                     _environment = environment;
-                    _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{Etag}");
+                    var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+                    _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
                     _contextPool = new TransactionContextPool(_environment);
                     _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
                     _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
@@ -451,15 +446,15 @@ namespace Raven.Server.Documents.Indexes
         public virtual void Start()
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
+                throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index '{Name} ({Etag})' was not initialized.");
+                throw new InvalidOperationException($"Index '{Name}' was not initialized.");
 
             using (DrainRunningQueries())
             {
                 if (_indexingThread != null)
-                    throw new InvalidOperationException($"Index '{Name} ({Etag})' is executing.");
+                    throw new InvalidOperationException($"Index '{Name}' is executing.");
 
                 if (Configuration.Disabled)
                     return;
@@ -499,10 +494,10 @@ namespace Raven.Server.Documents.Indexes
         public virtual void Stop(bool disableIndex = false)
         {
             if (_disposed)
-                throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
+                throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
-                throw new InvalidOperationException($"Index '{Name} ({Etag})' was not initialized.");
+                throw new InvalidOperationException($"Index '{Name}' was not initialized.");
 
             using (DrainRunningQueries())
             {
@@ -843,7 +838,7 @@ namespace Raven.Server.Documents.Indexes
                         ChangeIndexThreadPriorityIfNeeded();
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Starting indexing for '{Name} ({Etag})'.");
+                            _logger.Info($"Starting indexing for '{Name}'.");
 
                         _mre.Reset();
 
@@ -895,15 +890,15 @@ namespace Raven.Server.Documents.Indexes
                                     }
 
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
+                                        _logger.Info($"Finished indexing for '{Name}'.'");
 
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
+                                        _logger.Info($"Finished indexing for '{Name}'.'");
                                 }
                                 catch (OutOfMemoryException oome)
                                 {
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Out of memory occurred for '{Name} ({Etag})'.", oome);
+                                        _logger.Info($"Out of memory occurred for '{Name}'.", oome);
                                     // TODO [ppekrol] GC?
 
                                     scope.AddMemoryError(oome);
@@ -937,7 +932,7 @@ namespace Raven.Server.Documents.Indexes
                                 catch (Exception e)
                                 {
                                     if (_logger.IsOperationsEnabled)
-                                        _logger.Operations($"Critical exception occurred for '{Name} ({Etag})'.", e);
+                                        _logger.Operations($"Critical exception occurred for '{Name}'.", e);
 
                                     HandleUnexpectedErrors(scope, e);
                                 }
@@ -954,7 +949,7 @@ namespace Raven.Server.Documents.Indexes
                                 catch (Exception e)
                                 {
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Could not update stats for '{Name} ({Etag})'.", e);
+                                        _logger.Info($"Could not update stats for '{Name}'.", e);
                                 }
 
                                 try
@@ -976,7 +971,7 @@ namespace Raven.Server.Documents.Indexes
                                 catch (Exception e)
                                 {
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Could not replace index '{Name}' ({Etag})'.", e);
+                                        _logger.Info($"Could not replace index '{Name}'.", e);
                                 }
                             }
                         }
@@ -1102,7 +1097,7 @@ namespace Raven.Server.Documents.Indexes
             var beforeFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
             if (_logger.IsInfoEnabled)
                 _logger.Info(
-                    $"{beforeFree / 1024:#,#0} kb is used by '{Name} ({Etag})', reducing memory utilization.");
+                    $"{beforeFree / 1024:#,#0} kb is used by '{Name}', reducing memory utilization.");
 
             DocumentDatabase.DocumentsStorage.ContextPool.Clean();
             _contextPool.Clean();
@@ -1113,7 +1108,7 @@ namespace Raven.Server.Documents.Indexes
 
             var afterFree = NativeMemory.ThreadAllocations.Value.TotalAllocated;
             if (_logger.IsInfoEnabled)
-                _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name} ({Etag})'.");
+                _logger.Info($"After cleanup, using {afterFree / 1024:#,#0} kb by '{Name}'.");
         }
 
         internal void ResetErrors()
@@ -1183,7 +1178,7 @@ namespace Raven.Server.Documents.Indexes
             stats.AddCorruptionError(e);
 
             if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Data corruption occurred for '{Name}' ({Etag}).", e);
+                _logger.Operations($"Data corruption occurred for '{Name}'.", e);
 
             // TODO we should create notification here?
 
@@ -1379,7 +1374,7 @@ namespace Raven.Server.Documents.Indexes
                     return;
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Changing priority for '{Name} ({Etag})' from '{Definition.Priority}' to '{priority}'.");
+                    _logger.Info($"Changing priority for '{Name}' from '{Definition.Priority}' to '{priority}'.");
 
                 _indexStorage.WritePriority(priority);
 
@@ -1410,7 +1405,7 @@ namespace Raven.Server.Documents.Indexes
                     _errorStateReason = null;
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Changing state for '{Name} ({Etag})' from '{State}' to '{state}'.");
+                    _logger.Info($"Changing state for '{Name})' from '{State}' to '{state}'.");
 
 
                 var oldState = State;
@@ -1465,7 +1460,7 @@ namespace Raven.Server.Documents.Indexes
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info(
-                        $"Changing lock mode for '{Name} ({Etag})' from '{Definition.LockMode}' to '{mode}'.");
+                        $"Changing lock mode for '{Name}' from '{Definition.LockMode}' to '{mode}'.");
 
                 _indexStorage.WriteLock(mode);
 
@@ -1519,7 +1514,6 @@ namespace Raven.Server.Documents.Indexes
                 return new IndexProgress
                 {
                     Name = Name,
-                    Etag = Etag,
                     Type = Type
                 };
             }
@@ -1535,7 +1529,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 var progress = new IndexProgress
                 {
-                    Etag = Etag,
                     Name = Name,
                     Type = Type,
                     IsStale = IsStale(documentsContext, context)
@@ -1594,10 +1587,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_storageOperation.IsRunning)
             {
-                return new IndexStats
+                return new IndexStats()
                 {
                     Name = Name,
-                    Etag = Etag,
                     Type = Type
                 };
             }
@@ -1611,7 +1603,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 var stats = _indexStorage.ReadStats(tx);
 
-                stats.Etag = Etag;
                 stats.Name = Name;
                 stats.Type = Type;
                 stats.EntriesCount = reader.EntriesCount();
@@ -2113,27 +2104,27 @@ namespace Raven.Server.Documents.Indexes
         private void ThrowErrored()
         {
             throw new InvalidOperationException(
-                $"Index '{Name} ({Etag})' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
+                $"Index '{Name}' is marked as errored. Please check index errors avaiable at '/databases/{DocumentDatabase.Name}/indexes/errors?name={Name}'.");
         }
 
         private void ThrowMarkedAsError(string errorStateReason)
         {
-            throw new InvalidOperationException($"Index '{Name} ({Etag})' is marked as errored. {errorStateReason}");
+            throw new InvalidOperationException($"Index '{Name}' is marked as errored. {errorStateReason}");
         }
 
         private void ThrowWasDisposed()
         {
-            throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
+            throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
         }
 
         private void ThrowNotIntialized()
         {
-            throw new InvalidOperationException($"Index '{Name} ({Etag})' was not initialized.");
+            throw new InvalidOperationException($"Index '{Name}' was not initialized.");
         }
 
         private void ThrowCompactionInProgress()
         {
-            throw new InvalidOperationException($"Index '{Name} ({Etag})' is currently being compacted.");
+            throw new InvalidOperationException($"Index '{Name}' is currently being compacted.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
@@ -2532,7 +2523,7 @@ namespace Raven.Server.Documents.Indexes
         public IDisposable StorageOperation()
         {
             if (Monitor.TryEnter(_storageOperation) == false)
-                throw new InvalidOperationException($"Storage operation on index '{Name} ({Etag})' is already running");
+                throw new InvalidOperationException($"Storage operation on index '{Name}' is already running");
 
             _storageOperation.Init();
 
@@ -2552,7 +2543,7 @@ namespace Raven.Server.Documents.Indexes
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result)
         {
             if (_isCompactionInProgress)
-                throw new InvalidOperationException($"Index '{Name} ({Etag})' cannot be compacted because compaction is already in progress.");
+                throw new InvalidOperationException($"Index '{Name}' cannot be compacted because compaction is already in progress.");
 
             result.SizeBeforeCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
 
@@ -2564,11 +2555,11 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (_environment.Options.IncrementalBackupEnabled)
                     throw new InvalidOperationException(
-                        $"Index '{Name} ({Etag})' cannot be compacted because incremental backup is enabled.");
+                        $"Index '{Name}' cannot be compacted because incremental backup is enabled.");
 
                 if (Configuration.RunInMemory)
                     throw new InvalidOperationException(
-                        $"Index '{Name} ({Etag})' cannot be compacted because it runs in memory.");
+                        $"Index '{Name}' cannot be compacted because it runs in memory.");
 
                 _isCompactionInProgress = true;
                 PathSetting compactPath = null;

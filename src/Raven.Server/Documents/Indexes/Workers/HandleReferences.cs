@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     using (var collectionStats = stats.For("Collection_" + referencedCollection.Name))
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.Etag})'. Collection: {referencedCollection.Name}. Type: {actionType}.");
+                            _logger.Info($"Executing handle references for '{_index.Name}'. Collection: {referencedCollection.Name}. Type: {actionType}.");
 
                         long lastReferenceEtag;
 
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         }
 
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index.Name} ({_index.Etag})'. LastReferenceEtag: {lastReferenceEtag}.");
+                            _logger.Info($"Executing handle references for '{_index.Name}'. LastReferenceEtag: {lastReferenceEtag}.");
 
                         var lastEtag = lastReferenceEtag;
                         var count = 0;
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 foreach (var referencedDocument in references)
                                 {
                                     if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Executing handle references for '{_index.Name} ({_index.Etag})'. Processing reference: {referencedDocument.Key}.");
+                                        _logger.Info($"Executing handle references for '{_index.Name}'. Processing reference: {referencedDocument.Key}.");
 
                                     lastEtag = referencedDocument.Etag;
                                     count++;
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 indexWriter = writeOperation.Value;
 
                                             if (_logger.IsInfoEnabled)
-                                                _logger.Info($"Executing handle references for '{_index.Name} ({_index.Etag})'. Processing document: {current.Id}.");
+                                                _logger.Info($"Executing handle references for '{_index.Name}'. Processing document: {current.Id}.");
 
                                             try
                                             {
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             catch (Exception e)
                                             {
                                                 if (_logger.IsInfoEnabled)
-                                                    _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name} ({_index.Etag})'.", e);
+                                                    _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
                                             }
 
                                             if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, batchCount) == false)

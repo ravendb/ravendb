@@ -24,7 +24,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { @"from user in docs.Users select new { 
                                 user.Location,
@@ -81,7 +80,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_GroupByHobbies",
                     Maps = { @"from user in docs.Users select new { 
                                 user.Hobbies,
@@ -145,7 +143,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_GroupByLocationAndResidenceAddress",
                     Maps = { @"from user in docs.Users select new { 
                                 user.Location,
@@ -216,7 +213,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_GroupByLocationAndResidenceAddress",
                     Maps = { @"from user in docs.Users select new { 
                                 user.Hobbies,

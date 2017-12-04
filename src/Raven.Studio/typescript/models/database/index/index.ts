@@ -12,7 +12,6 @@ class index {
     createdTimestamp: string;
     entriesCount: number;
     errorsCount: number;
-    etag: number;
     isStale = ko.observable<boolean>(false);
     isInvalidIndex: boolean;
     //isTestIndex: boolean;
@@ -66,7 +65,6 @@ class index {
         this.createdTimestamp = dto.CreatedTimestamp;
         this.entriesCount = dto.EntriesCount;
         this.errorsCount = dto.ErrorsCount;
-        this.etag = dto.Etag;
         this.isStale(dto.IsStale);
         this.isInvalidIndex = dto.IsInvalidIndex;
         //this.isTestIndex = dto.IsTestIndex;

@@ -27,13 +27,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
                 staticIndex.LockMode = LockMode;
-                staticIndex.Etag = etag;
             }
 
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.LockMode = LockMode;
-                autoIndex.Etag = etag;
             }
 
             return null;

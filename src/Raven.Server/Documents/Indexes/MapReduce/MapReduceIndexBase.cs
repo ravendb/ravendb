@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private IndexingStatsScope _statsInstance;
         private readonly MapPhaseStats _stats = new MapPhaseStats();
         
-        protected MapReduceIndexBase(long etag, IndexType type, T definition) : base(etag, type, definition)
+        protected MapReduceIndexBase(IndexType type, T definition) : base(type, definition)
         {
         }
 

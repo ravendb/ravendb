@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var createdIndexes = new List<KeyValuePair<string, long>>();
+                var createdIndexes = new List<string>();
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
@@ -30,8 +30,8 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                         throw new ArgumentException("Index must have a 'Maps' fields");
-                    var etag = await Database.IndexStore.CreateIndex(indexDefinition);
-                    createdIndexes.Add(new KeyValuePair<string, long>(indexDefinition.Name, etag));
+                    var index = await Database.IndexStore.CreateIndex(indexDefinition);
+                    createdIndexes.Add(index.Name);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
@@ -43,13 +43,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                     writer.WriteArray(context, "Results", createdIndexes, (w, c, index) =>
                     {
                         w.WriteStartObject();
-                        w.WritePropertyName(nameof(PutIndexResult.IndexId));
-                        w.WriteInteger(index.Value);
-
-                        w.WriteComma();
-
                         w.WritePropertyName(nameof(PutIndexResult.Index));
-                        w.WriteString(index.Key);
+                        w.WriteString(index);
                         w.WriteEndObject();
                     });
 

@@ -27,13 +27,11 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
                 staticIndex.Priority = Priority;
-                staticIndex.Etag = etag;
             }
 
             if (record.AutoIndexes.TryGetValue(IndexName, out AutoIndexDefinition autoIndex))
             {
                 autoIndex.Priority = Priority;
-                autoIndex.Etag = etag;
             }
 
             return null;

@@ -80,8 +80,6 @@ namespace Raven.Client.ServerWide
                 var result = existingDefinition.Compare(definition);
                 if (result != IndexDefinitionCompareDifferences.All)
                 {
-                    result &= ~IndexDefinitionCompareDifferences.Etag;
-
                     if (result == IndexDefinitionCompareDifferences.LockMode &&
                         definition.LockMode == null)
                         return;
@@ -107,7 +105,6 @@ namespace Raven.Client.ServerWide
             if (AutoIndexes.TryGetValue(definition.Name, out AutoIndexDefinition existingDefinition))
             {
                 var result = existingDefinition.Compare(definition);
-                result &= ~IndexDefinitionCompareDifferences.Etag;
 
                 if (result == IndexDefinitionCompareDifferences.None)
                     return;

@@ -210,7 +210,6 @@ namespace Raven.Server.Monitoring.Snmp
 
             _objectStore.Add(new DatabaseIndexExists(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexName(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
-            _objectStore.Add(new DatabaseIndexEtag(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexPriority(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexState(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
             _objectStore.Add(new DatabaseIndexErrors(_databaseName, indexName, _databaseLandlord, _databaseIndex, index));
