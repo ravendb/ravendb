@@ -144,7 +144,8 @@ namespace Raven.Server.Documents.Handlers
 
                 if (identities != null)
                 {
-                    await GetIdentitiesValues(database, 
+                    await GetIdentitiesValues(ctx, 
+                        database, 
                         serverStore, 
                         identities, 
                         positionInListToCommandIndex, 
@@ -154,16 +155,22 @@ namespace Raven.Server.Documents.Handlers
             return new ArraySegment<CommandData>(cmds, 0, index + 1);
         }
 
-        private static async Task GetIdentitiesValues(DocumentDatabase database, ServerStore serverStore, List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
+        private static async Task GetIdentitiesValues(JsonOperationContext ctx, DocumentDatabase database, ServerStore serverStore, 
+            List<string> identities, List<int> positionInListToCommandIndex, CommandData[] cmds)
         {
             var newIds = await serverStore.GenerateClusterIdentitiesBatchAsync(database.Name, identities);
             Debug.Assert(newIds.Count == identities.Count);
 
+            var emptyChangeVector = ctx.GetLazyString("");
+
             for (var index = 0; index < positionInListToCommandIndex.Count; index++)
             {
                 var value = positionInListToCommandIndex[index];
-                cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + "/" +
-                                 newIds[index];
+                cmds[value].Id = cmds[value].Id.Substring(0, cmds[value].Id.Length - 1) + "/" + newIds[index];
+                
+                if (string.IsNullOrEmpty(cmds[value].ChangeVector) == false)
+                    ThrowInvalidUsageOfChangeVectorWithIdentities(cmds[value]);
+                cmds[value].ChangeVector = emptyChangeVector;
             }
         }
 
@@ -608,6 +615,12 @@ namespace Raven.Server.Documents.Handlers
                     ThrowInvalidProperty(state, ctx);
                     return CommandType.None;
             }
+        }
+
+        private static void ThrowInvalidUsageOfChangeVectorWithIdentities(CommandData commandData)
+        {
+            throw new InvalidOperationException($"You cannot use change vector ({commandData.ChangeVector}) " +
+                                                $"when using identity in the document ID ({commandData.Id}).");
         }
 
         private static unsafe void ThrowInvalidProperty(JsonParserState state, JsonOperationContext ctx)

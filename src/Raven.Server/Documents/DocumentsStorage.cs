@@ -183,7 +183,6 @@ namespace Raven.Server.Documents
         public ExpirationStorage ExpirationStorage;
         public ConflictsStorage ConflictsStorage;
         public AttachmentsStorage AttachmentsStorage;
-        public IdentitiesStorage Identities;
         public DocumentPutAction DocumentPut;
         private readonly Action<string> _addToInitLog;
 
@@ -290,7 +289,6 @@ namespace Raven.Server.Documents
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
                     ExpirationStorage = new ExpirationStorage(DocumentDatabase, tx);
-                    Identities = new IdentitiesStorage(DocumentDatabase, tx);
                     ConflictsStorage = new ConflictsStorage(DocumentDatabase, tx);
                     AttachmentsStorage = new AttachmentsStorage(DocumentDatabase, tx);
 
