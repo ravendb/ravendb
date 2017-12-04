@@ -87,7 +87,15 @@ https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites
 
 Lauch RavenDB:
 -------------
+Running locally:
+```
 <path/to/ravendb>/Server/Raven.Server
+```
+
+Running as service:
+```
+<path/to/ravendb>/Server/Raven.Server --daemon
+```
 
 Hello World Example:
 --------------------
