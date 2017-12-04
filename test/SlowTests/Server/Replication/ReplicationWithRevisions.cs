@@ -158,6 +158,121 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [Fact]
+        public async Task RevisionsAreReplicatedBack()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var user = new User { Name = "Name" };
+                var user2 = new User { Name = "Name2" };
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user2, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+
+                await SetupReplicationAsync(storeB, storeA);
+
+                using (var session = storeA.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevisionsAreReplicatedBackWithTombstoneAsResolved()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var user = new User { Name = "Name" };
+                var user2 = new User { Name = "Name2" };
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user2, "foo/bar");
+                    await session.SaveChangesAsync();
+                    session.Delete("foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+
+                await SetupReplicationAsync(storeB, storeA);
+
+                using (var session = storeA.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RevisionsAreReplicatedBackWithTombstone()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var user = new User { Name = "Name" };
+                var user2 = new User { Name = "Name2" };
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user, "foo/bar");
+                    await session.SaveChangesAsync();
+                    session.Delete("foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user2, "foo/bar");
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+
+                await SetupReplicationAsync(storeB, storeA);
+
+                using (var session = storeA.OpenSession())
+                {
+                    Assert.Equal(3, WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
+                }
+            }
+        }
+
 
         private async Task GenerateConflict(DocumentStore storeA, DocumentStore storeB, bool configureVersioning = true)
         {

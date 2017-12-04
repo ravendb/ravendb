@@ -347,6 +347,11 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
+        public string GetNewChangeVector(DocumentsOperationContext context)
+        {
+            return GetNewChangeVector(context, GenerateNextEtag());
+        }
+
         public static void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);

@@ -39,7 +39,7 @@ namespace Raven.Client.ServerWide
         // public OnGoingTasks tasks;  tasks for this node..
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
 
-        public ConflictSolver ConflictSolverConfig = new ConflictSolver();
+        public ConflictSolver ConflictSolverConfig;
 
         public Dictionary<string, IndexDefinition> Indexes;
 
