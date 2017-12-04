@@ -15,7 +15,7 @@ class documentHelpers {
 
         for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
             const curField = documentNodesFlattenedList[documentNodesCursor];
-            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField) && curField.length < 512) {
+            if (typeof curField === "string" && curField.length < 512 && /\w+\/\w+/ig.test(curField)) {
 
                 if (!results.find(x => x === curField.toString())) {
                     results.push(curField.toString());
