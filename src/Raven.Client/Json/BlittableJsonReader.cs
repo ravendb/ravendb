@@ -245,6 +245,7 @@ namespace Raven.Client.Json
             catch
             {
                 ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
+                return;
             }
             
             if (val != asRoundtringDecimal)
