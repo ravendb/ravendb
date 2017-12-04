@@ -4,22 +4,18 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class ClusterBatchCommand : CommandBase
+    public class AddOrUpdateCompareExchangeBatchCommand : CommandBase
     {
-        public List<CommandBase> CommandsList;
+        public List<AddOrUpdateCompareExchangeCommand> Commands;
 
-        public ClusterBatchCommand()
-        {
-        }
-        
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var djv = base.ToJson(context);
             var dja = new DynamicJsonArray();
-            foreach (var command in CommandsList){
+            foreach (var command in Commands){
                 dja.Add(command.ToJson(context));
             }
-            djv[nameof(CommandsList)] = dja;
+            djv[nameof(Commands)] = dja;
 
             return djv;
         }

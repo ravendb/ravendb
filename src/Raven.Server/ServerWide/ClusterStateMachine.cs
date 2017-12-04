@@ -121,12 +121,12 @@ namespace Raven.Server.ServerWide
                 string errorMessage;
                 switch (type)
                 {
-                    case nameof(ClusterBatchCommand):
-                        if (cmd.TryGet(nameof(ClusterBatchCommand.CommandsList), out BlittableJsonReaderArray batch) == false)
+                    case nameof(AddOrUpdateCompareExchangeBatchCommand):
+                        if (cmd.TryGet(nameof(AddOrUpdateCompareExchangeBatchCommand.Commands), out BlittableJsonReaderArray commands) == false)
                         {
-                            throw new InvalidDataException($"'{nameof(ClusterBatchCommand.CommandsList)}' is missing in 'ClusterBatchCommand'.");
+                            throw new InvalidDataException($"'{nameof(AddOrUpdateCompareExchangeBatchCommand.Commands)}' is missing in '{nameof(AddOrUpdateCompareExchangeBatchCommand)}'.");
                         }
-                        foreach (BlittableJsonReaderObject command in batch)
+                        foreach (BlittableJsonReaderObject command in commands)
                         {
                             Apply(context, command, index, leader, serverStore);
                         }
