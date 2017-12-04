@@ -3191,6 +3191,49 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
             }
         }
         
+        [Fact]
+        public void Can_Load_SingleDocument_When_Declare()
+        {
+            //RavenDB-9637
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Configuration() { Language = "nl" }, "configuration/global");
+                    session.Store(new Group()
+                    {
+                        Name = new Dictionary<string, string>(){
+                            { "en", "Administrator" },
+                            { "nl", "Administratie" }
+                        }
+                    }, "groups/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
+                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null}, "users/2");
+                    session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/3");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                        let configuration = RavenQuery.Load<Configuration>("configuration/global")
+                        let test = 1    // This will create a (DECLARE) function
+                        let groups = RavenQuery.Load<Group>(user.Groups)
+                        select new
+                        {                           
+                            Language = configuration.Language
+                        };
+
+
+                    var queryResult = query.ToList();
+
+                    Assert.Equal("nl", queryResult[0].Language);
+                }
+            }
+        }
+        
+        
+        
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -3434,6 +3477,8 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
             public IEnumerable<string> DetailIds { get; set; }
             public List<Detail> Details { get; set; }
             public string DetailShortId { get; set; }
+            public List<string> Groups { get; set; }
+
         }
         private class Detail
         {
@@ -3499,6 +3544,17 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
             public string FirstName { get; set; }
             public string LastName { get; set; }
             public string ReportsTo { get; set; }
+        }
+        
+        private class Configuration
+        {
+            public string Language { get; set; }
+        }
+
+        private class Group
+        {
+            // Multilanguage name
+            public Dictionary<string, string> Name { get; set; }
         }
     }
 }
