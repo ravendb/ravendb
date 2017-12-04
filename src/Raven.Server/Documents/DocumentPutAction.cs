@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -24,6 +25,7 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentDatabase _documentDatabase;
+        private readonly StringBuilder _idBuilder = new StringBuilder();
 
         public DocumentPutAction(DocumentsStorage documentsStorage, DocumentDatabase documentDatabase)
         {
@@ -280,7 +282,7 @@ namespace Raven.Server.Documents
                 if (lastChar == '/')
                 {
                     knownNewId = true;
-                    id = _documentsStorage.Identities.AppendNumericValueToId(id, newEtag);
+                    id = AppendNumericValueToId(id, newEtag);
                 }
                 else
                 {
@@ -296,6 +298,17 @@ namespace Raven.Server.Documents
         {
             throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id +
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
+        }
+        
+        private string AppendNumericValueToId(string id, long val)
+        {
+            _idBuilder.Length = 0;
+            _idBuilder.Append(id);
+            _idBuilder[_idBuilder.Length - 1] = '/';
+            _idBuilder.AppendFormat(CultureInfo.InvariantCulture, "{0:D19}", val);
+            _idBuilder.Append("-");
+            _idBuilder.Append(_documentDatabase.ServerStore.NodeTag);
+            return _idBuilder.ToString();
         }
 
         private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
