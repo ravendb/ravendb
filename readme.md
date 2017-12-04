@@ -55,8 +55,7 @@ Each Pull Request will be checked against following rules:
 - `tests` - this executes `build.cmd Test` on our CI to check if no constraints were violated
 
 
-# Setup & Run
---------------
+## Setup & Run
 
 Prerequsites:
 ------------
@@ -118,9 +117,9 @@ Hello World Example:
    dotnet new console 
 ```
 
-4. Replace the following files content (both example files are in this page):
- - Program.cs content with the content of example.cs 
- -  HelloWorld.csproj content with the content of example.csproj 
+4. Replace the following files content:
+ - replace https://github.com/ravendb/ravendb/blob/v4.0/Program.cs content with the content of example.cs 
+ - replace https://github.com/ravendb/ravendb/blob/v4.0/HelloWorld.csproj content with the content of example.csproj 
 
 5. Type:
 ```
@@ -128,6 +127,6 @@ Hello World Example:
    dotnet build
    dotnet run
 ```
-The example program should create a database with a sample dataset and make few quiries on it. The results should be printed out to the console.
+The example program should create a database with a sample dataset and make a few queries on it. The results should be printed out to the console.
 
 Enjoy.
