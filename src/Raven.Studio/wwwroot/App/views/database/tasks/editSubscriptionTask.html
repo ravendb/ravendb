@@ -34,8 +34,9 @@
                             <h3 data-bind="text: $parent.isAddingNewSubscriptionTask() ? `New Subscription` : `Edit Subscription`"></h3>
                             <div class="form-group margin-top" data-bind="validationElement: taskName">
                                 <label class="control-label">Task Name</label>
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)" title="Note: if no name is supplied then server will create one for you"
-                                       data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }" autocomplete="off" >
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task (optional)"                                     
+                                       data-bind="textInput: taskName, enable: $root.isAddingNewSubscriptionTask, 
+                                                  attr: { 'title': $root.isAddingNewSubscriptionTask() ? 'Note: if no name is supplied then server will create one for you' : '' }" autocomplete="off" >
                             </div>
                             <label>Subscription RQL:</label>
                             <div class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></div>
@@ -80,7 +81,7 @@
                             <div class="form-group" data-bind="visible: startingPointChangeVector() && setStartingPoint(), validationElement: startingChangeVector">
                                 <label class="control-label">Change Vector :</label>
                                 <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }">
-                                    <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, attr: { 'disabled': !setStartingPoint() }"></textarea>
+                                    <textarea rows="3" class="form-control" placeholder="Enter change vector to start sending documents from" data-bind="textInput: startingChangeVector, enable: setStartingPoint }"></textarea>
                                     <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
                                     <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>
                                 </div>

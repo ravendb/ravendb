@@ -75,7 +75,8 @@
                             <label class="control-label">Connection String</label>
                             <div class="flex-grow">
                                 <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsNames().length === 0">
+                                        data-bind="textInput: connectionStringName, disable: $root.ravenEtlConnectionStringsNames().length === 0,
+                                                   attr: { 'title': $root.ravenEtlConnectionStringsNames().length === 0 ? 'No connection strings defined' : 'Select a connection string' }">
                                     <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 </button>
@@ -185,7 +186,7 @@
                                 <div class="flex-grow">
                                     <div class="dropdown btn-block flex-grow">
                                         <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" autocomplete="off"
-                                               data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput', disabled: $root.collections().length === 0 }" />
+                                               data-bind="textInput: inputCollection, attr: { id: 'collectionNameInput' }, disable: $root.collections().length === 0" />
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                         <ul class="dropdown-menu" role="menu" style="display: none;"
                                             data-bind="autoComplete: '#collectionNameInput', foreach: $root.createCollectionNameAutocompleter(transformScriptCollections, inputCollection)">                                            
@@ -202,7 +203,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <button class="btn btn-info" data-bind="click: addCollection, attr: { 'disabled': !inputCollection() || !canAddCollection() }"><i class="icon-plus"></i> <span>Add Collection</span></button>
+                                    <button class="btn btn-info" data-bind="click: addCollection, enable: inputCollection() && canAddCollection()"><i class="icon-plus"></i> <span>Add Collection</span></button>
                                 </div>
                             </div>
                             <div data-bind="visible: transformScriptCollections().length" class="margin-top">
