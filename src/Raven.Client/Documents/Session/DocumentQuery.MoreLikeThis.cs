@@ -18,10 +18,10 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IDocumentQuery<T> IDocumentQuery<T>.MoreLikeThis(Action<IMoreLikeThisFactoryForDocumentQuery<T>> factory)
+        IDocumentQuery<T> IDocumentQuery<T>.MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder)
         {
-            var f = new MoreLikeThisFactory<T>();
-            factory.Invoke(f);
+            var f = new MoreLikeThisBuilder<T>();
+            builder.Invoke(f);
 
             using (var moreLikeThis = MoreLikeThis())
             {

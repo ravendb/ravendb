@@ -160,10 +160,10 @@ namespace Raven.Client.Documents
             return query;
         }
 
-        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetFactory<T>> factory = null)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetBuilder<T>> builder = null)
         {
-            var f = new FacetFactory<T>();
-            factory?.Invoke(f);
+            var f = new FacetBuilder<T>();
+            builder?.Invoke(f);
 
             return source.AggregateBy(f.Facet);
         }
@@ -244,10 +244,10 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Suggest alternative values for the queried term
         /// </summary>
-        public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, Action<ISuggestionFactory<T>> factory)
+        public static ISuggestionQuery<T> SuggestUsing<T>(this IQueryable<T> source, Action<ISuggestionBuilder<T>> builder)
         {
-            var f = new SuggestionFactory<T>();
-            factory?.Invoke(f);
+            var f = new SuggestionBuilder<T>();
+            builder?.Invoke(f);
 
             return source.SuggestUsing(f.Suggestion);
         }
@@ -1291,10 +1291,10 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
-        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Action<IMoreLikeThisFactory<T>> factory)
+        public static IRavenQueryable<T> MoreLikeThis<T>(this IQueryable<T> source, Action<IMoreLikeThisBuilder<T>> builder)
         {
-            var f = new MoreLikeThisFactory<T>();
-            factory.Invoke(f);
+            var f = new MoreLikeThisBuilder<T>();
+            builder.Invoke(f);
 
             return source.MoreLikeThis(f.MoreLikeThis);
         }

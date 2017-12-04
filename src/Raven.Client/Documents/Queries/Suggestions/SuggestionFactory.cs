@@ -4,7 +4,7 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Suggestions
 {
-    public interface ISuggestionFactory<T>
+    public interface ISuggestionBuilder<T>
     {
         ISuggestionOperations<T> ByField(string fieldName, string term);
 
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
         ISuggestionOperations<T> WithOptions(SuggestionOptions options);
     }
 
-    internal class SuggestionFactory<T> : ISuggestionFactory<T>, ISuggestionOperations<T>
+    internal class SuggestionBuilder<T> : ISuggestionBuilder<T>, ISuggestionOperations<T>
     {
         private SuggestionWithTerm _term;
         private SuggestionWithTerms _terms;
