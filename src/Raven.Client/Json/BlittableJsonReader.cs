@@ -232,21 +232,26 @@ namespace Raven.Client.Json
             return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
         }
         
-        private static void AssertDecimalValueInDoublePercisionBoundries(decimal val)
+        internal static void AssertDecimalValueInDoublePercisionBoundries(decimal val)
         {
+            double asDouble;
+            decimal asRoundtringDecimal;
+
             try
             {
-                var asDouble = (double)val;
-                var asRoundtringDecimal = (decimal)asDouble;
-                if (val != asRoundtringDecimal)
-                {
-                    ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);                    
-                }
+                asDouble = (double)val;
+                asRoundtringDecimal = (decimal)asDouble;
             }
             catch
             {
                 ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
             }
+            
+            if (val != asRoundtringDecimal)
+            {
+                ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);                    
+            }
+
         }
 
         private static void ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(decimal value)

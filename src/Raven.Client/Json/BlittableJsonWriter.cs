@@ -67,7 +67,7 @@ namespace Raven.Client.Json
                         _manualBlittableJsonDocumentBuilder.WriteValue((double)value);
                     else if (value is decimal decVal)
                     {
-                        AssertDecimalValueInDoublePercisionBoundries(decVal);
+                        BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(decVal);
                         _manualBlittableJsonDocumentBuilder.WriteValue((decimal)value);
                     }
                     else if (value is float)
@@ -188,29 +188,6 @@ namespace Raven.Client.Json
         }
 
 
-        private static void AssertDecimalValueInDoublePercisionBoundries(decimal val)
-        {
-            try
-            {
-                var asDouble = (double)val;
-                var asRoundtringDecimal = (decimal)asDouble;
-                if (val != asRoundtringDecimal)
-                {
-                    ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
-                }
-            }
-            catch
-            {
-                ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
-            }
-        }
-
-        private static void ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(decimal value)
-        {
-            throw new NotSupportedException(
-                                $"RavenDB supports up to double percision floating point types, therefore it does not support the decimal value {value}. Please use double type, or store value as string");
-        }        
-
         public override void WriteEndObject()
         {
             _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
@@ -288,7 +265,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(decimal value)
         {
-            AssertDecimalValueInDoublePercisionBoundries(value);
+            BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(value);
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
