@@ -130,7 +130,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import-s3-dir", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.Operator)]
         public async Task PostImportFromS3Directory()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
@@ -154,7 +154,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             await BulkImport(files, Path.GetTempPath());
         }
 
-        [RavenAction("/databases/*/smuggler/import-dir", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/smuggler/import-dir", "GET", AuthorizationStatus.Operator)]
         public async Task PostImportDirectory()
         {
             var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
@@ -511,11 +511,18 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             var file = GetStringQueryString("file", required: false);
             if (string.IsNullOrEmpty(file) == false)
+            {
+                if(IsOperator() == false)
+                    throw new UnauthorizedAccessException("The use of the 'file' query string parameters is limited operators and above");
                 return File.OpenRead(file);
+            }
 
             var url = GetStringQueryString("url", required: false);
             if (string.IsNullOrEmpty(url) == false)
             {
+                if(IsOperator() == false)
+                    throw new UnauthorizedAccessException("The use of the 'url' query string parameters is limited operators and above");
+                
                 if (HttpContext.Request.Method == "POST")
                 {
                     var msg = await HttpClient.PostAsync(url, new StreamContent(HttpContext.Request.Body)
