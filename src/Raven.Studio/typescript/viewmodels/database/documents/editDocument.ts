@@ -644,23 +644,20 @@ class editDocument extends viewModelBase {
                 }
 
                 loadTask.resolve(doc);
-                this.isBusy(false);
-
             })
             .fail((xhr: JQueryXHR) => {
                 // if revisions is enabled try to load revisions bin entry
                 if (xhr.status === 404 && db.hasRevisionsConfiguration()) {
                     this.loadRevisionsBinEntry(id)
                         .done(doc => loadTask.resolve(doc))
-                        .fail(() => loadTask.reject())
-                        .always(() => this.isBusy(false));
+                        .fail(() => loadTask.reject());
                 } else {
                     this.dirtyFlag().reset();
                     messagePublisher.reportError("Could not find document: " + id);
-                    this.isBusy(false);
                     loadTask.reject();
                 }
-            });
+            })
+            .always(()=> this.isBusy(false));
 
         return loadTask;
     }

@@ -21,19 +21,19 @@
    
 <div class="text-center" id="savingKeyData">
     <span  class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
-        <button type="button" class="btn btn-default btn-sm" data-bind="click: copyEncryptionKeyToClipboard, attr: { disabled: disableSavingKeyData }">
+        <button type="button" class="btn btn-default btn-sm" data-bind="click: copyEncryptionKeyToClipboard, disable: disableSavingKeyData">
             <i class="icon-copy"></i> <span>Copy to clipboard</span>
         </button>            
     </span>
     
     <span class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
-        <button type="button" class="btn btn-default btn-sm" data-bind="click: downloadEncryptionKey, attr: { disabled: disableSavingKeyData }">
+        <button type="button" class="btn btn-default btn-sm" data-bind="click: downloadEncryptionKey, disable: disableSavingKeyData">
             <i class="icon-export"></i> <span>Download encryption key</span>
         </button>
     </span>
 
     <span class="has-disable-reason" data-bind="attr: { 'data-original-title': disableSavingKeyData() ? 'Validate database name & key !' : '' }">
-        <button type="button" class="btn btn-default btn-sm" data-bind="click: printEncryptionKey, attr: { disabled: disableSavingKeyData() }">
+        <button type="button" class="btn btn-default btn-sm" data-bind="click: printEncryptionKey, disable: disableSavingKeyData">
             <i class="icon-print"></i><span>Print encryption key</span>
         </button>
     </span>
