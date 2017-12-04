@@ -987,7 +987,9 @@ namespace Raven.Server.Documents.Replication
 
                                     if ((item.Flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
                                     {
-                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null)
+                                        if (database.DocumentsStorage.RevisionsStorage.Configuration == null 
+                                            && item.Flags.Contain(DocumentFlags.Resolved) == false
+                                            && item.Flags.Contain(DocumentFlags.Conflicted) == false)
                                         {
                                             if (_incoming._log.IsOperationsEnabled)
                                                 _incoming._log.Operations("Revisions are disabled but the node got a delete revision from replication.");

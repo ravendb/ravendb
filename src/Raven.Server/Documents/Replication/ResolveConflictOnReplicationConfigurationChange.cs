@@ -229,16 +229,18 @@ namespace Raven.Server.Documents.Replication
             if (incoming != null)
             {
                 // we resolved the conflict on the fly, so we save the remote documents as revisions
+                // we have to generate a new change vector, so it will be replicated back to the source
+                var newChangeVector = _database.DocumentsStorage.GetNewChangeVector(context);
                 if (incoming.Doc != null)
                 {
                     _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
-                        NonPersistentDocumentFlags.None, incoming.ChangeVector, incoming.LastModified.Ticks);
+                        NonPersistentDocumentFlags.None, newChangeVector, incoming.LastModified.Ticks);
                 }
                 else
                 {
                     using (Slice.External(context.Allocator, incoming.LowerId, out var key))
                     {
-                        _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, key, new CollectionName(incoming.Collection), incoming.ChangeVector,
+                        _database.DocumentsStorage.RevisionsStorage.Delete(context, incoming.Id, key, new CollectionName(incoming.Collection), newChangeVector,
                             incoming.LastModified.Ticks, NonPersistentDocumentFlags.None, incoming.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions);
                     }
                 }
