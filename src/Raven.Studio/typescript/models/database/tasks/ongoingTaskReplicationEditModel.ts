@@ -3,9 +3,8 @@ import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditMode
 
 class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
        
-    destinationDB = ko.observable<string>();        // Read-only data. Input data is through the connection string.
-    destinationURL = ko.observable<string>();       // Actual destination url where the targeted database is located. Read-only data.
-    connectionStringName = ko.observable<string>(); // Contains list of discovery urls in the targeted cluster. The task communicates with these urls.
+    destinationDB = ko.observable<string>();          // Read-only data. Input data is through the connection string.   
+    connectionStringName = ko.observable<string>();   // The connection stgring contains a list of discovery urls in the targeted cluster. The task communicates with these urls.
     
     showReplicationDetails = ko.observable(false);
   
@@ -24,7 +23,6 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
 
         this.connectionStringName(dto.ConnectionStringName); 
         this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl || 'N/A');
         this.manualChooseMentor(!!dto.MentorNode);
         this.preferredMentor(dto.MentorNode);
     }

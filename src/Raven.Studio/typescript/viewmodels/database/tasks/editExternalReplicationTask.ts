@@ -18,7 +18,9 @@ class editExternalReplicationTask extends viewModelBase {
     private taskId: number = null;
     
     possibleMentors = ko.observableArray<string>([]);
-    ravenEtlConnectionStringsNames = ko.observableArray<string>([]);
+    
+    ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.ServerWide.ETL.RavenConnectionString>([]);
+
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
@@ -82,8 +84,8 @@ class editExternalReplicationTask extends viewModelBase {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
             .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                const connectionStringsNames = Object.keys(result.RavenConnectionStrings);
-                this.ravenEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
+                const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
+                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));                
             });
     }
 
@@ -168,9 +170,15 @@ class editExternalReplicationTask extends viewModelBase {
         
         // 4. All is well, Save Replication task
         savingNewStringAction.done(()=> {
+            
+            // Find and update destination database from the current selected connection string !
+            this.editedExternalReplication().destinationDB(this.createNewConnectionString() ?
+                this.newConnectionString().database() :
+                (_.find(this.ravenEtlConnectionStringsDetails(), x => x.Name === this.editedExternalReplication().connectionStringName())).Database);
+
             const dto = this.editedExternalReplication().toDto(this.taskId);
             this.taskId = this.isAddingNewReplicationTask() ? 0 : this.taskId;
-
+                        
             new saveExternalReplicationTaskCommand(this.activeDatabase(), dto)
                 .execute()
                 .done(() => {
