@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Revisions
 
         public const long NotDeletedRevisionMarker = 0;
 
-        private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration();
+        private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration{ Disabled = true };
 
         public RevisionsStorage(DocumentDatabase database, Transaction tx)
         {
