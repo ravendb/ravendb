@@ -1,5 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -34,6 +37,34 @@ namespace SlowTests.Server.Replication
                 var timeout = 3000;
                 Assert.True(WaitForDocument(store2, "foo/bar", timeout), store2.Identifier);
                 Assert.True(WaitForDocument(store3, "foo/bar", timeout), store3.Identifier);
+            }
+        }
+
+        [Fact]
+        public async Task DelayedExternalReplication()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var delay = TimeSpan.FromSeconds(5).Ticks;
+                var externalTask = new ExternalReplication(store2.Database, "DelayedExternalReplication")
+                {
+                    DelayReplicationFor = delay
+                };
+                await AddWatcherToReplicationTopology(store1, externalTask);
+                DateTime date;
+
+                using (var s1 = store1.OpenSession())
+                {
+                    s1.Store(new User(), "foo/bar");
+                    date = DateTime.UtcNow;
+                    s1.SaveChanges();
+                }
+
+                Assert.True(WaitForDocument(store2, "foo/bar"));
+                var elapsed = (DateTime.UtcNow - date).Ticks;
+                Assert.True(elapsed >= delay,$" only {elapsed}/{delay} ticks elapsed");
+
             }
         }
     }

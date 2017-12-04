@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -156,9 +158,18 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats)
+        public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats, ref DateTime next)
         {
             EnsureValidStats(stats);
+
+            long delayReplicationFor = 0;
+            var wasDelayed = false;
+            
+            if (_parent._parent._server.LicenseManager.GetLicenseStatus().HasDelayedExternalReplication 
+                && _parent.Destination is ExternalReplication external)
+            {
+                delayReplicationFor = external.DelayReplicationFor;
+            }
 
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
@@ -182,6 +193,16 @@ namespace Raven.Server.Documents.Replication
                         {
                             if (lastTransactionMarker != item.TransactionMarker)
                             {
+                                if (delayReplicationFor > 0)
+                                {
+                                    var nextReplication = item.LastModifiedTicks + delayReplicationFor;
+                                    if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
+                                    {
+                                        next = new DateTime(nextReplication);
+                                        wasDelayed = true;
+                                        break;
+                                    }
+                                }
                                 lastTransactionMarker = item.TransactionMarker;
 
                                 // Include the attachment's document which is right after its latest attachment.
@@ -221,7 +242,8 @@ namespace Raven.Server.Documents.Replication
                         // the last etag they have from us on the other side
                         _parent._lastSentDocumentEtag = _lastEtag;
                         _parent._lastDocumentSentTime = DateTime.UtcNow;
-                        _parent.SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(documentsContext));
+                        var changeVector = wasDelayed ? null : DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                        _parent.SendHeartbeat(changeVector);
                         return hasModification;
                     }
 

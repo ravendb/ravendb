@@ -214,9 +214,11 @@ namespace Raven.Server.Documents.Replication
                             throw;
                         }
 
+                        DateTime nextReplicateAt = default(DateTime);
+
                         while (_cts.IsCancellationRequested == false)
                         {
-                            while (true)
+                            while (_database.Time.GetUtcNow() > nextReplicateAt)
                             {
                                 if (_parent.DebugWaitAndRunReplicationOnce != null)
                                 {
@@ -235,7 +237,7 @@ namespace Raven.Server.Documents.Replication
                                     {
                                         try
                                         {
-                                            var didWork = documentSender.ExecuteReplicationOnce(scope);
+                                            var didWork = documentSender.ExecuteReplicationOnce(scope, ref nextReplicateAt);
                                             if (didWork == false)
                                                 break;
 
@@ -286,6 +288,10 @@ namespace Raven.Server.Documents.Replication
                                     if (etag == _lastSentDocumentEtag)
                                     {
                                         SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
+                                    }
+                                    else if (nextReplicateAt > DateTime.UtcNow)
+                                    {
+                                        SendHeartbeat(null);
                                     }
                                     else
                                     {
