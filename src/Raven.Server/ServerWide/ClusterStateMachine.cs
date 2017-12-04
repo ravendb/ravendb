@@ -250,8 +250,6 @@ namespace Raven.Server.ServerWide
                     case nameof(AddDatabaseCommand):
                         AddDatabase(context, cmd, index, leader);
                         break;
-                    case nameof(GetRaftIndexCommand):
-                        break;
                 }
             }
             catch (Exception e)

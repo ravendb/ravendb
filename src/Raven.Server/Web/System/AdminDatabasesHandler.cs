@@ -226,7 +226,7 @@ namespace Raven.Server.Web.System
                     return;
                 }
 
-                await RecreateIndexes(databaseRecord);
+                RecreateIndexes(databaseRecord);
 
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index);
 
@@ -246,7 +246,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task RecreateIndexes(DatabaseRecord databaseRecord)
+        private void RecreateIndexes(DatabaseRecord databaseRecord)
         {
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseRecord.DatabaseName, true, true, true, databaseRecord);
             if (databaseConfiguration.Indexing.RunInMemory ||
@@ -266,7 +266,6 @@ namespace Raven.Server.Web.System
             {
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
                 documentDatabase.Initialize(options);
-                var command = new GetRaftIndexCommand();
 
                 var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
@@ -277,25 +276,22 @@ namespace Raven.Server.Web.System
                         if (documentDatabase.DatabaseShutdown.IsCancellationRequested)
                             return;
 
-                        index = Index.Open(1, indexPath, documentDatabase);
+                        index = Index.Open(indexPath, documentDatabase);
                         if (index == null)
                             continue;
 
                         var definition = index.Definition;
-                        var (etag, _) = await ServerStore.SendToLeaderAsync(command);
                         switch (index.Type)
                         {
                             case IndexType.AutoMap:
                             case IndexType.AutoMapReduce:
                                 var autoIndexDefinition = PutAutoIndexCommand.GetAutoIndexDefinition((AutoIndexDefinitionBase)definition, index.Type);
-                                autoIndexDefinition.Etag = etag;
                                 databaseRecord.AutoIndexes.Add(autoIndexDefinition.Name, autoIndexDefinition);
                                 break;
 
                             case IndexType.Map:
                             case IndexType.MapReduce:
                                 var indexDefinition = index.GetIndexDefinition();
-                                indexDefinition.Etag = etag;
                                 databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
                                 break;
                             default:
@@ -314,7 +310,7 @@ namespace Raven.Server.Web.System
                 }
 
             }
-            
+
         }
 
         private async Task<(long, DatabaseTopology, List<string>)> CreateDatabase(string name, DatabaseRecord databaseRecord, TransactionOperationContext context, int replicationFactor, long? index)

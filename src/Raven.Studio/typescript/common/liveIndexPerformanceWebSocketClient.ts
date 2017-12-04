@@ -72,7 +72,6 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
 
             if (!existingIndexStats) {
                 existingIndexStats = {
-                    Etag: incomingIndexStats.Etag,
                     Name: incomingIndexStats.Name,
                     Performance: []
                 };

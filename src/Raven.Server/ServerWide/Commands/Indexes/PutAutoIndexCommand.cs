@@ -29,7 +29,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Definition.Etag = etag;
             record.AddIndex(Definition);
             return null;
         }
@@ -60,10 +59,9 @@ namespace Raven.Server.ServerWide.Commands.Indexes
         {
             Debug.Assert(indexType == IndexType.AutoMap || indexType == IndexType.AutoMapReduce);
 
-            return new AutoIndexDefinition
+            return new AutoIndexDefinition()
             {
                 Collection = definition.Collections.First(),
-                Etag = 0,
                 MapFields = CreateFields(definition.MapFields.ToDictionary(x => x.Key, x => x.Value.As<AutoIndexField>())),
                 GroupByFields = indexType == IndexType.AutoMap ? null : CreateFields(((AutoMapReduceIndexDefinition)definition).GroupByFields),
                 LockMode = definition.LockMode,

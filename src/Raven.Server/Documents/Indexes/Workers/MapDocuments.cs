@@ -49,12 +49,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.Etag})'. Collection: {collection}.");
+                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection}.");
 
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.Etag})'. LastMappedEtag: {lastMappedEtag}.");
+                        _logger.Info($"Executing map for '{_index.Name}'. LastMappedEtag: {lastMappedEtag}.");
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info(
-                                            $"Executing map for '{_index.Name} ({_index.Etag})'. Processing document: {current.Id}.");
+                                            $"Executing map for '{_index.Name}'. Processing document: {current.Id}.");
 
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Data.Size);
@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         collectionStats.RecordMapError();
                                         if (_logger.IsInfoEnabled)
                                             _logger.Info(
-                                                $"Failed to execute mapping function on '{current.Id}' for '{_index.Name} ({_index.Etag})'.",
+                                                $"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.",
                                                 e);
 
                                         collectionStats.AddMapError(current.Id,
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         continue;
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name} ({_index.Etag})'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
+                        _logger.Info($"Executing map for '{_index.Name}'. Processed {count:#,#;;0} documents and {resultsCount:#,#;;0} map results in '{collection}' collection in {collectionStats.Duration.TotalMilliseconds:#,#;;0} ms.");
 
                     if (_index.Type.IsMap())
                     {

@@ -41,10 +41,5 @@ namespace Raven.Client.Exceptions.Documents.Indexes
         {
             throw new IndexDoesNotExistException($"There is no index with '{indexName}' name.");
         }
-
-        public static IndexDoesNotExistException ThrowFor(long etag)
-        {
-            throw new IndexDoesNotExistException($"There is no index with '{etag}' etag.");
-        }
     }
 }

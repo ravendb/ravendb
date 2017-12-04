@@ -9,7 +9,6 @@ namespace Raven.Server.Extensions
         public static DynamicJsonValue ToJson(this IndexDefinition definition)
         {
             var result = new DynamicJsonValue();
-            result[nameof(IndexDefinition.Etag)] = definition.Etag;
 #if FEATURE_TEST_INDEX
             result[nameof(IndexDefinition.IsTestIndex)] = definition.IsTestIndex;
 #endif

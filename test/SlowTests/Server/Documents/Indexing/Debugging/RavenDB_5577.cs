@@ -34,8 +34,7 @@ select new
     Product = g.Key,
     Count = g.Sum(x=> x.Count),
     Total = g.Sum(x=> x.Total)
-}",
-                    Etag = 1
+}"
                 }, database))
                 {
                     var numberOfDocs = 100;
@@ -106,7 +105,6 @@ select new
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition
                 {
-                    Etag = 1,
                     Name = "Users_ByCount_GroupByProduct",
                     Maps = { @"from order in docs.Orders
 from line in order.Lines
@@ -212,7 +210,6 @@ select new
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition
                 {
-                    Etag = 1,
                     Name = "Users_ByCount_GroupByProduct",
                     Maps = { @"from order in docs.Orders
 from line in order.Lines

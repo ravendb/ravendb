@@ -25,7 +25,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanUseSimpleReduction()
         {
             using (var db = CreateDocumentDatabase())
-            using (var mri = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            using (var mri = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, 2, "Poland");
 
@@ -68,7 +68,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 CreateUsers(db, numberOfUsers, locations);
 
@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             const long numberOfUsers = 10;
 
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
 
                 CreateUsers(db, numberOfUsers, "Poland");
@@ -245,7 +245,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     GroupByArrayBehavior = GroupByArrayBehavior.ByContent
                 };
 
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })) > 0);
+                Assert.NotNull(await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count }, new[] { location })));
 
                 var sum = new AutoIndexField
                 {
@@ -254,13 +254,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Aggregation = AggregationOperation.Sum
                 };
 
-                var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
-                Assert.True(etag > 0);
+                var index = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] { count, sum }, new[] { location }));
+                Assert.NotNull(index);
 
-                var index2 = database.IndexStore.GetIndex(etag);
-                var task = Task.WhenAll(database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError),
-                    database.IndexStore.SetPriority(index2.Name, IndexPriority.High));
-                index2.SetState(IndexState.Disabled);
+                var task = Task.WhenAll(database.IndexStore.SetLock(index.Name, IndexLockMode.LockedError),
+                    database.IndexStore.SetPriority(index.Name, IndexPriority.High));
+                index.SetState(IndexState.Disabled);
                 await task;
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
@@ -270,12 +269,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x => x.Etag)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
 
-                Assert.True(indexes[0].Etag > 0);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
@@ -295,7 +292,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
-                Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
 
@@ -324,7 +320,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanGroupByNestedFieldAndAggregateOnCollection()
         {
             using (var db = CreateDocumentDatabase())
-            using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition(
+            using (var mri = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition(
                 "Orders",
                 new[]
                 {
@@ -382,7 +378,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public void CanStoreAndReadReduceStats()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, GetUsersCountByLocationIndexDefinition(), db))
+            using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
                 index._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
                 {
@@ -431,7 +427,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanUpdateByChangingValue()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
+            using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {
@@ -506,7 +502,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task CanUpdateByChangingReduceKey()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
+            using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {
@@ -584,7 +580,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         public async Task GroupByMultipleFields()
         {
             using (var db = CreateDocumentDatabase())
-            using (var index = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Orders", new[]
+            using (var index = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Orders", new[]
             {
                 new AutoIndexField
                 {

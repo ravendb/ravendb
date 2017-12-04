@@ -24,8 +24,8 @@ namespace Raven.Server.Documents.Indexes.Static
         private HandleReferences _handleReferences;
         //private HandleSuggestions _handleSuggestions;
 
-        private MapIndex(long etag, MapIndexDefinition definition, StaticIndexBase compiled)
-            : base(etag, IndexType.Map, definition)
+        private MapIndex(MapIndexDefinition definition, StaticIndexBase compiled)
+            : base(IndexType.Map, definition)
         {
             _compiled = compiled;
 
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return instance;
         }
 
-        public static Index Open(long etag, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
             var instance = CreateIndexInstance(definition);
@@ -216,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields, staticIndex.HasDynamicFields);
-            var instance = new MapIndex(definition.Etag, staticMapIndexDefinition, staticIndex);
+            var instance = new MapIndex(staticMapIndexDefinition, staticIndex);
             return instance;
         }
     }

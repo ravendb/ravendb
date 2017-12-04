@@ -25,7 +25,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_ByLocation",
                     Maps = { @"from user in docs.Users
 select new { Location = user.Location, Count = 1 }" },

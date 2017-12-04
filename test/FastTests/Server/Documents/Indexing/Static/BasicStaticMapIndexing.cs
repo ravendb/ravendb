@@ -29,7 +29,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             {
                 using (var index = MapIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
                     Type = IndexType.Map
@@ -109,10 +108,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 };
 
-                var etag = await database.IndexStore.CreateIndex(indexDefinition);
-                Assert.True(etag > 0);
-
-                var index = database.IndexStore.GetIndex(etag);
+                var index = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.NotNull(index);
 
                 Assert.Equal(33, (int)index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
                 Assert.NotEqual(database.Configuration.Indexing.MapTimeout.AsTimeSpan, index.Configuration.MapTimeout.AsTimeSpan);
@@ -142,8 +139,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                     }
                 };
 
-                var etag = await database.IndexStore.CreateIndex(indexDefinition1);
-                Assert.True(etag > 0);
+                var index1 = await database.IndexStore.CreateIndex(indexDefinition1);
+                Assert.NotNull(index1);
 
                 indexDefinition2 = new IndexDefinition
                 {
@@ -151,8 +148,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Maps = { "from user in docs.Users select new { CustomAge = user.Age }" }
                 };
 
-                etag = await database.IndexStore.CreateIndex(indexDefinition2);
-                Assert.True(etag > 0);
+                var index2 = await database.IndexStore.CreateIndex(indexDefinition2);
+                Assert.NotNull(index2);
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
 
@@ -161,10 +158,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x => x.Etag)
                     .ToList();
 
-                Assert.True(indexes[0].Etag > 0);
                 Assert.Equal(IndexType.Map, indexes[0].Type);
                 Assert.Equal("Users_ByName", indexes[0].Name);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
@@ -173,10 +168,8 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Contains("Name", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
-                Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[0].Definition.Compare(indexDefinition1));
-                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(indexDefinition1.Equals(indexes[0].GetIndexDefinition()));
 
-                Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(IndexType.Map, indexes[1].Type);
                 Assert.Equal("Users_ByAge", indexes[1].Name);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
@@ -185,8 +178,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 Assert.Contains("CustomAge", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
-                Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[1].Definition.Compare(indexDefinition2));
-                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(indexDefinition2.Equals(indexes[1].GetIndexDefinition()));
             }
         }
 
@@ -206,7 +198,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             indexDefinition.Name = "n1";
             indexDefinition.Reduce = "c";
             indexDefinition.Type = IndexType.MapReduce;
-            indexDefinition.Etag = 3;
             indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>
             {
                 {"f1", new IndexFieldOptions
@@ -258,7 +249,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     var newIndexDefinition = JsonDeserializationServer.IndexDefinition(json);
 
-                    Assert.True(indexDefinition.Equals(newIndexDefinition, compareIndexEtags: true, ignoreFormatting: false));
+                    Assert.True(indexDefinition.Equals(newIndexDefinition));
                 }
             }
         }
@@ -270,7 +261,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             {
                 using (var index = MapIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Index1",
                     Maps = { "from doc in docs select new { doc.Name }" },
                     Type = IndexType.Map
@@ -361,7 +351,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             {
                 using (var index = MapIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Index1",
                     Maps = { "from doc in docs.Users select new { doc.Name }" },
                     Type = IndexType.Map

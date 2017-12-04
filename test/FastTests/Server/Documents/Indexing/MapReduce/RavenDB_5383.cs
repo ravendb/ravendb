@@ -20,7 +20,6 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_ByCount_GroupByProduct",
                     Maps = { @"from order in docs.Orders
 from line in order.Lines

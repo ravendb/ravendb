@@ -16,7 +16,6 @@ namespace SlowTests.Issues
             {
                 var index = MapIndex.CreateNew(new IndexDefinition
                 {
-                    Etag = 10,
                     Name = "Index",
                     Maps =
                     {

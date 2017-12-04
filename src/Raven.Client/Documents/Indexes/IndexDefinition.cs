@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -22,10 +23,6 @@ namespace Raven.Client.Documents.Indexes
             _configuration = new IndexConfiguration();
         }
 
-        /// <summary>
-        /// Index etag (internal).
-        /// </summary>
-        public long Etag { get; set; }
 
         /// <summary>
         /// This is the means by which the outside world refers to this index definition
@@ -89,9 +86,6 @@ namespace Raven.Client.Documents.Indexes
 
             if (ReferenceEquals(this, other))
                 return result;
-
-            if (Equals(Etag, other.Etag) == false)
-                result |= IndexDefinitionCompareDifferences.Etag;
 
             if (Maps.SetEquals(other.Maps) == false)
             {
@@ -160,9 +154,8 @@ namespace Raven.Client.Documents.Indexes
         /// Equals the specified other.
         /// </summary>
         /// <param name="other">The other.</param>
-        /// <param name="compareIndexEtags">allow caller to choose whether to include the index Id in the comparison</param>
         /// <param name="ignoreFormatting">Comparison ignores formatting in both of the definitions</param>
-        public bool Equals(IndexDefinition other, bool compareIndexEtags = true, bool ignoreFormatting = false)
+        public bool Equals(IndexDefinition other, bool ignoreFormatting = false)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -174,9 +167,6 @@ namespace Raven.Client.Documents.Indexes
 
             if (result == IndexDefinitionCompareDifferences.None)
                 return true;
-
-            if (compareIndexEtags && result.HasFlag(IndexDefinitionCompareDifferences.Etag))
-                return false;
 
             var mapsReduceEquals = ignoreFormatting
                 ? result.HasFlag(IndexDefinitionCompareDifferences.MapsFormatting) == false && result.HasFlag(IndexDefinitionCompareDifferences.ReduceFormatting) == false
@@ -398,7 +388,6 @@ namespace Raven.Client.Documents.Indexes
                 Name = Name,
                 Type = Type,
                 Priority = Priority,
-                Etag = Etag,
                 Reduce = Reduce,
                 Maps = new HashSet<string>(Maps),
                 Configuration = new IndexConfiguration(),
@@ -422,7 +411,6 @@ namespace Raven.Client.Documents.Indexes
     public enum IndexDefinitionCompareDifferences
     {
         None = 0,
-        Etag = 1 << 0,
         Maps = 1 << 1,
         MapsFormatting = 1 << 2,
         Reduce = 1 << 3,
@@ -432,6 +420,6 @@ namespace Raven.Client.Documents.Indexes
         LockMode = 1 << 7,
         Priority = 1 << 8,
 
-        All = Etag | Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority
+        All = Maps | MapsFormatting | Reduce | ReduceFormatting | Fields | Configuration | LockMode | Priority
     }
 }

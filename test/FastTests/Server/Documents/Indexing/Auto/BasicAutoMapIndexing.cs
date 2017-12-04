@@ -33,7 +33,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
+                var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var ex = await Record.ExceptionAsync(() => index.Query(new IndexQueryServerSide($"FROM INDEX'{index.Name}'"), null, OperationCancelToken.None));
                 Assert.IsType<ObjectDisposedException>(ex);
 
-                index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
+                index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -57,7 +57,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var cts = new CancellationTokenSource())
                 {
-                    index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
+                    index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                     {
                         Name = "Name",
                         Storage = FieldStorage.No
@@ -72,37 +72,18 @@ namespace FastTests.Server.Documents.Indexing.Auto
         }
 
         [Fact]
-        public async Task CanDispose()
-        {
-            using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
-            {
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
-                {
-                    Name = "Name1",
-                    Storage = FieldStorage.No
-                } })) > 0);
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
-                {
-                    Name = "Name2",
-                    Storage = FieldStorage.No
-                } })) > 0);
-            }
-        }
-
-        [Fact]
         public async Task CanPersist()
         {
-            string dbName;
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
-                dbName = database.Name;
+                var dbName = database.Name;
 
                 var name1 = new AutoIndexField
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
                 };
-                Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })) > 0);
+                Assert.NotNull(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })));
                 var name2 = new AutoIndexField
                 {
                     Name = "Name2",
@@ -110,10 +91,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Indexing = AutoFieldIndexing.Default | AutoFieldIndexing.Search
                 };
 
-                var etag2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }));
-                Assert.True(etag2 > 0);
-
-                var index2 = database.IndexStore.GetIndex(etag2);
+                var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }));
+                Assert.NotNull(index2);
 
                 var task = Task.WhenAll(database.IndexStore.SetLock(index2.Name, IndexLockMode.LockedError),
                     database.IndexStore.SetPriority(index2.Name, IndexPriority.Low));
@@ -127,12 +106,9 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
-                    .OrderBy(x => x.Etag)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
-
-                Assert.True(indexes[0].Etag > 0);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
@@ -141,7 +117,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
 
-                Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
@@ -187,16 +162,15 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            await database.IndexStore.DeleteIndex(index1);
+            await database.IndexStore.DeleteIndex(index1.Name);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
 
             var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
 
             Assert.Equal(1, indexes.Count);
-            Assert.Equal(index2, indexes[0].Etag);
 
-            await database.IndexStore.DeleteIndex(index2);
+            await database.IndexStore.DeleteIndex(index2.Name);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
 
@@ -237,7 +211,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             var indexesAfterReset = database.IndexStore.GetIndexesForCollection("Users");
             Assert.Equal(2, indexesAfterReset.Count());
 
-            var index3 = database.IndexStore.ResetIndex(index1);
+            var index3 = database.IndexStore.ResetIndex(index1.Name);
             var path3 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def1.Name));
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -247,7 +221,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, indexes.Count);
 
-            var index4 = database.IndexStore.ResetIndex(index2);
+            var index4 = database.IndexStore.ResetIndex(index2.Name);
             var path4 = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath, IndexDefinitionBase.GetIndexNameSafeForFileSystem(def2.Name));
 
             if (database.Configuration.Core.RunInMemory == false)
@@ -265,7 +239,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             using (var database = CreateDocumentDatabase())
             {
-                using (var index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
+                using (var index = AutoMapIndex.CreateNew(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField
                 {
                     Name = "Name",
                     Storage = FieldStorage.No
@@ -317,7 +291,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         index._indexStorage.UpdateStats(now, batchStats);
 
                         var stats = index.GetStats();
-                        Assert.Equal(index.Etag, stats.Etag);
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
 #if FEATURE_TEST_INDEX
@@ -364,7 +337,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
-                        Assert.Equal(index.Etag, stats.Etag);
+   
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
 #if FEATURE_TEST_INDEX
@@ -401,7 +374,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         index._indexStorage.UpdateStats(now, batchStats);
 
                         stats = index.GetStats();
-                        Assert.Equal(index.Etag, stats.Etag);
                         Assert.Equal(index.Name, stats.Name);
                         Assert.False(stats.IsInvalidIndex);
 #if FEATURE_TEST_INDEX
@@ -429,7 +401,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(
-                    1,
                     new AutoMapIndexDefinition(
                         "Users",
                         new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }),
@@ -883,7 +854,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(
-                    1,
                     new AutoMapIndexDefinition(
                         "Users",
                         new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }),
@@ -912,7 +882,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var database = CreateDocumentDatabase())
             {
                 using (var index = AutoMapIndex.CreateNew(
-                    1,
                     new AutoMapIndexDefinition(
                         "Users",
                         new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }),
@@ -954,21 +923,17 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
             using (var database = CreateDocumentDatabase())
             {
-                var index0Id = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No } }));
-                var index0 = database.IndexStore.GetIndex(index0Id);
-
+                var index0 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Job", Storage = FieldStorage.No } }));
                 index0.SetState(IndexState.Idle);
 
                 database.IndexStore.RunIdleOperations(); // young idle index should be removed
 
-                index0 = database.IndexStore.GetIndex(index0Id);
+                index0 = database.IndexStore.GetIndex(index0.Name);
                 Assert.Null(index0);
 
-                var index1Id = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }));
-                var index2Id = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Age", Storage = FieldStorage.No } }));
+                var index1 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } }));
+                var index2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Age", Storage = FieldStorage.No } }));
 
-                var index1 = database.IndexStore.GetIndex(index1Id);
-                var index2 = database.IndexStore.GetIndex(index2Id);
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
                     await index1.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
@@ -983,8 +948,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen because difference between querying time between those two indexes is less than TimeToWaitBeforeMarkingAutoIndexAsIdle
 
-                index1 = database.IndexStore.GetIndex(index1Id);
-                index2 = database.IndexStore.GetIndex(index2Id);
+                index1 = database.IndexStore.GetIndex(index1.Name);
+                index2 = database.IndexStore.GetIndex(index2.Name);
 
                 Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
                 Assert.Equal(IndexPriority.Normal, index2.Definition.Priority);
@@ -998,8 +963,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
 
-                index1 = database.IndexStore.GetIndex(index1Id);
-                index2 = database.IndexStore.GetIndex(index2Id);
+                index1 = database.IndexStore.GetIndex(index1.Name);
+                index2 = database.IndexStore.GetIndex(index2.Name);
 
                 Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
                 Assert.Equal(IndexState.Idle, index2.State);
@@ -1011,8 +976,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 database.IndexStore.RunIdleOperations(); // nothing should happen here, because age will be greater than 2x TimeToWaitBeforeMarkingAutoIndexAsIdle but less than TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle
 
-                index1 = database.IndexStore.GetIndex(index1Id);
-                index2 = database.IndexStore.GetIndex(index2Id);
+                index1 = database.IndexStore.GetIndex(index1.Name);
+                index2 = database.IndexStore.GetIndex(index2.Name);
 
                 Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
                 Assert.Equal(IndexState.Idle, index2.State);
@@ -1022,8 +987,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 database.IndexStore.RunIdleOperations(); // this will delete index2
 
-                index1 = database.IndexStore.GetIndex(index1Id);
-                index2 = database.IndexStore.GetIndex(index2Id);
+                index1 = database.IndexStore.GetIndex(index1.Name);
+                index2 = database.IndexStore.GetIndex(index2.Name);
 
                 Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
                 Assert.Null(index2);
@@ -1038,10 +1003,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
 
-                var indexId1 = await database.IndexStore.CreateIndex(definition1);
-                var indexId2 = await database.IndexStore.CreateIndex(definition2);
+                var index1 = await database.IndexStore.CreateIndex(definition1);
+                var index2 = await database.IndexStore.CreateIndex(definition2);
 
-                Assert.Equal(indexId1, indexId2);
+                Assert.Equal(index1, index2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
                 var definition3 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.Yes } });
@@ -1049,7 +1014,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var e = (await Assert.ThrowsAsync<CommandExecutionException>(() => database.IndexStore.CreateIndex(definition3))).InnerException;
 
                 Assert.Contains("Can not update auto-index", e.Message);
-                Assert.NotNull(database.IndexStore.GetIndex(indexId1));
+                Assert.NotNull(index1);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
             }
         }
@@ -1062,16 +1027,17 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var definition1 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
                 var definition2 = new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name", Storage = FieldStorage.No } });
 
-                var indexId1 = await database.IndexStore.CreateIndex(definition1);
-                var index1 = database.IndexStore.GetIndex(indexId1);
+                var index1 = await database.IndexStore.CreateIndex(definition1);
                 index1.SetLock(IndexLockMode.LockedIgnore);
 
-                var indexId2 = await database.IndexStore.CreateIndex(definition2);
+                await database.IndexStore.CreateIndex(definition2);
                 Assert.Equal(1, database.IndexStore.GetIndexes().Count());
 
                 index1.SetLock(IndexLockMode.LockedError);
-                indexId2 = await database.IndexStore.CreateIndex(definition2); // no-op
-                Assert.True(indexId2 >= indexId1);
+                var index2 = await database.IndexStore.CreateIndex(definition2);
+                Assert.NotNull(index1);
+                Assert.NotNull(index2);
+                
             }
         }
 
@@ -1092,9 +1058,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Storage = FieldStorage.No,
                 };
 
-                var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
-                Assert.True(etag > 0);
-                var index = database.IndexStore.GetIndex(etag);
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
+                Assert.NotNull(index);
                 indexName = index.Name;
 
                 indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
@@ -1137,9 +1102,8 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Storage = FieldStorage.No,
                 };
 
-                var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
-                Assert.True(etag > 0);
-                var index = database.IndexStore.GetIndex(etag);
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
+                Assert.NotNull(index);
                 var indexSafeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
 
                 var indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
@@ -1161,13 +1125,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 index = database
                     .IndexStore
-                    .GetIndex(etag);
+                    .GetIndex(index.Name);
 
                 Assert.IsType<FaultyInMemoryIndex>(index);
                 Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexSafeName, IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
 
-                await database.IndexStore.DeleteIndex(index.Etag);
+                await database.IndexStore.DeleteIndex(index.Name);
 
                 for (int i = 0; i < 5; i++)
                 {

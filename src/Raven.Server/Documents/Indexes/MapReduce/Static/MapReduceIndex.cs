@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
         public PropertyAccessor OutputReduceToCollectionPropertyAccessor;
 
-        private MapReduceIndex(long etag, MapReduceIndexDefinition definition, StaticIndexBase compiled)
-            : base(etag, IndexType.MapReduce, definition)
+        private MapReduceIndex(MapReduceIndexDefinition definition, StaticIndexBase compiled)
+            : base(IndexType.MapReduce, definition)
         {
             _compiled = compiled;
 
@@ -194,7 +194,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return false;
         }
 
-        public static Index Open(long etag, StorageEnvironment environment, DocumentDatabase documentDatabase)
+        public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
             var instance = CreateIndexInstance(definition);
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);
-            var instance = new MapReduceIndex(definition.Etag, staticMapIndexDefinition, staticIndex);
+            var instance = new MapReduceIndex(staticMapIndexDefinition, staticIndex);
 
             return instance;
         }

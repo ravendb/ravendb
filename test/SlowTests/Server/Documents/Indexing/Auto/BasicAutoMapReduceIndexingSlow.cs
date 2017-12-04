@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         public async Task MultipleAggregationFunctionsCanBeUsed()
         {
             using (var db = CreateDocumentDatabase())
-            using (var mri = AutoMapReduceIndex.CreateNew(1, new AutoMapReduceIndexDefinition("Users", new[]
+            using (var mri = AutoMapReduceIndex.CreateNew(new AutoMapReduceIndexDefinition("Users", new[]
             {
                 new AutoIndexField
                 {

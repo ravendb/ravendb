@@ -39,8 +39,7 @@ namespace FastTests.Client.Indexing
                     .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.True(output.Etag > 0);
-                Assert.True(input.Equals(output, compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(input.Equals(output));
             }
         }
 
@@ -85,8 +84,7 @@ namespace FastTests.Client.Indexing
                     .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.True(output1.Etag > 0);
-                Assert.True(input.Equals(output1, compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(input.Equals(output1));
 
                 await store
                     .Maintenance
@@ -98,9 +96,8 @@ namespace FastTests.Client.Indexing
                      .Maintenance
                      .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.True(output2.Etag > output1.Etag, $"{output2.Etag} > {output1.Etag}");
                 Assert.Equal("Users_ByName", output2.Name);
-                Assert.True(input2.Equals(output2, compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(input2.Equals(output2));
 
             }
         }
@@ -140,8 +137,7 @@ namespace FastTests.Client.Indexing
                     .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.True(output1.Etag > 0);
-                Assert.True(input.Equals(output1, compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(input.Equals(output1));
 
                 await store
                     .Maintenance
@@ -165,8 +161,7 @@ namespace FastTests.Client.Indexing
                     .Maintenance
                     .SendAsync(new GetIndexOperation("Users_ByName"));
 
-                Assert.True(output2.Etag >= output1.Etag);
-                Assert.True(input.Equals(output2, compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(input.Equals(output2));
 
             }
         }

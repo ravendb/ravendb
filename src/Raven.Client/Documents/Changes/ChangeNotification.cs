@@ -127,11 +127,6 @@ namespace Raven.Client.Documents.Changes
         /// </summary>
         public string Name { get; set; }
 
-        /// <summary>
-        /// The index etag
-        /// </summary>
-        public long? Etag { get; set; }
-
         public override string ToString()
         {
             return string.Format("{0} on {1}", Type, Name);
@@ -141,7 +136,6 @@ namespace Raven.Client.Documents.Changes
         {
             return new DynamicJsonValue
             {
-                [nameof(Etag)] = Etag,
                 [nameof(Name)] = Name,
                 [nameof(Type)] = Type.ToString()
             };
@@ -149,13 +143,11 @@ namespace Raven.Client.Documents.Changes
 
         internal static IndexChange FromJson(BlittableJsonReaderObject value)
         {
-            value.TryGet(nameof(Etag), out long? etag);
             value.TryGet(nameof(Name), out string name);
             value.TryGet(nameof(Type), out string type);
 
             return new IndexChange
             {
-                Etag = etag,
                 Type = (IndexChangeTypes)Enum.Parse(typeof(IndexChangeTypes), type, ignoreCase: true),
                 Name = name
             };

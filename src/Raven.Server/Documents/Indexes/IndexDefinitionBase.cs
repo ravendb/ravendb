@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -28,7 +29,6 @@ namespace Raven.Server.Documents.Indexes
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             Name = name;
-
             Persist(context, options);
         }
 
@@ -55,7 +55,6 @@ namespace Raven.Server.Documents.Indexes
         {
             var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
             indexDefinition.Name = index.Name;
-            indexDefinition.Etag = index.Etag;
             indexDefinition.Type = index.Type;
             indexDefinition.LockMode = LockMode;
             indexDefinition.Priority = Priority;

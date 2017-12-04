@@ -30,8 +30,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
-                var index = database.IndexStore.GetIndex(indexId);
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
@@ -50,8 +49,7 @@ namespace FastTests.Client.Indexing
             {
                 var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
-                var index = database.IndexStore.GetIndex(indexId);
+                var index = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { new AutoIndexField { Name = "Name1" } }));
 
                 var indexes = database.IndexStore.GetIndexesForCollection("Users").ToList();
                 Assert.Equal(1, indexes.Count);
@@ -148,7 +146,6 @@ namespace FastTests.Client.Indexing
                 var index = indexes[0];
                 var stats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.Name));
 
-                Assert.Equal(index.Etag, stats.Etag);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
                 Assert.Equal(IndexPriority.Normal, stats.Priority);
 
@@ -267,7 +264,6 @@ namespace FastTests.Client.Indexing
 #endif
                 Assert.Equal(serverDefinition.Reduce, definition.Reduce);
                 Assert.Equal((int)serverDefinition.Type, (int)definition.Type);
-                Assert.Equal(serverDefinition.Etag, definition.Etag);
                 Assert.Equal((int)serverDefinition.LockMode, (int)definition.LockMode);
                 Assert.Equal(serverDefinition.Configuration, definition.Configuration);
                 Assert.Equal(serverDefinition.Maps, definition.Maps);
@@ -366,17 +362,14 @@ namespace FastTests.Client.Indexing
                 var performanceStats = await store.Maintenance.SendAsync(new GetIndexPerformanceStatisticsOperation());
                 Assert.Equal(2, performanceStats.Length);
                 Assert.Equal(indexName1, performanceStats[0].Name);
-                Assert.True(performanceStats[0].Etag > 0);
                 Assert.True(performanceStats[0].Performance.Length > 0);
 
                 Assert.Equal(indexName2, performanceStats[1].Name);
-                Assert.True(performanceStats[1].Etag > 0);
                 Assert.True(performanceStats[1].Performance.Length > 0);
 
                 performanceStats = await store.Maintenance.SendAsync(new GetIndexPerformanceStatisticsOperation(new[] { indexName1 }));
                 Assert.Equal(1, performanceStats.Length);
                 Assert.Equal(indexName1, performanceStats[0].Name);
-                Assert.True(performanceStats[0].Etag > 0);
                 Assert.True(performanceStats[0].Performance.Length > 0);
             }
         }
@@ -504,8 +497,6 @@ namespace FastTests.Client.Indexing
                     {
                         "Posts"
                     }, new[] { "Title", "Desc" }, false));
-
-                    var index = database.IndexStore.GetIndex(indexId);
 
                     WaitForIndexing(store);
 

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -14,8 +16,6 @@ namespace Raven.Client.Documents.Indexes
         }
 
         public IndexType Type { get; set; }
-
-        public long Etag { get; set; }
 
         public string Name { get; set; }
 
@@ -50,9 +50,6 @@ namespace Raven.Client.Documents.Indexes
 
             if (LockMode != other.LockMode)
                 result |= IndexDefinitionCompareDifferences.LockMode;
-
-            if (Etag != other.Etag)
-                result |= IndexDefinitionCompareDifferences.Etag;
 
             return result;
         }

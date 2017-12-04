@@ -24,7 +24,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { @"from user in docs.Users select new { 
                                 user.Location, 
@@ -116,7 +115,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             {
                 using (var index = MapReduceIndex.CreateNew(new IndexDefinition()
                 {
-                    Etag = 10,
                     Name = "Users_ByCount_GroupByLocation",
                     Maps = { @"from order in docs.Orders
 from line in order.Lines
@@ -228,8 +226,7 @@ select new
                     Reduce = "from result in results group result by result.Location into g select new { Location = g.Key, Count = g.Sum(x => x.Count) }",
                 };
 
-                var index = database.IndexStore.GetIndex(await database.IndexStore.CreateIndex(defOne));
-                Assert.True(index.Etag > 0);
+                var index = await database.IndexStore.CreateIndex(defOne);
 
                 defTwo = new IndexDefinition()
                 {
@@ -252,8 +249,7 @@ select new
                     LockMode = IndexLockMode.LockedError
                 };
 
-                var etag = await database.IndexStore.CreateIndex(defTwo);
-                Assert.True(etag > 0);
+                await database.IndexStore.CreateIndex(defTwo);
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
@@ -283,11 +279,9 @@ select new
                 var indexes = database
                     .IndexStore
                     .GetIndexes()
-                    .OrderBy(x => x.Etag)
                     .OfType<MapReduceIndex>()
                     .ToList();
 
-                Assert.True(indexes[0].Etag > 0);
                 Assert.Equal(IndexType.MapReduce, indexes[0].Type);
                 Assert.Equal("Users_ByCount_GroupByLocation", indexes[0].Name);
                 Assert.Equal(1, indexes[0].Definition.Collections.Count);
@@ -297,11 +291,9 @@ select new
                 Assert.Contains("Count", indexes[0].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
-                Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[0].Definition.Compare(defOne));
-                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(defOne.Equals(indexes[0].GetIndexDefinition()));
                 Assert.Equal(1, indexes[0].MapReduceWorkContext.NextMapResultId);
 
-                Assert.True(indexes[1].Etag > 0);
                 Assert.Equal(IndexType.MapReduce, indexes[1].Type);
                 Assert.Equal("Orders_ByCount_GroupByProduct", indexes[1].Name);
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
@@ -313,8 +305,7 @@ select new
                 Assert.Contains("Total", indexes[1].Definition.MapFields.Keys);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[1].Definition.Priority);
-                Assert.Equal(IndexDefinitionCompareDifferences.Etag, indexes[1].Definition.Compare(defTwo));
-                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition(), compareIndexEtags: false, ignoreFormatting: false));
+                Assert.True(defTwo.Equals(indexes[1].GetIndexDefinition()));
                 Assert.Equal(0, indexes[1].MapReduceWorkContext.NextMapResultId);
             }
         }

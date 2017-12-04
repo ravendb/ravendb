@@ -16,10 +16,8 @@ namespace FastTests.Issues
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                var etag = await database.IndexStore.CreateIndex(indexDefinition);
-                Assert.True(etag > 0);
-
-                var index = database.IndexStore.GetIndex(etag);
+                var index = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.NotNull(index);
 
                 var options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
                 Assert.Equal(IndexCreationOptions.Noop, options);
@@ -53,19 +51,15 @@ namespace FastTests.Issues
                 var indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "33";
 
-                var etag = await database.IndexStore.CreateIndex(indexDefinition);
-                Assert.True(etag > 0);
-
-                var index = database.IndexStore.GetIndex(etag);
+                var index = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.NotNull(index);
                 Assert.Equal(33, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                etag = await database.IndexStore.CreateIndex(indexDefinition);
-                Assert.True(etag > 0);
-
-                index = database.IndexStore.GetIndex(etag);
+                index = await database.IndexStore.CreateIndex(indexDefinition);
+                Assert.NotNull(index);
                 Assert.Equal(30, index.Configuration.MapTimeout.AsTimeSpan.TotalSeconds);
 
                 var indexName = index.Name;

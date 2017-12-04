@@ -35,10 +35,6 @@ namespace Raven.Server.Json
                 w.WriteString(stat.Name);
                 w.WriteComma();
 
-                w.WritePropertyName(nameof(stat.Etag));
-                w.WriteInteger(stat.Etag);
-                w.WriteComma();
-
                 w.WriteArray(c, nameof(stat.Performance), stat.Performance, (wp, cp, performance) => { wp.WriteIndexingPerformanceStats(context, performance); });
 
                 w.WriteEndObject();
@@ -522,10 +518,6 @@ namespace Raven.Server.Json
                 writer.WriteString(index.Name);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(index.Etag));
-                writer.WriteInteger(index.Etag);
-                writer.WriteComma();
-
                 writer.WritePropertyName(nameof(index.LockMode));
                 writer.WriteString(index.LockMode.ToString());
                 writer.WriteComma();
@@ -561,10 +553,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(indexDefinition.Name));
             writer.WriteString(indexDefinition.Name);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(indexDefinition.Etag));
-            writer.WriteInteger(indexDefinition.Etag);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Type));
@@ -729,10 +717,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(progress.Type));
             writer.WriteString(progress.Type.ToString());
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(progress.Etag));
-            writer.WriteInteger(progress.Etag);
 
             writer.WriteEndObject();
         }

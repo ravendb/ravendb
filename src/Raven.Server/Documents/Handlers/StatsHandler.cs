@@ -68,7 +68,6 @@ namespace Raven.Server.Documents.Handlers
                         State = index.State,
                         IsStale = isStale,
                         Name = index.Name,
-                        Etag = index.Etag,
                         LockMode = index.Definition.LockMode,
                         Priority = index.Definition.Priority,
                         Type = index.Type,

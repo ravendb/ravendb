@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
             using (var database = CreateDocumentDatabase())
             {
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
+                var autoIndex = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
                 {
                     new AutoIndexField
                     {
@@ -30,8 +30,6 @@ namespace SlowTests.Issues
                         Name = "LastName",
                     }
                 }));
-
-                var autoIndex = database.IndexStore.GetIndex(indexId);
 
                 autoIndex.SetState(IndexState.Idle);
 
@@ -51,15 +49,13 @@ namespace SlowTests.Issues
             {
                 var matcher = new DynamicQueryToIndexMatcher(database.IndexStore);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
+                var autoIndex = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[]
                 {
                     new AutoIndexField
                     {
                         Name = "FirstName",
                     }
                 }));
-
-                var autoIndex = database.IndexStore.GetIndex(indexId);
 
                 autoIndex.SetState(IndexState.Idle);
 
@@ -78,7 +74,7 @@ namespace SlowTests.Issues
             {
                 var matcher = new DynamicQueryToIndexMatcher(database.IndexStore);
 
-                var indexId = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[]
+                var autoIndex = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[]
                 {
                     new AutoIndexField
                     {
@@ -93,8 +89,6 @@ namespace SlowTests.Issues
                         Name = "Location",
                     }
                 }));
-
-                var autoIndex = database.IndexStore.GetIndex(indexId);
 
                 autoIndex.SetState(IndexState.Idle);
 
