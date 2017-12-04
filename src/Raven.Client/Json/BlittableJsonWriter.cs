@@ -365,7 +365,16 @@ namespace Raven.Client.Json
 
         public override void WriteValue(decimal? value)
         {
-            throw new InvalidCastException("RavenDB supports up to double percision floating point types, therefore it does not support decimal. Please use double type, or store value as string");
+            if (value != null)
+            {
+                AssertDecimalValueInDoublePercisionBoundries(value.Value);
+                _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
+            }                
+            else
+            {
+                _manualBlittableJsonDocumentBuilder.WriteValueNull();
+            }               
+            
         }
 
         public override void WriteValue(DateTime? value)
