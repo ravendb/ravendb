@@ -4,12 +4,25 @@
         margin-left: 37px;
     }  
 
+    .actions {
+        white-space: nowrap;
+    }
+    
     .text-details {
         color: @gray-lighter;
         width: 250px;
     }
 
+    .panel-name {
+        &, & > * {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+    
     .node {
+        white-space: nowrap;
         i + span {
             margin-left: 0;
             font-weight: bold;
