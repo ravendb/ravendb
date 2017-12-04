@@ -96,7 +96,7 @@ class expiration extends viewModelBase {
 
     onConfigurationLoaded(data: Raven.Client.ServerWide.Expiration.ExpirationConfiguration) {
         if (data) {
-            this.enabled(data.Active);
+            this.enabled(!data.Disabled);
             this.specifyDeleteFrequency(data.DeleteFrequencyInSec != null);
             this.deleteFrequencyInSec(data.DeleteFrequencyInSec);
 
@@ -109,7 +109,7 @@ class expiration extends viewModelBase {
     
     toDto() {
         return {
-            Active: this.enabled(),
+            Disabled: !this.enabled(),
             DeleteFrequencyInSec: this.specifyDeleteFrequency() ? this.deleteFrequencyInSec() : null
         } as Raven.Client.ServerWide.Expiration.ExpirationConfiguration;
     }
