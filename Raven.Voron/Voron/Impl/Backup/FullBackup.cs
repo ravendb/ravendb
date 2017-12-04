@@ -46,6 +46,7 @@ namespace Voron.Impl.Backup
                         var usedJournals = new List<JournalFile>();
                         long lastWrittenLogPage = -1;
                         long lastWrittenLogFile = -1;
+                        var backupSuccess = false;
                         using (var txw = env.NewTransaction(TransactionFlags.ReadWrite)) // so we can snapshot the headers safely
                         {
                             txr = env.NewTransaction(TransactionFlags.Read); // now have snapshot view
@@ -108,6 +109,8 @@ namespace Voron.Impl.Backup
 
                         try
                         {
+                            long lastBackedupJournal = 0;
+                            long lastBackedUpPage = -1;
                             foreach (var journalFile in usedJournals)
                             {
                                 var journalPart = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalFile.Number), compression);
@@ -123,13 +126,40 @@ namespace Voron.Impl.Backup
                                     copier.ToStream(journalFile, 0, pagesToCopy, stream, token);
                                     infoNotify(string.Format("Voron copy journal file {0} ", journalFile));
                                 }
-
+                                lastBackedupJournal = journalFile.Number;
+                                lastBackedUpPage = pagesToCopy;
                             }
+
+                            if (env.Options.IncrementalBackupEnabled)
+                            {
+                                env.HeaderAccessor.Modify(header =>
+                                {
+                                    header->IncrementalBackup.LastBackedUpJournal = lastBackedupJournal;
+                                    header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+                                });
+                            }
+                            backupSuccess = true;
+                        }
+                        catch (Exception)
+                        {
+                            backupSuccess = false;
+                            throw;
                         }
                         finally
                         {
+                            var lastSyncedJournal = env.HeaderAccessor.Get(header => header->Journal).LastSyncedJournal;
+
                             foreach (var journalFile in usedJournals)
                             {
+                                if (backupSuccess) // if backup succeeded we can remove journals
+                                {
+                                    if (journalFile.Number < lastWrittenLogFile &&  // prevent deletion of the current journal and journals with a greater number
+                                        journalFile.Number < lastSyncedJournal) // prevent deletion of journals that aren't synced with the data file
+                                    {
+                                        journalFile.DeleteOnClose = true;
+                                    }
+                                }
+
                                 journalFile.Release();
                             }
                         }
