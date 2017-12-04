@@ -65,8 +65,11 @@ namespace Raven.Client.Json
                         _manualBlittableJsonDocumentBuilder.WriteValue((long)value);
                     else if (value is double)
                         _manualBlittableJsonDocumentBuilder.WriteValue((double)value);
-                    else if (value is decimal)
-                        ThrowDoesNotSupportDecimalValues();
+                    else if (value is decimal decVal)
+                    {
+                        AssertDecimalValueInDoublePercisionBoundries(decVal);
+                        _manualBlittableJsonDocumentBuilder.WriteValue((decimal)value);
+                    }
                     else if (value is float)
                         _manualBlittableJsonDocumentBuilder.WriteValue((float)value);
                     else if (value is bool)
@@ -184,11 +187,29 @@ namespace Raven.Client.Json
             }
         }
 
-        private static void ThrowDoesNotSupportDecimalValues()
+
+        private static void AssertDecimalValueInDoublePercisionBoundries(decimal val)
+        {
+            try
+            {
+                var asDouble = (double)val;
+                var asRoundtringDecimal = (decimal)asDouble;
+                if (val != asRoundtringDecimal)
+                {
+                    ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
+                }
+            }
+            catch
+            {
+                ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
+            }
+        }
+
+        private static void ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(decimal value)
         {
             throw new NotSupportedException(
-                "RavenDB supports up to double percision floating point types, therefore it does not support decimal. Please use double type, or store value as string");
-        }
+                                $"RavenDB supports up to double percision floating point types, therefore it does not support the decimal value {value}. Please use double type, or store value as string");
+        }        
 
         public override void WriteEndObject()
         {
@@ -267,7 +288,8 @@ namespace Raven.Client.Json
 
         public override void WriteValue(decimal value)
         {
-            ThrowDoesNotSupportDecimalValues();
+            AssertDecimalValueInDoublePercisionBoundries(value);
+            _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
         public override void WriteValue(DateTime value)

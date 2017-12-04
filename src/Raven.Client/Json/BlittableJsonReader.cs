@@ -122,9 +122,10 @@ namespace Raven.Client.Json
                 return BlittableJsonToken.LazyNumber;
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
-            if (val is decimal)
+            if (val is decimal asDec)
             {
-                ThrowDoesNotSupportDeciamlValues();
+                AssertDecimalValueInDoublePercisionBoundries(asDec);
+                return BlittableJsonToken.LazyNumber;
             }
             return BlittableJsonToken.StartObject;
         }
@@ -216,14 +217,42 @@ namespace Raven.Client.Json
 
         public override decimal? ReadAsDecimal()
         {
-            ThrowDoesNotSupportDeciamlValues();
-            return null;
+            if (!Read())
+            {
+                SetToken(JsonToken.None);
+                return null;
+            }
+            if (Value == null)
+                return null;
+            if (Value is decimal)
+            {
+                AssertDecimalValueInDoublePercisionBoundries((decimal)Value);
+                return (decimal)Value;
+            }                
+            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
         }
         
-        private static void ThrowDoesNotSupportDeciamlValues()
+        private static void AssertDecimalValueInDoublePercisionBoundries(decimal val)
+        {
+            try
+            {
+                var asDouble = (double)val;
+                var asRoundtringDecimal = (decimal)asDouble;
+                if (val != asRoundtringDecimal)
+                {
+                    ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);                    
+                }
+            }
+            catch
+            {
+                ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
+            }
+        }
+
+        private static void ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(decimal value)
         {
             throw new NotSupportedException(
-                "RavenDB supports up to double percision floating point types, therefore it does not support decimal. Please use double type, or store value as string");
+                                $"RavenDB supports up to double percision floating point types, therefore it does not support the decimal value {value}. Please use double type, or store value as string");
         }
 
         public override double? ReadAsDouble()

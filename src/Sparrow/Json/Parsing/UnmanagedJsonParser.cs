@@ -458,6 +458,7 @@ namespace Sparrow.Json.Parsing
                         _zeroPrefix = false;
                         _isNegative = true;
                         _isFractionedDouble = false;
+                        _isOverflow = false;
                         _isExponent = false;
                         _state.Long = 0;
                         _state.EscapePositions.Clear();
