@@ -90,8 +90,7 @@ namespace Sparrow.Threading
                     throw new NotSupportedException("Unknown operation mode: " + typeof(TOperationMode));
                 }
 
-                // Rethrow so that our thread knows it failed
-                throw new AggregateException(e);
+                throw;
             }
         }
 
