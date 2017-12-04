@@ -227,7 +227,7 @@ namespace Raven.Server.Smuggler.Documents
         private class DatabaseCmpXchgActions : IKeyValueActions<BlittableJsonReaderObject>
         {
             private readonly DocumentDatabase _database;
-            private readonly List<CommandBase> _cmpXchgCommands = new List<CommandBase>();
+            private readonly List<AddOrUpdateCompareExchangeCommand> _cmpXchgCommands = new List<AddOrUpdateCompareExchangeCommand>();
             public DatabaseCmpXchgActions(DocumentDatabase database)
             {
                 _database = database;
@@ -261,9 +261,9 @@ namespace Raven.Server.Smuggler.Documents
             private void SendCommands()
             {
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new ClusterBatchCommand
+                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand
                 {
-                    CommandsList = _cmpXchgCommands
+                    Commands = _cmpXchgCommands
                 }));
 
                 _cmpXchgCommands.Clear();
