@@ -40,7 +40,7 @@ namespace Raven.Server.Web.Studio
                     {
                         ["Orders"] = new RevisionsCollectionConfiguration
                         {
-                            Active = true
+                            Disabled = false
                         }
                     }
                 }, Database.Name);
