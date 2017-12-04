@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                         Name = "Fitzchak"
                     }, "ExpectedChangeVector", "users|");
                     var exception = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
-                    Assert.Contains("You cannot use change vector (ExpectedChangeVector) when using identity in the document ID (users/2). ", exception.Message);
+                    Assert.Contains("System.InvalidOperationException: You cannot use change vector (ExpectedChangeVector) when using identity in the document ID (users/2).", exception.Message);
                 }
             }
         }
