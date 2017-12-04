@@ -4,9 +4,9 @@ import document = require("models/database/documents/document");
 
 class documentHelpers {
     static findRelatedDocumentsCandidates(doc: documentBase): string[] {
-        var results: string[] = [];
-        var initialDocumentFields = doc.getDocumentPropertyNames();
-        var documentNodesFlattenedList: any[] = [];
+        const results: string[] = [];
+        const initialDocumentFields = doc.getDocumentPropertyNames();
+        const documentNodesFlattenedList: any[] = [];
 
         // get initial nodes list to work with
         initialDocumentFields.forEach(curField => {
@@ -14,8 +14,8 @@ class documentHelpers {
         });
 
         for (let documentNodesCursor = 0; documentNodesCursor < documentNodesFlattenedList.length; documentNodesCursor++) {
-            var curField = documentNodesFlattenedList[documentNodesCursor];
-            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField)) {
+            const curField = documentNodesFlattenedList[documentNodesCursor];
+            if (typeof curField === "string" && /\w+\/\w+/ig.test(curField) && curField.length < 512) {
 
                 if (!results.find(x => x === curField.toString())) {
                     results.push(curField.toString());
