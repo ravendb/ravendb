@@ -92,10 +92,16 @@ Running locally:
 <path/to/ravendb>/Server/Raven.Server
 ```
 
-Running as service:
+Registering as service in Windows:
+```
+.\rvn.exe windows-service register --service-name RavenDB4
+```
+
+Running as service in Linux, add to your daemon script:
 ```
 <path/to/ravendb>/Server/Raven.Server --daemon
 ```
+
 
 Hello World Example:
 --------------------
