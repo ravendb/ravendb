@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Revisions
 
         public const long NotDeletedRevisionMarker = 0;
 
-        private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration();
+        private readonly RevisionsCollectionConfiguration _emptyConfiguration = new RevisionsCollectionConfiguration{ Disabled = true };
 
         public RevisionsStorage(DocumentDatabase database, Transaction tx)
         {
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Revisions
                 Default = new RevisionsCollectionConfiguration
                 {
                     MinimumRevisionAgeToKeep = TimeSpan.FromDays(45),
-                    Active = true
+                    Disabled = false
                 }
             };
             CreateTrees(tx);
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     foreach (var collection in Configuration.Collections)
                     {
-                        if (collection.Value.Active == false)
+                        if (collection.Value.Disabled)
                             continue;
                         EnsureRevisionTableCreated(tx, new CollectionName(collection.Key));
                     }
@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Revisions
             out RevisionsCollectionConfiguration configuration)
         {
             configuration = GetRevisionsConfiguration(collectionName.Name);
-            if (configuration.Active == false)
+            if (configuration.Disabled)
             {
                 return false;
             }
@@ -605,7 +605,7 @@ namespace Raven.Server.Documents.Revisions
             }
 
             var configuration = GetRevisionsConfiguration(collectionName.Name, flags);
-            if (configuration.Active == false)
+            if (configuration.Disabled)
                 return;
 
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
