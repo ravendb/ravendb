@@ -1,5 +1,5 @@
 <div id="dashboard-container" class="content-margin">
-    <div class="dashboard-items">
+    <div class="dashboard-items no-databases">
         <div class="flex-vertical dashboard-nodecpu">
 
             <div class="dashboard-item dashboard-node">
@@ -114,7 +114,12 @@
                         </div>
                     </div>
                     <div class="list-container">
+                        <div class="create-database">
+                            <div><i class="icon-empty-set"></i><span>No data</span></div>
+                            <a href="#" class="btn btn-primary btn-xs text-uppercase" >Create Database</a>
+                        </div>
                         <div class="list absolute-fill fix-size">
+                            
                             <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true"></virtual-grid>
                         </div>
                     </div>
@@ -134,6 +139,10 @@
                         <div>Offline: <strong data-bind="text: totalOfflineDatabases"></strong></div>
                     </div>
                     <div class="list-container">
+                        <div class="create-database">
+                            <div><i class="icon-empty-set"></i><span>No data</span></div>
+                            <a href="#" class="btn btn-primary btn-xs text-uppercase">Create Database</a>
+                        </div>
                         <div class="list absolute-fill fix-size">
                             <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true"></virtual-grid>
                         </div>
