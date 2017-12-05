@@ -7,7 +7,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -161,15 +160,9 @@ namespace Raven.Server.Documents.Replication
         public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats, ref DateTime next)
         {
             EnsureValidStats(stats);
+            var wasInterrupted = false;
 
-            long delayReplicationFor = 0;
-            var wasDelayed = false;
-            
-            if (_parent._parent._server.LicenseManager.GetLicenseStatus().HasDelayedExternalReplication 
-                && _parent.Destination is ExternalReplication external)
-            {
-                delayReplicationFor = external.DelayReplicationFor;
-            }
+            var delay = GetDelayReplication();
 
             using (_parent._database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
@@ -193,13 +186,13 @@ namespace Raven.Server.Documents.Replication
                         {
                             if (lastTransactionMarker != item.TransactionMarker)
                             {
-                                if (delayReplicationFor > 0)
+                                if (delay.Ticks > 0)
                                 {
-                                    var nextReplication = item.LastModifiedTicks + delayReplicationFor;
+                                    var nextReplication = item.LastModifiedTicks + delay.Ticks;
                                     if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
                                     {
                                         next = new DateTime(nextReplication);
-                                        wasDelayed = true;
+                                        wasInterrupted = true;
                                         break;
                                     }
                                 }
@@ -212,7 +205,17 @@ namespace Raven.Server.Documents.Replication
                                     ((maxSizeToSend.HasValue && size > maxSizeToSend.Value.GetValue(SizeUnit.Bytes)) ||
                                      (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
                                 {
+                                    wasInterrupted = true;
                                     break;
+                                }
+
+                                if (_stats.Storage.CurrentStats.InputCount % 10000 == 0)
+                                {
+                                    if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
+                                    {
+                                        wasInterrupted = true;
+                                        break;
+                                    }
                                 }
                             }
 
@@ -242,7 +245,7 @@ namespace Raven.Server.Documents.Replication
                         // the last etag they have from us on the other side
                         _parent._lastSentDocumentEtag = _lastEtag;
                         _parent._lastDocumentSentTime = DateTime.UtcNow;
-                        var changeVector = wasDelayed ? null : DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                        var changeVector = wasInterrupted ? null : DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                         _parent.SendHeartbeat(changeVector);
                         return hasModification;
                     }
@@ -291,6 +294,22 @@ namespace Raven.Server.Documents.Replication
                     _replicaAttachmentStreams.Clear();
                 }
             }
+        }
+
+        private TimeSpan GetDelayReplication()
+        {
+            TimeSpan delayReplicationFor = TimeSpan.Zero;
+
+            if (_parent.Destination is ExternalReplication external)
+            {
+                delayReplicationFor = external.DelayReplicationFor;
+
+                if (delayReplicationFor.Ticks > 0 && _parent._parent._server.LicenseManager.CanDelayReplication(out var _) == false)
+                {
+                    return TimeSpan.Zero;
+                }
+            }
+            return delayReplicationFor;
         }
 
         private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)

@@ -16,6 +16,7 @@
         Cores,
         Memory,
         Downgrade,
-        Snmp
+        Snmp,
+        DelayedReplication
     }
 }

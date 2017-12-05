@@ -1339,6 +1339,20 @@ namespace Raven.Server.Commercial
             return false;
         }
 
+        public bool CanDelayReplication(out LicenseLimit licenseLimit)
+        {
+            if (IsValid(out licenseLimit) == false)
+                return false;
+
+            if (_licenseStatus.HasDelayedExternalReplication)
+                return true;
+
+            const string details = "Your current license doesn't include " +
+                                   "the delayed replication feature";
+            licenseLimit = GenerateLicenseLimit(LimitType.DelayedReplication, details, addNotification: true);
+            return false;
+        }
+
         public bool CanDynamicallyDistributeNodes(out LicenseLimit licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
