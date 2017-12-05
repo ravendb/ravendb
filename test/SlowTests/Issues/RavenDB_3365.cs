@@ -29,7 +29,7 @@ namespace SlowTests.Issues
             Assert.Equal(firstFormat, secondFormat);
         }
 
-        [Fact(Skip = "Need to review how can we see if we reset the index")]
+        [Fact]
         public void shouldnt_reset_index_when_non_meaningful_change()
         {
             using (var store = GetDocumentStore())
@@ -40,13 +40,14 @@ namespace SlowTests.Issues
                 var indexName = new Users_ByName().IndexName;
                 var indexDef = store.Maintenance.Send(new GetIndexOperation(indexName));
 
+                var indexInstance1 = GetDocumentDatabaseInstanceFor(store).Result.IndexStore.GetIndex(indexName);
+
+                
                 indexDef.Maps = new HashSet<string> { "   " + indexDef.Maps.First().Replace(" ", "  \t ") + "   " };
                 store.Maintenance.Send(new PutIndexesOperation(indexDef));
 
-                indexDef = store.Maintenance.Send(new GetIndexOperation(indexName));
-                // and verify if index wasn't reset
-                // TODO Check if index change
-                //Assert.Equal(indexId1, indexId2);
+                var indexInstance2 = GetDocumentDatabaseInstanceFor(store).Result.IndexStore.GetIndex(indexName);
+                Assert.Same(indexInstance1, indexInstance2);
             }
         }
 

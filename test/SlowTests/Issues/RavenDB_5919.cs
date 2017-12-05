@@ -104,7 +104,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "Skip until review how to see if index as been change")]
+        [Fact]
         public void ShouldNotRecreateReplacementIndexIfItIsTheSame()
         {
             using (var documentStore = GetDocumentStore())
@@ -115,14 +115,16 @@ namespace SlowTests.Issues
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var index1 = documentStore.Maintenance.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+                var index = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById";
+                var index1 = documentStore.Maintenance.Send(new GetIndexOperation(index));
+
+                var indexInstance1 = GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
 
                 new Entity_ById_V2().Execute(documentStore);
 
-                var index2 = documentStore.Maintenance.Send(new GetIndexOperation($"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}Entity/ById"));
+                var indexInstance2 = GetDocumentDatabaseInstanceFor(documentStore).Result.IndexStore.GetIndex(index);
 
-                // TODO make sure index is the same
-                //Assert.Equal(index1.CreatedAt, index2.CreatedAt);
+                Assert.Same(indexInstance1, indexInstance2);
             }
         }
 
