@@ -99,6 +99,7 @@ iv. Click on `Settings` and then on `Create Sample Data` in the left menu. Now C
 #### Client Side
 
 i. Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
+
 ii. Open terminal and type:
 
 ```
@@ -106,6 +107,7 @@ ii. Open terminal and type:
    cd HelloWorld
    dotnet new console
 ```
+
 iii. Add to file HelloWorld.csproj, above `</Project>` the following:
 ```
     <ItemGroup>
