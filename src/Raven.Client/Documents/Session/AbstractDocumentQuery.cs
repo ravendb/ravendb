@@ -1157,7 +1157,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             if (array.Length == 0)
             {
-                tokens.AddLast(TrueToken.Instance);
+                tokens.AddLast(FalseToken.Instance);
                 return;
             }
 
