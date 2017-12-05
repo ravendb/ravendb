@@ -1,7 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Xunit;
 using Raven.Server.Documents.Replication;
 
@@ -17,8 +19,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task PUT_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -69,8 +91,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task DELETE_of_conflicted_document_with_outdated_etag_throws_concurrency_exception()
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = storeA.OpenSession())
                 {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -25,8 +27,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task IfIncludedDocumentIsConflictedItShouldNotThrowConflictException()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -113,8 +135,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task ExpirationShouldHandleConflicts()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 await SetupExpiration(store1);
                 await SetupExpiration(store2);

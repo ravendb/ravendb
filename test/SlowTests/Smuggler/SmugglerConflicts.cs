@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -23,14 +25,29 @@ namespace SlowTests.Smuggler
 
             _store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_store1"
+                ModifyDatabaseName = s => $"{s}_store1",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             });
             _store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_store2"
+                ModifyDatabaseName = s => $"{s}_store2",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             });
         }
-
         public override void Dispose()
         {
             _store1.Dispose();
@@ -117,11 +134,27 @@ namespace SlowTests.Smuggler
 
             using (var store3 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_store3"
+                ModifyDatabaseName = s => $"{s}_store3",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store4 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_store4"
+                ModifyDatabaseName = s => $"{s}_store4",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 await GenerateConflict2(store3, store4);

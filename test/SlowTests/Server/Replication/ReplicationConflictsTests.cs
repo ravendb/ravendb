@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
@@ -436,11 +437,27 @@ namespace SlowTests.Server.Replication
         {
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_foo1"
+                ModifyDatabaseName = s => $"{s}_foo1",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_foo2"
+                ModifyDatabaseName = s => $"{s}_foo2",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 using (var s1 = store1.OpenSession())
@@ -482,15 +499,39 @@ namespace SlowTests.Server.Replication
             var dbName3 = "FooBar-3";
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName1}"
+                ModifyDatabaseName = s => $"{s}_{dbName1}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName2}"
+                ModifyDatabaseName = s => $"{s}_{dbName2}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store3 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName3}"
+                ModifyDatabaseName = s => $"{s}_{dbName3}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 using (var s1 = store1.OpenSession())
@@ -523,11 +564,27 @@ namespace SlowTests.Server.Replication
             const string dbName2 = "FooBar-2";
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName1}"
+                ModifyDatabaseName = s => $"{s}_{dbName1}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName2}"
+                ModifyDatabaseName = s => $"{s}_{dbName2}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 using (var s1 = store1.OpenSession())
@@ -554,11 +611,27 @@ namespace SlowTests.Server.Replication
             const string dbName2 = "FooBar-2";
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName1}"
+                ModifyDatabaseName = s => $"{s}_{dbName1}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName2}"
+                ModifyDatabaseName = s => $"{s}_{dbName2}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 using (var s2 = store2.OpenSession())
@@ -597,11 +670,27 @@ namespace SlowTests.Server.Replication
             const string dbName2 = "FooBar-2";
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName1}"
+                ModifyDatabaseName = s => $"{s}_{dbName1}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName2}"
+                ModifyDatabaseName = s => $"{s}_{dbName2}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 using (var s2 = store2.OpenSession())
@@ -646,11 +735,27 @@ namespace SlowTests.Server.Replication
             const string dbName2 = "FooBar-2";
             using (var store1 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName1}"
+                ModifyDatabaseName = s => $"{s}_{dbName1}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_{dbName2}"
+                ModifyDatabaseName = s => $"{s}_{dbName2}",
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
             }))
             {
                 using (var s2 = store2.OpenSession())
@@ -698,8 +803,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task Should_not_resolve_conflcit_with_script_when_they_from_different_collection()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = store1.OpenSession())
                 {

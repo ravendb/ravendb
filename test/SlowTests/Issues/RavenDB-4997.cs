@@ -1,7 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.ServerWide;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -16,8 +18,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Load_of_conflicted_document_with_tombstone_should_result_in_error()
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -56,8 +78,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Load_of_conflicted_document_with_another_document_should_result_in_error()
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -90,8 +132,28 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Delete_of_conflicted_document_should_resolve_conflict()
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = storeA.OpenSession())
                 {
@@ -124,9 +186,39 @@ namespace SlowTests.Issues
         [Fact]
         public async Task Load_of_several_conflicted_document_should_result_in_error()
         {
-            using (var storeA = GetDocumentStore())
-            using (var storeB = GetDocumentStore())
-            using (var storeC = GetDocumentStore())
+            using (var storeA = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var storeC = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 using (var session = storeA.OpenSession())
                 {

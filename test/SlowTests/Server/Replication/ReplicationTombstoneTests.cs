@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -240,8 +242,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task CreateConflictAndResolveItWithTombstone()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
 
                 using (var session = store1.OpenSession())

@@ -61,9 +61,12 @@ namespace SlowTests.Issues
                         .ToListAsync();
                 }
 
-                await mre.WaitAsync(TimeSpan.FromSeconds(15));
+                Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
 
+                WaitForUserToContinueTheTest(store);
+                
                 indexes = await store.Maintenance.SendAsync(new GetIndexesOperation(0, 25));
+                Assert.Equal(1, indexes.Length);
                 Assert.Equal("Auto/Users/ByFirstNameAndLastName", indexes[0].Name);
             }
         }

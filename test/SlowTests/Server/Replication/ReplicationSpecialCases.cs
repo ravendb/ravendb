@@ -1,6 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Replication;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -12,8 +14,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task NonIdenticalContentConflict()
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var slave = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
 
                 await SetupReplicationAsync(master, slave);
@@ -44,8 +66,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task NonIdenticalMetadataConflict()
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var slave = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
 
                 await SetupReplicationAsync(master, slave);
@@ -85,8 +127,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task UpdateConflictOnParentDocumentArrival()
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var slave = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 await SetupReplicationAsync(master, slave);
 
@@ -125,8 +187,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task IdenticalContentConflictResolution()
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var slave = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
 
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.None);
@@ -171,8 +253,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task TomstoneToTombstoneConflict()
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var slave = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
 
                 await SetReplicationConflictResolutionAsync(slave, StraightforwardConflictResolution.None);

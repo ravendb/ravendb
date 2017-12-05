@@ -44,8 +44,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ResolveWhenScriptAdded()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+                {
+                    ModifyDatabaseRecord = record =>
+                    {
+                        record.ConflictSolverConfig = new ConflictSolver
+                        {
+                            ResolveToLatest = false,
+                            ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        };
+                    }
+                }))
             {
                 await GenerateConflicts(store1, store2);
                 var config = new ConflictSolver
@@ -70,8 +90,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ResolveWhenChangeToLatest()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 await GenerateConflicts(store1, store2);
 

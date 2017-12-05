@@ -606,7 +606,6 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() =>
                 {
                     _contextPool?.Dispose();
-                    _contextPool = null;
                 });
 
                 exceptionAggregator.Execute(() =>

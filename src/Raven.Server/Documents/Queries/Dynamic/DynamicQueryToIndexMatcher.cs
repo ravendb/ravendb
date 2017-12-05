@@ -131,8 +131,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure);
 
             var state = index.State;
-            var stats = index.GetStats();
+            IndexStats stats;
+            try
+            {
+                stats = index.GetStats();
 
+            }
+            catch (OperationCanceledException)
+            {
+                return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure);
+            }
             if (state == IndexState.Error || state == IndexState.Disabled || stats.IsInvalidIndex)
             {
                 explanations?.Add(new Explanation(indexName, $"Cannot do dynamic queries on disabled index or index with errors (index name = {indexName})"));

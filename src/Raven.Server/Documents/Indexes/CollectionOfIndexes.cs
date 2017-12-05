@@ -44,11 +44,24 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public bool TryRemoveByName(string name, out Index index)
+        public bool TryRemoveByName(string name, Index existingInstance)
         {
-            var result = _indexesByName.TryRemove(name, out index);
+            var result = _indexesByName.TryGetValue(name, out var index);
             if (result == false)
                 return false;
+
+            if (index != existingInstance)
+                return false;
+
+            if (_indexesByName.TryRemove(name, out index) == false)
+                return false; // already removed?
+
+            if (index != existingInstance)
+            {
+                // here for correctness only, don't expect this to ever happen
+                _indexesByName.TryAdd(name, index);// re-add the removed one
+                return false;
+            }
 
             foreach (var collection in index.Definition.Collections)
             {

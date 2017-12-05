@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -13,8 +15,28 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task CanAutomaticlyResolveConflict()
         {
-            using (var master = GetDocumentStore())
-            using (var slave = GetDocumentStore())
+            using (var master = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var slave = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 await SetupReplicationAsync(master, slave);
 

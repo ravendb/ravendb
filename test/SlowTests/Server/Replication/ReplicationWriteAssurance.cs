@@ -1,31 +1,30 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Replication
 {
-    public class ReplicationWriteAssurance : ReplicationTestBase
+    public class ReplicationWriteAssurance : ClusterTestBase 
     {
         [Fact]
         public async Task ServerSideWriteAssurance()
         {
-            using (var store1 = GetDocumentStore(new Options
+            
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_dbName1"
+                Server = leader,
+                ReplicationFactor = 3,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Topology.DynamicNodesDistribution = false;
+                }
             }))
-            using (var store2 = GetDocumentStore(new Options
             {
-                ModifyDatabaseName = s => $"{s}_dbName2"
-            }))
-            using (var store3 = GetDocumentStore(new Options
-            {
-                ModifyDatabaseName = s => $"{s}_dbName3"
-            }))
-            {
-                await SetupReplicationAsync(store1, store2, store3);
-
-                using (var s1 = store1.OpenSession())
+                using (var s1 = store.OpenSession())
                 {
                     s1.Advanced.WaitForReplicationAfterSaveChanges(replicas: 2, timeout: TimeSpan.FromSeconds(30));
 
@@ -37,20 +36,14 @@ namespace SlowTests.Server.Replication
                     s1.SaveChanges();
                 }
 
-                using (var s1 = store1.OpenSession())
+                foreach (var server in Servers)
                 {
-                    Assert.NotNull(s1.Load<dynamic>("users/1"));
-                }
-
-                using (var s2 = store2.OpenSession())
-                {
-                    var s = s2.Load<dynamic>("users/1");
-                    Assert.NotNull(s);
-                }
-
-                using (var s3 = store3.OpenSession())
-                {
-                    Assert.NotNull(s3.Load<dynamic>("users/1"));
+                    var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    using(db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    {
+                        context.OpenReadTransaction();
+                        Assert.NotNull(db.DocumentsStorage.Get(context, "users/1"));
+                    }
                 }
             }
         }

@@ -13,6 +13,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -846,8 +847,28 @@ namespace SlowTests.Client.Attachments
         [Fact]
         public async Task PutSameAttachmentsDifferentContentTypeShouldConflict()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
                 await SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
@@ -918,8 +939,28 @@ namespace SlowTests.Client.Attachments
         [Fact]
         public async Task PutDifferentAttachmentsShouldConflict()
         {
-            using (var store1 = GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
             {
                 await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
                 await SetDatabaseId(store2, new Guid("99999999-48c4-421e-9466-999999999999"));
