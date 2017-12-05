@@ -87,20 +87,20 @@ Running as service in Linux, add to your daemon script:
 
 #### Server Side
 
-i. Launch RavenDB server instance as follows:
+- Launch RavenDB server instance as follows:
 ```
    <path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
 ```
 
-ii. Open a web browser and enter `http://localhost:8080`
-iii. Click on `Databases` on the left menu, and then create a new database named `SampleDataDB`
-iv. Click on `Settings` and then on `Create Sample Data` in the left menu. Now Click on `Create`
+- Open a web browser and enter `http://localhost:8080`
+- Click on `Databases` on the left menu, and then create a new database named `SampleDataDB`
+- Click on `Settings` and then on `Create Sample Data` in the left menu. Now Click on `Create`
 
 #### Client Side
 
-i. Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
+- Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
 
-ii. Open terminal and type:
+- Open terminal and type:
 
 ```
    mkdir HelloWorld
@@ -108,14 +108,14 @@ ii. Open terminal and type:
    dotnet new console
 ```
 
-iii. Add to file HelloWorld.csproj, above `</Project>` the following:
+- Add to file HelloWorld.csproj, above `</Project>` the following:
 ```
     <ItemGroup>
         <PackageReference Include="RavenDB.Client" Version="4.0.0-*" />
     </ItemGroup>
 ```
 
-iv. Replace the content of Program.cs with the following:
+- Replace the content of Program.cs with the following:
 ```
 using System;
 using Raven.Client.Documents;
@@ -142,7 +142,7 @@ namespace HelloWorld
 
                 using (var session = store.OpenSession())
                 {
-                    var shipper = session.Load<Shippers>("shippers/1");
+                    var shipper = session.Load<Shippers>("shippers/1-A");
                     Console.WriteLine("Shipper #1 : " + shipper.Name + ", Phone: " + shipper.Phone);
                 }
             }
@@ -151,7 +151,7 @@ namespace HelloWorld
 }
 ```
 
-v. Type:
+- Type:
 ```
    dotnet restore
    dotnet build
