@@ -1,6 +1,6 @@
-﻿# RavenDB - an ACID NoSQL 2nd generation database
+﻿# RavenDB - An ACID NoSQL Document Database
 
-This repository contains source code for the [RavenDB](https://ravendb.net/) document database. With a RavenDB database you can set up a NoSQL data architecture, or add a NoSQL layer to your current relational database. 
+This repository contains source code for the [RavenDB](https://ravendb.net/) document database. With a RavenDB database you can set up a NoSQL data architecture or add a NoSQL layer to your current relational database. 
 
 ![RavenDb Studio](docs/readmeScreenshot.png)
 
@@ -29,7 +29,6 @@ Stay Updated on New Developments
 ------------------
 We are always adding new features to improve your RavenDB experience. Check out [our latest improvements](https://ravendb.net/docs/article-page/latest/csharp/start/whats-new), updated weekly. 
 
-
 Documentation
 ------------
 Access [full documentation](https://ravendb.net/docs/article-page/latest/csharp) for RavenDB. Like our database, it is easy to use. 
@@ -54,3 +53,80 @@ Each Pull Request will be checked against following rules:
 - `commit/whitespace` - all changed files cannot contain TABs inside them. Before doing any work we suggest executing our `git_setup.cmd`. This will install git pre-commit hook that will normalize all whitespaces during commit
 - `commit/message/conventions` - all commit messages (except in merge commits) must contain issue number from our [YouTrack](http://issues.hibernatingrhinos.com) e.g. 'RavenDB-1234 Fixed issue with something'
 - `tests` - this executes `build.cmd Test` on our CI to check if no constraints were violated
+
+
+## Setup & Run
+
+Prerequsites:
+------------
+
+Windows
+-------
+Microsoft Visual C++ 2015 Redistributable Package should be installed prior to RavenDB launch.
+[Visual C++ Downloads](https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads)
+See also: [Windows Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites)
+
+
+Linux/MacOS
+-----------
+It is recommended that you update your OS before launching an instance of RavenDB.
+For example, Ubuntu-16.x as an updated OS doesn't require any additional packages.
+libsodium (1.0.13 or up) must be installed prior to RavenDB launch. 
+```
+In Ubuntu 16.x: apt-get install libsodium-18 
+In MacOS 10.12: brew install libsodium
+```
+You might need to also install additional packages, for example, 
+```
+apt-get install libunwind8 liblttng-ust0 libcurl3 libssl1.0.0 libuuid1 libkrb5 zlib1g libicu55
+```
+
+See also: [Linux Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites) or 
+[MacOS Prerequisites](https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites)
+
+Lauch RavenDB:
+-------------
+Running locally:
+```
+<path/to/ravendb>/Server/Raven.Server
+```
+
+Registering as service in Windows:
+```
+.\rvn.exe windows-service register --service-name RavenDB4
+```
+
+Running as service in Linux, add to your daemon script:
+```
+<path/to/ravendb>/Server/Raven.Server --daemon
+```
+
+
+Hello World Example:
+--------------------
+1. Launch RavenDB server instance as follows:
+```
+   <path/to/ravendb>/Server/Raven.Server --ServerUrl=http://localhost:8080
+```
+2. Install dotnet core sdk. See : [Downloads](https://www.microsoft.com/net/download) and [PowerShell](https://github.com/PowerShell/PowerShell/releases)
+3. Open terminal and type:
+
+```
+   mkdir HelloWorld
+   cd HelloWorld
+   dotnet new console 
+```
+
+4. Replace the following files content:
+ - replace [Program.cs](https://github.com/ravendb/ravendb/blob/v4.0/Program.cs) content with the content of example.cs 
+ - replace [HelloWorld.csproj](https://github.com/ravendb/ravendb/blob/v4.0/HelloWorld.csproj) content with the content of example.csproj 
+
+5. Type:
+```
+   dotnet restore
+   dotnet build
+   dotnet run
+```
+The example program should create a database with a sample dataset and make a few queries on it. The results should be printed out to the console.
+
+Enjoy.
