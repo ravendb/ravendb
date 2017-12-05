@@ -52,6 +52,68 @@ namespace Raven.Tests.Storage
 
         [Theory]
         [PropertyData("Storages")]
+        public void AfterFullThenIncrementalThenFullAgainBackupRestoreCanReadDocument(string storageName)
+        {
+            InitializeDocumentDatabase(storageName);
+            IOExtensions.DeleteDirectory(BackupDir);
+
+            db.Documents.Put("ayende", null, RavenJObject.Parse("{'email':'ayende@ayende.com'}"), new RavenJObject(), null);
+
+            db.Maintenance.StartBackup(BackupDir, false, new DatabaseDocument(), new ResourceBackupState());
+            WaitForBackup(db, true);
+
+            db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
+            db.Maintenance.StartBackup(BackupDir, true, new DatabaseDocument(), new ResourceBackupState());
+            WaitForBackup(db, true);
+
+            db.Maintenance.StartBackup(BackupDir + "\\backup2", false, new DatabaseDocument(), new ResourceBackupState());
+            WaitForBackup(db, true);
+
+            db.Documents.Put("itamar", null, RavenJObject.Parse("{'email':'itamar@ayende.com'}"), new RavenJObject(), null);
+            db.Maintenance.StartBackup(BackupDir + "\\backup2", true, new DatabaseDocument(), new ResourceBackupState());
+            WaitForBackup(db, true);
+
+            db.Dispose();
+            IOExtensions.DeleteDirectory(DataDir);
+
+            MaintenanceActions.Restore(new RavenConfiguration
+            {
+                DefaultStorageTypeName = storageName,
+                DataDirectory = DataDir,
+                RunInMemory = false,
+                RunInUnreliableYetFastModeThatIsNotSuitableForProduction = false,
+                Settings =
+                {
+                    {"Raven/Esent/CircularLog", "false"},
+                    {"Raven/Voron/AllowIncrementalBackups", "true"}
+                }
+
+            }, new DatabaseRestoreRequest
+            {
+                BackupLocation = BackupDir,
+                DatabaseLocation = DataDir,
+                Defrag = true
+            }, s => { });
+
+            db = new DocumentDatabase(new RavenConfiguration { DataDirectory = DataDir }, null);
+
+            var fetchedData = db.Documents.Get("ayende", null);
+            Assert.NotNull(fetchedData);
+
+            var jObject = fetchedData.ToJson();
+            Assert.NotNull(jObject);
+            Assert.Equal("ayende@ayende.com", jObject.Value<string>("email"));
+
+            fetchedData = db.Documents.Get("itamar", null);
+            Assert.NotNull(fetchedData);
+
+            jObject = fetchedData.ToJson();
+            Assert.NotNull(jObject);
+            Assert.Equal("itamar@ayende.com", jObject.Value<string>("email"));
+        }
+
+        [Theory]
+        [PropertyData("Storages")]
         public void AfterIncrementalBackupRestoreCanReadDocument(string storageName)
         {
             InitializeDocumentDatabase(storageName);

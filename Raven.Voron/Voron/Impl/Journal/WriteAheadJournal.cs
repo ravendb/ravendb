@@ -818,26 +818,25 @@ namespace Voron.Impl.Journal
 
             internal void DeleteCurrentAlreadyFlushedJournal()
             {
-                var current = _waj._files.First();
-                if (_waj._env.Options.IncrementalBackupEnabled)
-                {
-                    var lastBackedUpJournal = _waj._env.HeaderAccessor.Get(header => header->IncrementalBackup).LastBackedUpJournal;
-                    if(current.Number <= lastBackedUpJournal)
-                        return;
-                }
-
                 if (_waj._files.Count == 0)
                     return;
 
                 if (_waj._files.Count != 1)
                     throw new InvalidOperationException("Cannot delete current journal because there is more journals being in use");
 
-
+                var current = _waj._files.First();
                 if (current.Number != _lastSyncedJournal)
                     throw new InvalidOperationException(string.Format("Cannot delete current journal because it isn't last synced file. Current journal number: {0}, the last one which was synced {1}", _waj.CurrentFile.Number, _lastSyncedJournal));
 
-                if(_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
+                if (_waj._env.NextWriteTransactionId - 1 != _lastSyncedTransactionId)
                     throw new InvalidOperationException();
+
+                if (_waj._env.Options.IncrementalBackupEnabled)
+                {
+                    var lastBackedUpJournal = _waj._env.HeaderAccessor.Get(header => header->IncrementalBackup).LastBackedUpJournal;
+                    if(current.Number <= lastBackedUpJournal)
+                        return;
+                }
                     
                 _waj._files = _waj._files.RemoveFront(1);
                 _waj.CurrentFile = null;
