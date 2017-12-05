@@ -23,22 +23,21 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new CreateDatabaseCommand(conventions, _databaseRecord, this);
+            return new CreateDatabaseCommand(conventions, _databaseRecord, _replicationFactor);
         }
 
-        private class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
+        internal class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
         {
             private readonly DocumentConventions _conventions;
             private readonly DatabaseRecord _databaseRecord;
-            private readonly CreateDatabaseOperation _createDatabaseOperation;
+            private readonly int _replicationFactor;
             private readonly string _databaseName;
 
-            public CreateDatabaseCommand(DocumentConventions conventions, DatabaseRecord databaseRecord,
-                CreateDatabaseOperation createDatabaseOperation)
+            public CreateDatabaseCommand(DocumentConventions conventions, DatabaseRecord databaseRecord, int replicationFactor = 1)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseRecord = databaseRecord;
-                _createDatabaseOperation = createDatabaseOperation;
+                _replicationFactor = replicationFactor;
                 _databaseName = databaseRecord?.DatabaseName ?? throw new ArgumentNullException(nameof(databaseRecord));
              
             }
@@ -47,7 +46,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 url = $"{node.Url}/admin/databases?name={_databaseName}";
                 
-                url += "&replication-factor=" + _createDatabaseOperation._replicationFactor;
+                url += "&replication-factor=" + _replicationFactor;
                 var databaseDocument = EntityToBlittable.ConvertEntityToBlittable(_databaseRecord, _conventions, ctx);
 
                 var request = new HttpRequestMessage

@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Client.Subscriptions;
 using Org.BouncyCastle.Asn1.Cms;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
@@ -52,7 +53,7 @@ namespace SlowTests.Server.Documents.Notifications
                 Certificate = null
             }.Initialize())
             {
-                var result = store.Maintenance.Server.Send(new CreateDatabaseOperationWithoutNameValidation(doc));
+                var result = store.Maintenance.Server.Send(new SubscriptionsBasic.CreateDatabaseOperationWithoutNameValidation(doc));
                 var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                 await WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
 
@@ -286,69 +287,6 @@ namespace SlowTests.Server.Documents.Notifications
 
             }
         }
-
-        public class CreateDatabaseOperationWithoutNameValidation : IServerOperation<DatabasePutResult>
-        {
-            private readonly DatabaseRecord _databaseRecord;
-            private readonly int _replicationFactor;
-
-            public CreateDatabaseOperationWithoutNameValidation(DatabaseRecord databaseRecord, int replicationFactor = 1)
-            {
-                _databaseRecord = databaseRecord;
-                _replicationFactor = replicationFactor;
-            }
-
-            public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
-            {
-                return new CreateDatabaseCommand(conventions, context, _databaseRecord, this);
-            }
-
-            private class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
-            {
-                private readonly JsonOperationContext _context;
-                private readonly CreateDatabaseOperationWithoutNameValidation _createDatabaseOperation;
-                private readonly BlittableJsonReaderObject _databaseDocument;
-                private readonly string _databaseName;
-
-                public CreateDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseRecord databaseRecord,
-                    CreateDatabaseOperationWithoutNameValidation createDatabaseOperation)
-                {
-                    if (conventions == null)
-                        throw new ArgumentNullException(nameof(conventions));
-
-                    _context = context ?? throw new ArgumentNullException(nameof(context));
-                    _createDatabaseOperation = createDatabaseOperation;
-                    _databaseName = databaseRecord?.DatabaseName ?? throw new ArgumentNullException(nameof(databaseRecord));
-                    _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, conventions, context);
-                }
-                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-                {
-                    url = $"{node.Url}/admin/databases?name={_databaseName}";
-
-                    url += "&replication-factor=" + _createDatabaseOperation._replicationFactor;
-
-                    var request = new HttpRequestMessage
-                    {
-                        Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(stream =>
-                        {
-                            _context.Write(stream, _databaseDocument);
-                        })
-                    };
-
-                    return request;
-                }
-
-                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-                {
-                    if (response == null)
-                        ThrowInvalidResponse();
-
-                    Result = JsonDeserializationClient.DatabasePutResult(response);
-                }
-
-                public override bool IsReadRequest => false;
-            }
-        }
+        
     }
 }
