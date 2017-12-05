@@ -388,9 +388,17 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var rewrittenExpression = (CSharpSyntaxNode)mapRewriter.Visit(expression);
 
-            var optimized = new RavenLinqOptimizer(fieldValidator).Visit(new RavenLinqPrettifier().Visit(rewrittenExpression))
-                as StatementSyntax;
+            StatementSyntax optimized = null;
 
+            try
+            {
+                var visitor = new RavenLinqOptimizer(fieldValidator);
+                optimized = visitor.Visit(new RavenLinqPrettifier().Visit(rewrittenExpression)) as StatementSyntax;
+            }
+            catch (NotSupportedException)
+            {
+                // there are certain patterns we aren't optimizing, that is fine
+            }
             var collectionName = string.IsNullOrWhiteSpace(mapRewriter.CollectionName) ? Constants.Documents.Collections.AllDocumentsCollection : mapRewriter.CollectionName;
 
             var collection = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, SyntaxFactory.Literal(collectionName));

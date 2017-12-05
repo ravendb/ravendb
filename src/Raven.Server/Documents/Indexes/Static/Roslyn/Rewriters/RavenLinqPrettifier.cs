@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -114,10 +115,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     if (innerInnerMemberAccess != null && innerInnerMemberAccess.Name.Identifier.ValueText == "SelectMany")
                     {
                         //handle docs.SelectMany().Where().Select()
-                        var innerQueryExpSyntax = (QueryExpressionSyntax)Visit(innerInvocExp);
+                        var innerQueryExpSyntax = Visit(innerInvocExp) as QueryExpressionSyntax;
+                        if (innerQueryExpSyntax == null)
+                            throw new NotSupportedException("This expression is not recognized, skipping prettifying");
+
                         var clauses = innerQueryExpSyntax.Body.Clauses.Add(SyntaxFactory.LetClause(
-                            SyntaxFactory.Identifier(whereClause.Parameter.Identifier.ValueText),
-                            (ExpressionSyntax)Visit((innerQueryExpSyntax.Body.SelectOrGroup as SelectClauseSyntax)?.Expression)));
+                        SyntaxFactory.Identifier(whereClause.Parameter.Identifier.ValueText),
+                        (ExpressionSyntax)Visit((innerQueryExpSyntax.Body.SelectOrGroup as SelectClauseSyntax)?.Expression)));
                         clauses = clauses.Add(SyntaxFactory.WhereClause((ExpressionSyntax)Visit(whereClause.Body)));
 
                         return SyntaxFactory.QueryExpression(
