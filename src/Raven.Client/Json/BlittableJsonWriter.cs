@@ -344,7 +344,7 @@ namespace Raven.Client.Json
         {
             if (value != null)
             {
-                AssertDecimalValueInDoublePercisionBoundries(value.Value);
+                BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(value.Value);
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             }                
             else
