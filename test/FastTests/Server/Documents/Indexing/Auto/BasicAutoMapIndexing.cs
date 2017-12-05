@@ -106,6 +106,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
+                    .OrderBy(x=>x.Name.Length)
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);

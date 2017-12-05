@@ -20,7 +20,15 @@ namespace SlowTests.Server.Replication
                 ReplicationFactor = 3,
                 ModifyDatabaseRecord = record =>
                 {
-                    record.Topology.DynamicNodesDistribution = false;
+                    record.Topology = new Raven.Client.ServerWide.DatabaseTopology
+                    {
+                        DynamicNodesDistribution = false,
+                        Members = new System.Collections.Generic.List<string>
+                        {
+                            "A","B","C"
+                        },
+                        ReplicationFactor = 3
+                    };
                 }
             }))
             {
