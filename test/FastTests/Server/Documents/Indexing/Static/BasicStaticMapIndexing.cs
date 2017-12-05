@@ -158,6 +158,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
+                    .OrderByDescending(x=>x.Name.Length)
                     .ToList();
 
                 Assert.Equal(IndexType.Map, indexes[0].Type);

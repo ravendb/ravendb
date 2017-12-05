@@ -104,7 +104,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                 Assert.Contains("In order to create the 'DailyInvoicesIndex' index " +
                                 "which would output reduce results to documents in the 'DailyInvoices' collection, " +
                                 "you firstly need to delete all of the documents in the 'DailyInvoices' collection" +
-                                " (currenlty have 1 document).", exception.Message);
+                                " (currently have 1 document).", exception.Message);
             }
         }
 
