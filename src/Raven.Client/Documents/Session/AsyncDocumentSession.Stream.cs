@@ -57,10 +57,9 @@ namespace Raven.Client.Documents.Session
             private StreamResult<T> CreateStreamResult(BlittableJsonReaderObject json)
             {
                 var metadata = json.GetMetadata();
-                var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
-                string id;
+                var changeVector = metadata.GetChangeVector();
                 //MapReduce indexes return reduce results that don't have @id property
-                metadata.TryGetId(out id);
+                metadata.TryGetId(out string id);
 
                 json = _parent.Context.ReadObject(json, id);
                 var entity = QueryOperation.Deserialize<T>(id, json, metadata, _fieldsToFetch, true, _parent);

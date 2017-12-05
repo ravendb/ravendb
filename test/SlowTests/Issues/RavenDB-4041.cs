@@ -325,7 +325,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
+                    Assert.NotNull(metadata.GetChangeVector());
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
@@ -368,7 +368,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
+                    Assert.NotNull(metadata.GetChangeVector());
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
@@ -516,7 +516,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
+                    Assert.NotNull(metadata.GetChangeVector());
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
@@ -558,7 +558,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
+                    Assert.NotNull(metadata.GetChangeVector());
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;

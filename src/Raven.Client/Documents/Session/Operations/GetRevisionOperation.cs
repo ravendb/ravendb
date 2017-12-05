@@ -52,11 +52,10 @@ namespace Raven.Client.Documents.Session.Operations
             var id = metadata.GetId();
             var entity = (T)_session.ConvertToEntity(typeof(T), id, document);
 
-            var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
             _session.DocumentsByEntity[entity] = new DocumentInfo
             {
                 Id = id,
-                ChangeVector = changeVector,
+                ChangeVector = metadata.GetChangeVector(),
                 Document = document,
                 Metadata = metadata,
                 Entity = entity
