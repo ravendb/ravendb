@@ -267,6 +267,31 @@
             flex-grow: 1;
         }
 
+        .create-database {
+            display: none;
+        }
+
+        &.no-databases {
+            .list-container {
+                .create-database {
+                    text-align: center;
+                    display: block;
+                    .absolute-center;
+                    z-index: 1000;
+                    margin-top: 12px;
+                }
+            }
+
+            .dashboard-storage, .dashboard-indexing {
+
+                & > .panel {
+                    opacity: .2;
+                    pointer-events: none;
+                    //visibility: hidden;
+                }
+            }
+        }
+
         .dashboard-item {
             flex-grow: 1;
             display: flex;
