@@ -207,15 +207,8 @@ namespace SlowTests.Server.Replication
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
 
-                try
-                {
-                    Assert.Equal(2, WaitUntilHasConflict(store1, "users/1-A").Length);
-                }
-                catch (System.Exception)
-                {
-                    WaitForUserToContinueTheTest(store1, debug: false);
-                    throw;
-                }
+                Assert.Equal(2, WaitUntilHasConflict(store1, "users/1-A").Length);
+           
                 Assert.Equal(2,WaitUntilHasConflict(store2, "users/1-A").Length);
 
                 var db = await GetDocumentDatabaseInstanceFor(store1);
