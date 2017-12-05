@@ -110,7 +110,6 @@ namespace Voron.Impl.Backup
                         try
                         {
                             long lastBackedupJournal = 0;
-                            long lastBackedUpPage = -1;
                             foreach (var journalFile in usedJournals)
                             {
                                 var journalPart = package.CreateEntry(StorageEnvironmentOptions.JournalName(journalFile.Number), compression);
@@ -127,7 +126,6 @@ namespace Voron.Impl.Backup
                                     infoNotify(string.Format("Voron copy journal file {0} ", journalFile));
                                 }
                                 lastBackedupJournal = journalFile.Number;
-                                lastBackedUpPage = pagesToCopy;
                             }
 
                             if (env.Options.IncrementalBackupEnabled)
@@ -135,7 +133,9 @@ namespace Voron.Impl.Backup
                                 env.HeaderAccessor.Modify(header =>
                                 {
                                     header->IncrementalBackup.LastBackedUpJournal = lastBackedupJournal;
-                                    header->IncrementalBackup.LastBackedUpJournalPage = lastBackedUpPage;
+
+                                    //since we backed-up everything, no need to start next incremental backup from the middle
+                                    header->IncrementalBackup.LastBackedUpJournalPage = -1;
                                 });
                             }
                             backupSuccess = true;
