@@ -7,9 +7,10 @@ using System.Threading.Tasks;
 using FastTests.Issues;
 using FastTests.Server.Documents.Indexing.MapReduce;
 using Raven.Server.Utils;
+using SlowTests.Authentication;
 using SlowTests.Issues;
+using SlowTests.Server.Documents.Notifications;
 using SlowTests.Voron.Issues;
-using FastTests.Server.Documents.Indexing.Static;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -33,11 +34,9 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
 
-            for (int i = 0; i < 10000; i++)
+            using (var a = new AuthenticationChangesTests())
             {
-                Console.WriteLine(i);
-                using (var test = new RavenDB_7691())
-                    test.CanIndexBigNumbersEdgeCases().Wait();                
+                a.ChangesWithAuthentication().Wait();
             }
         }
 

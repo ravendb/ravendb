@@ -117,12 +117,12 @@ namespace Raven.Traffic
         /// <summary>
         /// Connects to raven traffic event source and registers all the requests to the file defined in the config
         /// </summary>
-        /// <param name="config">configuration conatining the connection, the file to write to, etc.</param>
+        /// <param name="config">configuration containing the connection, the file to write to, etc.</param>
         /// <param name="store">the store to work with</param>
         private async Task RecordRequests(TrafficToolConfiguration config, IDocumentStore store)
         {
             var id = Guid.NewGuid().ToString();
-            using (var client = new ClientWebSocket())
+            using (var client = DatabaseChanges.CreateClientWebSocket(store.GetRequestExecutor()))
             {
                 var url = store.Urls.First() + "/admin/traffic-watch";
                 var uri = new Uri(url.ToWebSocketPath());
