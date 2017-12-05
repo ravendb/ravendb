@@ -360,6 +360,7 @@ namespace FastTests.Client.Indexing
                 }
 
                 var performanceStats = await store.Maintenance.SendAsync(new GetIndexPerformanceStatisticsOperation());
+                Array.Sort(performanceStats, (x, y) => x.Name.Length - y.Name.Length);
                 Assert.Equal(2, performanceStats.Length);
                 Assert.Equal(indexName1, performanceStats[0].Name);
                 Assert.True(performanceStats[0].Performance.Length > 0);

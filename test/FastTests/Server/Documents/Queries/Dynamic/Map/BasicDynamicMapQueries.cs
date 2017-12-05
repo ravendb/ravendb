@@ -343,7 +343,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("users/1", users[0].Id);
                     Assert.Equal("users/3", users[1].Id);
 
-                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10)).ToList();
+                    var indexes = store.Maintenance.Send(new GetIndexesOperation(0, 10))
+                        .OrderBy(x=>x.Name.Length)
+                        .ToList();
 
                     Assert.Equal("Auto/Users/ByName", indexes[0].Name);
                     Assert.Equal("Auto/Users/ByAgeAndName", indexes[1].Name);

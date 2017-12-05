@@ -269,6 +269,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var indexes = database
                     .IndexStore
                     .GetIndexesForCollection("Users")
+                    .OrderBy(x=>x.Name.Length) // smaller index has lesser fields
                     .ToList();
 
                 Assert.Equal(2, indexes.Count);
