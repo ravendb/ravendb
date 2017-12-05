@@ -348,7 +348,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.ConvertToJson)
             {
-                var json = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(value);
+                var val = TypeConverter.ToBlittableSupportedType(value);
+                if (!(val is DynamicJsonValue json))
+                {
+                    return GetRegularFields(instance, field, val, indexContext, nestedArray);
+                }
 
                 foreach (var jsonField in GetComplexObjectFields(path, Scope.CreateJson(json, indexContext), storage, indexing, termVector))
                 {
