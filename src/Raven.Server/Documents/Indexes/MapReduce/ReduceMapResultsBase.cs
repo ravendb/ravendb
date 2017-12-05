@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
         }
-
+        
         private void HandleTreeReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
             CancellationToken token, MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
             IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table)
@@ -202,6 +202,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var parentPagesToAggregate = new HashSet<long>();
 
             var page = new TreePage(null, Constants.Storage.PageSize);
+
+            HashSet<long> compressedEmptyPages = null;
 
             foreach (var modifiedPage in modifiedStore.ModifiedPages)
             {
@@ -230,19 +232,31 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     if (leafPage.NumberOfEntries == 0)
                     {
-                        if (leafPage.PageNumber != tree.State.RootPageNumber)
+                        if (leafPage.PageNumber == tree.State.RootPageNumber)
                         {
-                            throw new UnexpectedReduceTreePageException(
-                                $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree.");
+                            writer.DeleteReduceResult(reduceKeyHash, stats);
+
+                            var emptyPageNumber = Bits.SwapBytes(leafPage.PageNumber);
+                            using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out Slice pageNumSlice))
+                                table.DeleteByKey(pageNumSlice);
+
+                            continue;
                         }
 
-                        writer.DeleteReduceResult(reduceKeyHash, stats);
+                        if (compressed)
+                        {
+                            // it doesn't have any entries after decompression because 
+                            // each compressed entry has the delete tombstone
 
-                        var emptyPageNumber = Bits.SwapBytes(leafPage.PageNumber);
-                        using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out Slice pageNumSlice))
-                            table.DeleteByKey(pageNumSlice);
+                            if (compressedEmptyPages == null)
+                                compressedEmptyPages = new HashSet<long>();
 
-                        continue;
+                            compressedEmptyPages.Add(leafPage.PageNumber);
+                            continue;
+                        }
+
+                        throw new UnexpectedReduceTreePageException(
+                            $"Encountered empty page which isn't a root. Page {leafPage} in '{tree.Name}' tree.");
                     }
 
                     var parentPage = tree.GetParentPageOf(leafPage);
@@ -354,6 +368,30 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     // we still have unaggregated branches which were modified but their children were not modified (branch page splitting) so we missed them
                     parentPagesToAggregate.Add(branchesToAggregate.First());
                 }
+            }
+
+            if (compressedEmptyPages != null && compressedEmptyPages.Count > 0)
+            {
+                // we had some compressed pages that are empty after decompression
+                // let's remove them and reduce the tree once again
+
+                modifiedStore.ModifiedPages.Clear();
+                modifiedStore.FreedPages.Clear();
+
+                foreach (var pageNumber in compressedEmptyPages)
+                {
+                    page.Base = lowLevelTransaction.GetPage(pageNumber).Pointer;
+
+                    using (var emptyPage = tree.DecompressPage(page, skipCache: true))
+                    {
+                        if (emptyPage.NumberOfEntries > 0) // could be changed meanwhile
+                            continue;
+
+                        modifiedStore.Tree.RemoveEmptyDecompressedPage(emptyPage);
+                    }
+                }
+
+                HandleTreeReduction(indexContext, stats, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
             }
         }
 
