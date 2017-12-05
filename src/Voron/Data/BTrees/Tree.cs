@@ -1067,6 +1067,26 @@ namespace Voron.Data.BTrees
             return node->DataSize;
         }
 
+        public void RemoveEmptyDecompressedPage(DecompressedLeafPage emptyPage)
+        {
+            using (emptyPage.Original.GetNodeKey(_llt, 0, out var key))
+            {
+                var p = FindPageFor(key, node: out _, cursor: out var cursorConstructor, allowCompressed: true);
+
+                Debug.Assert(p.IsLeaf && p.IsCompressed && p.PageNumber == emptyPage.PageNumber);
+
+                using (var cursor = cursorConstructor.Build(key))
+                {
+                    var treeRebalancer = new TreeRebalancer(_llt, this, cursor);
+                    var changedPage = (TreePage)emptyPage;
+                    while (changedPage != null)
+                    {
+                        changedPage = treeRebalancer.Execute(changedPage);
+                    }
+                }
+            }
+        }
+
         public long GetParentPageOf(TreePage page)
         {
             Debug.Assert(page.IsCompressed == false);
