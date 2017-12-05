@@ -13,7 +13,7 @@ namespace Raven.Client.ServerWide
         public string Name;
         public string ConnectionStringName;
         public string MentorNode;
-        public long DelayReplicationFor; 
+        public TimeSpan DelayReplicationFor; 
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only

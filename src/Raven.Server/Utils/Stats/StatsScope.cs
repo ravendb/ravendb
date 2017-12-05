@@ -22,6 +22,8 @@ namespace Raven.Server.Utils.Stats
 
         public TimeSpan Duration => _sw.Elapsed;
 
+        public T CurrentStats => _stats;
+
         public TStatsScope Start()
         {
             _sw.Start();

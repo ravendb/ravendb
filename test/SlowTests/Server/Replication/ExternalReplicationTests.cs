@@ -46,7 +46,7 @@ namespace SlowTests.Server.Replication
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var delay = TimeSpan.FromSeconds(5).Ticks;
+                var delay = TimeSpan.FromSeconds(5);
                 var externalTask = new ExternalReplication(store2.Database, "DelayedExternalReplication")
                 {
                     DelayReplicationFor = delay
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Replication
                 }
 
                 Assert.True(WaitForDocument(store2, "foo/bar"));
-                var elapsed = (DateTime.UtcNow - date).Ticks;
+                var elapsed = DateTime.UtcNow - date;
                 Assert.True(elapsed >= delay,$" only {elapsed}/{delay} ticks elapsed");
 
             }
