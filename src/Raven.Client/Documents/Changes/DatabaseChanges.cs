@@ -47,12 +47,20 @@ namespace Raven.Client.Documents.Changes
            
             _tcs = new TaskCompletionSource<IDatabaseChanges>(TaskCreationOptions.RunContinuationsAsynchronously);
             _cts = new CancellationTokenSource();
-            _client = new ClientWebSocket();
+            _client = CreateClientWebSocket(_requestExecutor);
 
             _onDispose = onDispose;
             ConnectionStatusChanged += OnConnectionStatusChanged;
 
             _task = DoWork();   
+        }
+
+        public static ClientWebSocket CreateClientWebSocket(RequestExecutor requestExecutor)
+        {
+            var clientWebSocket = new ClientWebSocket();
+            if (requestExecutor.Certificate != null)
+                clientWebSocket.Options.ClientCertificates.Add(requestExecutor.Certificate);
+            return clientWebSocket;
         }
 
         private void OnConnectionStatusChanged(object sender, EventArgs e)
@@ -418,7 +426,7 @@ namespace Raven.Client.Documents.Changes
                         return;
 
                     using (_client)
-                        _client = new ClientWebSocket();
+                        _client = CreateClientWebSocket(_requestExecutor);
 
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 

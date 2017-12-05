@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -28,7 +29,7 @@ namespace SlowTests.Server.Documents.Notifications
     public class ChangesTests : RavenTestBase
     {
         [Fact]
-        public async Task ChangesAPIWithDatabaseNameThatHasWhitespace()
+        public async Task ChangesWithDatabaseNameThatHasWhitespace()
         {
             var name = "Foo Bar";
             var doc = new DatabaseRecord(name)
