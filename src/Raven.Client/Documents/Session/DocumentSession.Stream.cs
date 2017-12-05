@@ -99,10 +99,9 @@ namespace Raven.Client.Documents.Session
         private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, FieldsToFetchToken fieldsToFetch)
         {
             var metadata = json.GetMetadata();
-            var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
-            string id;
+            var changeVector = metadata.GetChangeVector();
             //MapReduce indexes return reduce results that don't have @id property
-            metadata.TryGetId(out id);
+            metadata.TryGetId(out string id);
 
             //TODO - Investigate why ConvertToEntity fails if we don't call ReadObject before
             json = Context.ReadObject(json, id);

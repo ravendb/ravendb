@@ -20,8 +20,7 @@ namespace Raven.Client.Extensions
 
         public static string GetId(this BlittableJsonReaderObject metadata)
         {
-            string id;
-            if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.Id}' field.");
 
             return id;
@@ -37,7 +36,7 @@ namespace Raven.Client.Extensions
             return metadata.TryGet(Constants.Documents.Metadata.Conflict, out conflict);
         }
 
-        public static string GetChangeVector(BlittableJsonReaderObject metadata)
+        public static string GetChangeVector(this BlittableJsonReaderObject metadata)
         {
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 InvalidMissingChangeVector();
@@ -47,8 +46,7 @@ namespace Raven.Client.Extensions
 
         public static DateTime GetLastModified(this BlittableJsonReaderObject metadata)
         {
-            DateTime lastModified;
-            if (metadata.TryGet(Constants.Documents.Metadata.LastModified, out lastModified) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.LastModified, out DateTime lastModified) == false)
                 InvalidMissingLastModified();
 
             return lastModified;
@@ -56,8 +54,7 @@ namespace Raven.Client.Extensions
 
         public static bool TryGetChangeVector(this BlittableJsonReaderObject metadata, out string changeVector)
         {
-            object changeVectorAsObject;
-            if (metadata.TryGetMember(Constants.Documents.Metadata.ChangeVector, out changeVectorAsObject) == false)
+            if (metadata.TryGetMember(Constants.Documents.Metadata.ChangeVector, out object changeVectorAsObject) == false)
             {
                 changeVector = null;
                 return false;
