@@ -25,6 +25,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Https;
+using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -315,6 +316,30 @@ namespace Raven.Server.Commercial
                                                     "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
                                                     );
             }
+        }
+
+        private static async Task DeleteAllExistingCertificates(ServerStore serverStore)
+        {
+            // If a user repeats the setup process, there might be certificate leftovers in the cluster
+
+            List<string> existingCertificateKeys;
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                existingCertificateKeys = serverStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue)
+                    .Select(item => Constants.Certificates.Prefix + JsonDeserializationServer.CertificateDefinition(item.Value).Thumbprint)
+                    .ToList();
+            }
+
+            if (existingCertificateKeys.Count == 0)
+                return;
+
+            var res = await serverStore.SendToLeaderAsync(new DeleteCertificateCollectionFromClusterCommand()
+            {
+                Names = existingCertificateKeys
+            });
+
+            await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
 
         private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, CancellationToken token, SetupInfo setupInfo, Dictionary<string, Task<Challenge>> dictionary, AcmeClient acmeClient,
@@ -989,6 +1014,9 @@ namespace Raven.Server.Commercial
                             }
 
                             serverStore.EnsureNotPassive(publicServerUrl);
+
+                            await DeleteAllExistingCertificates(serverStore);
+
                             if (setupMode == SetupMode.LetsEncrypt)
                                 await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false);
 
