@@ -10,7 +10,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3484 : RavenTestBase
     {
-        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromSeconds(20);
+        private readonly TimeSpan waitForDocTimeout = TimeSpan.FromMinutes(2);
 
         [Fact]
         public void AllClientsWith_WaitForFree_StrategyShouldGetAccessToSubscription()
