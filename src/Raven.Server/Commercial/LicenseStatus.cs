@@ -156,7 +156,9 @@ namespace Raven.Server.Commercial
                 [nameof(HasExternalReplication)] = HasExternalReplication,
                 [nameof(HasDelayedExternalReplication)] = HasDelayedExternalReplication,
                 [nameof(HasRavenEtl)] = HasRavenEtl,
-                [nameof(HasSqlEtl)] = HasSqlEtl
+                [nameof(HasSqlEtl)] = HasSqlEtl,
+                [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
+                [nameof(DistributedCluster)] = DistributedCluster
             };
         }
     }
