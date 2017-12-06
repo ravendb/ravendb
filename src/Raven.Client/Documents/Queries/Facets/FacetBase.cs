@@ -26,16 +26,6 @@ namespace Raven.Client.Documents.Queries.Facets
             set => _displayFieldName = value;
         }
 
-        public class AggregationField
-        {
-            public FacetAggregation Type { get; set; }
-
-            /// <summary>
-            /// Field on which aggregation will be performed.
-            /// </summary>
-            public string Field { get; set; }
-        }
-
         internal abstract Facet AsFacet();
 
         internal abstract RangeFacet AsRangeFacet();

@@ -168,10 +168,10 @@ namespace Raven.Client.Documents
             return source.AggregateBy(f.Facet);
         }
 
-        public static IAggregationQuery<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentKey)
+        public static IAggregationQuery<T> AggregateUsing<T>(this IQueryable<T> source, string facetSetupDocumentId)
         {
-            if (facetSetupDocumentKey == null)
-                throw new ArgumentNullException(nameof(facetSetupDocumentKey));
+            if (facetSetupDocumentId == null)
+                throw new ArgumentNullException(nameof(facetSetupDocumentId));
 
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
@@ -181,7 +181,7 @@ namespace Raven.Client.Documents
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
-            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facetSetupDocumentKey)));
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facetSetupDocumentId)));
 
             return new AggregationQuery<T>(source, ConvertExpressionIfNecessary, currentMethod);
         }
