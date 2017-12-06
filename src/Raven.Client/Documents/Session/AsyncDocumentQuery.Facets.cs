@@ -6,10 +6,10 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentQuery<T>
     {
-        public IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder = null)
+        public IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder)
         {
             var ff = new FacetBuilder<T>();
-            builder?.Invoke(ff);
+            builder.Invoke(ff);
 
             return AggregateBy(ff.Facet);
         }

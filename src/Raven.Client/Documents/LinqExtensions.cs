@@ -160,10 +160,10 @@ namespace Raven.Client.Documents
             return query;
         }
 
-        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetBuilder<T>> builder = null)
+        public static IAggregationQuery<T> AggregateBy<T>(this IQueryable<T> source, Action<IFacetBuilder<T>> builder)
         {
             var f = new FacetBuilder<T>();
-            builder?.Invoke(f);
+            builder.Invoke(f);
 
             return source.AggregateBy(f.Facet);
         }
