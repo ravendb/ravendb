@@ -14,7 +14,7 @@ properties {
     $uploader = "..\Uploader\S3Uploader.exe"
     $global:configuration = "Release"
     $msbuild = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe"
-    $nowarn = "1591,1573"
+    $nowarn = "1591,1573,1701,1702,1705"
     
     $dotnet = "dotnet"
     $dotnetLib = "netstandard1.3"
