@@ -1163,6 +1163,10 @@ namespace Raven.Server.Web.System
                     {
                         try
                         {
+                            // send some initial progess so studio can open details 
+                            result.AddInfo("Starting migration");
+                            onProgress(overallProgress);
+                            
                             while (true)
                             {
                                 var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration,token.Token);
