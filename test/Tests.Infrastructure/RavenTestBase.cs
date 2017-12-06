@@ -46,7 +46,7 @@ namespace FastTests
         {
             var database = await GetDocumentDatabaseInstanceFor(store);
             var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
-            type.Environment.DbId = dbId;
+            type.Environment.FillBase64Id(dbId);
         }
 
         private readonly object _getDocumentStoreSync = new object();

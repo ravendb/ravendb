@@ -306,7 +306,6 @@ namespace Voron
 
                 var databaseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
 
-                DbId = databaseGuidId;
                 FillBase64Id(databaseGuidId);
 
                 if (_options.GenerateNewDatabaseId)
@@ -395,8 +394,9 @@ namespace Voron
                 ". " + message);
         }
 
-        private unsafe void FillBase64Id(Guid databseGuidId)
+        public unsafe void FillBase64Id(Guid databseGuidId)
         {
+            DbId = databseGuidId;
             fixed (char* pChars = Base64Id)
             {
                 var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&databseGuidId, 0, 16);
@@ -425,8 +425,7 @@ namespace Voron
                 using (var treesTx = new Transaction(tx))
                 {
 
-                    DbId = Guid.NewGuid();
-                    FillBase64Id(DbId);
+                    FillBase64Id(Guid.NewGuid());
 
                     var metadataTree = treesTx.CreateTree(Constants.MetadataTreeNameSlice);
                     metadataTree.Add("db-id", DbId.ToByteArray());
