@@ -55,13 +55,13 @@
                 </div>
             </div>
         </div>
-        <h2 class="pull-left-sm">
-            Results
-            <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
-        </h2>
     </div>
-    <div class="flex-window-scroll flex-window stretch">
+    <div class="flex-window-scroll flex-window stretch query-results-container">
         <div class="flex-window-head">
+            <h2>
+                Results
+                <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
+            </h2>
             <div class="clearfix">
                 <div class="results-info pull-left">
                     <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown" >
