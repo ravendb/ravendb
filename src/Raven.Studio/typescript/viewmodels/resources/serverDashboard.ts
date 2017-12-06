@@ -1,3 +1,4 @@
+import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
@@ -14,6 +15,8 @@ import dashboardChart = require("models/resources/serverDashboard/dashboardChart
 import storagePieChart = require("models/resources/serverDashboard/storagePieChart");
 import serverDashboardWebSocketClient = require("common/serverDashboardWebSocketClient");
 import clusterNode = require("models/database/cluster/clusterNode");
+import databasesManager = require("common/shell/databasesManager");
+import createDatabase = require("viewmodels/resources/createDatabase");
 
 class machineResourcesSection {
 
@@ -530,6 +533,8 @@ class serverDashboard extends viewModelBase {
     indexingSpeedSection = new indexingSpeedSection();
     machineResourcesSection = new machineResourcesSection();
     driveUsageSection = new driveUsageSection();
+    
+    noDatabases = ko.pureComputed(() => databasesManager.default.databases().length === 0);
 
     constructor() {
         super();
@@ -616,6 +621,11 @@ class serverDashboard extends viewModelBase {
             default:
                 throw new Error("Unhandled notification type: " + data.Type);
         }
+    }
+    
+    newDatabase() {
+        const createDbView = new createDatabase("newDatabase");
+        app.showBootstrapDialog(createDbView);
     }
 }
 
