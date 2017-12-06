@@ -27,7 +27,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RDBC-76")]
+        [Fact]
         public void CanQueryWhenContainsAnyIsEmpty()
         {
             var noPets = new string[0];
