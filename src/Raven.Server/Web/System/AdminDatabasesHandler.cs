@@ -226,7 +226,11 @@ namespace Raven.Server.Web.System
                     return;
                 }
 
-                RecreateIndexes(databaseRecord);
+                if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
+                {
+                    using (ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
+                        RecreateIndexes(databaseRecord);
+                }
 
                 var (newIndex, topology, nodeUrlsAddedTo) = await CreateDatabase(name, databaseRecord, context, replicationFactor, index);
 
