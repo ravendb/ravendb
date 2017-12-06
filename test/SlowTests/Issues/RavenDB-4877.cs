@@ -53,12 +53,11 @@ namespace SlowTests.Issues
                         .ToList();
                     Assert.Equal(result.Count, 2);
 
-                    // By definition, en empty set is a subset of an any set (including empty set). 
-                    // Following that logic --> An empty array contains an empty array
+                    // https://github.com/apache/commons-lang/blob/dd2394323b441e7a22d3c85ce751b619918ee161/src/main/java/org/apache/commons/lang3/StringUtils.java#L2152
                     result = session.Query<User, Users_ByNameAndPets>()
                         .Where(user => user.Pets.ContainsAny(noPets) || user.Name == "Moshe")
                         .ToList();
-                    Assert.Equal(result.Count, 2);
+                    Assert.Equal(0, result.Count);
                 }
             }
         }
