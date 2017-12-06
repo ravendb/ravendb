@@ -1,5 +1,5 @@
 <div id="dashboard-container" class="content-margin">
-    <div class="dashboard-items no-databases">
+    <div class="dashboard-items" data-bind="css: { 'no-databases': noDatabases }">
         <div class="flex-vertical dashboard-nodecpu">
 
             <div class="dashboard-item dashboard-node">
@@ -114,9 +114,9 @@
                         </div>
                     </div>
                     <div class="list-container">
-                        <div class="create-database">
+                        <div class="create-database" data-bind="visible: $root.noDatabases">
                             <div><i class="icon-empty-set"></i><span>No data</span></div>
-                            <a href="#" class="btn btn-primary btn-xs text-uppercase" >Create Database</a>
+                            <button  data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase" >Create Database</button>
                         </div>
                         <div class="list absolute-fill fix-size">
                             
@@ -139,9 +139,9 @@
                         <div>Offline: <strong data-bind="text: totalOfflineDatabases"></strong></div>
                     </div>
                     <div class="list-container">
-                        <div class="create-database">
+                        <div class="create-database" data-bind="visible: $root.noDatabases">
                             <div><i class="icon-empty-set"></i><span>No data</span></div>
-                            <a href="#" class="btn btn-primary btn-xs text-uppercase">Create Database</a>
+                            <button  data-bind="click: $root.newDatabase" class="btn btn-primary btn-xs text-uppercase" >Create Database</button>
                         </div>
                         <div class="list absolute-fill fix-size">
                             <virtual-grid class="resizable no-margin" params="controller: gridController, condensed: true"></virtual-grid>
