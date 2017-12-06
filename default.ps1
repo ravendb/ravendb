@@ -21,7 +21,7 @@ properties {
     $global:configuration = "Release"
     $v4_net_version = (ls "$env:windir\Microsoft.NET\Framework\v4.0*").Name
     $msbuild = "C:\Windows\Microsoft.NET\Framework\$v4_net_version\MSBuild.exe"
-    $nowarn = "1591 1573 1591"
+    $nowarn = "1591 1573 1591 1701 1702 1705"
     
     $nuget = "$base_dir\.nuget\NuGet.exe"
     
