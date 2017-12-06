@@ -1155,12 +1155,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var array = TransformEnumerable(fieldName, UnpackEnumerable(values))
                 .ToArray();
 
-            if (array.Length == 0)
-            {
-                tokens.AddLast(TrueToken.Instance);
-                return;
-            }
-
             tokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(array), exact: false));
         }
 
