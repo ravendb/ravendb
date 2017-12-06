@@ -91,7 +91,6 @@ namespace Sparrow.Json
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
-                Debug.Assert(lazyStringValue != null);
                 lazyStringValue.Renew(str, ptr, size);
                 return lazyStringValue;
             }
