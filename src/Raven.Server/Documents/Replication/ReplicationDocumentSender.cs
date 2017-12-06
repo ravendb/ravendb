@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Replication
                                     break;
                                 }
 
-                                if (_stats.Storage.CurrentStats.InputCount % 10000 == 0)
+                                if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
                                 {
                                     if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
                                     {
@@ -304,9 +304,9 @@ namespace Raven.Server.Documents.Replication
             {
                 delayReplicationFor = external.DelayReplicationFor;
 
-                if (delayReplicationFor.Ticks > 0 && _parent._parent._server.LicenseManager.CanDelayReplication(out var _) == false)
+                if (delayReplicationFor.Ticks > 0 && _parent._parent._server.LicenseManager.CanDelayReplication(out var limit) == false)
                 {
-                    return TimeSpan.Zero;
+                    throw new OperationCanceledException($"External replication was canceled, because : {limit.Message}");
                 }
             }
             return delayReplicationFor;
