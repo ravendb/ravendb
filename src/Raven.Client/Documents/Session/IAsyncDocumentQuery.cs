@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Session
 
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 
-        IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder = null);
+        IAsyncAggregationDocumentQuery<T> AggregateBy(Action<IFacetBuilder<T>> builder);
 
         IAsyncAggregationDocumentQuery<T> AggregateBy(FacetBase facet);
 
