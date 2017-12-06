@@ -671,8 +671,8 @@ namespace Raven.Server.Documents
             try
             {
                 var existing = DatabasesCache.Replace(dbName, tcs);
-
-                (await existing)?.Dispose();
+                if(existing != null)
+                    (await existing)?.Dispose();
 
                 return new DisposableAction(() =>
                 {

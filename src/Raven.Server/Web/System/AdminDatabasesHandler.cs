@@ -228,7 +228,7 @@ namespace Raven.Server.Web.System
 
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
                 {
-                    using (ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
+                    using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(name, "Checking if we need to recreate indexes"))
                         RecreateIndexes(databaseRecord);
                 }
 
