@@ -3,7 +3,9 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -69,6 +71,18 @@ namespace SlowTests.Issues
                     Assert.Equal(numberOfClaimsToGenerate / 2, results[1].Count);
                     Assert.Equal("MATCHED", results[1].MatchingStatus);
                     Assert.Equal("111", results[1].BillType);
+                }
+
+                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Claims" }));
+                operation.WaitForCompletion(TimeSpan.FromSeconds(60));
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<ClaimsByBillTypeAndMatchingStatus.Result, ClaimsByBillTypeAndMatchingStatus>().OrderBy(x => x.BillType).ToList();
+
+                    Assert.Equal(0, results.Count);
                 }
             }
         }
