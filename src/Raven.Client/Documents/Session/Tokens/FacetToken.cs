@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public class FacetToken : QueryToken
     {
-        private readonly string _facetSetupDocumentKey;
+        private readonly string _facetSetupDocumentId;
         private readonly string _aggregateByFieldName;
         private readonly string _alias;
         private readonly List<string> _ranges;
@@ -18,9 +18,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public string Name => _alias ?? _aggregateByFieldName;
 
-        private FacetToken(string facetSetupDocumentKey)
+        private FacetToken(string facetSetupDocumentId)
         {
-            _facetSetupDocumentKey = facetSetupDocumentKey;
+            _facetSetupDocumentId = facetSetupDocumentId;
         }
 
         private FacetToken(string aggregateByFieldName, string alias, List<string> ranges, string optionsParameterName)
@@ -32,12 +32,12 @@ namespace Raven.Client.Documents.Session.Tokens
             _aggregations = new List<FacetAggregationToken>();
         }
 
-        public static FacetToken Create(string facetSetupDocumentKey)
+        public static FacetToken Create(string facetSetupDocumentId)
         {
-            if (string.IsNullOrWhiteSpace(facetSetupDocumentKey))
-                throw new ArgumentNullException(nameof(facetSetupDocumentKey));
+            if (string.IsNullOrWhiteSpace(facetSetupDocumentId))
+                throw new ArgumentNullException(nameof(facetSetupDocumentId));
 
-            return new FacetToken(facetSetupDocumentKey);
+            return new FacetToken(facetSetupDocumentId);
         }
 
         public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter)
@@ -90,11 +90,11 @@ namespace Raven.Client.Documents.Session.Tokens
             writer
                 .Append("facet(");
 
-            if (_facetSetupDocumentKey != null)
+            if (_facetSetupDocumentId != null)
             {
                 writer
                     .Append("id('")
-                    .Append(_facetSetupDocumentKey)
+                    .Append(_facetSetupDocumentId)
                     .Append("'))");
 
                 return;

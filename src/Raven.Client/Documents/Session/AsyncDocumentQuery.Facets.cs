@@ -29,9 +29,9 @@ namespace Raven.Client.Documents.Session
             return new AsyncAggregationDocumentQuery<T>(this);
         }
 
-        public new IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey)
+        public new IAsyncAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId)
         {
-            base.AggregateUsing(facetSetupDocumentKey);
+            base.AggregateUsing(facetSetupDocumentId);
 
             return new AsyncAggregationDocumentQuery<T>(this);
         }

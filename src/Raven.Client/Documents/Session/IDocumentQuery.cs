@@ -155,7 +155,7 @@ namespace Raven.Client.Documents.Session
 
         IAggregationDocumentQuery<T> AggregateBy(IEnumerable<Facet> facets);
 
-        IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentKey);
+        IAggregationDocumentQuery<T> AggregateUsing(string facetSetupDocumentId);
 
         ISuggestionDocumentQuery<T> SuggestUsing(SuggestionBase suggestion);
 
