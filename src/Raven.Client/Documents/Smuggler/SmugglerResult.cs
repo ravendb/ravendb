@@ -93,6 +93,7 @@ namespace Raven.Client.Documents.Smuggler
             public override CountsWithLastEtag Conflicts => _result.Conflicts;
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
+            public override Counts CmpXchg => _result.CmpXchg;
 
             public override DynamicJsonValue ToJson()
             {
