@@ -17,8 +17,6 @@ namespace FastTests.Server.Documents.Queries
         [Fact]
         public async Task Cutoff_etag_usage()
         {
-            long lastEtagOfUser;
-
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -31,13 +29,11 @@ namespace FastTests.Server.Documents.Queries
                     await session.StoreAsync(new Address());
 
                     await session.SaveChangesAsync();
-
-                    lastEtagOfUser = session.Advanced.GetChangeVectorFor(entity).ToChangeVector()[0].Etag;
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResultsAsOf(lastEtagOfUser)).OrderBy(x => x.Name).ToList();
+                    var users = session.Query<User>().Customize(x => x.WaitForNonStaleResults()).OrderBy(x => x.Name).ToList();
 
                     Assert.Equal(2, users.Count);
                 }

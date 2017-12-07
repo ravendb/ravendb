@@ -14,6 +14,16 @@ namespace Raven.Server.Documents.Queries
         [JsonDeserializationIgnore]
         public QueryMetadata Metadata { get; private set; }
 
+        /// <summary>
+        /// Gets or sets the cutoff etag.
+        /// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
+        /// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
+        /// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
+        /// <para>can work without it.</para>
+        /// </summary>
+        [JsonDeserializationIgnore]
+        public long? CutoffEtag { get; set; }
+        
         private IndexQueryServerSide()
         {
             // for deserialization

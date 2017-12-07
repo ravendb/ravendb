@@ -29,13 +29,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (query.CutoffEtag.HasValue)
-            {
-                writer.WritePropertyName(nameof(query.CutoffEtag));
-                writer.WriteInteger(query.CutoffEtag.Value);
-                writer.WriteComma();
-            }
-
             if (query.Start > 0)
             {
                 writer.WritePropertyName(nameof(query.Start));

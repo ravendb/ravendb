@@ -88,42 +88,5 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
         IDocumentQueryCustomization WaitForNonStaleResults(TimeSpan waitTimeout);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of the cutoff etag.
-        /// </summary>
-        /// <param name="cutOffEtag">
-        ///     <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        ///     <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        ///     <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        ///     <para>can work without it.</para>
-        ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        ///     <para>etag belong to is actually considered for the results. </para>
-        ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable trade-off.</para>
-        ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        ///     <para>use the Cutoff date option, instead.</para>
-        /// </param>
-        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(long cutOffEtag);
-
-        /// <summary>
-        ///     Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
-        /// </summary>
-        /// <param name="cutOffEtag">
-        ///     <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        ///     <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        ///     <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        ///     <para>can work without it.</para>
-        ///     <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        ///     <para>etag belong to is actually considered for the results. </para>
-        ///     <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        ///     <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
-        ///     <para>considered to be an acceptable trade-off.</para>
-        ///     <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        ///     <para>use the Cutoff date option, instead.</para>
-        /// </param>
-        /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
-        IDocumentQueryCustomization WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout);
     }
 }

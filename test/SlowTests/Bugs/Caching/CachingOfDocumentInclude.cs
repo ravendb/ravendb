@@ -233,12 +233,10 @@ namespace SlowTests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                var latestEtag1 = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
-
                 using (var s = store.OpenSession())
                 {
                     var results = s.Query<User>("index")
-                        .Customize(q => q.WaitForNonStaleResultsAsOf(latestEtag1))
+                        .Customize(q => q.WaitForNonStaleResults())
                         .Where(u => u.Email == "same.email@example.com")
                         .ToArray();
                     // Cache is done by url, so including a cutoff date invalidates the cache.
@@ -254,8 +252,6 @@ namespace SlowTests.Bugs.Caching
                     s.SaveChanges();
                 }
 
-                var latestEtag2 = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag ?? 0;
-
                 using (var s = store.OpenSession())
                 {
                     s.Store(new User { Name = "Other", Email = "same.email@example.com" });
@@ -265,7 +261,7 @@ namespace SlowTests.Bugs.Caching
                 using (var s = store.OpenSession())
                 {
                     var results = s.Query<User>("index")
-                        .Customize(q => q.WaitForNonStaleResultsAsOf(latestEtag2))
+                        .Customize(q => q.WaitForNonStaleResults())
                         .Where(u => u.Email == "same.email@example.com")
                         .ToArray();
                     // this works, since we don't hit the cache
