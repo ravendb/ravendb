@@ -643,6 +643,12 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Order the results by the specified fields
         ///     The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
+        TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering = OrderingType.String);
+
+        /// <summary>
+        ///     Order the results by the specified fields
+        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
+        /// </summary>
         /// <param name="propertySelectors">Property selectors for the fields.</param>
         TSelf OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors);
 
@@ -651,6 +657,12 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The field is the name of the field to sort, defaulting to sorting by descending.
         /// </summary>
         TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);
+
+        /// <summary>
+        ///     Order the results by the specified fields
+        ///     The field is the name of the field to sort, defaulting to sorting by ascending.
+        /// </summary>
+        TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
