@@ -108,11 +108,10 @@ Running as service in Linux, add to your daemon script:
    dotnet new console
 ```
 
-- Add to file HelloWorld.csproj, above `</Project>` the following:
+- Add RavenDB Client package:
+
 ```
-    <ItemGroup>
-        <PackageReference Include="RavenDB.Client" Version="4.0.0-*" />
-    </ItemGroup>
+   dotnet add package RavenDB.Client --version 4.0.0-*
 ```
 
 - Replace the content of Program.cs with the following:
