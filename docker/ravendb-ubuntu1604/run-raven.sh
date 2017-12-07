@@ -44,9 +44,6 @@ if [ ! -z "$PUBLIC_TCP_SERVER_URL" ]; then
     NO_SETUP=1
 fi
 
-if [ ! -z "$UNSECURED_ACCESS_ALLOWED" ]; then
-    COMMAND="$COMMAND --Security.UnsecuredAccessAllowed=$UNSECURED_ACCESS_ALLOWED"
-fi
 
 if [ ! -z "$DATA_DIR" ]; then
     COMMAND="$COMMAND --DataDir=\"$DATA_DIR\""
@@ -116,6 +113,16 @@ fi
 
 if [ $NO_SETUP == 1  ]; then
     COMMAND="$COMMAND --Setup.Mode=\"None\""
+fi
+
+if [ ! -z "$UNSECURED_ACCESS_ALLOWED" ]; then
+    COMMAND="$COMMAND --Security.UnsecuredAccessAllowed=$UNSECURED_ACCESS_ALLOWED"
+else
+    if [ $FIRST_RUN == 1 ] && [ $NO_SETUP == 0 ] ; then
+        echo "Initiating setup on first run..."
+        COMMAND="$COMMAND --Security.UnsecuredAccessAllowed=PublicNetwork"
+        export REMOVE_UNSECURED_CLI_ARG_AFTER_RESTART="true"
+    fi
 fi
 
 COMMAND="$COMMAND --print-id"

@@ -55,10 +55,6 @@ $commandArgs += "--DataDir=`"$($env:DATA_DIR)`""
 
 $noSetup = $False;
 
-if ([string]::IsNullOrEmpty($env:UNSECURED_ACCESS_ALLOWED) -eq $False) {
-    $commandArgs += "--Security.UnsecuredAccessAllowed=$($env:UNSECURED_ACCESS_ALLOWED)"
-}
-
 if ([string]::IsNullOrEmpty($env:PUBLIC_SERVER_URL) -eq $False) {
     $commandArgs += "--PublicServerUrl=$($env:PUBLIC_SERVER_URL)"
     $noSetup = $True;
@@ -99,6 +95,17 @@ if ([string]::IsNullOrEmpty($certificatePassword) -eq $False) {
 
 if ($noSetup) {
     $commandArgs += "--Setup.Mode=`"None`""
+}
+
+if ([string]::IsNullOrEmpty($env:UNSECURED_ACCESS_ALLOWED) -eq $False) {
+    $commandArgs += "--Security.UnsecuredAccessAllowed=$($env:UNSECURED_ACCESS_ALLOWED)"
+} 
+else {
+    if ($firstRun -and ($noSetup -eq $False)) {
+        write-host "Initiating setup on first run..."
+        $commandArgs += "--Security.UnsecuredAccessAllowed=PublicNetwork"
+        $env:REMOVE_UNSECURED_CLI_ARG_AFTER_RESTART = "true";
+    }
 }
 
 $commandDesc = "Starting RavenDB server: $command $commandArgs" 
