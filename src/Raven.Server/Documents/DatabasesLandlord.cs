@@ -135,7 +135,8 @@ namespace Raven.Server.Documents
                 var title = $"Failed to digest change of type '{changeType}' for database '{t.DatabaseName}'";
                 if (_logger.IsInfoEnabled)
                     _logger.Info(title, e);
-                _serverStore.NotificationCenter.Add(AlertRaised.Create(t.DatabaseName,title, e.Message, AlertType.DeletionError, NotificationSeverity.Error));
+                _serverStore.NotificationCenter.Add(AlertRaised.Create(t.DatabaseName, title, e.Message, AlertType.DeletionError, NotificationSeverity.Error,
+                    details: new ExceptionDetails(e)));
             }
             finally
             {
