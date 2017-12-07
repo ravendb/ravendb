@@ -363,7 +363,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering)
+        {
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), ordering);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
             foreach (var item in propertySelectors)
             {
@@ -381,7 +388,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering)
+        {
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), ordering);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
             foreach (var item in propertySelectors)
             {
