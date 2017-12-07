@@ -7,11 +7,15 @@ namespace Raven.Server.Utils.Cli
 {
     public static class PostSetupCliArgumentsUpdater
     {
+        private static bool IsRunningOnDocker => 
+            string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER")) == false;
+
         public static string[] Process(string[] configurationArgs, RavenConfiguration configBeforeRestart, RavenConfiguration currentConfiguration)
         {
             var result = configurationArgs;
             result = UpdateServerUrlCommandLineArgAfterSetupIfNecessary(result, configBeforeRestart.Core.ServerUrls, currentConfiguration.GetSetting(RavenConfiguration.GetKey(x => x.Core.ServerUrls)));
             result = FilterOutSetupModeArg(result);
+            result = FilterOutUnsecuredAccessAllowedIfNeeded(result);
             return result;
         }
 
@@ -45,7 +49,12 @@ namespace Raven.Server.Utils.Cli
 
         private static string[] FilterOutSetupModeArg(string[] args)
         {
-            var idx = CommandLineConfigurationArgumentsHelper.FindIndexOfCliOptFor(args, RavenConfiguration.GetKey(x => x.Core.SetupMode));
+            return FilterOutArgByConfigurationKey(args, RavenConfiguration.GetKey(x => x.Core.SetupMode));
+        }
+
+        private static string[] FilterOutArgByConfigurationKey(string[] args, string confKey)
+        {
+            var idx = CommandLineConfigurationArgumentsHelper.FindIndexOfCliOptFor(args, confKey);
             if (idx == -1)
                 return args;
 
@@ -53,5 +62,19 @@ namespace Raven.Server.Utils.Cli
             result.RemoveAt(idx);
             return result.ToArray();
         }
+
+        private static string[] FilterOutUnsecuredAccessAllowedIfNeeded(string[] args)
+        {
+            var removeArgEnvVar = Environment.GetEnvironmentVariable("REMOVE_UNSECURED_CLI_ARG_AFTER_RESTART");
+            var shouldRemoveUnsecuredCliArg = removeArgEnvVar == "true";
+
+            if (IsRunningOnDocker && shouldRemoveUnsecuredCliArg)
+            {
+                return FilterOutArgByConfigurationKey(args, RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed));
+            }
+
+            return args;
+        }
+
     }
 }
