@@ -1,16 +1,11 @@
 using Raven.Client.Documents;
+using RachisTests.DatabaseCluster;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Issues;
-using FastTests.Server.Documents.Indexing.MapReduce;
 using Raven.Server.Utils;
-using SlowTests.Authentication;
-using SlowTests.Issues;
-using SlowTests.Server.Documents.Notifications;
-using SlowTests.Voron.Issues;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -33,10 +28,14 @@ namespace Tryouts
 
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
-
-            using (var a = new AuthenticationChangesTests())
+           
+            for (int i = 0; i < 100; i++)
             {
-                a.ChangesWithAuthentication().Wait();
+                Console.WriteLine(i);
+                using (var a = new ClusterDatabaseMaintenance())
+                {
+                    a.DontRemoveNodeWhileItHasNotReplicatedDocs().Wait();
+                }
             }
         }
 

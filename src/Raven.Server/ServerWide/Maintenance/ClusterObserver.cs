@@ -414,21 +414,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         var tryPromote = TryPromote(dbName, topology, current, previous, mentorNode, rehab);
                         if (tryPromote.Promote)
                         {
-                            if (pendingDelete.Contains(rehab))
-                            {
-                                var msg = $"Node {rehab} was recovered from rehabilitation, but was already replaced by another node, so it's waiting for deletion.";
-                                if (_logger.IsOperationsEnabled)
-                                {
-                                    _logger.Operations(msg);
-                                }
-                                return msg;
-                            }
-
                             if (_logger.IsOperationsEnabled)
                             {
                                 _logger.Operations($"The database {dbName} on {rehab} is reachable and up to date, so we promote it back to member.");
                             }
-
+                            
                             topology.Members.Add(rehab);
                             topology.Rehabs.Remove(rehab);
                             RemoveOtherNodesIfNeeded(dbName, record, clusterTopology, current, ref deletions);
@@ -562,27 +552,33 @@ namespace Raven.Server.ServerWide.Maintenance
                 promotableClusterStats.Report.TryGetValue(dbName, out var promotableDbStats) == false)
                 return (false, null);
 
-            var mentorsEtag = mentorPrevDbStats.LastEtag;
-            if (mentorCurrDbStats.LastSentEtag.TryGetValue(promotable, out var lastSentEtag))
+            if (topology.Members.Count == topology.ReplicationFactor)
             {
-                if (lastSentEtag < mentorsEtag)
-                {
-                    var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
-                              $"Last sent Etag: {lastSentEtag}" + Environment.NewLine +  
-                              $"Mentor's Etag: {mentorsEtag}";
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info(msg);
-                    }
+                return (false, null);
+            }
 
-                    if (msg.Equals(topology.DemotionReasons[promotable]) == false)
-                    {
-                        topology.DemotionReasons[promotable] = msg;
-                        topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
-                        return (false, msg);
-                    }
-                    return (false, null);
+            var mentorsEtag = mentorPrevDbStats.LastEtag;
+            if (mentorCurrDbStats.LastSentEtag.TryGetValue(promotable, out var lastSentEtag) == false)
+            {
+                return (false, null);
+            }
+            if (lastSentEtag < mentorsEtag)
+            {
+                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
+                          $"Last sent Etag: {lastSentEtag}" + Environment.NewLine +
+                          $"Mentor's Etag: {mentorsEtag}";
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info(msg);
                 }
+
+                if (msg.Equals(topology.DemotionReasons[promotable]) == false)
+                {
+                    topology.DemotionReasons[promotable] = msg;
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
+                    return (false, msg);
+                }
+                return (false, null);
             }
 
             var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
@@ -630,9 +626,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var nodesToDelete = new List<string>();
             var mentorChangeVector = new Dictionary<string,string>();
 
-            var alreadInDeletionProgress = GetPendingDeleteNodes(record);
-
-            foreach (var node in topology.Promotables.Concat(topology.Rehabs).Except(alreadInDeletionProgress))
+            foreach (var node in topology.Promotables.Concat(topology.Rehabs))
             {
                 if (TryGetMentorNode(dbName, topology, clusterTopology, node, out var mentorNode) == false ||
                     current.TryGetValue(mentorNode, out var metorStats) == false ||

@@ -192,7 +192,7 @@ namespace Tests.Infrastructure
 
         protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
         {
-            var allNodes = topology.AllNodes;
+            var allNodes = topology.Members;
             var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
             var nodes = serversTopology.Select(x => new ServerNode
             {
