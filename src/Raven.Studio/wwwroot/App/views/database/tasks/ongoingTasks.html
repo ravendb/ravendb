@@ -96,17 +96,27 @@
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
                                             <li>
-                                                <span>Destination:</span>
-                                                <span title="Destination <database>@<Url>">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationDB() + '@' + destinationURL() "></a> 
-                                                </span>
-                                            </li>
-                                            <li>
                                                 <span>Connection String:</span>
                                                 <span title="Connection string name">
                                                     <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
                                                 </span>
                                             </li>
+                                            <li>
+                                                <span>Destination Database:</span>
+                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>                                           
+                                            </li>
+                                            <li>
+                                                <span>Actual Destination Url:</span>
+                                                <span title="Actual Destination Url">
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a> 
+                                                </span>
+                                            </li>                                           
+                                            <!-- ko foreach: topologyDiscoveryUrls -->
+                                            <li>                                        
+                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>                                                
+                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>                                                
+                                            </li>
+                                            <!-- /ko -->
                                         </ul>
                                     </div>
                                 </div>
@@ -144,17 +154,27 @@
                                                 <span class="text-details" data-bind="text: badgeText"></span>
                                             </li>
                                             <li>
-                                                <span>Destination:</span>
-                                                <span title="Destination <database>@<Url>">
-                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationDB() + '@' + destinationURL()"></a>
-                                                </span>
-                                            </li>
-                                            <li>
-                                                <span>Connection String:</span> 
+                                                <span>Connection String:</span>
                                                 <span title="Connection string name">
                                                     <a target="_blank" data-bind="attr: { href: connectionStringsUrl }, text: connectionStringName"></a>
                                                 </span>
                                             </li>
+                                            <li>
+                                                <span>Destination Database:</span>
+                                                <span class="text-details" data-bind="text:  destinationDB" title="Destination database"></span>
+                                            </li>
+                                            <li>
+                                                <span>Actual Destination Url:</span>
+                                                <span title="Actual Destination Url">
+                                                    <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a> 
+                                                </span>
+                                            </li>
+                                            <!-- ko foreach: topologyDiscoveryUrls -->
+                                            <li>
+                                                <span data-bind="text: $data === $parent.topologyDiscoveryUrls()[0] ? 'Topology Discovery URLs:' : ''"></span>
+                                                <span class="text-details" data-bind="text: $data" title="Discovery Url"></span>
+                                            </li>
+                                            <!-- /ko -->
                                         </ul>
                                     </div>
                                 </div>
