@@ -597,11 +597,16 @@ namespace Raven.Server.Documents.Replication
 
         private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<OutgoingReplicationHandler> instancesToDispose)
         {
-            foreach (var reconnected in _reconnectQueue.Where(r => connectionsToRemove.Contains(r.Node)).ToList())
+            var toRemove = connectionsToRemove.ToList();
+            foreach (var replication in _reconnectQueue.ToList())
             {
-                _reconnectQueue.TryRemove(reconnected);
+                if (toRemove.Contains(replication.Node))
+                {
+                    _reconnectQueue.TryRemove(replication);
+                }
             }
-            var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination)).ToList();
+
+            var outgoingChanged = _outgoing.Where(o => toRemove.Contains(o.Destination)).ToList();
             if (outgoingChanged.Count == 0)
                 return; // no connections to remove
 
