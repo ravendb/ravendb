@@ -363,13 +363,6 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(query.CutoffEtag));
-            if (query.CutoffEtag.HasValue)
-                writer.WriteInteger(query.CutoffEtag.Value);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.ExplainScores));
             writer.WriteBool(query.ExplainScores);
             writer.WriteComma();
