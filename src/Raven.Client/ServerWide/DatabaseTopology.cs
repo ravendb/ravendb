@@ -123,12 +123,15 @@ namespace Raven.Client.ServerWide
                 // if we are in rehab, but now are back online. We need to send all the new documents that we might have.
                 var url = clusterTopology.GetUrlFromTag(myTag);
                 var mentor = WhoseTaskIsIt(new PromotableTask(myTag, url, databaseName), state);
-                destinations.Add(new InternalReplication
+                if (mentor != null)
                 {
-                    NodeTag = mentor,
-                    Url = clusterTopology.GetUrlFromTag(mentor),
-                    Database = databaseName
-                });
+                    destinations.Add(new InternalReplication
+                    {
+                        NodeTag = mentor,
+                        Url = clusterTopology.GetUrlFromTag(mentor),
+                        Database = databaseName
+                    });
+                }
                 return destinations;
             }
             
