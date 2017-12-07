@@ -74,51 +74,8 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                var deletionInProgress = DeletionInProgressStatus.No;
-                var directDelete = record.DeletionInProgress != null &&
-                                   record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
-                                   deletionInProgress != DeletionInProgressStatus.No;
-
-                string mentorsChangeVector = "";
-                var conditionalDelete = record.DeletionInProgressChangeVector != null &&
-                                    record.DeletionInProgressChangeVector.TryGetValue(_serverStore.NodeTag, out mentorsChangeVector);
-
-                if (directDelete)
-                {
-                    DeleteDatabase(t, deletionInProgress, record);
+                if (ShouldDeleteDatabase(t.DatabaseName, record)) 
                     return;
-                }
-
-                if (conditionalDelete)
-                {
-                    // A delete command was issued while we were in rehabilitation. We need to check if we recieved any new documents while we were in that state.
-                    // If so, we can't simply delete the database.
-
-                    DatabasesCache.TryGetValue(t.DatabaseName, out var dbTask);
-                    var db = dbTask.Result;
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        var dbChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                        var status = ChangeVectorUtils.GetConflictStatus(mentorsChangeVector, dbChangeVector);
-                        if (mentorsChangeVector.Equals(dbChangeVector) == false && status != ConflictStatus.Update)
-                        {
-                            // raise alert
-                            _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                                t.DatabaseName,
-                                $"Database '{t.DatabaseName}' cannot be deleted in order to maintain the replication factor",
-                                "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
-                                "but it may contain documents that are not existing in the rest of the database-group.\n" +
-                                $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
-                                AlertType.DeletionError,
-                                NotificationSeverity.Error
-                            ));
-                            return;
-                        }
-                    }
-                    DeleteDatabase(t, DeletionInProgressStatus.HardDelete, record);
-                    return;
-                }
 
                 if (record.Topology.RelevantFor(_serverStore.NodeTag) == false)
                     return;
@@ -186,16 +143,65 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteDatabase((string DatabaseName, long Index, string Type) t, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
+        public bool ShouldDeleteDatabase(string dbName, DatabaseRecord record)
         {
-            UnloadDatabase(t.DatabaseName);
+            var deletionInProgress = DeletionInProgressStatus.No;
+            var directDelete = record.DeletionInProgress != null &&
+                               record.DeletionInProgress.TryGetValue(_serverStore.NodeTag, out deletionInProgress) &&
+                               deletionInProgress != DeletionInProgressStatus.No;
+            
+            string mentorsChangeVector = "";
+            var conditionalDelete = record.DeletionInProgressChangeVector != null &&
+                                    record.DeletionInProgressChangeVector.TryGetValue(_serverStore.NodeTag, out mentorsChangeVector);
+
+            if (conditionalDelete)
+            {
+                // A delete command was issued while we were in rehabilitation. We need to check if we recieved any new documents while we were in that state.
+                // If so, we can't simply delete the database.
+                DatabasesCache.TryGetValue(dbName, out var dbTask);
+                var db = dbTask.Result;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var dbChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                    var status = ChangeVectorUtils.GetConflictStatus(mentorsChangeVector, dbChangeVector);
+                    if (mentorsChangeVector.Equals(dbChangeVector) == false && status != ConflictStatus.Update)
+                    {
+                        // raise alert
+                        _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                            dbName,
+                            $"Database '{dbName}' cannot be deleted in order to maintain the replication factor",
+                            "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
+                            "but it may contain documents that are not existing in the rest of the database-group.\n" +
+                            $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
+                            AlertType.DeletionError,
+                            NotificationSeverity.Error
+                        ));
+                        return true;
+                    }
+                }
+                DeleteDatabase(dbName, deletionInProgress, record);
+                return true;
+            }
+
+            if (directDelete)
+            {
+                DeleteDatabase(dbName, deletionInProgress, record);
+                return true;
+            }
+            return false;
+        }
+
+        private void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
+        {
+            UnloadDatabase(dbName);
 
             if (deletionInProgress == DeletionInProgressStatus.HardDelete)
             {
                 RavenConfiguration configuration;
                 try
                 {
-                    configuration = CreateDatabaseConfiguration(t.DatabaseName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: record);
+                    configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: record);
                 }
                 catch (Exception ex)
                 {
@@ -216,13 +222,13 @@ namespace Raven.Server.Documents
                     using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenWriteTransaction())
                     {
-                        _serverStore.DeleteSecretKey(context, t.DatabaseName);
+                        _serverStore.DeleteSecretKey(context, dbName);
                         tx.Commit();
                     }
                 }
             }
 
-            NotifyLeaderAboutRemoval(t.DatabaseName);
+            NotifyLeaderAboutRemoval(dbName);
         }
 
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)

@@ -237,6 +237,10 @@ namespace Raven.Server.Documents.Replication
                                     {
                                         try
                                         {
+                                            if (Destination is InternalReplication dest)
+                                            {
+                                                _parent.EnsureNotDeleted(dest.NodeTag);
+                                            }
                                             var didWork = documentSender.ExecuteReplicationOnce(scope, ref nextReplicateAt);
                                             if (didWork == false)
                                                 break;
@@ -288,6 +292,7 @@ namespace Raven.Server.Documents.Replication
                                     if (etag == _lastSentDocumentEtag)
                                     {
                                         SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
+                                        _parent.CompleteDeletionIfNeeded();
                                     }
                                     else if (nextReplicateAt > DateTime.UtcNow)
                                     {

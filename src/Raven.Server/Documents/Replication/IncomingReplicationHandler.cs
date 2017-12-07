@@ -143,6 +143,8 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (msg.Document != null)
                                 {
+                                    _parent.EnsureNotDeleted(_parent._server.NodeTag); 
+
                                     using (var writer = new BlittableJsonTextWriter(msg.Context, _stream))
                                     {
                                         HandleSingleReplicationBatch(msg.Context,
@@ -905,7 +907,6 @@ namespace Raven.Server.Documents.Replication
                     foreach (var item in _incoming._replicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
-
                         ++operationsCount;
                         using (var rcvdChangeVector = context.GetLazyString(item.ChangeVector))
                         using (item)

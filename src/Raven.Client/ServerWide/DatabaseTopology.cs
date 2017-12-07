@@ -112,25 +112,45 @@ namespace Raven.Client.ServerWide
                    Promotables.Contains(nodeTag);
         }
 
-        public List<ReplicationNode> GetDestinations(string nodeTag, string databaseName, ClusterTopology clusterTopology, RachisState state)
+        public List<ReplicationNode> GetDestinations(string myTag, string databaseName, Dictionary<string, DeletionInProgressStatus> deletionInProgress,
+            ClusterTopology clusterTopology, RachisState state)
         {
             var list = new List<string>();
             var destinations = new List<ReplicationNode>();
-
-            if (Members.Contains(nodeTag) == false) // if we are not a member we can't have any destinations
+            
+            if (Rehabs.Contains(myTag))
+            {
+                // if we are in rehab, but now are back online. We need to send all the new documents that we might have.
+                var url = clusterTopology.GetUrlFromTag(myTag);
+                var mentor = WhoseTaskIsIt(new PromotableTask(myTag, url, databaseName), state);
+                destinations.Add(new InternalReplication
+                {
+                    NodeTag = mentor,
+                    Url = clusterTopology.GetUrlFromTag(mentor),
+                    Database = databaseName
+                });
+                return destinations;
+            }
+            
+            if (Members.Contains(myTag) == false) // if we are not a member we can't have any destinations
                 return destinations;
 
             foreach (var member in Members)
             {
-                if (member == nodeTag) //skip me
+                if (member == myTag) //skip me
+                    continue;
+                if (deletionInProgress != null && deletionInProgress.ContainsKey(member))
                     continue;
                 list.Add(clusterTopology.GetUrlFromTag(member));
             }
             foreach (var promotable in Promotables.Concat(Rehabs))
             {
+                if (deletionInProgress != null && deletionInProgress.ContainsKey(promotable))
+                    continue;
+                
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 PredefinedMentors.TryGetValue(promotable, out var mentor);
-                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName, mentor), state) == nodeTag)
+                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName, mentor), state) == myTag)
                 {
                     list.Add(url);
                 }
@@ -147,7 +167,7 @@ namespace Raven.Client.ServerWide
                     Database = databaseName
                 });
             }
-
+            
             return destinations;
         }
 

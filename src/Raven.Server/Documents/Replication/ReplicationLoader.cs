@@ -470,6 +470,33 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        public void EnsureNotDeleted(string node)
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var record = _server.Cluster.ReadDatabase(ctx, Database.Name, out var _);
+                if (record.DeletionInProgress?.ContainsKey(node) == true)
+                {
+                    throw new OperationCanceledException($"The database '{Database.Name}' on node '{node}' is being deleted, " +
+                                                         "so it will not handle replications.");
+                }
+            }
+        }
+
+        public void CompleteDeletionIfNeeded()
+        {
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var record = _server.Cluster.ReadDatabase(ctx, Database.Name, out var _);
+                if (record?.DeletionInProgress?.ContainsKey(_server.NodeTag) == true)
+                {
+                    _server.DatabasesLandlord.ShouldDeleteDatabase(Database.Name, record);
+                }
+            }
+        }
+        
         private bool ValidateConnectionString(DatabaseRecord newRecord, ExternalReplication externalReplication, out RavenConnectionString connectionString)
         {
             connectionString = null;
@@ -517,9 +544,10 @@ namespace Raven.Server.Documents.Replication
         private void HandleInternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
         {
             var clusterTopology = GetClusterTopology();
-            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, clusterTopology, _server.Engine.CurrentState);
+            var newInternalDestinations =
+                newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, clusterTopology, _server.Engine.CurrentState);
             var internalConnections = DatabaseTopology.FindChanges(_internalDestinations, newInternalDestinations);
-
+           
             if (internalConnections.RemovedDestiantions.Count > 0)
             {
                 var removed = internalConnections.RemovedDestiantions.Select(r => new InternalReplication
@@ -569,6 +597,10 @@ namespace Raven.Server.Documents.Replication
 
         private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, List<OutgoingReplicationHandler> instancesToDispose)
         {
+            foreach (var reconnected in _reconnectQueue.Where(r => connectionsToRemove.Contains(r.Node)).ToList())
+            {
+                _reconnectQueue.TryRemove(reconnected);
+            }
             var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination)).ToList();
             if (outgoingChanged.Count == 0)
                 return; // no connections to remove

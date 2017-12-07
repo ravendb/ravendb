@@ -211,6 +211,7 @@ namespace Raven.Server.Documents.Replication
 
                                 if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
                                 {
+                                    // ReSharper disable once PossibleLossOfFraction
                                     if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
                                     {
                                         wasInterrupted = true;
@@ -390,8 +391,6 @@ namespace Raven.Server.Documents.Replication
             _parent._lastDocumentSentTime = DateTime.UtcNow;
 
             _parent.HandleServerResponse();
-
-          
         }
 
         private void WriteItemToServer(DocumentsOperationContext context,ReplicationBatchItem item, OutgoingReplicationStatsScope stats)

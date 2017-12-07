@@ -8,11 +8,11 @@ using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Rachis;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -346,6 +346,104 @@ namespace RachisTests.DatabaseCluster
                 record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
                 Assert.Null(record);
+            }
+        }
+
+        [NightlyBuildFact]
+        public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
+        {
+            var databaseName = "DontRemoveNodeWhileItHasNotReplicatedDocs" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+                var topology = new DatabaseTopology
+                {
+                    Members = new List<string>
+                    {
+                        "B",
+                        "C"
+                    },
+                    DynamicNodesDistribution = true
+                };
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(new DatabaseRecord
+                {
+                    DatabaseName = databaseName,
+                    Topology = topology
+                }, 2, leader.WebUrl);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User(),"users/1");
+                    session.SaveChanges();
+                }
+                var dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(2, dbToplogy.AllNodes.Count());
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+                Assert.True(await WaitForDocumentInClusterAsync<User>(topology, databaseName, "users/1", null, TimeSpan.FromSeconds(30)));
+
+                var serverA = Servers.Single(s => s.ServerStore.NodeTag == "A");
+                var urlsA = new[] { serverA.WebUrl };
+                var dataDirA = serverA.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                DisposeServerAndWaitForFinishOfDisposal(serverA);
+
+                var serverB = Servers.Single(s => s.ServerStore.NodeTag == "B");
+                var urlsB = new[] { serverB.WebUrl };
+                var dataDirB = serverB.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                DisposeServerAndWaitForFinishOfDisposal(serverB);
+
+                // write doc only to C
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User(), "users/2");
+                    session.SaveChanges();
+                }
+
+                var serverC = Servers.Single(s => s.ServerStore.NodeTag == "C");
+                var urlsC = new[] { serverC.WebUrl };
+                var dataDirC = serverC.Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                DisposeServerAndWaitForFinishOfDisposal(serverC);
+
+                Servers[0] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsA[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDirA);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsB[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDirB);
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                Assert.Equal(2, await WaitForValueAsync(async () => await GetMembersCount(leaderStore, databaseName), 2));
+                Assert.Equal(1, await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName), 1));
+                
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User(), "users/3");
+                    session.SaveChanges();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
+                {
+                    Members = new List<string>{"A","B"}
+                }, databaseName, "users/3", null, TimeSpan.FromSeconds(10)));
+
+                Servers[2] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrls), urlsC[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDirC);
+                Assert.Equal(2, await WaitForValueAsync(async () => await GetMembersCount(leaderStore, databaseName), 2));
+                Assert.Equal(0, await WaitForValueAsync(async () => await GetRehabCount(leaderStore, databaseName), 0, 30_000));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(dbToplogy, databaseName, "users/3", null, TimeSpan.FromSeconds(10)));
+
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(2, dbToplogy.AllNodes.Count());
+                Assert.Equal(2, dbToplogy.Members.Count);
+                Assert.Equal(0, dbToplogy.Rehabs.Count);
+                
+                Assert.True(await WaitForDocumentInClusterAsync<User>(dbToplogy, databaseName, "users/1", null, TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(dbToplogy, databaseName, "users/3", null, TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(dbToplogy, databaseName, "users/2", null, TimeSpan.FromSeconds(30)));
+
+                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(2, dbToplogy.AllNodes.Count());
+                Assert.Equal(2, dbToplogy.Members.Count);
+                Assert.Equal(0, dbToplogy.Rehabs.Count);
             }
         }
 
