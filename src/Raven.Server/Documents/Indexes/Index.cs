@@ -1770,19 +1770,20 @@ namespace Raven.Server.Documents.Indexes
                         documentsContext.OpenReadTransaction();
                         // we have to open read tx for mapResults _after_ we open index tx
 
-                        if (query.WaitForNonStaleResults && query.CutoffEtag == null)
+                        long? cutoffEtag = null;
+                        if (query.WaitForNonStaleResults)
                         {
-                            query.CutoffEtag = 0;
+                            cutoffEtag = 0;
                             foreach (var collection in Collections)
                             {
                                 var etag = GetLastEtagInCollection(documentsContext, collection);
 
-                                if (etag > query.CutoffEtag)
-                                    query.CutoffEtag = etag;
+                                if (etag > cutoffEtag)
+                                    cutoffEtag = etag;
                             }
                         }
 
-                        var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                        var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
                         {
                             documentsContext.CloseTransaction();
@@ -1901,10 +1902,11 @@ namespace Raven.Server.Documents.Indexes
                             documentsContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
 
-                            if (query.WaitForNonStaleResults && query.CutoffEtag == null)
-                                query.CutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+                            long? cutoffEtag = null;
+                            if (query.WaitForNonStaleResults)
+                                cutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
-                            var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                            var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
 
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
@@ -1997,12 +1999,11 @@ namespace Raven.Server.Documents.Indexes
                             documentsContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
 
-                            if (query.WaitForNonStaleResults && query.CutoffEtag == null)
-                                query.CutoffEtag =
-                                    Collections.Max(
-                                        x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+                            long? cutoffEtag = null;
+                            if (query.WaitForNonStaleResults)
+                                cutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
 
-                            var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                            var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
@@ -2058,7 +2059,7 @@ namespace Raven.Server.Documents.Indexes
 
                 using (documentsContext.OpenReadTransaction())
                 {
-                    var isStale = IsStale(documentsContext, indexContext, query.CutoffEtag);
+                    var isStale = IsStale(documentsContext, indexContext);
                     FillQueryResult(result, isStale, documentsContext, indexContext);
                 }
 
