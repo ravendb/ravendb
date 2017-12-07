@@ -2,6 +2,7 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents;
@@ -31,7 +32,7 @@ namespace Raven.Server.Utils
         {
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {                
+            {   
                 var getTcpInfoCommand = new GetTcpInfoCommand(tag ,databaseName);
                 await requestExecutor.ExecuteAsync(getTcpInfoCommand, context);
 
@@ -39,6 +40,24 @@ namespace Raven.Server.Utils
                 if (url.StartsWith("https",StringComparison.OrdinalIgnoreCase) && tcpConnectionInfo.Certificate == null)
                     throw new InvalidOperationException("Getting TCP info over HTTPS but the server didn't return the expected certificate to use over TCP, invalid response, aborting");
                 return tcpConnectionInfo;
+            }
+        }
+
+        public static Topology GetTopology(string url, string databaseName, X509Certificate2 certificate)
+        {
+            using (var requestExecutor = RequestExecutor.Create(new[] { url }, databaseName, certificate, new DocumentConventions()))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                try
+                {
+                    var command = new GetTopologyCommand();
+                    requestExecutor.Execute(command, context);
+                    return command.Result;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
             }
         }
 

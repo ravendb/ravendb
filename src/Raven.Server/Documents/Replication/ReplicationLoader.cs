@@ -5,11 +5,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -646,7 +646,20 @@ namespace Raven.Server.Documents.Replication
                 }
                 if (node is InternalReplication internalNode)
                 {
-                    return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.Certificate.Certificate);
+                    var topology = ReplicationUtils.GetTopology(_server.Server.WebUrl, internalNode.Database, _server.Server.Certificate.Certificate);
+                    try
+                    {
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.Certificate.Certificate);
+                    }
+                    catch (AllTopologyNodesDownException e)
+                    {
+                        var message = e.Message;
+                        if (topology != null)
+                            message += $". {Environment.NewLine}Able to gain access to {_server.Server.WebUrl} {internalNode.Database} topology. fetched topology with etag {topology.Etag}: "+ 
+                                string.Join(",", topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"));
+                        throw new AllTopologyNodesDownException(message);
+                    }
+                    
                 }
                 throw new InvalidOperationException(
                     $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
