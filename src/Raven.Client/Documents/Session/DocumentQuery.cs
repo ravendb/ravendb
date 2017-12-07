@@ -672,34 +672,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
         IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults()
         {
             WaitForNonStaleResults();
@@ -867,7 +839,6 @@ namespace Raven.Client.Documents.Session
                 QueryParameters = QueryParameters,
                 Start = Start,
                 Timeout = Timeout,
-                CutoffEtag = CutoffEtag,
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 Negate = Negate,

@@ -31,7 +31,6 @@ namespace Raven.Client.Documents.Queries
 #endif
                 hasher.Write(ExplainScores);
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
-                hasher.Write(CutoffEtag);
                 hasher.Write(Start);
                 hasher.Write(PageSize);
                 hasher.Write(QueryParameters);
@@ -179,22 +178,6 @@ namespace Raven.Client.Documents.Queries
 
         public TimeSpan? WaitForNonStaleResultsTimeout { get; set; }
 
-        /// <summary>
-        /// Gets or sets the cutoff etag.
-        /// <para>Cutoff etag is used to check if the index has already process a document with the given</para>
-        /// <para>etag. Unlike Cutoff, which uses dates and is susceptible to clock synchronization issues between</para>
-        /// <para>machines, cutoff etag doesn't rely on both the server and client having a synchronized clock and </para>
-        /// <para>can work without it.</para>
-        /// <para>However, when used to query map/reduce indexes, it does NOT guarantee that the document that this</para>
-        /// <para>etag belong to is actually considered for the results. </para>
-        /// <para>What it does it guarantee that the document has been mapped, but not that the mapped values has been reduced. </para>
-        /// <para>Since map/reduce queries, by their nature, tend to be far less susceptible to issues with staleness, this is </para>
-        /// <para>considered to be an acceptable trade-off.</para>
-        /// <para>If you need absolute no staleness with a map/reduce index, you will need to ensure synchronized clocks and </para>
-        /// <para>use the Cutoff date option, instead.</para>
-        /// </summary>
-        public long? CutoffEtag { get; set; }
-
         public override string ToString()
         {
             return Query;
@@ -212,8 +195,7 @@ namespace Raven.Client.Documents.Queries
                    string.Equals(Query, other.Query) &&
                    Start == other.Start &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
-                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-                   Equals(CutoffEtag, other.CutoffEtag);
+                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults);
         }
 
         public override bool Equals(object obj)
@@ -234,7 +216,6 @@ namespace Raven.Client.Documents.Queries
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Start;
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
                 return hashCode;
             }
         }

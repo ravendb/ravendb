@@ -46,7 +46,6 @@ namespace FastTests.Client.Indexing
                     }, "query/parameters"))
                     {
                         Start = q.Start,
-                        CutoffEtag = q.CutoffEtag,
                         ExplainScores = q.ExplainScores,
                         PageSize = q.PageSize,
 #if FEATURE_SHOW_TIMINGS

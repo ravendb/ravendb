@@ -152,8 +152,6 @@ namespace Raven.Client.Documents.Session
 
         public bool IsDynamicMapReduce => GroupByTokens.Count > 0;
 
-        protected long? CutoffEtag;
-
         private bool _isInMoreLikeThis;
 
         private static TimeSpan DefaultTimeout
@@ -213,7 +211,6 @@ namespace Raven.Client.Documents.Session
         public void WaitForNonStaleResults(TimeSpan waitTimeout)
         {
             TheWaitForNonStaleResults = true;
-            CutoffEtag = null;
             Timeout = waitTimeout;
         }
 
@@ -968,24 +965,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff etag.
-        /// </summary>
-        public void WaitForNonStaleResultsAsOf(long cutOffEtag)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag, DefaultTimeout);
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff etag.
-        /// </summary>
-        public void WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
-        {
-            TheWaitForNonStaleResults = true;
-            Timeout = waitTimeout;
-            CutoffEtag = cutOffEtag;
-        }
-
-        /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
@@ -1031,7 +1010,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             {
                 Query = query,
                 Start = Start,
-                CutoffEtag = CutoffEtag,
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
