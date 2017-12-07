@@ -10,6 +10,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     connectionStringName = ko.observable<string>();
+    topologyDiscoveryUrls = ko.observableArray<string>([]);
 
     connectionStringsUrl: string; 
     
@@ -37,6 +38,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
         this.destinationDB(dto.DestinationDatabase);
         this.destinationURL(dto.DestinationUrl || 'N/A');
         this.connectionStringName(dto.ConnectionStringName);
+        this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls);
     }
 
     editTask() {

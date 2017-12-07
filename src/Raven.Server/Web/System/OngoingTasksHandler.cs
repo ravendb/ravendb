@@ -167,9 +167,10 @@ namespace Raven.Server.Web.System
                     NodeUrl = clusterTopology.GetUrlFromTag(tag)
                 },
                 ConnectionStringName = watcher.ConnectionStringName,     
-                DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
                 TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                DestinationUrl = res.Url,
+                DestinationDatabase = connectionStrings[watcher.ConnectionStringName].Database,
+                DestinationUrl = res.Url, 
+                TopologyDiscoveryUrls = connectionStrings[watcher.ConnectionStringName].TopologyDiscoveryUrls,
                 MentorNode = watcher.MentorNode,
                 TaskConnectionStatus = res.Status,
             };
@@ -679,6 +680,7 @@ namespace Raven.Server.Web.System
                         TaskConnectionStatus = res.Status,
                         DestinationDatabase = connection.Database,
                         ConnectionStringName = ravenEtl.ConnectionStringName,
+                        TopologyDiscoveryUrls = connection.TopologyDiscoveryUrls,
                         Error = error
                     };
                 }
