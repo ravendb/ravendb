@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (_indexQuery.WaitForNonStaleResults == false)
                 return null;
 
-            return _session.DocumentStore.DisableAggressiveCaching();
+            return _session.DocumentStore.DisableAggressiveCaching(_session.DatabaseName);
         }
 
         public List<T> Complete<T>()
@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                 if (fieldsToFetch.FieldsToFetch != null && fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                 {
-                    if (inner is BlittableJsonReaderObject innerJson) //extraction from original type 
+                    if (inner is BlittableJsonReaderObject innerJson) //extraction from original type
                         document = innerJson;
                 }
             }
