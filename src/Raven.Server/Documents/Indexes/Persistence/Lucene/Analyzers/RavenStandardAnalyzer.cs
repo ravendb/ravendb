@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
     {
         public RavenStandardAnalyzer(Version matchVersion) : base(matchVersion)
         {
-            this._matchVersion = matchVersion;
+            _matchVersion = matchVersion;
         }
 
         public override TokenStream TokenStream(string fieldName, TextReader reader)
