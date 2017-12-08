@@ -649,7 +649,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector)
         {
-            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingOfType(propertySelector.ReturnType));
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), OrderingUtil.GetOrderingOfType(propertySelector.ReturnType));
             return this;
         }
 
