@@ -70,15 +70,15 @@ namespace rvn
 
                 try
                 {
-                    new Win32ServiceManager().CreateService(
-                        NormalizeServiceName(serviceName),
-                        serviceName,
-                        serviceDesc,
-                        serviceCommand,
-                        Win32ServiceCredentials.LocalSystem,
-                        autoStart: true,
-                        startImmediately: true,
-                        errorSeverity: ErrorSeverity.Normal);
+                    new Win32ServiceManager().CreateService(new ServiceDefinition(NormalizeServiceName(serviceName), serviceCommand)
+                    {
+                        DisplayName = serviceName,
+                        Description = serviceDesc,
+                        Credentials = Win32ServiceCredentials.LocalService,
+                        AutoStart = true,
+                        DelayedAutoStart = false,
+                        ErrorSeverity = ErrorSeverity.Normal
+                    });
 
                     Console.WriteLine($"Service {ServiceFullName} has been registered.");
                 }
