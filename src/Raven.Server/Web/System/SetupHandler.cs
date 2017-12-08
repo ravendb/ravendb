@@ -334,9 +334,8 @@ namespace Raven.Server.Web.System
 
                 var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                HttpContext.Response.ContentType = "binary/octet-stream";
+                HttpContext.Response.ContentType = "application/octet-stream";
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 HttpContext.Response.Body.Write(zip, 0, zip.Length);
             }
         }
@@ -391,9 +390,8 @@ namespace Raven.Server.Web.System
 
                 var contentDisposition = $"attachment; filename={setupInfo.Domain}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                HttpContext.Response.ContentType = "binary/octet-stream";
+                HttpContext.Response.ContentType = "application/octet-stream";
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 HttpContext.Response.Body.Write(zip, 0, zip.Length);
             }
         }

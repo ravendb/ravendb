@@ -66,9 +66,8 @@ namespace Raven.Server.Web.Authentication
 
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-                HttpContext.Response.ContentType = "binary/octet-stream";
+                HttpContext.Response.ContentType = "application/octet-stream";
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                 HttpContext.Response.Body.Write(certs, 0, certs.Length);
             }
         }
@@ -110,7 +109,7 @@ namespace Raven.Server.Web.Authentication
                 Thumbprint = selfSignedCertificate.Thumbprint,
                 NotAfter = selfSignedCertificate.NotAfter
             };
-			
+            
             var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
 
@@ -168,7 +167,7 @@ namespace Raven.Server.Web.Authentication
         }
 
         
-		[RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             // one of the first admin action is to create a certificate, so let
@@ -527,9 +526,8 @@ namespace Raven.Server.Web.Authentication
 
             var contentDisposition = "attachment; filename=ClusterCertificatesCollection.pfx";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
-            HttpContext.Response.ContentType = "binary/octet-stream";
+            HttpContext.Response.ContentType = "application/octet-stream";
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             
             return Task.CompletedTask;
