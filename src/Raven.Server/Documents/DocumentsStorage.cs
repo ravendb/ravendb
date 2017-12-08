@@ -1474,6 +1474,7 @@ namespace Raven.Server.Documents
             if (_logger.IsInfoEnabled && deleteCount > 0)
                 _logger.Info($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
 
+            EnsureLastEtagIsPersisted(context, etag);
         }
 
         public IEnumerable<string> GetTombstoneCollections(Transaction transaction)
