@@ -23,7 +23,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/clusterObserverLog",
             title: "Cluster Observer Log",
             nav: true,
-            css: 'icon-cluster',
+            css: 'icon-cluster-log',
             dynamicHash: appUrl.forClusterObserverLog,
             enabled: canReadOrWrite
         }),
