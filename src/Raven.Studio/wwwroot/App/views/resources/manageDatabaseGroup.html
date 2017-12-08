@@ -19,7 +19,8 @@
                 </div>
                 <div data-bind="visible: !inSortableMode()">
                     <button class="btn btn-default" data-bind="click: enableNodesSort, enable: nodes().length > 1">
-                        Reorder nodes
+                        <i class="icon-reorder"></i>
+                        <span>Reorder nodes</span>
                     </button>
                     <button class="btn btn-primary" data-bind="click: addNode, enable: addNodeEnabled">
                         <i class="icon-plus"></i>

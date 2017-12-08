@@ -62,7 +62,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/expiration',
             title: 'Document Expiration',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-document-expiration',
             dynamicHash: appUrls.expiration
         }),
         new leafMenuItem({
@@ -70,7 +70,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/resources/manageDatabaseGroup',
             title: 'Manage Database Group',
             nav: true,
-            css: 'icon-topology',
+            css: 'icon-manage-dbgroup',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
         /*TODO
