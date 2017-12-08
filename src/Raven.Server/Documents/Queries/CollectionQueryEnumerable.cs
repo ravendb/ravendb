@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Queries
 
                 public override void VisitBetween(QueryExpression fieldName, QueryExpression firstValue, QueryExpression secondValue, BlittableJsonReaderObject parameters)
                 {
-                    if (fieldName is MethodExpression me && me.Name.Equals("id") && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
+                    if (fieldName is MethodExpression me && string.Equals("id", me.Name, StringComparison.OrdinalIgnoreCase) && firstValue is ValueExpression fv && secondValue is ValueExpression sv)
                     {
                         throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
                             QueryText, parameters);
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Queries
 
                 public override void VisitIn(QueryExpression fieldName, List<QueryExpression> values, BlittableJsonReaderObject parameters)
                 {
-                    if (fieldName is MethodExpression me && me.Name.Equals("id"))
+                    if (fieldName is MethodExpression me && string.Equals("id", me.Name, StringComparison.OrdinalIgnoreCase))
                     {
                         foreach (var item in values)
                         {
@@ -393,6 +393,11 @@ namespace Raven.Server.Documents.Queries
                                 }
                             }
                         }
+                    }
+                    else
+                    {  
+                        throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
+                            QueryText, parameters);
                     }
                 }
 
