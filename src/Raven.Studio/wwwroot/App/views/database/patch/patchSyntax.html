@@ -1,5 +1,5 @@
-<div class="modal-dialog modal-lg" role="document" id="patchSyntaxDialog">
-    
+<div class="modal-dialog modal-lg margin-bottom" role="document" id="patchSyntaxDialog">
+
 <div>Filter out an array item:</div>
 <pre class="margin-bottom"><span class="token keyword">from</span><span class="token string"> Orders </span>
 <span class="token keyword">update</span><span class="token punctuation"> { </span>
@@ -27,5 +27,11 @@
     <span class="token keyword">this</span>.DocumentId = id(<span class="token keyword">this</span>);
     <span class="token keyword">this</span>.DocumentCollection = <span class="token keyword">this</span>["@metadata"]["@collection"];
 <span class="token punctuation">}</span></pre>    
-    
+
+    <p>You can use following functions in your patch script:
+    <ul>
+        <li><code>PutDocument(documentId, document)</code> - puts document with given name and data</li>
+        <li><code>LoadDocument(documentIdToLoad)</code> - loads document by id
+        <li><code>output(message)</code> - allows to output debug info when testing patches</li>
+    </ul>
 </div>

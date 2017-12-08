@@ -232,24 +232,6 @@ class patch extends viewModelBase {
                 this.runPatch();
             }
         }, patch.ContainerSelector);
-        
-        const jsCode = Prism.highlight("this.NewProperty = this.OldProperty + myParameter;\r\n" +
-            "delete this.UnwantedProperty;\r\n" +
-            "this.Comments.RemoveWhere(function(comment){\r\n" +
-            "  return comment.Spam;\r\n" +
-            "});",
-            (Prism.languages as any).javascript);
-
-        popoverUtils.longWithHover($(".patch-title small"),
-            {
-                content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>`
-                + `<p>You can use following functions in your patch script:</p>`
-                + `<ul>`
-                + `<li><code>PutDocument(documentId, document)</code> - puts document with given name and data</li>`
-                + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
-                + `<li><code>output(message)</code> - allows to output debug info when testing patches</li>`
-                + `</ul>`
-            });
     }
 
     private showPreview(doc: document) {
