@@ -121,6 +121,8 @@ namespace Raven.Server.Documents.Replication
 
         public List<ReplicationNode> Destinations => _destinations;
         private List<ReplicationNode> _destinations = new List<ReplicationNode>();
+        private ClusterTopology _clusterTopology = new ClusterTopology();
+        private int _numberOfSiblings;
         public ConflictSolver ConflictSolverConfig;
 
         public ReplicationLoader(DocumentDatabase database, ServerStore server)
@@ -394,17 +396,20 @@ namespace Raven.Server.Documents.Replication
                 DropOutgoingConnections(Destinations, instancesToDispose);
                 _internalDestinations.Clear();
                 _externalDestinations.Clear();
-                _destinations.Clear();
+                _destinations.Clear();                
                 DisposeConnections(instancesToDispose);
                 return;
             }
+
+            _clusterTopology = GetClusterTopology();
 
             HandleInternalReplication(newRecord, instancesToDispose);
             HandleExternalReplication(newRecord, instancesToDispose);
             var destinations = new List<ReplicationNode>();
             destinations.AddRange(_internalDestinations);
             destinations.AddRange(_externalDestinations);
-            _destinations = destinations;
+            _destinations = destinations;            
+            _numberOfSiblings = _destinations.Select(x => x.Url).Intersect(_clusterTopology.AllNodes.Select(x => x.Value)).Count();
 
             DisposeConnections(instancesToDispose);
         }
@@ -542,17 +547,16 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void HandleInternalReplication(DatabaseRecord newRecord, List<OutgoingReplicationHandler> instancesToDispose)
-        {
-            var clusterTopology = GetClusterTopology();
+        { 
             var newInternalDestinations =
-                newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, clusterTopology, _server.Engine.CurrentState);
+                newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, newRecord.DeletionInProgress, _clusterTopology, _server.Engine.CurrentState);
             var internalConnections = DatabaseTopology.FindChanges(_internalDestinations, newInternalDestinations);
            
             if (internalConnections.RemovedDestiantions.Count > 0)
             {
                 var removed = internalConnections.RemovedDestiantions.Select(r => new InternalReplication
                 {
-                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
+                    NodeTag = _clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
                     Url = r,
                     Database = Database.Name
                 });
@@ -563,7 +567,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var added = internalConnections.AddedDestinations.Select(r => new InternalReplication
                 {
-                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
+                    NodeTag = _clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
                     Url = r,
                     Database = Database.Name
                 });
@@ -911,16 +915,13 @@ namespace Raven.Server.Documents.Replication
         }
 
         public int GetSizeOfMajority()
-        {
-            var numberOfSiblings = _destinations.Count;
-            return numberOfSiblings / 2 + 1;
+        {            
+            return _numberOfSiblings / 2 + 1;
         }
 
         public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
-        {
-            var topology = GetClusterTopology();
-            var numberOfSiblings = _destinations.Select(x=>x.Url).Intersect(topology.AllNodes.Select(x=>x.Value)).Count();
-            if (numberOfSiblings == 0)
+        {            
+            if (_numberOfSiblings == 0)
             {
              
                 if (_log.IsInfoEnabled)
@@ -929,14 +930,14 @@ namespace Raven.Server.Documents.Replication
 
                 return numberOfReplicasToWaitFor;
             }
-            if (numberOfSiblings < numberOfReplicasToWaitFor)
+            if (_numberOfSiblings < numberOfReplicasToWaitFor)
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Was asked to get write assurance on a database with {numberOfReplicasToWaitFor} servers " +
-                              $"but we have only {numberOfSiblings} servers, reducing request to {numberOfSiblings}. " +
+                              $"but we have only {_numberOfSiblings} servers, reducing request to {_numberOfSiblings}. " +
                               $"InternalDestinations: {_internalDestinations.Count}. " );
 
-                numberOfReplicasToWaitFor = numberOfSiblings;
+                numberOfReplicasToWaitFor = _numberOfSiblings;
             }
             var sp = Stopwatch.StartNew();
             while (true)
@@ -994,6 +995,19 @@ namespace Raven.Server.Documents.Replication
             var count = 0;
             foreach (var destination in _outgoing.Where(x=>_internalDestinations.Select(y=>y.Url).Contains(x.Destination.Url)))
             {
+                var foundInInternalDestination = false;
+                foreach (var internalDestination in _internalDestinations)
+                {
+                    if (internalDestination.Url == destination.Destination.Url)
+                    {
+                        foundInInternalDestination = true;
+                        break;
+                    }
+                }
+
+                if (foundInInternalDestination == false)
+                    continue;
+
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
