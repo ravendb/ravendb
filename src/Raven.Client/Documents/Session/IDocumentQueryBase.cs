@@ -85,13 +85,13 @@ namespace Raven.Client.Documents.Session
         TSelf UsingDefaultOperator(QueryOperator queryOperator);
 
         /// <summary>
-        ///     EXPERT ONLY: Instructs the query to wait for non stale results.
+        ///     Instructs the query to wait for non stale results.
         ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
         TSelf WaitForNonStaleResults();
 
         /// <summary>
-        ///     EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
+        ///     Instructs the query to wait for non stale results for the specified wait timeout.
         ///     This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
