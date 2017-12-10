@@ -47,8 +47,7 @@ namespace rvn
             }
             catch (CommandParsingException parsingException)
             {
-                ExitWithError(parsingException.Message, _app);
-                return 1;
+                return ExitWithError(parsingException.Message, _app);
             }
         }
 

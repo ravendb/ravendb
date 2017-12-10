@@ -66,8 +66,7 @@ namespace Raven.Traffic
                         $"Trying to 'ReceiveAsync' WebSocket while not in Open state. State is {webSocket.State}");
 
                 var state = new JsonParserState();
-                JsonOperationContext.ManagedPinnedBuffer buffer;
-                using (context.GetManagedBuffer(out buffer))
+                using (context.GetManagedBuffer(out var buffer))
                 using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
                 {
                     builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None,
@@ -140,11 +139,11 @@ namespace Raven.Traffic
 
                 try
                 {
-                    string resourceName = config.ResourceName ?? "N/A";
+                    string databaseName = config.Database ?? "N/A";
                     var connectMessage = new DynamicJsonValue
                     {
                         ["Id"] = id,
-                        ["DatabaseName"] = resourceName,
+                        ["DatabaseName"] = databaseName,
                         ["Timeout"] = timeout
                     };
 
@@ -189,8 +188,7 @@ namespace Raven.Traffic
                                         break;
                                     }
 
-                                    string type;
-                                    if (reader.TryGet("Type", out type))
+                                    if (reader.TryGet("Type", out string type))
                                     {
                                         if (type.Equals("Heartbeat"))
                                         {
@@ -198,8 +196,7 @@ namespace Raven.Traffic
                                         }
                                     }
 
-                                    string error;
-                                    if (reader.TryGet("Error", out error))
+                                    if (reader.TryGet("Error", out string error))
                                     {
                                         throw new InvalidOperationException("Server returned error: " + error);
                                     }
@@ -258,24 +255,21 @@ namespace Raven.Traffic
 
         private static string GetStringFromJson(BlittableJsonReaderObject reader, string value)
         {
-            string str;
-            if (reader.TryGet(value, out str) == false)
+            if (reader.TryGet(value, out string str) == false)
                 throw new InvalidOperationException($"Missing string '{value}' in message : ${reader}");
             return str;
         }
 
         private static DateTime GetDateTimeFromJson(BlittableJsonReaderObject reader, string value)
         {
-            string str;
-            if (reader.TryGet(value, out str) == false)
+            if (reader.TryGet(value, out string str) == false)
                 throw new InvalidOperationException($"Missing DateTime '{value}' in message : ${reader}");
             return DateTime.Parse(str);
         }
 
         private static int GetIntFromJson(BlittableJsonReaderObject reader, string value)
         {
-            int int32;
-            if (reader.TryGet(value, out int32) == false)
+            if (reader.TryGet(value, out int int32) == false)
                 throw new InvalidOperationException($"Missing int '{value}' in message : ${reader}");
             return int32;
         }
