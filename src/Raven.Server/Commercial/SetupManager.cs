@@ -1064,7 +1064,7 @@ namespace Raven.Server.Commercial
                             // requires server certificate to be loaded
                             clientCertificateName = $"{name}.client.certificate";
                             certBytes = await GenerateCertificateTask(clientCertificateName, serverStore);
-                            clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable);
+                            clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
                         }
                         catch (Exception e)
                         {
