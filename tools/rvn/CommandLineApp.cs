@@ -9,8 +9,9 @@ namespace rvn
     {
         private const string HelpOptionString = "-h | -? | --help";
 
-        private const string EncryptionCommandsNote =
-                "Setup encryption for the server store or decrypt an encrypted store. All commands MUST run under the same user as the one that the RavenDB server is using. The server MUST be offline for the duration of those operations";
+        private const string EncryptionCommandsNote = "Setup encryption for the server store or decrypt an encrypted store. " +
+                                                      "All commands MUST run under the same user as the one that the RavenDB server is using. " +
+                                                      "The server MUST be offline for the duration of those operations";
 
         private static CommandLineApplication _app;
 
@@ -19,10 +20,13 @@ namespace rvn
             if (args == null)
                 throw new ArgumentNullException(nameof(args));
 
-            _app = new CommandLineApplication();
-            _app.Name = "rvn";
-            _app.Description =
-                @"This utility lets you manage RavenDB offline operations, such as setting encryption mode for the server store. The server store which may contain sensitive information is not encrypted by default (even if it contains encrypted databases). If you want it encrypted, you must do it manually using this tool.";
+            _app = new CommandLineApplication
+            {
+                Name = "rvn",
+                Description = "This utility lets you manage RavenDB offline operations, such as setting encryption mode for the server store. " +
+                              "The server store which may contain sensitive information is not encrypted by default (even if it contains encrypted databases). " +
+                              "If you want it encrypted, you must do it manually using this tool."
+            };
 
             _app.HelpOption(HelpOptionString);
 
@@ -138,7 +142,8 @@ namespace rvn
                     var serverDirOpt = ConfigureServerDirOption(subcmd);
 
                     subcmd.Description = "Registers RavenDB Server as Windows Service";
-                    subcmd.ExtendedHelpText = "\r\nRegisters RavenDB Server as Windows Service. Any additional arguments passed after command options are going to be passed to the server.";
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Registers RavenDB Server as Windows Service. " +
+                                              "Any additional arguments passed after command options are going to be passed to the server.";
                     subcmd.HelpOption(HelpOptionString);
 
                     subcmd.OnExecute(() =>
@@ -225,8 +230,9 @@ namespace rvn
                 cmd.Command("get-key", subcmd =>
                 {
                     subcmd.Description = "Exports unprotected server store encryption key";
-                    subcmd.ExtendedHelpText =
-                        "\r\nExports unprotected server store encryption key. This key will allow decryption of the server store and must be secured. This is REQUIRED when restoring backups from an encrypted server store.";
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Exports unprotected server store encryption key. " +
+                                              "This key will allow decryption of the server store and must be secured. " +
+                                              "This is REQUIRED when restoring backups from an encrypted server store.";
                     subcmd.HelpOption(HelpOptionString);
 
                     subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
@@ -252,8 +258,8 @@ namespace rvn
                         });
                     });
 
-                    subcmd.ExtendedHelpText =
-                        "\r\nRestores the encryption key on the new machine and protects it for the current OS user. This is typically used as part of the restore process of an encrypted server store on a new machine";
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Restores the encryption key on the new machine and protects it for the current OS user. " +
+                                              "This is typically used as part of the restore process of an encrypted server store on a new machine";
                 });
 
                 cmd.Command("trust", subcmd =>
@@ -282,7 +288,13 @@ namespace rvn
                 cmd.Command("encrypt", subcmd =>
                 {
                     subcmd.Description = "Encrypts RavenDB files and saves the key to the same directory";
-                    subcmd.ExtendedHelpText = $"\r\nEncrypts RavenDB files and saves the key to a given directory. This key file (secret.key.encrypted) is protected for the current OS user. Once encrypted, The server will only work for the current OS user. It is recommended that you do that as part of the initial setup of the server, before it is running. Encrypted server store can only talk to other encrypted server stores, and only over SSL.\r\n{ EncryptionCommandsNote }";
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Encrypts RavenDB files and saves the key to a given directory. " +
+                                              "This key file (secret.key.encrypted) is protected for the current OS user. " +
+                                              "Once encrypted, The server will only work for the current OS user. " +
+                                              "It is recommended that you do that as part of the initial setup of the server, before it is running. " +
+                                              "Encrypted server store can only talk to other encrypted server stores, and only over SSL." +
+                                              Environment.NewLine + EncryptionCommandsNote;
+                    
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
@@ -296,7 +308,8 @@ namespace rvn
 
                 cmd.Command("decrypt", subcmd =>
                 {
-                    subcmd.ExtendedHelpText = $"\r\nDecrypts RavenDB files in a given directory using the key inserted earlier using the put-key command.\r\n{ EncryptionCommandsNote }";
+                    subcmd.ExtendedHelpText = Environment.NewLine + "Decrypts RavenDB files in a given directory using the key inserted earlier using the put-key command." + 
+                                              Environment.NewLine + EncryptionCommandsNote;
                     subcmd.HelpOption(HelpOptionString);
                     subcmd.Description = "Decrypts RavenDB files";
                     subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
