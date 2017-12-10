@@ -3232,8 +3232,47 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
             }
         }
         
-        
-        
+
+                
+        [Fact]
+        public void Can_Load_Old_Document_With_Undefined_Member()
+        {
+            //RavenDB-9638
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Configuration() { Language = "nl" }, "configuration/global");
+                    session.Store(new Group()
+                    {
+                        Name = new Dictionary<string, string>(){
+                            { "en", "Administrator" },
+                            { "nl", "Administratie" }
+                        }
+                    }, "groups/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
+                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null}, "users/2");
+                    session.Store(new OldUser.User { Name = "Bob", LastName = "Weir" }, "users/3");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var queryResult = (from user in session.Query<User>()
+                                       let groups = RavenQuery.Load<Group>(user.Groups)
+                                       select new
+                                       {
+                                           Language = groups.Select(a => a.Name)                                          
+                                       }).ToList();
+                                        
+                    Assert.NotEmpty(queryResult[0].Language);
+                    Assert.Empty(queryResult[1].Language);
+                    Assert.Empty(queryResult[2].Language);
+                }
+            }
+        }
+
         public class ProjectionParameters : RavenTestBase
         {
             public class Document
@@ -3556,6 +3595,16 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
             // Multilanguage name
             public Dictionary<string, string> Name { get; set; }
         }
+        
+        private class OldUser
+        {
+            public class User
+            {
+                public string Name { get; set; }
+                public string LastName { get; set; }
+            }
+        }
+        
     }
 }
 

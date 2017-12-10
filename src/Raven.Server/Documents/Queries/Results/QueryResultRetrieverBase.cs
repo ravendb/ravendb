@@ -420,6 +420,11 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (_loadedDocumentIds.Count == 0)
             {
+                if (fieldToFetch.QueryField.SourceIsArray)
+                {
+                    value = new List<object>();
+                    return true;
+                }
                 value = null;
                 return false;
             }
