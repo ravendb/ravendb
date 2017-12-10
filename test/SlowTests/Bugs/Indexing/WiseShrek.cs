@@ -99,12 +99,12 @@ namespace SlowTests.Bugs.Indexing
                 session.Advanced.GetMetadataFor(entity)["@collection"] = "Softs";
                 session.SaveChanges();
 
-                List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test").
-                                        WaitForNonStaleResults(TimeSpan.FromHours(1))
-                                        .WhereStartsWith("f_name", "s")
-                                        .OrderByDescending("f_License")
-                                        .OrderBy("f_totaldownload")
-                                        .ToList();
+                List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test")
+                    .WaitForNonStaleResults()
+                    .WhereStartsWith("f_name", "s")
+                    .OrderByDescending("f_License")
+                    .OrderBy("f_totaldownload")
+                    .ToList();
 
                 Assert.Empty(tmps);
             }

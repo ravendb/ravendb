@@ -76,14 +76,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;
         }
 
         /// <inheritdoc />
-        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;
@@ -668,20 +668,6 @@ namespace Raven.Client.Documents.Session
                 OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.ReturnType));
             }
 
-            return this;
-        }
-
-        /// <inheritdoc />
-        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults();
-            return this;
-        }
-
-        /// <inheritdoc />
-        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults();
             return this;
         }
 

@@ -204,14 +204,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        ///   Instruct the query to wait for non stale result for the specified wait timeout.
+        ///   Instruct the query to wait for non stale results.
+        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        /// <returns></returns>
-        public void WaitForNonStaleResults(TimeSpan waitTimeout)
+        /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
+        public void WaitForNonStaleResults(TimeSpan? waitTimeout = null)
         {
             TheWaitForNonStaleResults = true;
-            Timeout = waitTimeout;
+            Timeout = waitTimeout ?? DefaultTimeout;
         }
 
         protected internal QueryOperation InitializeQueryOperation()
@@ -962,15 +962,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         {
             AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.ScoreDescending);
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        public void WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults(DefaultTimeout);
         }
 
         /// <summary>

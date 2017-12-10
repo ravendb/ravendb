@@ -420,20 +420,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults();
-            return this;
-        }
-
-        /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults();
-            return this;
-        }
-
-        /// <inheritdoc />
         IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
         {
             BeforeQueryExecuted(beforeQueryExecuted);
@@ -448,14 +434,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        IAsyncDocumentQuery<T> IQueryBase<T, IAsyncDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan waitTimeout)
+        IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
             return this;
