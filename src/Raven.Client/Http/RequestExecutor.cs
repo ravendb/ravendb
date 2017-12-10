@@ -64,6 +64,8 @@ namespace Raven.Client.Http
 
         public Topology Topology => _nodeSelector?.Topology;
 
+        private ServerNode TopologyTakenFromNode;
+
         public HttpClient HttpClient { get; }
 
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
@@ -427,13 +429,16 @@ namespace Raven.Client.Http
             {
                 try
                 {
-                    await UpdateTopologyAsync(new ServerNode
+                    var serverNode = new ServerNode
                     {
                         Url = url,
                         Database = _databaseName
-                    }, Timeout.Infinite).ConfigureAwait(false);
+                    };
+
+                    await UpdateTopologyAsync(serverNode, Timeout.Infinite).ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
+                    TopologyTakenFromNode = serverNode;
                     return;
                 }
                 catch (AuthorizationException)
@@ -759,9 +764,16 @@ namespace Raven.Client.Http
 
         private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request, Exception e, Exception timeoutException)
         {
-            throw new AllTopologyNodesDownException(
-                $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " +
-                string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException ?? e);
+            var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, all of them seem to be down or not responding. " +
+                          $"I've tried to access the following nodes: {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0])}.";
+
+            if (TopologyTakenFromNode != null)
+            {
+                message += $"{Environment.NewLine}I was able to fetch {TopologyTakenFromNode.Database} topology from {TopologyTakenFromNode.Url}.{Environment.NewLine}" + 
+                           $"fetched topology : {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
+            }
+
+            throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology, timeoutException ?? e);
         }
 
         private static void ThrowInvalidConcurrentSessionUsage(string command, SessionInfo sessionInfo)
