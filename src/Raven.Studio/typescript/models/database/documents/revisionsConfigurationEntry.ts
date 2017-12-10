@@ -1,5 +1,4 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-
 import generalUtils = require("common/generalUtils");
 
 class revisionsConfigurationEntry {
@@ -44,8 +43,13 @@ class revisionsConfigurationEntry {
     private initObservables() {
         this.humaneRetentionDescription = ko.pureComputed(() => {
             const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumRevisionAgeToKeep() * 1000, true);
-            const agePart = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid() ? `Revisions are going to be removed on next revision creation or document deletion once they exceed retention time of <strong>${retentionTimeHumane}</strong>. ` : "";
-            const countPart = this.limitRevisions() && this.minimumRevisionsToKeep.isValid() ? `At least <strong>${this.minimumRevisionsToKeep()}</strong> revisions are going to be kept. ` : "";
+            
+            const agePart = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid() && this.minimumRevisionAgeToKeep() !== 0 ?
+                `Revisions are going to be removed on next revision creation or document deletion once they exceed retention time of <strong>${retentionTimeHumane}</strong>` : "";
+            
+            const countPart = this.limitRevisions() && this.minimumRevisionsToKeep.isValid() ? 
+                `At least <strong>${this.minimumRevisionsToKeep()}</strong> revisions are going to be kept` : "";
+            
             return agePart + countPart;
         });
 
@@ -84,10 +88,10 @@ class revisionsConfigurationEntry {
         this.purgeOnDelete(incoming.purgeOnDelete());
         this.collection(incoming.collection());
 
-        this.limitRevisions(incoming.minimumRevisionsToKeep() != null);
+        this.limitRevisions(incoming.limitRevisions());
         this.minimumRevisionsToKeep(incoming.minimumRevisionsToKeep());
 
-        this.limitRevisionsByAge(incoming.minimumRevisionAgeToKeep() != null);
+        this.limitRevisionsByAge(incoming.limitRevisionsByAge());
         this.minimumRevisionAgeToKeep(incoming.minimumRevisionAgeToKeep());
         
         return this;
