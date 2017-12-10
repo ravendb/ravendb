@@ -965,7 +965,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         /// <summary>
-        ///   EXPERT ONLY: Instructs the query to wait for non stale results.
+        ///   Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
         public void WaitForNonStaleResults()

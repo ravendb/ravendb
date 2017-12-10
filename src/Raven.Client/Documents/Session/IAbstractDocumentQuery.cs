@@ -291,7 +291,7 @@ namespace Raven.Client.Documents.Session
 #endif
 
         /// <summary>
-        ///   EXPERT ONLY: Instructs the query to wait for non stale results.
+        ///   Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
         void WaitForNonStaleResults();
