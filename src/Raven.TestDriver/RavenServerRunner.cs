@@ -13,7 +13,7 @@ namespace Raven.TestDriver
             Process result = null;
             try
             {
-                result = Process.Start((ProcessStartInfo)processStartInfo);
+                result = Process.Start(processStartInfo);
             }
             catch (Exception e)
             {
@@ -34,21 +34,22 @@ namespace Raven.TestDriver
 
             var commandArguments = new List<string>
             {
-                    locator.CommandArguments,
-                    "--ServerUrl=http://127.0.0.1:0",
-                    "--RunInMemory=true",
-                    "--Testing.ParentProcessId=" + Process.GetCurrentProcess().Id,
-                    "--Setup.Mode=None"
-                };
+                locator.CommandArguments,
+                "--ServerUrl=http://127.0.0.1:0",
+                "--RunInMemory=true",
+                "--Testing.ParentProcessId=" + Process.GetCurrentProcess().Id,
+                "--Setup.Mode=None"
+            };
 
             var argumentsString = string.Join(" ", commandArguments); 
-            return new ProcessStartInfo()
+            return new ProcessStartInfo
             {
                 FileName = locator.Command,
                 Arguments = argumentsString,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
+                UseShellExecute = false,
             };
         }
     }
