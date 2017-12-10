@@ -262,7 +262,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index.SetState(IndexState.Disabled);
                 await task;
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(dbName)?.Dispose();
 
                 database = await GetDatabase(dbName);
 

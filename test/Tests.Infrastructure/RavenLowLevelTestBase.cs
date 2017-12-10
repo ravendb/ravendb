@@ -116,7 +116,7 @@ namespace FastTests
                 {
                     exceptionAggregator.Execute(() =>
                     {
-                        Server.ServerStore.DatabasesLandlord.UnloadDatabase(database);
+                        Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(database)?.Dispose();
                     });
 
                     exceptionAggregator.Execute(() =>

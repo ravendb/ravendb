@@ -64,7 +64,7 @@ namespace FastTests.Issues
 
                 var indexName = index.Name;
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(database.Name);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(database.Name)?.Dispose();
 
                 database = await GetDatabase(database.Name);
 

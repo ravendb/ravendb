@@ -260,7 +260,7 @@ namespace FastTests.Server.Documents
         {
             _documentDatabase.Dispose();
 
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase(_documentDatabase.Name);
+            Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(_documentDatabase.Name)?.Dispose();
 
             _documentDatabase = await GetDatabase(_documentDatabase.Name);
         }

@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    UnloadDatabase(t.DatabaseName);
+                    UnloadDatabaseIfDoneLoading(t.DatabaseName)?.Dispose();
                     return;
                 }
 
@@ -82,7 +82,7 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    UnloadDatabase(t.DatabaseName);
+                    UnloadDatabaseIfDoneLoading(t.DatabaseName)?.Dispose();
                     return;
                 }
 
@@ -195,41 +195,43 @@ namespace Raven.Server.Documents
 
         private void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
         {
-            UnloadDatabase(dbName);
-
-            if (deletionInProgress == DeletionInProgressStatus.HardDelete)
+            using (UnloadDatabaseIfDoneLoading(dbName))
             {
-                RavenConfiguration configuration;
-                try
+                if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
-                    configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true, databaseRecord: record);
-                }
-                catch (Exception ex)
-                {
-                    configuration = null;
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Could not create database configuration", ex);
-                }
-                // this can happen if the database record was already deleted
-                if (configuration != null)
-                {
-                    DatabaseHelper.DeleteDatabaseFiles(configuration);
-                }
-
-                // At this point the db record still exists but the db was effectively deleted 
-                // from this node so we can also remove its secret key from this node.
-                if (record.Encrypted)
-                {
-                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (var tx = context.OpenWriteTransaction())
+                    RavenConfiguration configuration;
+                    try
                     {
-                        _serverStore.DeleteSecretKey(context, dbName);
-                        tx.Commit();
+                        configuration = CreateDatabaseConfiguration(dbName, ignoreDisabledDatabase: true, ignoreBeenDeleted: true, ignoreNotRelevant: true,
+                            databaseRecord: record);
+                    }
+                    catch (Exception ex)
+                    {
+                        configuration = null;
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info("Could not create database configuration", ex);
+                    }
+                    // this can happen if the database record was already deleted
+                    if (configuration != null)
+                    {
+                        DatabaseHelper.DeleteDatabaseFiles(configuration);
+                    }
+
+                    // At this point the db record still exists but the db was effectively deleted 
+                    // from this node so we can also remove its secret key from this node.
+                    if (record.Encrypted)
+                    {
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (var tx = context.OpenWriteTransaction())
+                        {
+                            _serverStore.DeleteSecretKey(context, dbName);
+                            tx.Commit();
+                        }
                     }
                 }
-            }
 
-            NotifyLeaderAboutRemoval(dbName);
+                NotifyLeaderAboutRemoval(dbName);
+            }
         }
 
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
@@ -661,7 +663,7 @@ namespace Raven.Server.Documents
 
                 await Task.Delay(2000); // let it propagate the exception to the client first
 
-                UnloadDatabase(databaseName);
+                UnloadDatabaseIfDoneLoading(databaseName)?.Dispose();
             });
         }
 
@@ -693,19 +695,31 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null)
+        public IDisposable UnloadDatabaseIfDoneLoading(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null,
+            [CallerMemberName]string caller = null)
         {
+            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked from {caller}")
+            {
+                Data =
+                {
+                    [DoNotRemove] = true
+                }
+            });
+            var result = new DisposableAction(() =>
+            {
+                DatabasesCache.TryRemove(dbName, out var _);
+            });
             if (DatabasesCache.TryGetValue(dbName, out Task<DocumentDatabase> dbTask) == false)
             {
-                LastRecentlyUsed.TryRemove(dbName, out _);
-                return;
+                DatabasesCache.Replace(dbName, tcs, null);
+                return result;
             }
             var dbTaskStatus = dbTask.Status;
             if (dbTaskStatus == TaskStatus.Faulted || dbTaskStatus == TaskStatus.Canceled)
             {
                 LastRecentlyUsed.TryRemove(dbName, out _);
-                DatabasesCache.TryRemove(dbName, out dbTask);
-                return;
+                DatabasesCache.Replace(dbName, tcs, dbTask);
+                return result;
             }
             if (dbTaskStatus != TaskStatus.RanToCompletion)
                 throw new InvalidOperationException($"Couldn't modify '{dbName}' while it is loading, current status {dbTaskStatus}");
@@ -715,7 +729,7 @@ namespace Raven.Server.Documents
 
             if (skipIfActiveInDuration != null && SystemTime.UtcNow - LastWork(database) < skipIfActiveInDuration ||
                 shouldSkip != null && shouldSkip(database))
-                return;
+                return null;
 
             try
             {
@@ -728,9 +742,12 @@ namespace Raven.Server.Documents
             }
 
             LastRecentlyUsed.TryRemove(dbName, out _);
-            DatabasesCache.TryRemove(dbName, out dbTask);
+
+            DatabasesCache.Replace(dbName, tcs, dbTask);
 
             database.DatabaseShutdownCompleted.Set();
+
+            return result;
         }
 
         private enum ClusterDatabaseChangeType

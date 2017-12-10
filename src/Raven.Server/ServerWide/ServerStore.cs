@@ -1188,7 +1188,7 @@ namespace Raven.Server.ServerWide
 
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
-                        DatabasesLandlord.UnloadDatabase(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle,
+                        DatabasesLandlord.UnloadDatabaseIfDoneLoading(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle,
                             shouldSkip: database => database.Configuration.Core.RunInMemory);
                     }
 
