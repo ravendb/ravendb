@@ -86,6 +86,7 @@ namespace Raven.Client.ServerWide.Operations
         public string DestinationDatabase { get; set; }
         public string MentorNode { get; set; }
         public string ConnectionStringName { get; set; }
+        public TimeSpan DelayReplicationFor { get; set; } 
         
         public override DynamicJsonValue ToJson()
         {
@@ -95,6 +96,7 @@ namespace Raven.Client.ServerWide.Operations
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(MentorNode)] = MentorNode;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(DelayReplicationFor)] = DelayReplicationFor;
             return json;
         }
     }

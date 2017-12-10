@@ -173,6 +173,7 @@ namespace Raven.Server.Web.System
                 TopologyDiscoveryUrls = connectionStrings[watcher.ConnectionStringName].TopologyDiscoveryUrls,
                 MentorNode = watcher.MentorNode,
                 TaskConnectionStatus = res.Status,
+                DelayReplicationFor = watcher.DelayReplicationFor
             };
             
             return taskInfo;

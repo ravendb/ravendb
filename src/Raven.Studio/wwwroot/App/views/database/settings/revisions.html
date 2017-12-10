@@ -1,6 +1,5 @@
 <form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges">
     <div class="flex-header">
-        
         <div class="clearfix toolbar">
             <div class="pull-left">
                 <div class="form-inline">
@@ -8,7 +7,6 @@
                         <input type="checkbox" class="styled" data-bind="checkboxTriple: selectionState, event: { change: toggleSelectAll }" />
                         <label></label>
                     </div>
-
                     <div class="toolbar-actions">
                     
                         <div class="btn-group btn-group-label" data-label="Selection" data-bind="css: { active: selectedItems().length }">
@@ -133,7 +131,6 @@
         </div>
     </div>
 </form>
-
 
 <script type="text/html" id="revisions-config-item-template">
     <div class="state" data-bind="attr: { 'data-state-text': disabled() ? 'disabled' : 'enabled' }, css: { 'state-success': !disabled(), 'state-warning': disabled() }"></div>

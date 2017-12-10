@@ -105,6 +105,8 @@ class editExternalReplicationTask extends viewModelBase {
                 model.manualChooseMentor,
                 model.preferredMentor,
                 model.connectionStringName,
+                model.delayReplicationTime,
+                model.showDelayReplication,
                 this.createNewConnectionString                
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
