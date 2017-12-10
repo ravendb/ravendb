@@ -32,16 +32,16 @@ namespace Raven.Server.Documents
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
-        private readonly TimeSpan _concurrentResourceLoadTimeout;
+        private readonly TimeSpan _concurrentDatabaseLoadTimeout;
         private readonly Logger _logger;
-        private readonly SemaphoreSlim _resourceSemaphore;
+        private readonly SemaphoreSlim _databaseSemaphore;
         private readonly ServerStore _serverStore;
 
         public DatabasesLandlord(ServerStore serverStore)
         {
             _serverStore = serverStore;
-            _resourceSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentResourceLoads);
-            _concurrentResourceLoadTimeout = _serverStore.Configuration.Databases.ConcurrentResourceLoadTimeout.AsTimeSpan;
+            _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentDatabaseLoads);
+            _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentDatabaseLoadTimeout.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
         }
 
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents
 
                 try
                 {
-                    _resourceSemaphore.Dispose();
+                    _databaseSemaphore.Dispose();
                 }
                 catch (Exception e)
                 {
@@ -404,7 +404,7 @@ namespace Raven.Server.Documents
             if (config == null)
                 return Task.FromResult<DocumentDatabase>(null);
 
-            if (!_resourceSemaphore.Wait(0))
+            if (!_databaseSemaphore.Wait(0))
                 return UnlikelyCreateDatabaseUnderContention(databaseName, config);
 
             return CreateDatabaseUnderResourceSemaphore(databaseName, config);
@@ -412,7 +412,7 @@ namespace Raven.Server.Documents
 
         private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config)
         {
-            if (await _resourceSemaphore.WaitAsync(_concurrentResourceLoadTimeout) == false)
+            if (await _databaseSemaphore.WaitAsync(_concurrentDatabaseLoadTimeout) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
             return await CreateDatabaseUnderResourceSemaphore(databaseName, config);
@@ -427,13 +427,13 @@ namespace Raven.Server.Documents
                 if (database == task)
                     task.Start(); // the semaphore will be released here at the end of the task
                 else
-                    _resourceSemaphore.Release();
+                    _databaseSemaphore.Release();
 
                 return database;
             }
             catch (Exception)
             {
-                _resourceSemaphore.Release();
+                _databaseSemaphore.Release();
                 throw;
             }
         }
@@ -476,7 +476,7 @@ namespace Raven.Server.Documents
             {
                 try
                 {
-                    _resourceSemaphore.Release();
+                    _databaseSemaphore.Release();
                 }
                 catch (ObjectDisposedException)
                 {

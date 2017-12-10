@@ -13,29 +13,29 @@ namespace Raven.Server.Config.Categories
         public TimeSetting OperationTimeout { get; set; }
 
         /// <summary>
-        /// This much time has to wait for the resource to become available when too much
-        /// different resources get loaded at the same time
+        /// This much time has to wait for the database to become available when too much
+        /// different datavases get loaded at the same time
         /// </summary>
         [Description("The time in seconds to wait for a database to start loading when under load")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.ConcurrentResourceLoadTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting ConcurrentResourceLoadTimeout { get; set; }
+        [ConfigurationEntry("Databases.ConcurrentDatabaseLoadTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ConcurrentDatabaseLoadTimeout { get; set; }
 
         /// <summary>
         /// specifies the maximum amount of databases that can be loaded simultaneously
         /// </summary>
         [DefaultValue(8)]
-        [ConfigurationEntry("Databases.MaxConcurrentResourceLoads", ConfigurationEntryScope.ServerWideOnly)]
-        public int MaxConcurrentResourceLoads { get; set; }
+        [ConfigurationEntry("Databases.MaxConcurrentDatabaseLoads", ConfigurationEntryScope.ServerWideOnly)]
+        public int MaxConcurrentDatabaseLoads { get; set; }
 
         [DefaultValue(900)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.MaxIdleTimeForTenantDatabaseInSec", ConfigurationEntryScope.ServerWideOnly)]
-        [LegacyConfigurationEntry("Raven/Databases/MaxIdleTimeForTenantDatabase")]
+        [ConfigurationEntry("Databases.MaxIdleTimeForDatabaseInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [LegacyConfigurationEntry("Raven/Databases/MaxIdleTimeForDatabase")]
         public TimeSetting MaxIdleTime { get; set; }
 
-        [Description("The time in seconds to check for an idle tenant database")]
+        [Description("The time in seconds to check for an idle database")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.FrequencyToCheckForIdleDatabasesInSec", ConfigurationEntryScope.ServerWideOnly)]
