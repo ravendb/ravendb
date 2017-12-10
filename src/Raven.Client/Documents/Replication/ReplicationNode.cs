@@ -38,8 +38,6 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         public string Database;
 
-        public bool Disabled;
-
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 
         public virtual bool IsEqualTo(ReplicationNode other)
@@ -60,7 +58,6 @@ namespace Raven.Client.Documents.Replication
             unchecked
             {
                 var hashCode = (int)CalculateStringHash(Database);
-                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 return hashCode;
             }
         }
@@ -76,7 +73,6 @@ namespace Raven.Client.Documents.Replication
             {
                 [nameof(Database)] = Database,
                 [nameof(Url)] = Url,
-                [nameof(Disabled)] = Disabled
             };
 
             return json;
@@ -84,10 +80,7 @@ namespace Raven.Client.Documents.Replication
 
         public override string ToString()
         {
-            var str = $"{Url} - {Database}";
-            if (Disabled)
-                str += " - DISABLED";
-            return str;
+            return $"{Url} - {Database}";
         }
 
         public abstract string FromString();
