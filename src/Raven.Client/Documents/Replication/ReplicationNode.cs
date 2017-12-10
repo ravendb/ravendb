@@ -38,6 +38,9 @@ namespace Raven.Client.Documents.Replication
         /// </summary>
         public string Database;
 
+        /// <summary>
+        /// Used to indicated whteher external replication is disabled.
+        /// </summary>
         public bool Disabled;
 
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
@@ -60,7 +63,6 @@ namespace Raven.Client.Documents.Replication
             unchecked
             {
                 var hashCode = (int)CalculateStringHash(Database);
-                hashCode = (hashCode * 397) ^ Disabled.GetHashCode();
                 return hashCode;
             }
         }
@@ -72,14 +74,12 @@ namespace Raven.Client.Documents.Replication
 
         public virtual DynamicJsonValue ToJson()
         {
-            var json = new DynamicJsonValue
+            return new DynamicJsonValue
             {
                 [nameof(Database)] = Database,
                 [nameof(Url)] = Url,
                 [nameof(Disabled)] = Disabled
             };
-
-            return json;
         }
 
         public override string ToString()
