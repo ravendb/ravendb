@@ -14,7 +14,7 @@ namespace FastTests.Server
             Assert.NotNull(databaseWithName_21);
 
             DeleteDatabase("CanCreateAndDeleteDbWithNameBeingPrefix.ctor_2");
-            Server.ServerStore.DatabasesLandlord.UnloadDatabase("CanCreateAndDeleteDbWithNameBeingPrefix.ctor_21");
+            Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading("CanCreateAndDeleteDbWithNameBeingPrefix.ctor_21")?.Dispose();
             var database = await GetDatabase("CanCreateAndDeleteDbWithNameBeingPrefix.ctor_21");
 
             Assert.NotNull(database);

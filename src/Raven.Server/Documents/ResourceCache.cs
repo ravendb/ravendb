@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Sparrow;
 using Sparrow.Collections;
 
@@ -108,6 +109,37 @@ namespace Raven.Server.Documents
                     databaseName
                 };
                 return value;
+            }
+        }
+
+        public Task<TResource> Replace(string databaseName, Task<TResource> task, Task<TResource> compare)
+        {
+            lock (this)
+            {
+                Task<TResource> existingTask = null;
+                _caseInsensitive.AddOrUpdate(databaseName, segment =>
+                {
+                    if (null != compare)
+                        throw new ConcurrencyException("Attempted to replace database task instance " + databaseName +
+                                                       " with another instance but it was already replaced");
+
+                    return task;
+                }, (key, existing) =>
+                {
+                    if (existing != compare)
+                        throw new ConcurrencyException("Attempted to replace database task instance " + databaseName +
+                                                       " with another instance but it was already replaced");
+                    existingTask = existing;
+                    return task;
+                });
+                if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
+                {
+                    foreach (var mapping in mappings)
+                    {
+                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                    }
+                }
+                return existingTask;
             }
         }
 

@@ -460,7 +460,7 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(gotBatch.Wait(_reasonableWaitTime));
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database)?.Dispose();
 
                 for (int i = 0; i < 150; i++)
                 {

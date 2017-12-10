@@ -272,7 +272,7 @@ select new
                     index.DoIndexingWork(new IndexingStatsScope(new IndexingRunStats()), CancellationToken.None);
                 }
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabase(dbName);
+                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(dbName)?.Dispose();
 
                 database = await GetDatabase(dbName);
 

@@ -291,6 +291,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     return $"None of '{dbName}' nodes are responding, promoting {node} from rehab";
                 }
 
+                if (topology.Members.Count == 0 && record.DeletionInProgress?.Count > 0)
+                {
+                    return null; // We delete the whole database.
+                }
+
                 RaiseNoLivingNodesAlert($"None of '{dbName}' database nodes are responding to the supervisor, the database is unreachable.", dbName);
             }
 
