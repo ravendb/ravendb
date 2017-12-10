@@ -22,6 +22,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -430,6 +431,14 @@ namespace Raven.Server.Documents.Indexes
                 var instance = GetIndex(definition.Name);
 
                 return instance;
+            }
+            catch (TimeoutException toe)
+            {
+                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down.", toe);
+            }
+            catch (Exception e)
+            {
+                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, unexpected error during index creation.", e);
             }
             finally
             {
