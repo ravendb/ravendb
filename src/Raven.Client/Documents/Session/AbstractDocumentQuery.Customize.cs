@@ -93,16 +93,9 @@ namespace Raven.Client.Documents.Session
 #endif
 
         /// <inheritdoc />
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults(TimeSpan waitTimeout)
+        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
-            return this;
-        }
-
-        /// <inheritdoc />
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults();
             return this;
         }
     }

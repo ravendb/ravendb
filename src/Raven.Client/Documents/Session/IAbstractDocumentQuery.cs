@@ -30,11 +30,11 @@ namespace Raven.Client.Documents.Session
         bool IsDynamicMapReduce { get; }
 
         /// <summary>
-        ///   Instruct the query to wait for non stale result for the specified wait timeout.
+        ///   Instruct the query to wait for non stale results.
+        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        /// <returns></returns>
-        void WaitForNonStaleResults(TimeSpan waitTimeout);
+        /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
+        void WaitForNonStaleResults(TimeSpan? waitTimeout = null);
 
         /// <summary>
         ///   Gets the fields for projection
@@ -289,12 +289,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="postTags">Postfix tags.</param>
         void SetHighlighterTags(string[] preTags, string[] postTags);    
 #endif
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        void WaitForNonStaleResults();
 
         /// <summary>
         /// Perform a search for documents which fields that match the searchTerms.
