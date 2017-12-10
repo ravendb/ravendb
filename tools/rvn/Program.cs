@@ -3,7 +3,7 @@ using System.Text;
 
 namespace rvn
 {
-    internal class Program
+    internal static class Program
     {
         private static int Main(string[] args)
         {
