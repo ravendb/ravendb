@@ -1938,6 +1938,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.CmpXchgValueSupport(),
                     new JavascriptConversionExtensions.CmpXchgMatchSupport(),
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
+                    new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
@@ -2173,6 +2174,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.CmpXchgMatchSupport(),
                     new JavascriptConversionExtensions.ValueTypeParseSupport(),
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
+                    new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.IdentityPropertySupport
                     {
                         AliasesToIdProperty = _aliasesToIdPropery

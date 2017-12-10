@@ -3272,6 +3272,40 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
                 }
             }
         }
+        
+        [Fact]
+        public void When_Comparing_to_Null_Should_Also_Compare_to_Undefined()
+        {                      
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
+                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null}, "users/2");
+                    session.Store(new OldUser.User { Name = "Bob", LastName = "Weir" }, "users/3");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    HasGroups = user.Groups != null
+                                };
+                    
+                    Assert.Equal("FROM Users as user SELECT " +
+                                 "{ HasGroups : (user.Groups!==null&&user.Groups!==undefined) }", query.ToString());
+                    
+                    var queryResult = query.ToList();
+                    
+                    Assert.True(queryResult[0].HasGroups);
+                    Assert.False(queryResult[1].HasGroups);
+                    Assert.False(queryResult[2].HasGroups);
+                }
+            }
+        }
 
         public class ProjectionParameters : RavenTestBase
         {
@@ -3476,7 +3510,7 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
 
                         Assert.Equal("FROM Documents as d WHERE (id() IN ($p0)) AND (d.Deleted = $p1) " +
                                      "SELECT { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return \"id2\"===null||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(function(x){return (\"id2\"===null||\"id2\"===undefined)||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
 
                         var result = projection.ToList();

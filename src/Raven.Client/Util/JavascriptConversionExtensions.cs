@@ -1002,6 +1002,46 @@ namespace Raven.Client.Util
                 }
             }
         }
+               
+        public class NullComparisonSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {                
+                if (!(context.Node is BinaryExpression binaryExpression) || 
+                    (binaryExpression.NodeType != ExpressionType.Equal && 
+                     binaryExpression.NodeType != ExpressionType.NotEqual)) 
+                    return;
+                
+                if (binaryExpression.Right is ConstantExpression right && right.Value == null)
+                {
+                    if (binaryExpression.Left is ConstantExpression leftConst && leftConst.Value == null)
+                        return;
+
+                    WriteExpression(context, binaryExpression.Left, binaryExpression.NodeType);
+                    return;
+                }
+
+                if (binaryExpression.Left is ConstantExpression left && left.Value == null)
+                {
+                    WriteExpression(context, binaryExpression.Right, binaryExpression.NodeType);
+                }
+
+            }
+
+            private static void WriteExpression(JavascriptConversionContext context, Expression expression, ExpressionType op)
+            {
+                var writer = context.GetWriter();                
+                context.PreventDefault();
+                
+                writer.Write("(");
+                context.Visitor.Visit(expression);                
+                writer.Write(op == ExpressionType.Equal ? "===null||" : "!==null&&");
+                context.Visitor.Visit(expression);
+                writer.Write(op == ExpressionType.Equal ? "===" : "!==");
+                writer.Write("undefined)");
+                
+            }
+        }
 
         public class NestedConditionalSupport : JavascriptConversionExtension
         {
