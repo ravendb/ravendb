@@ -7,6 +7,7 @@ RavenDB is making use of the following OSS projects:
 * Jint (https://github.com/sebastienros/jint) under the BSD 2 license (https://github.com/sebastienros/jint/blob/master/LICENSE.txt)
 * Lambda2Js (https://github.com/gearz-lab/lambda2js) under the MIT license (https://github.com/gearz-lab/lambda2js/blob/master/LICENSE)
 * Lextm.SharpSnmpLib (https://github.com/lextm/sharpsnmplib) under the MIT license (https://github.com/lextm/sharpsnmplib/blob/master/LICENSE)
+* libsodium (https://libsodium.org) under the ISC license (https://github.com/jedisct1/libsodium/blob/master/LICENSE)
 * Lucene.NET (https://github.com/apache/lucenenet) under the Apache 2.0 license (https://github.com/apache/lucenenet/blob/master/LICENSE.txt)
 * Newtonsoft.Json (https://github.com/JamesNK/Newtonsoft.Json/) under the MIT license (https://github.com/JamesNK/Newtonsoft.Json/blob/master/LICENSE.md)
 * NCrontab.Advanced (https://github.com/jcoutch/NCrontab-Advanced) under the Apatch 2.0 license (https://github.com/jcoutch/NCrontab-Advanced/blob/master/LICENSE)
