@@ -359,7 +359,7 @@ namespace Raven.Server
             // immediately.
 
             // we first register it as a valid cluster node certificate in the cluster
-            await ServerStore.RegisterServerCertificateInCluster(newCertificate, "Cluster-wide Certificate");
+            await ServerStore.RegisterServerCertificateInCluster(newCertificate, "Cluster-Wide Certificate");
             var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
             await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
             {

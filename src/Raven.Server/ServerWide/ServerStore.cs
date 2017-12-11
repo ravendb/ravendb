@@ -196,6 +196,7 @@ namespace Raven.Server.ServerWide
                             var newNodes = clusterTopology.AllNodes;
                             var nodesChanges = ClusterTopology.DictionaryDiff(oldNodes, newNodes);
                             oldNodes = newNodes;
+
                             foreach (var node in nodesChanges.RemovedValues)
                             {
                                 ClusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
@@ -204,8 +205,11 @@ namespace Raven.Server.ServerWide
                             {
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
+                            
+                            LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader);
+
                             if (await Task.WhenAny(topologyChangedTask, leaderChanged)
                                     .WithCancellation(_shutdownNotification.Token) == leaderChanged)
                                 break;
@@ -1286,16 +1290,16 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            EnsureServerCertificateIsInClusterState();
+            EnsureServerCertificateIsInClusterState($"Server Certificate for Node {_engine.Tag}");
         }
 
-        public void EnsureServerCertificateIsInClusterState()
+        public void EnsureServerCertificateIsInClusterState(string name)
         {
             if (Server.Certificate?.Certificate == null) 
                 return;
             
             // Also need to register my own certificate in the cluster, for other nodes to trust me
-            RegisterServerCertificateInCluster(Server.Certificate.Certificate, "Cluster-wide Certificate").Wait(ServerShutdown);
+            RegisterServerCertificateInCluster(Server.Certificate.Certificate, name).Wait(ServerShutdown);
         }
 
         public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)
