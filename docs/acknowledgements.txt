@@ -1,17 +1,14 @@
-The Raven Database is making use of the following OSS projects:
+RavenDB is making use of the following OSS projects:
 
-* ManagedEsent project (http://codeplex.com/ManagedEsent) and is used under the MS PL license: http://managedesent.codeplex.com/license
-* ICSharpCode.NRefactory from the SharpDevelop project (http://sharpdevelop.net) and is used under the MIT X11 license: https://github.com/icsharpcode/NRefactory/blob/735cb8595e642bfb3afabc7bd0750b73c5c0ec18/doc/license.txt
-* Newtonsoft.Json from James Newton-King (http://json.codeplex.com/) and is used under the MIT license: http://json.codeplex.com/license
-* Mono Project - more specifically, parts of the Mono BCL implementations (http://mono-project.com) and is used under the MIT license: http://www.mono-project.com/Licensing
-* DotNetZip (http://dotnetzip.codeplex.com) and is used under the MS PL license: http://dotnetzip.codeplex.com/license
-* NLog (http://nlog-project.org/) under the BSD license: http://www.opensource.org/licenses/bsd-license.php
-* Rhino.Licensing (https://github.com/hibernating-rhinos/rhino-licensing) under the BSD license: https://github.com/hibernating-rhinos/rhino-licensing/blob/master/license.txt
-* Rhino.Mocks (https://github.com/hibernating-rhinos/rhino-mocks/) under the BSD license: https://github.com/hibernating-rhinos/rhino-licensing/blob/master/license.txt
-* Lucene.NET, SpellChecker.NET, Spatial.NET - (http://incubator.apache.org/lucene.net/) under the apache license: https://svn.apache.org/repos/asf/incubator/lucene.net/trunk/LICENSE.txt
-* xUnit (http://xunit.codeplex.com) under the MS PL license: http://xunit.codeplex.com/license
-* Castle Project (http://www.castleproject.org/) under the Apache license: http://www.apache.org/licenses/LICENSE-2.0.html
-* BouncyCastle.Crypto ( http://www.bouncycastle.org/csharp/) under the MIT X11 license http://www.bouncycastle.org/csharp/licence.html
-* Jint - (https://github.com/sebastienros/jint) under the BSD 2 license (https://github.com/sebastienros/jint/blob/master/LICENSE.txt)
-* Mono - (https://github.com/jbevain/cecil/ and https://github.com/mono) under the MIT license: http://www.mono-project.com/Licensing
-* lodash.js / underscore.js - (http://lodash.com) under the MIT license http://lodash.com/license
+* Certes (https://github.com/fszlin/certes) under the MIT license (https://github.com/fszlin/certes/blob/master/LICENSE)
+* CsvHelper (https://github.com/JoshClose/CsvHelper/) under dual licensing MS-PL and Apache 2.0 (https://raw.githubusercontent.com/JoshClose/CsvHelper/master/LICENSE.txt)
+* DasMulli.Win32.ServiceUtils (https://github.com/dasMulli/dotnet-win32-service) under the MIT license (https://github.com/dasMulli/dotnet-win32-service/blob/master/LICENSE)
+* Esprima .NET (https://github.com/sebastienros/esprima-dotnet) under the BSD 3 license (https://github.com/sebastienros/esprima-dotnet/blob/master/LICENSE.txt)
+* Jint (https://github.com/sebastienros/jint) under the BSD 2 license (https://github.com/sebastienros/jint/blob/master/LICENSE.txt)
+* Lambda2Js (https://github.com/gearz-lab/lambda2js) under the MIT license (https://github.com/gearz-lab/lambda2js/blob/master/LICENSE)
+* Lextm.SharpSnmpLib (https://github.com/lextm/sharpsnmplib) under the MIT license (https://github.com/lextm/sharpsnmplib/blob/master/LICENSE)
+* Lucene.NET (https://github.com/apache/lucenenet) under the Apache 2.0 license (https://github.com/apache/lucenenet/blob/master/LICENSE.txt)
+* Newtonsoft.Json (https://github.com/JamesNK/Newtonsoft.Json/) under the MIT license (https://github.com/JamesNK/Newtonsoft.Json/blob/master/LICENSE.md)
+* NCrontab.Advanced (https://github.com/jcoutch/NCrontab-Advanced) under the Apatch 2.0 license (https://github.com/jcoutch/NCrontab-Advanced/blob/master/LICENSE)
+* Npgsql (http://www.npgsql.org/) under the PostgreSQL License, a liberal OSI-approved open source license (https://raw.githubusercontent.com/npgsql/npgsql/master/LICENSE.txt)
+* Portable.BouncyCastle (https://github.com/onovotny/bc-csharp) under the license based on the MIT X Consortium license (https://raw.githubusercontent.com/onovotny/bc-csharp/netstandard/License.html)
