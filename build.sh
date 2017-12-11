@@ -1,2 +1,2 @@
 #!/bin/bash
-powershell ./build.ps1 $@
+pwsh ./build.ps1 $@
