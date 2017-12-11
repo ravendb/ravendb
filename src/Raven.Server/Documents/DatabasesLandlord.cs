@@ -40,8 +40,8 @@ namespace Raven.Server.Documents
         public DatabasesLandlord(ServerStore serverStore)
         {
             _serverStore = serverStore;
-            _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentDatabaseLoads);
-            _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentDatabaseLoadTimeout.AsTimeSpan;
+            _databaseSemaphore = new SemaphoreSlim(_serverStore.Configuration.Databases.MaxConcurrentLoads);
+            _concurrentDatabaseLoadTimeout = _serverStore.Configuration.Databases.ConcurrentLoadTimeout.AsTimeSpan;
             _logger = LoggingSource.Instance.GetLogger<DatabasesLandlord>("Raven/Server");
         }
 
