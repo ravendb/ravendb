@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace Raven.Server.Exceptions
+namespace Raven.Client.Exceptions.Documents.Indexes
 {
     public class IndexCreationException: Exception
     {
