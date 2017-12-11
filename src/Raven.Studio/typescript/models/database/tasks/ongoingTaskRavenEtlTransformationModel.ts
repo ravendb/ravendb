@@ -77,7 +77,7 @@ class ongoingTaskEtlTransformationModel {
             validation: [
                 {
                     validator: () => this.applyScriptForAllCollections() || this.transformScriptCollections().length > 0,
-                    message: "All least one collection is required"
+                    message: "Atleast one collection is required"
                 }
             ]
         });
