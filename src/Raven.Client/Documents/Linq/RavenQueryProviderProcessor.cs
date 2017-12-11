@@ -7,6 +7,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
@@ -958,7 +959,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case nameof(LinqExtensions.Spatial):
                     VisitExpression(expression.Arguments[0]);
-                    
+
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var spatialFieldName);
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var spatialCriteria);
 
@@ -969,48 +970,20 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         _documentQuery.Spatial(spatialFieldNameAsString, spatialCriteriaInstance);
                     }
-                    else if (spatialFieldName is SpatialDynamicField spatialDynamicField)
+                    else if (spatialFieldName is DynamicSpatialField spatialDynamicField)
                     {
                         _documentQuery.Spatial(spatialDynamicField, spatialCriteriaInstance);
                     }
                     break;
                 case nameof(LinqExtensions.OrderByDistance):
-                    VisitExpression(expression.Arguments[0]);
-                    
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldName);
-                    if (expression.Arguments.Count == 4)
-                    {
-                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
-                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
-
-                        _documentQuery.OrderByDistance((string)distanceFieldName, (double)distanceLatitude, (double)distanceLongitude);
-                    }
-                    else
-                    {
-                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceShapeWkt);
-
-                        _documentQuery.OrderByDistance((string)distanceFieldName, (string)distanceShapeWkt);
-                    }
+                    VisitOrderByDistance(expression.Arguments, descending: false);
                     break;
                 case nameof(LinqExtensions.OrderByDistanceDescending):
-                    VisitExpression(expression.Arguments[0]);
-                    
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldNameDesc);
-                    if (expression.Arguments.Count == 4)
-                    {
-                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
-                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
-
-                        _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (double)distanceLatitude, (double)distanceLongitude);
-                    }
-                    else
-                    {
-                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceShapeWkt);
-
-                        _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (string)distanceShapeWkt);
-                    }
+                    VisitOrderByDistance(expression.Arguments, descending: true);
                     break;
                 case nameof(LinqExtensions.Include):
+                    VisitExpression(expression.Arguments[0]);
+
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includePath);
 
                     _documentQuery.Include((string)includePath);
@@ -1085,6 +1058,56 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+            }
+        }
+
+        private void VisitOrderByDistance(ReadOnlyCollection<Expression> arguments, bool descending)
+        {
+            VisitExpression(arguments[0]);
+
+            LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[1], out var distanceFieldName);
+            if (arguments.Count == 4)
+            {
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[2], out var distanceLatitude);
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[3], out var distanceLongitude);
+
+                if (distanceFieldName is string fieldName)
+                {
+                    if (descending == false)
+                        _documentQuery.OrderByDistance(fieldName, (double)distanceLatitude, (double)distanceLongitude);
+                    else
+                        _documentQuery.OrderByDistanceDescending(fieldName, (double)distanceLatitude, (double)distanceLongitude);
+                }
+                else if (distanceFieldName is DynamicSpatialField dynamicField)
+                {
+                    if (descending == false)
+                        _documentQuery.OrderByDistance(dynamicField, (double)distanceLatitude, (double)distanceLongitude);
+                    else
+                        _documentQuery.OrderByDistanceDescending(dynamicField, (double)distanceLatitude, (double)distanceLongitude);
+                }
+                else
+                    throw new NotSupportedException("Unknown spatial field name type: " + distanceFieldName.GetType());
+            }
+            else
+            {
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(arguments[2], out var distanceShapeWkt);
+
+                if (distanceFieldName is string fieldName)
+                {
+                    if (descending == false)
+                        _documentQuery.OrderByDistance(fieldName, (string)distanceShapeWkt);
+                    else
+                        _documentQuery.OrderByDistanceDescending(fieldName, (string)distanceShapeWkt);
+                }
+                else if (distanceFieldName is DynamicSpatialField dynamicField)
+                {
+                    if (descending == false)
+                        _documentQuery.OrderByDistance(dynamicField, (string)distanceShapeWkt);
+                    else
+                        _documentQuery.OrderByDistanceDescending(dynamicField, (string)distanceShapeWkt);
+                }
+                else
+                    throw new NotSupportedException("Unknown spatial field name type: " + distanceFieldName.GetType());
             }
         }
 

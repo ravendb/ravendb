@@ -330,15 +330,23 @@ namespace Raven.Client.Documents.Session
 
         void WhereTrue();
 
-        void Spatial(SpatialDynamicField field, SpatialCriteria criteria);
+        void Spatial(DynamicSpatialField field, SpatialCriteria criteria);
 
         void Spatial(string fieldName, SpatialCriteria criteria);
 
+        void OrderByDistance(DynamicSpatialField field, double latitude, double longitude);
+
         void OrderByDistance(string fieldName, double latitude, double longitude);
+
+        void OrderByDistance(DynamicSpatialField field, string shapeWkt);
 
         void OrderByDistance(string fieldName, string shapeWkt);
 
+        void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude);
+
         void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+
+        void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt);
 
         void OrderByDistanceDescending(string fieldName, string shapeWkt);
 
