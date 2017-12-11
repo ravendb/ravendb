@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Queries
                         termType = GetLuceneField(fieldName, tuple.Type).LuceneTermType;
                         hasGotTheRealType = true;
                     }
-                    matches.Add(LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact));
+                    matches.Add(LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact || tuple.Type == ValueTokenType.Parameter));
                 }
 
                 return new TermsMatchQuery(fieldName, matches);
@@ -938,6 +938,8 @@ namespace Raven.Server.Documents.Queries
                     return LuceneDocumentConverterBase.FalseString;
                 case ValueTokenType.Null:
                     return null;
+                case ValueTokenType.Parameter:
+                    return parameterValue;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(parameterType), parameterType, null);
             }
@@ -1068,6 +1070,9 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
+            if (parameterValue is BlittableJsonReaderObject)
+                return ValueTokenType.Parameter;
+            
             ThrowUnexpectedParameterValue(parameterValue, queryText, parameters);
 
             return default(ValueTokenType);
