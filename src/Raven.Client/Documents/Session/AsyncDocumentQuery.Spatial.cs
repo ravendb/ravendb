@@ -9,20 +9,23 @@ namespace Raven.Client.Documents.Session
     public partial class AsyncDocumentQuery<T>
     {
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-            return Spatial(path.ToPropertyPath(), clause);
+            var criteria = clause(SpatialCriteriaFactory.Instance);
+            Spatial(path.ToPropertyPath(), criteria);
+            return this;
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             Spatial(fieldName, criteria);
             return this;
         }
 
-        public IAsyncDocumentQuery<T> Spatial(SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             Spatial(field, criteria);
@@ -30,10 +33,10 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> Spatial(Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
-            var dynamicField = field(new SpatialDynamicFieldFactory<T>());
+            var dynamicField = field(DynamicSpatialFieldFactory<T>.Instance);
             Spatial(dynamicField, criteria);
             return this;
         }
@@ -67,7 +70,35 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance<TValue>(DynamicSpatialField field, double latitude, double longitude)
+        {
+            OrderByDistance(field, latitude, longitude);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
+        {
+            OrderByDistance(field(DynamicSpatialFieldFactory<T>.Instance), latitude, longitude);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(DynamicSpatialField field, string shapeWkt)
+        {
+            OrderByDistance(field, shapeWkt);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
+        {
+            OrderByDistance(field(DynamicSpatialFieldFactory<T>.Instance), shapeWkt);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude)
         {
             OrderByDistance(propertySelector.ToPropertyPath(), latitude, longitude);
             return this;
@@ -81,7 +112,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt)
         {
             OrderByDistance(propertySelector.ToPropertyPath(), shapeWkt);
             return this;
@@ -95,7 +126,35 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude)
+        {
+            OrderByDistanceDescending(field, latitude, longitude);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
+        {
+            OrderByDistanceDescending(field(DynamicSpatialFieldFactory<T>.Instance), latitude, longitude);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt)
+        {
+            OrderByDistanceDescending(field, shapeWkt);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
+        {
+            OrderByDistanceDescending(field(DynamicSpatialFieldFactory<T>.Instance), shapeWkt);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude)
         {
             OrderByDistanceDescending(propertySelector.ToPropertyPath(), latitude, longitude);
             return this;
@@ -109,7 +168,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt)
         {
             OrderByDistanceDescending(propertySelector.ToPropertyPath(), shapeWkt);
             return this;

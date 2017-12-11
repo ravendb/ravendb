@@ -491,12 +491,12 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected two arguments, got " + me.Arguments.Count, QueryText,
                         parameters);
 
-                if (!(me.Arguments[0] is FieldExpression fieldToken))
-                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected field token, got " + me.Arguments[0], QueryText,
-                        parameters);
+                var fieldName = ExtractFieldNameFromFirstArgument(me.Arguments, "spatial.distance", parameters);
 
-                if (!(me.Arguments[1] is MethodExpression expression))
-                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected expression, got " + me.Arguments[1], QueryText,
+                var lastArgument = me.Arguments[me.Arguments.Count - 1];
+
+                if (!(lastArgument is MethodExpression expression))
+                    throw new InvalidQueryException("Invalid ORDER BY 'spatial.distance()' call, expected expression, got " + lastArgument, QueryText,
                         parameters);
 
                 var methodName = expression.Name;
@@ -526,7 +526,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 return new OrderByField(
-                    new QueryFieldName(fieldToken.FieldValue, false),
+                    fieldName,
                     OrderByFieldType.Distance,
                     asc,
                     methodType,

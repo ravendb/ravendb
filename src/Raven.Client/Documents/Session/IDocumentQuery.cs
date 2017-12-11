@@ -132,9 +132,9 @@ namespace Raven.Client.Documents.Session
         /// <param name="clause">function with spatial criteria factory</param>
         IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
-        IDocumentQuery<T> Spatial(SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+        IDocumentQuery<T> Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
-        IDocumentQuery<T> Spatial(Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+        IDocumentQuery<T> Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         /// <summary>
         /// Changes the return type of the query

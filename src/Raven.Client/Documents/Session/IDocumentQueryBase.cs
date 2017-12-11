@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -697,7 +698,27 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
+        TSelf OrderByDistance<TValue>(DynamicSpatialField field, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(DynamicSpatialField field, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -707,7 +728,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt);
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -717,7 +738,27 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
+        TSelf OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -727,7 +768,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt);
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt);
 
         /// <summary>
         /// Sorts the query results by distance.

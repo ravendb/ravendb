@@ -1096,24 +1096,44 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
-        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Func<SpatialDynamicFieldFactory<T>, SpatialDynamicField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-            return source.Spatial(field(new SpatialDynamicFieldFactory<T>()), clause);
+            return source.Spatial(field(DynamicSpatialFieldFactory<T>.Instance), clause);
         }
 
-        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, SpatialDynamicField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetSpatialMethod(typeof(SpatialDynamicField));
+            var currentMethod = GetSpatialMethod(typeof(DynamicSpatialField));
 #endif
 
             var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(clause)));
             return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
+        {
+            return source.OrderByDistance(field(DynamicSpatialFieldFactory<T>.Instance), latitude, longitude);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IOrderedQueryable<T>)queryable;
         }
 
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
@@ -1136,6 +1156,26 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
+        {
+            return source.OrderByDistance(field(DynamicSpatialFieldFactory<T>.Instance), shapeWkt);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(shapeWkt)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
         public static IOrderedQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
         {
             return source.OrderByDistance(path.ToPropertyPath(), shapeWkt);
@@ -1156,6 +1196,26 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
+        {
+            return source.OrderByDistanceDescending(field(DynamicSpatialFieldFactory<T>.Instance), latitude, longitude);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, double latitude, double longitude)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IOrderedQueryable<T>)queryable;
+        }
+
         public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
         {
             return source.OrderByDistanceDescending(path.ToPropertyPath(), latitude, longitude);
@@ -1173,6 +1233,26 @@ namespace Raven.Client.Documents
             var expression = ConvertExpressionIfNecessary(source);
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
+        {
+            return source.OrderByDistanceDescending(field(DynamicSpatialFieldFactory<T>.Instance), shapeWkt);
+        }
+
+        public static IOrderedQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, DynamicSpatialField field, string shapeWkt)
+        {
+#if CURRENT
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#endif
+#if LEGACY
+            MethodInfo currentMethod = null; // TODO [ppekrol]
+#endif
+
+            var expression = ConvertExpressionIfNecessary(source);
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(shapeWkt)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1649,7 +1729,7 @@ namespace Raven.Client.Documents
             if (parameterType == typeof(string))
                 return _spatialMethodString;
 
-            if (parameterType == typeof(SpatialDynamicField))
+            if (parameterType == typeof(DynamicSpatialField))
                 return _spatialMethodSpatialDynamicField;
 
             throw new NotSupportedException(parameterType.Name);
@@ -1663,7 +1743,7 @@ namespace Raven.Client.Documents
                 return;
             }
 
-            if (parameterType == typeof(SpatialDynamicField))
+            if (parameterType == typeof(DynamicSpatialField))
             {
                 _spatialMethodSpatialDynamicField = methodInfo;
                 return;

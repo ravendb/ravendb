@@ -4,8 +4,14 @@ using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Queries.Spatial
 {
-    public class SpatialDynamicFieldFactory<TEntity>
+    public class DynamicSpatialFieldFactory<TEntity>
     {
+        public static readonly DynamicSpatialFieldFactory<TEntity> Instance = new DynamicSpatialFieldFactory<TEntity>();
+
+        private DynamicSpatialFieldFactory()
+        {
+        }
+
         public PointField Point(Expression<Func<TEntity, object>> latitudePath, Expression<Func<TEntity, object>> longitudePath)
         {
             var latitude = latitudePath.ToPropertyPath();
@@ -19,7 +25,6 @@ namespace Raven.Client.Documents.Queries.Spatial
             var wkt = wktPath.ToPropertyPath();
 
             return new WktField(wkt);
-
         }
     }
 }
