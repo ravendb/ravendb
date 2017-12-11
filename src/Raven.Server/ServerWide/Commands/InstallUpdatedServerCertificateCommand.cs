@@ -1,4 +1,6 @@
 ﻿using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -20,6 +22,13 @@ namespace Raven.Server.ServerWide.Commands
         {
             AssertClusterAdmin(isClusterAdmin);
         }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Certificate)] = Certificate;
+            return json;
+        }
     }
     
     public class ConfirmReceiptServerCertificateCommand : CommandBase
@@ -39,6 +48,13 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             AssertClusterAdmin(isClusterAdmin);
+        }
+
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
+        {
+            var json = base.ToJson(context);
+            json[nameof(Thumbprint)] = Thumbprint;
+            return json;
         }
     }
     

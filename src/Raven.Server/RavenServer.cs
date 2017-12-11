@@ -149,8 +149,7 @@ namespace Raven.Server
                     {
                         _httpsConnectionAdapter = new HttpsConnectionAdapter();
                         _httpsConnectionAdapter.SetCertificate(Certificate.Certificate);
-                        // TODO: Currently we aren't supporting refresh
-                        //_refreshClusterCertificate = new Timer(RefreshClusterCertificate);
+                        _refreshClusterCertificate = new Timer(RefreshClusterCertificate);
                         var adapter = new AuthenticatingAdapter(this, _httpsConnectionAdapter);
 
                         foreach (var address in ListenEndpoints.Addresses)
@@ -238,7 +237,7 @@ namespace Raven.Server
 
         private Task _currentRefreshTask = Task.CompletedTask;
 
-        private void RefreshClusterCertificate(object state)
+        public void RefreshClusterCertificate(object state)
         {
             // If the setup mode is anything but SetupMode.LetsEncrypt, we'll
             // check if the certificate changed and if so we'll update it immediately
@@ -264,53 +263,62 @@ namespace Raven.Server
             }
             var refreshCertificate = new Task(async () =>
             {
+                await DoActualCertificateRefresh(currentCertificate);
+            });
+            if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
+                return;
+            refreshCertificate.Start();
+        }
+
+        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate)
+        {
+            try
+            {
+                CertificateHolder newCertificate = null;
                 try
                 {
-                    CertificateHolder newCertificate = null;
-                    try
+                    newCertificate = LoadCertificate();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Tried to load certificate as part of refresh check, but got an error!", e);
+                }
+                if (newCertificate == null)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Tried to load certificate as part of refresh check, but got a null back, but got a valid certificate on startup!");
+                    return;
+                }
+
+                if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
+                {
+                    if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
+                        _httpsConnectionAdapter.SetCertificate(newCertificate.Certificate);
+                    return;
+                }
+                if (Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
+                    return;
+
+                if (ServerStore.IsLeader() == false)
+                    return;
+
+                // we need to see if there is already an ongoing process
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
+                    if (certUpdate != null
+                        && certUpdate.TryGet("Thumbprint", out string thumbprint)
+                        && thumbprint != currentCertificate.Certificate.Thumbprint)
                     {
-                        newCertificate = LoadCertificate();
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Tried to load certificate as part of refresh check, but got an error!", e);
-                    }
-                    if (newCertificate == null)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Tried to load certificate as part of refresh check, but got a null back, but got a valid certificate on startup!");
+                        // we are already in the process of updating the certificate, so we need
+                        // to nudge all the nodes in the cluster in case we have a node that didn't
+                        // confirm to us but the time to replace has already passed.
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
                         return;
                     }
-
-                    if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
-                    {
-                        if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
-                            _httpsConnectionAdapter.SetCertificate(newCertificate.Certificate);
-                        return;
-                    }
-                    if (Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
-                        return;
-
-                    if (ServerStore.IsLeader() == false)
-                        return; // the leader will do this and let us know
-
-                    // we need to see if there is already an ongoing process
-                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var certUpdate = ServerStore.Cluster.GetItem(context, "server/cert");
-                        if (certUpdate != null
-                            && certUpdate.TryGet("Thumbprint", out string thumbprint)
-                            && thumbprint != currentCertificate.Certificate.Thumbprint)
-                        {
-                            // we are already in the process of updating the certificate, so we need
-                            // to nudge all the nodes in the cluster in case we have a node that didn't
-                            // confirm to us but the time to replace has already passed.
-                            await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
-                            return;
-                        }
-                    }
+                }
 
                     // same certificate, but now we need to see if we are need to auto update it
                     var remainingDays = (currentCertificate.Certificate.NotAfter - DateTime.Now).TotalDays;
@@ -322,27 +330,23 @@ namespace Raven.Server
                     if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
                         return;
 
-                    try
-                    {
-                        newCertificate = await RefreshLetsEncryptCertificate(currentCertificate);
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Failed to update certificate from Lets Encrypt", e);
-                        return;
-                    }
-                    await StartCertificateReplicationAsync(newCertificate);
+                try
+                {
+                    newCertificate = await RefreshLetsEncryptCertificate(currentCertificate);
                 }
                 catch (Exception e)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Failure when trying to refresh certificate", e);
+                        Logger.Operations("Failed to update certificate from Lets Encrypt", e);
+                    return;
                 }
-            });
-            if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
-                return;
-            refreshCertificate.Start();
+                await StartCertificateReplicationAsync(newCertificate);
+            }
+            catch (Exception e)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Failure when trying to refresh certificate", e);
+            }
         }
 
         private async Task StartCertificateReplicationAsync(CertificateHolder newCertificate)
@@ -368,7 +372,7 @@ namespace Raven.Server
             var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
 
             var substring = hosts[0].Substring(0, hosts[0].Length - SetupManager.RavenDbDomain.Length - 1);
-            var domainEnd = substring.LastIndexOfAny(new[] { '.', '-' });
+            var domainEnd = substring.LastIndexOf('.');
 
             var license = ServerStore.LoadLicense();
 
@@ -395,9 +399,9 @@ namespace Raven.Server
 
             var domain = substring.Substring(domainEnd + 1);
 
-            if (userDomainsResult.Domains.ContainsKey(domain) == false)
+            if (userDomainsResult.Domains.Any(userDomain => string.Equals(userDomain.Key, domain, StringComparison.OrdinalIgnoreCase)) == false)
                 throw new InvalidOperationException("The license provided does not have access to the domain: " + domain);
-
+            
             var setupInfo = new SetupInfo
             {
                 Domain = domain,

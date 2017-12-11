@@ -572,7 +572,7 @@ namespace Raven.Server.ServerWide
                         var cert = Cluster.GetItem(context, "server/cert");
                         if (cert == null)
                             return; // was already processed?
-                        if (cert.TryGet("Confirmations", out int confirmations))
+                        if (cert.TryGet("Confirmations", out int confirmations) == false)
                             throw new InvalidOperationException("Expected to get confirmations count");
 
                         if (GetClusterTopology(context).AllNodes.Count > confirmations)
@@ -584,7 +584,7 @@ namespace Raven.Server.ServerWide
                         }
                         
                         if (cert.TryGet("Certificate", out string certBase64) == false || 
-                            cert.TryGet("Thumbprint", out string certThumbprint))
+                            cert.TryGet("Thumbprint", out string certThumbprint) == false)
                             throw new InvalidOperationException("Invalid server cert value, expected to get Certificate and Thumbprint properties");
 
                         if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
@@ -633,7 +633,7 @@ namespace Raven.Server.ServerWide
                         var cert = Cluster.GetItem(context, "server/cert");
                         if (cert == null)
                             return; // was already processed?
-                        if (cert.TryGet("Thumbprint", out string certThumbprint))
+                        if (cert.TryGet("Thumbprint", out string certThumbprint) == false)
                             throw new InvalidOperationException("Invalid server cert value, expected to get Thumbprint property");
 
                         // we got it, now let us let the leader know about it
@@ -1295,7 +1295,7 @@ namespace Raven.Server.ServerWide
                 return;
             
             // Also need to register my own certificate in the cluster, for other nodes to trust me
-            RegisterServerCertificateInCluster(Server.Certificate.Certificate, $"Server Certificate for Node {_engine.Tag}").Wait(ServerShutdown);
+            RegisterServerCertificateInCluster(Server.Certificate.Certificate, "Cluster-wide Certificate").Wait(ServerShutdown);
         }
 
         public Task RegisterServerCertificateInCluster(X509Certificate2 certificateCertificate, string name)

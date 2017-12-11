@@ -14,6 +14,7 @@ using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -533,6 +534,32 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
         
+        [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task ForceRenew()
+        {
+            if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
+                throw new InvalidOperationException("Cannot force renew the let's encrypt server certificate. This server wasn't set up using the let's encrypt setup mode.");
+
+            try
+            {
+                Server.RefreshClusterCertificate(null);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to force renew the let's encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.DnsName, false)}", e);
+            }
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/certificates/replace-server-cert", "POST", AuthorizationStatus.ClusterAdmin)]
+        public Task ReplaceServerCert()
+        {
+            //TODO
+            return Task.CompletedTask;
+        }
+
         public static void ValidateCertificate(CertificateDefinition certificate, ServerStore serverStore)
         {
             if (string.IsNullOrWhiteSpace(certificate.Name))
