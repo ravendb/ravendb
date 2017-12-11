@@ -414,34 +414,6 @@ namespace Raven.Server.Web.System
             return NoContent();
         }
 
-        [RavenAction("/admin/setup/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
-        public Task ForceRenew()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForDisk(RequestBodyStream(), "setup-lets-encrypt"))
-            {
-                var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
-
-                var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
-                var operationId = ServerStore.Operations.GetNextOperationId();
-
-                ServerStore.Operations.AddOperation(
-                    null,
-                    "Setting up RavenDB with a Let's Encrypt certificate",
-                    Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
-                    operationId, operationCancelToken);
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteOperationId(context, operationId);
-                }
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                return Task.CompletedTask;
-            }
-        }
-
         private void AssertOnlyInSetupMode()
         {
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)

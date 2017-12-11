@@ -308,7 +308,7 @@ namespace Raven.Server.ServerWide
 
         private void InstallUpdatedServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) || string.IsNullOrEmpty(cert))
+            if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) == false || string.IsNullOrEmpty(cert))
             {
                 throw new ArgumentException("Certificate property didn't exist in InstallUpdatedServerCertificateCommand");
             }
@@ -935,7 +935,8 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, key, out var k))
             {
                 var tvh = new Table.TableValueHolder();
-                items.ReadByKey(k, out tvh.Reader);
+                if (items.ReadByKey(k, out tvh.Reader) == false)
+                    return null;
                 return GetCurrentItem(context, tvh).Item2;
             }
         }

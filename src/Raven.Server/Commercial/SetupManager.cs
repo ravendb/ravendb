@@ -119,7 +119,7 @@ namespace Raven.Server.Commercial
 
         private class LetsEncryptCache
         {
-            public string Key { get; set; }
+            public Dictionary<string, string> KeysByUrl { get; set; }
             public string Domain { get; set; }
             public string Certificate { get; set; }
 
@@ -145,7 +145,7 @@ namespace Raven.Server.Commercial
             using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
             {
                 var dictionary = new Dictionary<string, Task<Challenge>>();
-                var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);
+                var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary, serverStore);
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}.");
@@ -175,7 +175,8 @@ namespace Raven.Server.Commercial
                     dictionary,
                     acmeClient,
                     challengeResult,
-                    cache);
+                    cache, 
+                    serverStore);
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Successfully acquired certificate from Let's Encrypt.");
@@ -221,7 +222,7 @@ namespace Raven.Server.Commercial
                 using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
                 {
                     var dictionary = new Dictionary<string, Task<Challenge>>();
-                    var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary);
+                    var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary, serverStore);
 
                     progress.Processed++;
                     progress.AddInfo(challengeResult.Challanges != null
@@ -257,7 +258,8 @@ namespace Raven.Server.Commercial
                         dictionary,
                         acmeClient,
                         challengeResult,
-                        cache);
+                        cache, 
+                        serverStore);
 
 
 
@@ -343,12 +345,12 @@ namespace Raven.Server.Commercial
         }
 
         private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, CancellationToken token, SetupInfo setupInfo, Dictionary<string, Task<Challenge>> dictionary, AcmeClient acmeClient,
-            (Dictionary<string, string> Challanges, byte[] Key) challengeResult, LetsEncryptCache cache)
+            (Dictionary<string, string> Challanges, byte[] Key) challengeResult, LetsEncryptCache cache, ServerStore serverStore)
         {
             if (challengeResult.Challanges == null && cache.Certificate != null)
             {
                 setupInfo.Certificate = cache.Certificate;
-                TrySaveLetEncryptCachedDetails(setupInfo, challengeResult.Key);
+                TrySaveLetEncryptCachedDetails(setupInfo, challengeResult.Key, serverStore);
                 return null;
             }
 
@@ -394,7 +396,7 @@ namespace Raven.Server.Commercial
                 var certBytes = pfxBuilder.Build(setupInfo.Domain.ToLower() + " cert", "");
                 setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
-                TrySaveLetEncryptCachedDetails(setupInfo, challengeResult1.Key);
+                TrySaveLetEncryptCachedDetails(setupInfo, challengeResult1.Key, serverStore);
 
 
                 return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable);
@@ -405,13 +407,16 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static void TrySaveLetEncryptCachedDetails(SetupInfo setupInfo, byte[] key)
+        private static void TrySaveLetEncryptCachedDetails(SetupInfo setupInfo, byte[] key, ServerStore serverStore)
         {
             var cache = new LetsEncryptCache
             {
                 Certificate = setupInfo.Certificate,
                 Domain = setupInfo.Domain,
-                Key = Convert.ToBase64String(key)
+                KeysByUrl = new Dictionary<string, string>
+                {
+                    [serverStore.Configuration.Core.AcmeUrl] = Convert.ToBase64String(key)
+                }
             };
             var cachePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".ravendb", "le.cache");
 
@@ -446,11 +451,11 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<(Dictionary<string, string> Challanges, byte[] Key)> InitialLetsEncryptChallenge(CancellationToken token, SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient, Dictionary<string, Task<Challenge>> dictionary)
+        private static async Task<(Dictionary<string, string> Challanges, byte[] Key)> InitialLetsEncryptChallenge(CancellationToken token, SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient, Dictionary<string, Task<Challenge>> dictionary, ServerStore serverStore)
         {
             try
             {
-                var key = await SetupLetsEncryptAccount(setupInfo, cache, acmeClient);
+                var key = await SetupLetsEncryptAccount(setupInfo, cache, acmeClient, serverStore);
 
                 // if the cache has less than 3 days, regenerate
                 // intentionally using DateTime.Now, because the NotBefore / NotAfter are 
@@ -482,11 +487,11 @@ namespace Raven.Server.Commercial
                         Type = AuthorizationIdentifierTypes.Dns,
                         Value = host
                     }).ContinueWith(t => { return t.Result.Data.Challenges.First(c => c.Type == ChallengeTypes.Dns01); }, token);
-                    dictionary[host] = authz;
+                    dictionary[tag.Key] = authz;
                 }
 
                 await Task.WhenAll(dictionary.Values.ToArray());
-                return (dictionary.ToDictionary(x => x.Key[0].ToString().ToUpper(), x => acmeClient.ComputeDnsValue(x.Value.Result)), key);
+                return (dictionary.ToDictionary(x => x.Key.ToString(), x => acmeClient.ComputeDnsValue(x.Value.Result)), key);
             }
             catch (Exception e)
             {
@@ -494,13 +499,13 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<byte[]> SetupLetsEncryptAccount(SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient)
+        private static async Task<byte[]> SetupLetsEncryptAccount(SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient, ServerStore serverStore)
         {
-            if (cache?.Key != null)
+            if (cache != null && cache.KeysByUrl.TryGetValue(serverStore.Configuration.Core.AcmeUrl, out var accountKey))
             {
                 try
                 {
-                    var key = Convert.FromBase64String(cache.Key);
+                    var key = Convert.FromBase64String(accountKey);
                     acmeClient.Use(new KeyInfo
                     {
                         PrivateKeyInfo = key
@@ -517,7 +522,7 @@ namespace Raven.Server.Commercial
             account.Data.Agreement = account.GetTermsOfServiceUri();
             await acmeClient.UpdateRegistration(account);
 
-            TrySaveLetEncryptCachedDetails(setupInfo, account.Key.PrivateKeyInfo);
+            TrySaveLetEncryptCachedDetails(setupInfo, account.Key.PrivateKeyInfo, serverStore);
             return account.Key.PrivateKeyInfo;
         }
 
