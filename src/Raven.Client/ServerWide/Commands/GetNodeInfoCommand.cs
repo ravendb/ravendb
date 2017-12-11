@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
@@ -14,6 +15,7 @@ namespace Raven.Client.ServerWide.Commands
         public int NumberOfCores;
         public double InstalledMemoryInGb;
         public double UsableMemoryInGb;
+        public Guid ServerId;
     }
 
     public class GetNodeInfoCommand : RavenCommand<NodeInfo>

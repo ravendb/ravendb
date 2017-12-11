@@ -165,6 +165,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var memoryInformation = MemoryInformation.GetMemoryInfo();
                     json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
                     json[nameof(NodeInfo.UsableMemoryInGb)] = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
+                    json[nameof(NodeInfo.ServerId)] = ServerStore.GetServerId().ToString();
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -339,17 +340,28 @@ namespace Raven.Server.Documents.Handlers.Admin
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
                     string topologyId;
+                    ClusterTopology clusterTopology;
                     using (ctx.OpenReadTransaction())
                     {
-                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
-                        var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
-                        if (possibleNode.HasUrl)
-                        {
-                            throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because this url is already used by node {possibleNode.NodeTag}");
-                        }
+                        clusterTopology = ServerStore.GetClusterTopology(ctx);                        
                         topologyId = clusterTopology.TopologyId;
                     }
-                    
+
+                    var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
+                    if (possibleNode.HasUrl)
+                    {
+                        throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because this url is already used by node {possibleNode.NodeTag}");
+                    }
+
+                    if (nodeInfo.ServerId == ServerStore.GetServerId())
+                    {
+                        throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because it is already in the cluster under the node {nodeInfo.NodeTag} and url {clusterTopology.GetUrlFromTag(nodeInfo.NodeTag)}");
+                    }
+
+
+                    var getClusterTopologyUrl = nodeUrl + "/cluster/topology";
+
+
                     if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
                     {
                         throw new TopologyMismatchException(
@@ -408,8 +420,8 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     using (ctx.OpenReadTransaction())
                     {
-                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
-                        var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
+                        clusterTopology = ServerStore.GetClusterTopology(ctx);
+                        possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
 
                         if (certificate != null)
