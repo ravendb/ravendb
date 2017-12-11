@@ -13,3 +13,7 @@ RavenDB is making use of the following OSS projects:
 * NCrontab.Advanced (https://github.com/jcoutch/NCrontab-Advanced) under the Apatch 2.0 license (https://github.com/jcoutch/NCrontab-Advanced/blob/master/LICENSE)
 * Npgsql (http://www.npgsql.org/) under the PostgreSQL License, a liberal OSI-approved open source license (https://raw.githubusercontent.com/npgsql/npgsql/master/LICENSE.txt)
 * Portable.BouncyCastle (https://github.com/onovotny/bc-csharp) under the license based on the MIT X Consortium license (https://raw.githubusercontent.com/onovotny/bc-csharp/netstandard/License.html)
+
+The full list of libraries used by the Studio can be found under:
+* https://github.com/ravendb/ravendb/blob/v4.0/src/Raven.Studio/bower.json
+* https://github.com/ravendb/ravendb/blob/v4.0/src/Raven.Studio/package.json
