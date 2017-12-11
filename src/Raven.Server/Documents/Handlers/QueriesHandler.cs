@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Post()
         {
             using (TrackRequestTime("Query"))
-            using (var token = CreateTimeLimitedOperationToken())
+            using (var token = CreateTimeLimitedQueryOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Get()
         {
             using (TrackRequestTime("Query"))
-            using (var token = CreateTimeLimitedOperationToken())
+            using (var token = CreateTimeLimitedQueryOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Handlers
                 Operations.Operations.OperationType operationType)
         {
             var options = GetQueryOperationOptions();
-            var token = CreateTimeLimitedOperationToken();
+            var token = CreateTimeLimitedQueryOperationToken();
 
             var operationId = Database.Operations.GetNextOperationId();
 

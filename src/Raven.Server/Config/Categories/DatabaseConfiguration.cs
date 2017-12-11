@@ -6,11 +6,23 @@ namespace Raven.Server.Config.Categories
 {
     public class DatabaseConfiguration : ConfigurationCategory
     {
-        [Description("The time to wait before canceling a database operation such as load (many) or query")]
+        [Description("The time to wait before canceling query operation")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Databases.OperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting OperationTimeout { get; set; }
+        [ConfigurationEntry("Databases.QueryOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting QueryOperationTimeout { get; set; }
+
+        [Description("The time to wait before canceling terms indexing operation")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Databases.IndexTermsOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting IndexTermsOperationTimeout { get; set; }
+
+        [Description("The time to wait before canceling indexing terms operation")]
+        [DefaultValue(5)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [ConfigurationEntry("Databases.DeleteDocsOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting DeleteDocsOperationTimeout { get; set; }
 
         /// <summary>
         /// This much time has to wait for the database to become available when too much
