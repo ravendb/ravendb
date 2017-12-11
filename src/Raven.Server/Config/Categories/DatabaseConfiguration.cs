@@ -14,31 +14,31 @@ namespace Raven.Server.Config.Categories
 
         /// <summary>
         /// This much time has to wait for the database to become available when too much
-        /// different datavases get loaded at the same time
+        /// different databases get loaded at the same time
         /// </summary>
         [Description("The time in seconds to wait for a database to start loading when under load")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.ConcurrentDatabaseLoadTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting ConcurrentDatabaseLoadTimeout { get; set; }
+        [ConfigurationEntry("Databases.ConcurrentLoadTimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ConcurrentLoadTimeout { get; set; }
 
         /// <summary>
         /// specifies the maximum amount of databases that can be loaded simultaneously
         /// </summary>
         [DefaultValue(8)]
-        [ConfigurationEntry("Databases.MaxConcurrentDatabaseLoads", ConfigurationEntryScope.ServerWideOnly)]
-        public int MaxConcurrentDatabaseLoads { get; set; }
+        [ConfigurationEntry("Databases.MaxConcurrentLoads", ConfigurationEntryScope.ServerWideOnly)]
+        public int MaxConcurrentLoads { get; set; }
 
         [DefaultValue(900)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.MaxIdleTimeForDatabaseInSec", ConfigurationEntryScope.ServerWideOnly)]
-        [LegacyConfigurationEntry("Raven/Databases/MaxIdleTimeForDatabase")]
+        [ConfigurationEntry("Databases.MaxIdleTimeInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [LegacyConfigurationEntry("Raven/Databases/MaxIdleTimeForTenantDatabase")]
         public TimeSetting MaxIdleTime { get; set; }
 
         [Description("The time in seconds to check for an idle database")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.FrequencyToCheckForIdleDatabasesInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Databases.FrequencyToCheckForIdleInSec", ConfigurationEntryScope.ServerWideOnly)]
         [LegacyConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabases")]
         public TimeSetting FrequencyToCheckForIdle { get; set; }
     }
