@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.ServerWide;
 
 namespace Raven.Client.Exceptions.Documents.Indexes
 {
