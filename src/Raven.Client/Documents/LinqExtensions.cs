@@ -80,7 +80,7 @@ namespace Raven.Client.Documents
         /// <param name="source">The source for querying</param>
         /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
         /// <returns></returns>
-        public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
+        public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
             return source.Include(path.ToPropertyPath());
         }
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents
         /// <param name="source">The source for querying</param>
         /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
         /// <returns></returns>
-        public static IRavenQueryable<TResult> Include<TResult, TInclude>(this IRavenQueryable<TResult> source, Expression<Func<TResult, object>> path)
+        public static IRavenQueryable<TResult> Include<TResult, TInclude>(this IQueryable<TResult> source, Expression<Func<TResult, object>> path)
         {
             var queryInspector = (IRavenQueryInspector)source;
             var conventions = queryInspector.Session.Conventions;
@@ -115,7 +115,7 @@ namespace Raven.Client.Documents
         /// <param name="source">The source for querying</param>
         /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
         /// <returns></returns>
-        public static IRavenQueryable<TResult> Include<TResult>(this IRavenQueryable<TResult> source, string path)
+        public static IRavenQueryable<TResult> Include<TResult>(this IQueryable<TResult> source, string path)
         {
 #if CURRENT
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();

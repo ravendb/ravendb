@@ -957,6 +957,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitQueryableMethodCall(expression);
                     break;
                 case nameof(LinqExtensions.Spatial):
+                    VisitExpression(expression.Arguments[0]);
+                    
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var spatialFieldName);
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var spatialCriteria);
 
@@ -973,6 +975,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                     break;
                 case nameof(LinqExtensions.OrderByDistance):
+                    VisitExpression(expression.Arguments[0]);
+                    
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldName);
                     if (expression.Arguments.Count == 4)
                     {
@@ -989,6 +993,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                     break;
                 case nameof(LinqExtensions.OrderByDistanceDescending):
+                    VisitExpression(expression.Arguments[0]);
+                    
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldNameDesc);
                     if (expression.Arguments.Count == 4)
                     {
