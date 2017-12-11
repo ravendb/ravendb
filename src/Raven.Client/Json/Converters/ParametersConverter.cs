@@ -41,7 +41,11 @@ namespace Raven.Client.Json.Converters
                     writer.WriteValue(dateTimeOffset.UtcDateTime.GetDefaultRavenFormat(true));
                 }
                 else
+                {
+                    if (v is object[])
+                        serializer.TypeNameHandling = TypeNameHandling.None;
                     serializer.Serialize(writer, kvp.Value);
+                }
             }
 
             writer.WriteEndObject();
