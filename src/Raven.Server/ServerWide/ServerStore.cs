@@ -1650,7 +1650,7 @@ namespace Raven.Server.ServerWide
 
         public string LastStateChangeReason()
         {
-            return _engine.CurrentState + ", " + _engine.LastStateChangeReason;
+            return $"{_engine.CurrentState}, {_engine.LastStateChangeReason} (at {_engine.LastStateChangeTime})";
         }
 
         public string GetNodeHttpServerUrl(string clientRequestedNodeUrl = null)

@@ -237,78 +237,91 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleStaticIndexChange(string name, IndexDefinition definition)
         {
-            var creationOptions = IndexCreationOptions.Create;
-            var currentIndex = GetIndex(name);
-            IndexDefinitionCompareDifferences currentDifferences = IndexDefinitionCompareDifferences.None;
-
-            if (currentIndex != null)
-                creationOptions = GetIndexCreationOptions(definition, currentIndex, out currentDifferences);
-
-            var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
-
-
-            if (creationOptions == IndexCreationOptions.Noop)
+            try
             {
-                Debug.Assert(currentIndex != null);
+                var creationOptions = IndexCreationOptions.Create;
+                var currentIndex = GetIndex(name);
+                IndexDefinitionCompareDifferences currentDifferences = IndexDefinitionCompareDifferences.None;
 
-                var replacementIndex = GetIndex(replacementIndexName);
-                if (replacementIndex != null)
-                    DeleteIndexInternal(replacementIndex);
+                if (currentIndex != null)
+                    creationOptions = GetIndexCreationOptions(definition, currentIndex, out currentDifferences);
 
-                return;
-            }
+                var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
 
-            if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
-            {
-                Debug.Assert(currentIndex != null);
 
-                var replacementIndex = GetIndex(replacementIndexName);
-                if (replacementIndex != null)
-                    DeleteIndexInternal(replacementIndex);
-
-                if (currentDifferences != IndexDefinitionCompareDifferences.None)
-                    UpdateIndex(definition, currentIndex, currentDifferences);
-                return;
-            }
-
-            UpdateStaticIndexLockModeAndPriority(definition, currentIndex, currentDifferences);
-
-            if (creationOptions == IndexCreationOptions.Update)
-            {
-                Debug.Assert(currentIndex != null);
-
-                definition.Name = replacementIndexName;
-                var replacementIndex = GetIndex(replacementIndexName);
-                if (replacementIndex != null)
+                if (creationOptions == IndexCreationOptions.Noop)
                 {
-                    creationOptions = GetIndexCreationOptions(definition, replacementIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
-                    if (creationOptions == IndexCreationOptions.Noop)
-                        return;
+                    Debug.Assert(currentIndex != null);
 
-                    if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
-                    {
-                        UpdateIndex(definition, replacementIndex, sideBySideDifferences);
-                        return;
-                    }
+                    var replacementIndex = GetIndex(replacementIndexName);
+                    if (replacementIndex != null)
+                        DeleteIndexInternal(replacementIndex);
 
-                    DeleteIndexInternal(replacementIndex);
+                    return;
                 }
-            }
 
-            Index index;
-            switch (definition.Type)
+                if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+                {
+                    Debug.Assert(currentIndex != null);
+
+                    var replacementIndex = GetIndex(replacementIndexName);
+                    if (replacementIndex != null)
+                        DeleteIndexInternal(replacementIndex);
+
+                    if (currentDifferences != IndexDefinitionCompareDifferences.None)
+                        UpdateIndex(definition, currentIndex, currentDifferences);
+                    return;
+                }
+
+                UpdateStaticIndexLockModeAndPriority(definition, currentIndex, currentDifferences);
+
+                if (creationOptions == IndexCreationOptions.Update)
+                {
+                    Debug.Assert(currentIndex != null);
+
+                    definition.Name = replacementIndexName;
+                    var replacementIndex = GetIndex(replacementIndexName);
+                    if (replacementIndex != null)
+                    {
+                        creationOptions = GetIndexCreationOptions(definition, replacementIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
+                        if (creationOptions == IndexCreationOptions.Noop)
+                            return;
+
+                        if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
+                        {
+                            UpdateIndex(definition, replacementIndex, sideBySideDifferences);
+                            return;
+                        }
+
+                        DeleteIndexInternal(replacementIndex);
+                    }
+                }
+
+                Index index;
+                switch (definition.Type)
+                {
+                    case IndexType.Map:
+                        index = MapIndex.CreateNew(definition, _documentDatabase);
+                        break;
+                    case IndexType.MapReduce:
+                        index = MapReduceIndex.CreateNew(definition, _documentDatabase);
+                        break;
+                    default:
+                        throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
+                }
+
+                CreateIndexInternal(index);
+            }
+            catch (TimeoutException toe)
             {
-                case IndexType.Map:
-                    index = MapIndex.CreateNew(definition, _documentDatabase);
-                    break;
-                case IndexType.MapReduce:
-                    index = MapReduceIndex.CreateNew(definition, _documentDatabase);
-                    break;
-                default:
-                    throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
+                throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down." +
+                                                 $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
-
-            CreateIndexInternal(index);
+            catch (Exception e)
+            {
+                throw new IndexCreationException($"Failed to create static index: {definition.Name}, unexpected error during index creation." +
+                                                 $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
+            }
         }
 
         private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
@@ -433,11 +446,13 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down.", toe);
+                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down." + 
+                                                     $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
             catch (Exception e)
             {
-                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, unexpected error during index creation.", e);
+                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, unexpected error during index creation." +
+                $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
             }
             finally
             {
@@ -791,32 +806,45 @@ namespace Raven.Server.Documents.Indexes
 
         private Index ResetIndexInternal(Index index)
         {
-            DeleteIndexInternal(index);
-
-            var definitionBase = index.Definition;
-            if (definitionBase is AutoMapIndexDefinition)
-                index = AutoMapIndex.CreateNew((AutoMapIndexDefinition)definitionBase, _documentDatabase);
-            else if (definitionBase is AutoMapReduceIndexDefinition)
-                index = AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definitionBase, _documentDatabase);
-            else
+            try
             {
-                var staticIndexDefinition = index.Definition.ConvertToIndexDefinition(index);
-                switch (staticIndexDefinition.Type)
+                DeleteIndexInternal(index);
+
+                var definitionBase = index.Definition;
+                if (definitionBase is AutoMapIndexDefinition)
+                    index = AutoMapIndex.CreateNew((AutoMapIndexDefinition)definitionBase, _documentDatabase);
+                else if (definitionBase is AutoMapReduceIndexDefinition)
+                    index = AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definitionBase, _documentDatabase);
+                else
                 {
-                    case IndexType.Map:
-                        index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
-                        break;
-                    case IndexType.MapReduce:
-                        index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
-                        break;
-                    default:
-                        throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                    var staticIndexDefinition = index.Definition.ConvertToIndexDefinition(index);
+                    switch (staticIndexDefinition.Type)
+                    {
+                        case IndexType.Map:
+                            index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            break;
+                        case IndexType.MapReduce:
+                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            break;
+                        default:
+                            throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                    }
                 }
+
+                CreateIndexInternal(index);
+
+                return index;
             }
-
-            CreateIndexInternal(index);
-
-            return index;
+            catch (TimeoutException toe)
+            {
+                throw new IndexCreationException($"Failed to reset index: {index.Name}, the cluster is probably down." +
+                                                 $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+            }
+            catch (Exception e)
+            {
+                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation."+
+                                                 $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
+            }
         }
 
         private void OpenIndexes(DatabaseRecord record)
