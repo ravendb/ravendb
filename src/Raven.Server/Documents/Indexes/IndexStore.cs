@@ -411,7 +411,18 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (CommandExecutionException e)
                 {
-                    throw e.InnerException;
+                    throw new IndexCreationException($"Failed to create static index: {definition.Name}, index creation command failed to execute." +
+                                                     $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e.InnerException);
+                }
+                catch (TimeoutException toe)
+                {
+                    throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down." +
+                                                     $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexCreationException($"Failed to create static index: {definition.Name}, unexpected error during index creation." +
+                                                     $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
                 }
             }
             finally
