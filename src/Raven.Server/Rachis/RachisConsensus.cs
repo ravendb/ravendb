@@ -127,7 +127,17 @@ namespace Raven.Server.Rachis
 
         public RachisState CurrentState { get; private set; }
 
-        public string LastStateChangeReason => _lastStateChangeReason;
+        public string LastStateChangeReason
+        {
+            get { return _lastStateChangeReason; }
+            private set
+            {
+                _lastStateChangeReason = value;
+                _lastStateChangeTime = DateTime.UtcNow;
+            }
+        }
+
+        public DateTime LastStateChangeTime => _lastStateChangeTime;
 
         public event EventHandler<ClusterTopology> TopologyChanged;
 
@@ -1442,6 +1452,7 @@ namespace Raven.Server.Rachis
         private TimeSpan _operationTimeout;
         private TimeSpan _electionTimeout;
         private TimeSpan _tcpConnectionTimeout;
+        private DateTime _lastStateChangeTime;
 
         public void ReportLeaderTime(long leaderTime)
         {
