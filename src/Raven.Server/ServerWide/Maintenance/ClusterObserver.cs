@@ -229,6 +229,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _logger.Operations(alertMsg);
             }
         }
+        
         private string UpdateDatabaseTopology(string dbName, DatabaseRecord record, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous,
@@ -331,7 +332,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     }
 
-                    if (_server.LicenseManager.CanDynamicallyDistributeNodes(out var _) == false)
+                    if (_server.LicenseManager.CanDynamicallyDistributeNodes(out _) == false)
                         continue;
 
                     // replace the bad promotable otherwise we will continue to add more and more nodes.
@@ -386,7 +387,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         if (goodMembers < topology.ReplicationFactor &&
                             TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
-                            if (_server.LicenseManager.CanDynamicallyDistributeNodes(out var _) == false)
+                            if (_server.LicenseManager.CanDynamicallyDistributeNodes(out _) == false)
                                 continue;
 
                             topology.Promotables.Add(node);

@@ -1,4 +1,4 @@
-﻿namespace Raven.Server.Commercial
+﻿namespace Raven.Client.Exceptions.Commercial
 {
     public enum LimitType
     {

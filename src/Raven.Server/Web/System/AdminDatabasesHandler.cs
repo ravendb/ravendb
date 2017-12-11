@@ -120,12 +120,8 @@ namespace Raven.Server.Web.System
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
                 var clusterTopology = ServerStore.GetClusterTopology(context);
 
-                if (databaseRecord.Encrypted &&
-                    ServerStore.LicenseManager.CanCreateEncryptedDatabase(out var licenseLimit) == false)
-                {
-                    SetLicenseLimitResponse(licenseLimit);
-                    return;
-                }
+                if (databaseRecord.Encrypted)
+                    ServerStore.LicenseManager.AssertCanCreateEncryptedDatabase();
 
                 // the case where an explicit node was requested 
                 if (string.IsNullOrEmpty(node) == false)
@@ -222,8 +218,7 @@ namespace Raven.Server.Web.System
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
                 {
-                    SetLicenseLimitResponse(licenseLimit);
-                    return;
+                    throw licenseLimit;
                 }
 
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(name) == false)
@@ -743,8 +738,7 @@ namespace Raven.Server.Web.System
                 if (enable &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
                 {
-                    SetLicenseLimitResponse(licenseLimit);
-                    return;
+                    throw licenseLimit;
                 }
 
                 databaseRecord.Topology.DynamicNodesDistribution = enable;

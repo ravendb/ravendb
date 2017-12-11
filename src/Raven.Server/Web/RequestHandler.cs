@@ -15,6 +15,7 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
@@ -478,21 +479,6 @@ namespace Raven.Server.Web
         protected void SetupCORSHeaders()
         {
             SetupCORSHeaders(HttpContext);
-        }
-
-        protected void SetLicenseLimitResponse(LicenseLimit licenseLimit)
-        {
-            if (licenseLimit == null)
-                throw new ArgumentNullException(nameof(licenseLimit));
-
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.PaymentRequired;
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var blittable = EntityToBlittable.ConvertEntityToBlittable(licenseLimit, DocumentConventions.Default, context);
-                context.Write(writer, blittable);
-                writer.Flush();
-            }
         }
     }
 }

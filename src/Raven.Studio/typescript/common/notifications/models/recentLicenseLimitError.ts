@@ -5,9 +5,9 @@ import generalUtils = require("common/generalUtils");
 
 class recentLicenseLimitError extends recentError {
 
-    licenseLimitType = ko.observable<Raven.Server.Commercial.LimitType>();
+    licenseLimitType = ko.observable<Raven.Client.Exceptions.Commercial.LimitType>();
     
-    constructor(dto: recentErrorDto, limitType: Raven.Server.Commercial.LimitType) {
+    constructor(dto: recentErrorDto, limitType: Raven.Client.Exceptions.Commercial.LimitType) {
         super(dto);
 
         this.hasDetails = ko.pureComputed(() => true); // it always has details
@@ -15,7 +15,7 @@ class recentLicenseLimitError extends recentError {
         this.licenseLimitType(limitType);
     }
 
-    static tryExtractLicenseLimitType(details: string): Raven.Server.Commercial.LimitType {
+    static tryExtractLicenseLimitType(details: string): Raven.Client.Exceptions.Commercial.LimitType {
         try {
             const parsedDetails = JSON.parse(details);
 

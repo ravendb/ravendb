@@ -47,7 +47,7 @@ namespace Raven.Server.Documents
         protected async Task DatabaseConfigurations(Func<TransactionOperationContext, string,
            BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc,
            string debug,
-           Func<string, BlittableJsonReaderObject, bool> beforeSetupConfiguration = null,
+           Action<string, BlittableJsonReaderObject> beforeSetupConfiguration = null,
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
@@ -62,8 +62,7 @@ namespace Raven.Server.Documents
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                if (beforeSetupConfiguration?.Invoke(Database.Name, configurationJson) == false)
-                    return;
+                beforeSetupConfiguration?.Invoke(Database.Name, configurationJson);
 
                 var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson);
                 DatabaseRecord dbRecord;

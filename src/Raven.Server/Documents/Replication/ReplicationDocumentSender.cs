@@ -305,10 +305,8 @@ namespace Raven.Server.Documents.Replication
             {
                 delayReplicationFor = external.DelayReplicationFor;
 
-                if (delayReplicationFor.Ticks > 0 && _parent._parent._server.LicenseManager.CanDelayReplication(out var limit) == false)
-                {
-                    throw new OperationCanceledException($"External replication was canceled, because : {limit.Message}");
-                }
+                if (delayReplicationFor.Ticks > 0)
+                    _parent._parent._server.LicenseManager.AssertCanDelayReplication();
             }
             return delayReplicationFor;
         }
