@@ -528,7 +528,7 @@ namespace Raven.Server.Documents.Handlers
             var field = GetQueryStringValueAndAssertIfSingleAndNotEmpty("field");
             var fromValue = GetStringQueryString("fromValue", required: false);
 
-            using (var token = CreateTimeLimitedOperationToken())
+            using (var token = CreateTimeLimitedIndexTermsOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {

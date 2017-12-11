@@ -96,9 +96,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        protected OperationCancelToken CreateTimeLimitedOperationToken()
+        protected OperationCancelToken CreateTimeLimitedQueryOperationToken()
         {
-            return new OperationCancelToken(Database.Configuration.Databases.OperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+            return new OperationCancelToken(Database.Configuration.Databases.QueryOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+
+        protected OperationCancelToken CreateTimeLimitedDeleteDocsOperationToken()
+        {
+            return new OperationCancelToken(Database.Configuration.Databases.DeleteDocsOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
+        }
+
+        protected OperationCancelToken CreateTimeLimitedIndexTermsOperationToken()
+        {
+            return new OperationCancelToken(Database.Configuration.Databases.IndexTermsOperationTimeout.AsTimeSpan, Database.DatabaseShutdown);
         }
 
         protected OperationCancelToken CreateOperationToken()
