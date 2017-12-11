@@ -153,11 +153,9 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{url}{query}",
                                 [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
-                                [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
+                                [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
+                                [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
                             };
-
-
-                            djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString();
 
                             using (var json = context.ReadObject(djv, "exception"))
                                 writer.WriteObject(json);

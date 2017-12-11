@@ -329,11 +329,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             Debug.Assert(assignedCores <= nodeInfo.NumberOfCores);
 
-            if (ServerStore.LicenseManager.CanAddNode(nodeUrl, assignedCores.Value, out var licenseLimit) == false)
-            {
-                SetLicenseLimitResponse(licenseLimit);
-                return;
-            }
+            ServerStore.LicenseManager.AssertCanAddNode(nodeUrl, assignedCores.Value);
 
             if (ServerStore.IsLeader())
             {
@@ -500,15 +496,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             if (ServerStore.IsLeader())
             {
-                var licenseLimit = await ServerStore
-                    .LicenseManager
-                    .ChangeLicenseLimits(nodeTag, newAssignedCores.Value);
-
-                if (licenseLimit != null)
-                {
-                    SetLicenseLimitResponse(licenseLimit);
-                    return;
-                }
+                await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value);
 
                 NoContentStatus();
                 return;

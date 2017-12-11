@@ -1011,7 +1011,8 @@ namespace Raven.Server.Commercial
 
                             try
                             {
-                                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, making sure there is no cluster from previous installation.");
+                                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " +
+                                                                                                                          "making sure there is no cluster from previous installation.");
                             }
                             catch (Exception e)
                             {

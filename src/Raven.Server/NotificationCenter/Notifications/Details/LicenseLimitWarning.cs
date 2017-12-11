@@ -1,4 +1,5 @@
-﻿using Raven.Server.Commercial;
+﻿using Raven.Client.Exceptions.Commercial;
+using Raven.Server.Commercial;
 using Raven.Server.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -11,7 +12,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             
         }
 
-        private LicenseLimitWarning(LicenseLimit licenseLimit)
+        private LicenseLimitWarning(LicenseLimitException licenseLimit)
         {
             Type = licenseLimit.Type;
             Message = licenseLimit.Message;
@@ -30,7 +31,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public static void AddLicenseLimitNotification(ServerStore serverStore, LicenseLimit licenseLimit)
+        public static void AddLicenseLimitNotification(ServerStore serverStore, LicenseLimitException licenseLimit)
         {
             var alert = AlertRaised.Create(
                 null,

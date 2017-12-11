@@ -9,7 +9,7 @@ class licenseModel {
 
     private static baseUrl = "https://ravendb.net/license/request";
 
-    static generateLicenseRequestUrl(limitType: Raven.Server.Commercial.LimitType = null): string {
+    static generateLicenseRequestUrl(limitType: Raven.Client.Exceptions.Commercial.LimitType = null): string {
         let url = `${licenseModel.baseUrl}?`;
 
         const build = buildInfo.serverBuildVersion();

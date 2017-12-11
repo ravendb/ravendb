@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
@@ -319,7 +320,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AdminRevisionsHandler.Parameters));
             scripter.AddType(typeof(ReorderDatabaseMembersOperation.Parameters));
             
-            scripter.AddType(typeof(LicenseLimit));
+            scripter.AddType(typeof(LicenseLimitException));
             
             scripter.AddType(typeof(CompactSettings));
             scripter.AddType(typeof(CompactionResult));

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
@@ -189,7 +190,8 @@ namespace Raven.Server
                     {
                         [nameof(ExceptionDispatcher.ExceptionSchema.Url)] = $"{context.Request.Path}{context.Request.QueryString}",
                         [nameof(ExceptionDispatcher.ExceptionSchema.Type)] = e.GetType().FullName,
-                        [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
+                        [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
                     };
 
 
@@ -198,7 +200,6 @@ namespace Raven.Server
                     File.WriteAllText(f,
                         $"{context.Request.Path}{context.Request.QueryString}" + Environment.NewLine + errorString);
 #endif
-                    djv[nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString();
 
                     MaybeAddAdditionalExceptionData(djv, e);
 
@@ -312,6 +313,12 @@ namespace Raven.Server
             if (exception is UnauthorizedAccessException)
             {
                 response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
+            if (exception is LicenseLimitException)
+            {
+                response.StatusCode = (int)HttpStatusCode.PaymentRequired;
                 return;
             }
 

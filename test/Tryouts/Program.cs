@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Utils;
+using SlowTests.Server.Replication;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -29,13 +30,17 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
            
-            for (int i = 0; i < 100; i++)
+            for (var i = 0; i < 10000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new ClusterDatabaseMaintenance())
+
+                Parallel.For(1, 10, (x) =>
                 {
-                    a.DontRemoveNodeWhileItHasNotReplicatedDocs().Wait();
-                }
+                    using (var test = new ReplicationSpecialCases())
+                    {
+                        test.IdenticalContentConflictResolution().Wait();
+                    }
+                });
             }
         }
 

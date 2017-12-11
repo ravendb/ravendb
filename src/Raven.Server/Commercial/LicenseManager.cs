@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
@@ -212,7 +213,7 @@ namespace Raven.Server.Commercial
             return _serverStore.GetClusterTopology().AllNodes.Count;
         }
 
-        public async Task<LicenseLimit> ChangeLicenseLimits(string nodeTag, int newAssignedCores)
+        public async Task ChangeLicenseLimits(string nodeTag, int newAssignedCores)
         {
             if (_serverStore.IsLeader() == false)
                 throw new InvalidOperationException("Only the leader is allowed to change the license limits");
@@ -240,15 +241,12 @@ namespace Raven.Server.Commercial
                 var maxCores = _licenseStatus.MaxCores;
                 if (utilizedCores > maxCores)
                 {
-                    return new LicenseLimit
-                    {
-                        Type = LimitType.Cores,
-                        Message = $"Cannot change the license limit for node {nodeTag} " +
+                    var message = $"Cannot change the license limit for node {nodeTag} " +
                                   $"from {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
                                   $"to {newAssignedCores} core{Pluralize(newAssignedCores)} " +
                                   $"because the utilized number of cores in the cluster will be {utilizedCores} " +
-                                  $"while the maximum allowed cores according to the license is {maxCores}."
-                    };
+                                  $"while the maximum allowed cores according to the license is {maxCores}.";
+                    throw new LicenseLimitException(LimitType.Cores, message);
                 }
 
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -296,7 +294,6 @@ namespace Raven.Server.Commercial
                 }
 
                 await _serverStore.PutLicenseLimitsAsync(licenseLimits);
-                return null;
             }
             finally
             {
@@ -331,9 +328,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                var licenseLimits = AsyncHelpers.RunSync(() => 
-                    UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails));
-
+                var licenseLimits = AsyncHelpers.RunSync(() => UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails));
                 if (licenseLimits == null)
                     return;
 
@@ -356,12 +351,11 @@ namespace Raven.Server.Commercial
             if (utilizedCores <= _licenseStatus.MaxCores)
                 return;
 
-            var details = $"The number of utilized cores is: {utilizedCores}, " +
+            var message = $"The number of utilized cores is: {utilizedCores}, " +
                           $"while the license limit is: {_licenseStatus.MaxCores} cores";
-            GenerateLicenseLimit(LimitType.Cores, details, addNotification: true);
-
             _licenseStatus.Error = true;
-            _licenseStatus.Message = details;
+            _licenseStatus.Message = message;
+            GenerateLicenseLimit(LimitType.Cores, message, addNotification: true);
         }
 
         private int GetUtilizedCores()
@@ -384,28 +378,24 @@ namespace Raven.Server.Commercial
             return Math.Min(availableCores, numberOfCores);
         }
 
-        private bool CanAssignCores(int assignedCores, out string details)
+        private void AssertCanAssignCores(int assignedCores)
         {
-            details = null;
-
             var licenseLimits = _serverStore.LoadLicenseLimits();
             if (licenseLimits?.NodeLicenseDetails == null ||
                 licenseLimits.NodeLicenseDetails.Count == 0)
-                return true;
+                return;
 
             var coresInUse = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
             if (coresInUse + assignedCores > _licenseStatus.MaxCores)
             {
-                details = $"Can't assign {assignedCores} core{Pluralize(assignedCores)} " +
+                var message = $"Can't assign {assignedCores} core{Pluralize(assignedCores)} " +
                           $"to the node, max allowed cores on license: {_licenseStatus.MaxCores}, " +
                           $"number of utilized cores: {coresInUse}";
-                return false;
+                throw GenerateLicenseLimit(LimitType.Cores, message);
             }
-
-            return true;
         }
 
-        public async Task<LicenseLimit> Activate(License license, bool skipLeaseLicense, bool ensureNotPassive = true)
+        public async Task Activate(License license, bool skipLeaseLicense, bool ensureNotPassive = true)
         {
             var newLicenseStatus = GetLicenseStatus(license);
 
@@ -421,15 +411,15 @@ namespace Raven.Server.Commercial
                     license = await GetUpdatedLicense(license);
                     if (license != null)
                     {
-                        return await Activate(license, skipLeaseLicense: true, ensureNotPassive: ensureNotPassive);
+                        await Activate(license, skipLeaseLicense: true, ensureNotPassive: ensureNotPassive);
+                        return;
                     }
                 }
 
                 throw new LicenseExpiredException($"License already expired on: {licenseExpiration}");
             }
 
-            if (CanActivateLicense(newLicenseStatus, out var licenseLimit) == false)
-                return licenseLimit;
+            ThrowIfCannotActivateLicense(newLicenseStatus);
 
             using (DisableCalculatingCoresCount())
             {
@@ -461,7 +451,6 @@ namespace Raven.Server.Commercial
             }
 
             CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
-            return null;
         }
 
         public LicenseStatus GetLicenseStatus(License license)
@@ -1052,34 +1041,31 @@ namespace Raven.Server.Commercial
             _leaseLicenseTimer?.Dispose();
         }
 
-        private bool CanActivateLicense(LicenseStatus newLicenseStatus, out LicenseLimit licenseLimit)
+        private void ThrowIfCannotActivateLicense(LicenseStatus newLicenseStatus)
         {
             if (newLicenseStatus.Type < LicenseType.Trial &&
                 (int)newLicenseStatus.Type < (int)_licenseStatus.Type)
             {
-                var details = $"Cannot downgrade license from {_licenseStatus.Type.ToString()} " +
+                var message = $"Cannot downgrade license from {_licenseStatus.Type.ToString()} " +
                               $"to {newLicenseStatus.Type.ToString()}!";
-                licenseLimit = GenerateLicenseLimit(LimitType.Downgrade, details);
-                return false;
+                throw GenerateLicenseLimit(LimitType.Downgrade, message);
             }
 
             var clusterSize = GetClusterSize();
             var maxClusterSize = newLicenseStatus.MaxClusterSize;
             if (clusterSize > maxClusterSize)
             {
-                var details = "Cannot activate license because the maximum allowed cluster size is: " +
+                var message = "Cannot activate license because the maximum allowed cluster size is: " +
                               $"{maxClusterSize} while the current cluster size is: {clusterSize}";
-                licenseLimit = GenerateLicenseLimit(LimitType.ClusterSize, details);
-                return false;
+                throw GenerateLicenseLimit(LimitType.ClusterSize, message);
             }
 
             var maxCores = newLicenseStatus.MaxCores;
             if (clusterSize > maxCores)
             {
-                var details = "Cannot activate license because the cores limit is: " +
+                var message = "Cannot activate license because the cores limit is: " +
                               $"{maxCores} while the current cluster size is: {clusterSize}!";
-                licenseLimit = GenerateLicenseLimit(LimitType.Cores, details);
-                return false;
+                throw GenerateLicenseLimit(LimitType.Cores, message);
             }
 
             var encryptedDatabasesCount = 0;
@@ -1121,53 +1107,44 @@ namespace Raven.Server.Commercial
             if (encryptedDatabasesCount > 0 &&
                 newLicenseStatus.HasEncryption == false)
             {
-                var details = GenerateDetails(encryptedDatabasesCount, "encryption");
-                licenseLimit = GenerateLicenseLimit(LimitType.Encryption, details);
-                return false;
+                var message = GenerateDetails(encryptedDatabasesCount, "encryption");
+                throw GenerateLicenseLimit(LimitType.Encryption, message);
             }
 
             if (externalReplicationCount > 0 &&
                 newLicenseStatus.HasExternalReplication == false)
             {
-                var details = GenerateDetails(externalReplicationCount, "external replication");
-                licenseLimit = GenerateLicenseLimit(LimitType.ExternalReplication, details);
-                return false;
+                var message = GenerateDetails(externalReplicationCount, "external replication");
+                throw GenerateLicenseLimit(LimitType.ExternalReplication, message);
             }
 
             if (ravenEtlCount > 0 &&
                 newLicenseStatus.HasRavenEtl == false)
             {
-                var details = GenerateDetails(ravenEtlCount, "Raven ETL");
-                licenseLimit = GenerateLicenseLimit(LimitType.RavenEtl, details);
-                return false;
+                var message = GenerateDetails(ravenEtlCount, "Raven ETL");
+                throw GenerateLicenseLimit(LimitType.RavenEtl, message);
             }
 
             if (sqlEtlCount > 0 &&
                 newLicenseStatus.HasSqlEtl == false)
             {
-                var details = GenerateDetails(sqlEtlCount, "SQL ETL");
-                licenseLimit = GenerateLicenseLimit(LimitType.SqlEtl, details);
-                return false;
+                var message = GenerateDetails(sqlEtlCount, "SQL ETL");
+                throw GenerateLicenseLimit(LimitType.SqlEtl, message);
             }
 
             if (snapshotBackupsCount > 0 &&
                 newLicenseStatus.HasSnapshotBackups == false)
             {
-                var details = GenerateDetails(cloudBackupsCount, "snapshot backups");
-                licenseLimit = GenerateLicenseLimit(LimitType.SnapshotBackup, details);
-                return false;
+                var message = GenerateDetails(cloudBackupsCount, "snapshot backups");
+                throw GenerateLicenseLimit(LimitType.SnapshotBackup, message);
             }
 
             if (cloudBackupsCount > 0 &&
                 newLicenseStatus.HasCloudBackups == false)
             {
-                var details = GenerateDetails(cloudBackupsCount, "cloud backups");
-                licenseLimit = GenerateLicenseLimit(LimitType.CloudBackup, details);
-                return false;
+                var message = GenerateDetails(cloudBackupsCount, "cloud backups");
+                throw GenerateLicenseLimit(LimitType.CloudBackup, message);
             }
-
-            licenseLimit = null;
-            return true;
         }
 
         private static string GenerateDetails(int count, string feature)
@@ -1216,41 +1193,32 @@ namespace Raven.Server.Commercial
             return (hasSnapshotBackup, hasCloudBackup);
         }
 
-        public bool CanAddNode(string nodeUrl, int assignedCores, out LicenseLimit licenseLimit)
+        public void AssertCanAddNode(string nodeUrl, int assignedCores)
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
-
-            if (CanAssignCores(assignedCores, out var coresDetails) == false)
-            {
-                licenseLimit = GenerateLicenseLimit(LimitType.Cores, coresDetails);
-                return false;
-            }
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+            
+            AssertCanAssignCores(assignedCores);
 
             if (_licenseStatus.DistributedCluster == false)
             {
-                var details = $"Your current license ({_licenseStatus.Type}) does not allow adding nodes to the cluster";
-                licenseLimit = GenerateLicenseLimit(LimitType.ForbiddenHost, details);
-                return false;
+                var message = $"Your current license ({_licenseStatus.Type}) does not allow adding nodes to the cluster";
+                throw GenerateLicenseLimit(LimitType.ForbiddenHost, message);
             }
 
             var maxClusterSize = _licenseStatus.MaxClusterSize;
             var clusterSize = GetClusterSize();
             if (++clusterSize > maxClusterSize)
             {
-                var details = $"Your current license allows up to {maxClusterSize} nodes in a cluster";
-                licenseLimit = GenerateLicenseLimit(LimitType.ClusterSize, details);
-                return false;
+                var message = $"Your current license allows up to {maxClusterSize} nodes in a cluster";
+                throw GenerateLicenseLimit(LimitType.ClusterSize, message);
             }
-
-            licenseLimit = null;
-            return true;
         }
 
-        public bool CanAddPeriodicBackup(BlittableJsonReaderObject readerObject, out LicenseLimit licenseLimit)
+        public void AssertCanAddPeriodicBackup(BlittableJsonReaderObject readerObject)
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -1260,74 +1228,57 @@ namespace Raven.Server.Commercial
                     _licenseStatus.HasSnapshotBackups == false)
                 {
                     const string details = "Your current license doesn't include the snapshot backups feature";
-                    licenseLimit = GenerateLicenseLimit(LimitType.SnapshotBackup, details);
-                    return false;
+                    throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
                 }
 
                 var hasCloudBackup = configuration.HasCloudBackup();
                 if (hasCloudBackup && _licenseStatus.HasCloudBackups == false)
                 {
                     const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
-                    licenseLimit = GenerateLicenseLimit(LimitType.CloudBackup, details);
-                    return false;
+                    throw GenerateLicenseLimit(LimitType.CloudBackup, details);
                 }
-
-                licenseLimit = null;
-                return true;
             }
         }
 
-        public bool CanAddExternalReplication(out LicenseLimit licenseLimit)
+        public void AssertCanAddExternalReplication()
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
-            if (_licenseStatus.HasExternalReplication == false)
-            {
-                var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
-                licenseLimit = GenerateLicenseLimit(LimitType.ExternalReplication, details);
-                return false;
-            }
-
-            licenseLimit = null;
-            return true;
+            if (_licenseStatus.HasExternalReplication) 
+                return;
+            
+            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
+            throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
 
-        public bool CanAddRavenEtl(out LicenseLimit licenseLimit)
+        public void AssertCanAddRavenEtl()
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
-            if (_licenseStatus.HasRavenEtl == false)
-            {
-                const string details = "Your current license doesn't include the RavenDB ETL feature";
-                licenseLimit = GenerateLicenseLimit(LimitType.RavenEtl, details);
-                return false;
-            }
+            if (_licenseStatus.HasRavenEtl)
+                return;
 
-            licenseLimit = null;
-            return true;
+            const string message = "Your current license doesn't include the RavenDB ETL feature";
+            throw GenerateLicenseLimit(LimitType.RavenEtl, message);
         }
 
-        public bool CanAddSqlEtl(out LicenseLimit licenseLimit)
+        public void AssertCanAddSqlEtl()
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
-            if (_licenseStatus.HasSqlEtl == false)
-            {
-                const string details = "Your current license doesn't include the SQL ETL feature";
-                licenseLimit = GenerateLicenseLimit(LimitType.SqlEtl, details);
-                return false;
-            }
+            if (_licenseStatus.HasSqlEtl != false)
+                return;
 
-            licenseLimit = null;
-            return true;
+            const string message = "Your current license doesn't include the SQL ETL feature";
+            throw GenerateLicenseLimit(LimitType.SqlEtl, message);
         }
 
         public bool CanUseSnmpMonitoring()
         {
-            if (IsValid(out var _) == false)
+            if (IsValid(out _) == false)
                 return false;
 
             if (_licenseStatus.HasSnmpMonitoring)
@@ -1339,21 +1290,19 @@ namespace Raven.Server.Commercial
             return false;
         }
 
-        public bool CanDelayReplication(out LicenseLimit licenseLimit)
+        public void AssertCanDelayReplication()
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
             if (_licenseStatus.HasDelayedExternalReplication)
-                return true;
+                return;
 
-            const string details = "Your current license doesn't include " +
-                                   "the delayed replication feature";
-            licenseLimit = GenerateLicenseLimit(LimitType.DelayedReplication, details, addNotification: true);
-            return false;
+            const string message = "Your current license doesn't include the delayed replication feature";
+            throw GenerateLicenseLimit(LimitType.DelayedReplication, message, addNotification: true);
         }
 
-        public bool CanDynamicallyDistributeNodes(out LicenseLimit licenseLimit)
+        public bool CanDynamicallyDistributeNodes(out LicenseLimitException licenseLimit)
         {
             if (IsValid(out licenseLimit) == false)
                 return false;
@@ -1361,56 +1310,45 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.HasDynamicNodesDistribution)
                 return true;
 
-            const string details = "Your current license doesn't include " +
-                                   "the dynamic nodes distribution feature";
-            licenseLimit = GenerateLicenseLimit(LimitType.DynamicNodeDistribution, details, addNotification: true);
+            const string message = "Your current license doesn't include the dynamic nodes distribution feature";
+            GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message, addNotification: true);
             return false;
         }
 
-        public bool CanCreateEncryptedDatabase(out LicenseLimit licenseLimit)
+        public void AssertCanCreateEncryptedDatabase()
         {
-            if (IsValid(out licenseLimit) == false)
-                return false;
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
 
-            if (_licenseStatus.HasEncryption == false)
-            {
-                const string details = "Your current license doesn't include the encryption feature";
-                licenseLimit = GenerateLicenseLimit(LimitType.Encryption, details);
-                return false;
-            }
+            if (_licenseStatus.HasEncryption)
+                return;
 
-            licenseLimit = null;
-            return true;
+            const string message = "Your current license doesn't include the encryption feature";
+            throw GenerateLicenseLimit(LimitType.Encryption, message);
         }
 
-        private LicenseLimit GenerateLicenseLimit(
+        private LicenseLimitException GenerateLicenseLimit(
             LimitType limitType,
             string message,
             bool addNotification = false)
         {
-            var licenseLimit = new LicenseLimit
-            {
-                Type = limitType,
-                Message = message
-            };
-
+            var licenseLimit = new LicenseLimitException(limitType, message);
             if (addNotification)
                 LicenseLimitWarning.AddLicenseLimitNotification(_serverStore, licenseLimit);
-
             return licenseLimit;
         }
 
-        private bool IsValid(out LicenseLimit licenseLimit)
+        private bool IsValid(out LicenseLimitException licenseLimit)
         {
-            if (_licenseStatus.Type == LicenseType.Invalid)
+            if (_licenseStatus.Type != LicenseType.Invalid)
             {
-                const string details = "Cannot perform operation while the license is in invalid state!";
-                licenseLimit = GenerateLicenseLimit(LimitType.InvalidLicense, details);
-                return false;
+                licenseLimit = null;
+                return true;
             }
-
-            licenseLimit = null;
-            return true;
+            
+            const string message = "Cannot perform operation while the license is in invalid state!";
+            licenseLimit = GenerateLicenseLimit(LimitType.InvalidLicense, message);
+            return false;
         }
 
         public async Task<LicenseSupportInfo> GetLicenseSupportInfo()

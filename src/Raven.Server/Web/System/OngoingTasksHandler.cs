@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -265,14 +266,8 @@ namespace Raven.Server.Web.System
                 "update-periodic-backup",
                 beforeSetupConfiguration: (_, readerObject) =>
                 {
-                    if (ServerStore.LicenseManager.CanAddPeriodicBackup(readerObject, out var licenseLimit) == false)
-                    {
-                        SetLicenseLimitResponse(licenseLimit);
-                        return false;
-                    }
-
+                    ServerStore.LicenseManager.AssertCanAddPeriodicBackup(readerObject);
                     VerifyPeriodicBackupConfiguration(readerObject);
-                    return true;
                 },
                 fillJson: (json, readerObject, index) =>
                 {
@@ -592,7 +587,7 @@ namespace Raven.Server.Web.System
             if (id == null)
             {
                 await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
-                    beforeSetupConfiguration: CanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
+                    beforeSetupConfiguration: AssertCanAddOrUpdateEtl, fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
                 return;
             }
@@ -620,33 +615,19 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private bool CanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
+        private void AssertCanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
         {
-            LicenseLimit licenseLimit;
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-
-                    if (ServerStore.LicenseManager.CanAddRavenEtl(out licenseLimit) == false)
-                    {
-                        SetLicenseLimitResponse(licenseLimit);
-                        return false;
-                    }
-
+                    ServerStore.LicenseManager.AssertCanAddRavenEtl();
                     break;
                 case EtlType.Sql:
-                    if (ServerStore.LicenseManager.CanAddSqlEtl(out licenseLimit) == false)
-                    {
-                        SetLicenseLimitResponse(licenseLimit);
-                        return false;
-                    }
-
+                    ServerStore.LicenseManager.AssertCanAddSqlEtl();
                     break;
                 default:
                     throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
             }
-
-            return true;
         }
 
         private IEnumerable<OngoingTask> CollectEtlTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology)
@@ -981,12 +962,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-  
-                if (ServerStore.LicenseManager.CanAddExternalReplication(out var licenseLimit) == false)
-                {
-                    SetLicenseLimitResponse(licenseLimit);
-                    return;
-                }
+                ServerStore.LicenseManager.AssertCanAddExternalReplication();
 
                 ExternalReplication watcher = null;
                 await DatabaseConfigurations((_, databaseName, blittableJson) => ServerStore.UpdateExternalReplication(databaseName, blittableJson, out watcher), "update_external_replication",
