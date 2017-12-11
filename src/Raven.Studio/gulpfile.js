@@ -16,6 +16,7 @@ var gulp = require('gulp'),
     findNewestFile = require('./gulp/findNewestFile'),
     checkAllFilesExist = require('./gulp/checkAllFilesExist'),
     gutil = require('gulp-util'),
+    cachebust = require('gulp-cache-bust'),
     autoPrefixer = require('gulp-autoprefixer'),
     fileExists = require('file-exists'),
     fsUtils = require('./gulp/fsUtils');
@@ -142,6 +143,9 @@ gulp.task('z_release:fonts', function() {
 gulp.task('z_release:html', function() {
     return gulp.src('wwwroot/index.html')
         .pipe(plugins.processhtml())
+        .pipe(cachebust({ 
+            type: 'timestamp'
+        }))
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 

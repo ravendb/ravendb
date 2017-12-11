@@ -4,7 +4,10 @@ import endpoints = require("endpoints");
 class getServerBuildVersionCommand extends commandBase {
 
     execute() {
-        return this.query<serverBuildVersionDto>(endpoints.global.buildVersion.buildVersion, null);
+        const args = {
+            t: new Date().getTime()
+        };
+        return this.query<serverBuildVersionDto>(endpoints.global.buildVersion.buildVersion, args);
     }
 }
 
