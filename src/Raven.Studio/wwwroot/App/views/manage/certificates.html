@@ -1,5 +1,49 @@
 <div class="certificates flex-vertical absolute-fill content-margin">
-    <div class="row flex-row flex-grow flex-stretch-items">
+    <div class="absolute-center unsecure" data-bind="visible: !usingHttps">
+        <div class="panel padding padding-lg">
+
+            <h2 class="text-warning"><i class="icon-unsecure"></i> Authentication is off</h2>
+
+            <p class="margin-top margin-lg">
+                RavenDB uses certificates to authenticate clients and server certificate information has not been set up.<br />
+                Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and fill in your certificate information under either:
+            </p>
+
+            <div class="flex-horizontal margin-top margin-lg">
+                <div class="flex-grow flex-basis-0">
+                    <div class="panel padding padding-sm text-center">
+                        <div class="text-file long-word"><strong>Security.Certificate.Path</strong></div>
+                        <div class="small">The path to <em>.pfx</em> certificate file</div>
+                    </div>
+                </div>
+                <div class="text-center">or</div>
+                <div class="flex-grow flex-basis-0">
+                    <div class="panel padding padding-sm text-center">
+                        <div class="text-file long-word"><strong>Security.Certificate.Exec</strong></div>
+                        <div class="small">A command or executable providing a .pfx certificate file</div>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="text-info bg-info padding padding-sm">
+                <div class="small">If either of them is specified, RavenDB will use <em>HTTPS/SSL</em> for all network activities. <br />Certificate setting priority order: 
+                    
+                </div>
+                <div class="small">
+                    <ol>
+                        <li>Base64</li>
+                        <li>Path</li>
+                        <li>Executable</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="text-center margin-top margin-lg">
+                For more information please head on to the <a href="https://ravendb.net/docs" target="_blank">RavenDB 4.0 Documentation</a>.
+            </div>
+        </div>
+
+    </div>
+    <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">
             <div class="flex-header">
                 <div>

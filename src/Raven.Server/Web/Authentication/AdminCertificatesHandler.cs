@@ -91,7 +91,7 @@ namespace Raven.Server.Web.Authentication
                     RavenConfiguration.GetKey(x => x.Security.CertificateExec)
                 };
 
-                throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
+                throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' because the server certificate is not loaded. " +
                                                     $"You can supply a server certificate by using the following configuration keys: {string.Join(", ", keys)}" +
                                                     "For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
             }
@@ -268,13 +268,13 @@ namespace Raven.Server.Web.Authentication
                 if (clientCert != null && clientCert.Thumbprint.Equals(thumbprint))
                 {
                     var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + thumbprint);
-                    throw new InvalidOperationException($"Cannot delete {clientCertDef?.Name} becuase it's the current client certificate being used");
+                    throw new InvalidOperationException($"Cannot delete {clientCertDef?.Name} because it's the current client certificate being used");
                 }
 
                 if (clientCert != null && Server.Certificate.Certificate.Thumbprint.Equals(thumbprint))
                 {
                     var serverCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + thumbprint);
-                    throw new InvalidOperationException($"Cannot delete {serverCertDef?.Name} becuase it's the current server certificate being used");
+                    throw new InvalidOperationException($"Cannot delete {serverCertDef?.Name} because it's the current server certificate being used");
                 }
 
                 var key = Constants.Certificates.Prefix + thumbprint;
