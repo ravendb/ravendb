@@ -89,6 +89,7 @@ namespace Voron.Impl.Backup
             long lastWrittenLogPage = -1;
             long lastWrittenLogFile = -1;
             LowLevelTransaction txr = null;
+            var backupSuccess = false;
             try
             {
                 long allocatedPages;
@@ -154,6 +155,7 @@ namespace Voron.Impl.Backup
 
                 try
                 {
+                    long lastBackedupJournal = 0;
                     foreach (var journalFile in usedJournals)
                     {
                         var journalPath = env.Options.GetJournalPath(journalFile.Number).FullPath;
@@ -178,12 +180,41 @@ namespace Voron.Impl.Backup
                             copier.ToStream(env, journalFile, 0, pagesToCopy, stream);
                             infoNotify(string.Format("Voron copy journal file {0}", entryName));
                         }
+
+                        lastBackedupJournal = journalFile.Number;
                     }
+
+                    if (env.Options.IncrementalBackupEnabled)
+                    {
+                        env.HeaderAccessor.Modify(header =>
+                        {
+                            header->IncrementalBackup.LastBackedUpJournal = lastBackedupJournal;
+
+                            //since we backed-up everything, no need to start next incremental backup from the middle
+                            header->IncrementalBackup.LastBackedUpJournalPage = -1;
+                        });
+                    }
+                    backupSuccess = true;
+                }
+                catch (Exception)
+                {
+                    backupSuccess = false;
+                    throw;
                 }
                 finally
                 {
+                    var lastSyncedJournal = env.HeaderAccessor.Get(header => header->Journal).LastSyncedJournal;
                     foreach (var journalFile in usedJournals)
                     {
+                        if (backupSuccess) // if backup succeeded we can remove journals
+                        {
+                            if (journalFile.Number < lastWrittenLogFile &&  // prevent deletion of the current journal and journals with a greater number
+                                journalFile.Number < lastSyncedJournal) // prevent deletion of journals that aren't synced with the data file
+                            {
+                                journalFile.DeleteOnClose = true;
+                            }
+                        }
+
                         journalFile.Release();
                     }
                 }
