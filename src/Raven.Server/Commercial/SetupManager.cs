@@ -1032,7 +1032,7 @@ namespace Raven.Server.Commercial
                             {
                                 if (node.Key == LocalNodeTag)
                                     continue;
-									
+                                    
                                 progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
                                 onProgress(progress);
 
@@ -1498,7 +1498,7 @@ namespace Raven.Server.Commercial
         public static async Task<byte[]> GenerateCertificateTask(string name, ServerStore serverStore)
         {
             if (serverStore.Server.Certificate?.Certificate == null)
-                throw new InvalidOperationException($"Cannot generate the client certificate '{name}' becuase the server certificate is not loaded.");
+                throw new InvalidOperationException($"Cannot generate the client certificate '{name}' because the server certificate is not loaded.");
 
             // this creates a client certificate which is signed by the current server certificate
             var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(name, serverStore.Server.Certificate, out var certBytes);

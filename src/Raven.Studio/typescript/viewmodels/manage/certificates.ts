@@ -32,6 +32,8 @@ class certificates extends viewModelBase {
     canExportClusterCertificates: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     
+    usingHttps = location.protocol === "https:";
+    
     resolveDatabasesAccess = certificateModel.resolveDatabasesAccess;
 
     importedFileName = ko.observable<string>();
