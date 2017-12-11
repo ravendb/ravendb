@@ -45,13 +45,13 @@ namespace Raven.Traffic
 
         private static void ConfigureTrafficCommand()
         {
-            _app.Command("rec", cmd =>
+            _app.Command("record", cmd =>
             {
                 cmd.ExtendedHelpText = cmd.Description = "Record database's traffic to a file";
                 RunCommand(cmd, TrafficToolConfiguration.TrafficToolMode.Record);
             });
             
-            _app.Command("play", cmd =>
+            _app.Command("replay", cmd =>
             {
                 cmd.ExtendedHelpText = cmd.Description = "Replay traffic from a specified file to a database.";
                 RunCommand(cmd, TrafficToolConfiguration.TrafficToolMode.Replay);
@@ -62,14 +62,14 @@ namespace Raven.Traffic
         {
             cmd.HelpOption(HelpOptionString);
 
-            var urlArg = cmd.Argument("[url]", "RavenDB Server URL", cmdWithArg => { });
-            var databaseArg = cmd.Argument("[database]", "Database name", cmdWithArg => { });
-            var recordFilePathArg = cmd.Argument("[url]", "Record file path", cmdWithArg => { });
+            var urlArg = cmd.Argument("URL", "RavenDB Server URL");
+            var databaseArg = cmd.Argument("Database", "Database name");
+            var recordFilePathArg = cmd.Argument("RecordFilePath", "Record file path");
 
             var durationConstraintArg = cmd.Option("--trace-seconds", "Time to perform the traffic watch(seconds)", CommandOptionType.SingleValue);
             var amountConstraintArg = cmd.Option("--trace-requests", "Time to perform the traffic watch", CommandOptionType.SingleValue);
             var compressedArg = cmd.Option("--compressed", "Work with compressed json outpu/input", CommandOptionType.NoValue);
-            var noOutputArg = cmd.Option("--noOutput", "Suppress console progress output", CommandOptionType.NoValue);
+            var noOutputArg = cmd.Option("--no-output", "Suppress console progress output", CommandOptionType.NoValue);
             var timeoutArg = cmd.Option("--timeout", "The timeout to use for requests(seconds)", CommandOptionType.SingleValue);
 
             cmd.OnExecute(() =>

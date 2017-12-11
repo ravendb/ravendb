@@ -58,7 +58,7 @@ namespace rvn
                 cmd.ExtendedHelpText = cmd.Description = "Tail server logs.";
                 cmd.HelpOption(HelpOptionString);
 
-                var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
+                var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
 
                 cmd.OnExecute(() =>
                 {
@@ -95,7 +95,7 @@ namespace rvn
             {
                 cmd.ExtendedHelpText = cmd.Description = "Open RavenDB CLI session on local machine (using piped name connection). If PID ommited - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
-                var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
+                var pidArg = cmd.Argument("ProcessID", "RavenDB Server process ID");
                 cmd.OnExecute(() =>
                 {
                     if (string.IsNullOrEmpty(pidArg.Value))
@@ -266,8 +266,8 @@ namespace rvn
                     subcmd.Description = string.Empty;
                     subcmd.HelpOption(HelpOptionString);
 
-                    var keyArg = subcmd.Argument("[key]", "key");
-                    var tagArg = subcmd.Argument("[tag]", "tag");
+                    var keyArg = subcmd.Argument("Key", "The key");
+                    var tagArg = subcmd.Argument("Tag", "The tag");
 
                     subcmd.OnExecute(() =>
                     {
