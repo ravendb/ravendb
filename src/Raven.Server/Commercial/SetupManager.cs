@@ -1048,7 +1048,7 @@ namespace Raven.Server.Commercial
                                     throw new InvalidOperationException($"Failed to add node '{node.Key}' to the cluster.", e);
                                 }
                             }
-                            serverStore.EnsureServerCertificateIsInClusterState();
+                            serverStore.EnsureServerCertificateIsInClusterState("Cluster-Wide Certificate");
                         }
                         catch (Exception e)
                         {
