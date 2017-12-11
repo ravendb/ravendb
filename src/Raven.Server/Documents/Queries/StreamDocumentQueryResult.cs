@@ -1,24 +1,23 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Session;
-using Raven.Server.Json;
-using Sparrow.Extensions;
-using Sparrow.Json;
+using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
 {
     public class StreamDocumentQueryResult : QueryResultServerSide, IDisposable
     {
         private readonly IStreamDocumentQueryResultWriter _writer;
+        private readonly OperationCancelToken _token;
         private bool _anyWrites;
         private bool _anyExceptions;
 
-        public StreamDocumentQueryResult(HttpResponse response, IStreamDocumentQueryResultWriter writer)
+        public StreamDocumentQueryResult(HttpResponse response, IStreamDocumentQueryResultWriter writer, OperationCancelToken token)
         {
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");
 
             _writer = writer;
+            _token = token;
         }
 
         public override void AddResult(Document result)
@@ -26,7 +25,8 @@ namespace Raven.Server.Documents.Queries
             if (_anyWrites == false)
                 StartResponseIfNeeded();
 
-            _writer.AddResult(result);            
+            _writer.AddResult(result);
+            _token.Delay();
         }
 
         public override void HandleException(Exception e)
@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Queries
 
             _writer.EndResults();
             _writer.WriteError(e);
-    
+
             throw e;
         }
 
@@ -64,14 +64,14 @@ namespace Raven.Server.Documents.Queries
 
         private void StartResponse()
         {
-            _writer.StartResponse();            
+            _writer.StartResponse();
 
             if (_writer.SupportStatistics)
             {
                 _writer.WriteQueryStatistics(ResultEtag, IsStale, IndexName, TotalResults, IndexTimestamp);
             }
             _writer.StartResults();
-            
+
         }
 
         private void EndResponse()
