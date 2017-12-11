@@ -9,18 +9,6 @@
     <AssemblyName>Raven.Client</AssemblyName>
     <PackageId>RavenDB.Client</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
-    <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
-    <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
-    <PackageLicenseUrl>http://www.ravendb.net/licensing</PackageLicenseUrl>
-    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/ravendb/ravendb</RepositoryUrl>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
-    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
-    <GenerateAssemblyInformationalVersionAttribute>false</GenerateAssemblyInformationalVersionAttribute>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <Product>RavenDB Client</Product>
     <Title>RavenDB Client</Title>
     <Configurations>Debug;Release;Validate</Configurations>
