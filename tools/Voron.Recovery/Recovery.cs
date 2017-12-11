@@ -34,7 +34,7 @@ namespace Voron.Recovery
         {
             _datafile = config.PathToDataFile;
             _output = config.OutputFileName;
-            _pageSize = config.PageSizeInKb * Constants.Size.Kilobyte;
+            _pageSize = config.PageSizeInKB * Constants.Size.Kilobyte;
             _initialContextSize = config.InitialContextSizeInMB * Constants.Size.Megabyte;
             _initialContextLongLivedSize = config.InitialContextLongLivedSizeInKB * Constants.Size.Kilobyte;
             _option = StorageEnvironmentOptions.ForPath(config.DataFileDirectory, null, Path.Combine(config.DataFileDirectory, "Journal"), null, null);
