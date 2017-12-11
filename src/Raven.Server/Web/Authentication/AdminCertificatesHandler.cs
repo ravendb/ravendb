@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.Asn1.Nist;
@@ -26,6 +27,7 @@ using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web.Authentication
 {
@@ -553,11 +555,62 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/certificates/replace-server-cert", "POST", AuthorizationStatus.ClusterAdmin)]
-        public Task ReplaceServerCert()
+        [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task ReplaceClusterCert()
         {
-            //TODO
-            return Task.CompletedTask;
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-server-cert"))
+            {
+                try
+                {
+                    var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                    if (string.IsNullOrWhiteSpace(certificate.Name))
+                        throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition.");
+
+                    if (string.IsNullOrWhiteSpace(certificate.Certificate))
+                        throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
+
+                    if (IsClusterAdmin() == false)
+                        throw new InvalidOperationException($"Cannot replace the server certificate with '{certificate.Name}'. Only a ClusterAdmin can do this.");
+
+                    byte[] certBytes;
+                    try
+                    {
+                        certBytes = Convert.FromBase64String(certificate.Certificate);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new ArgumentException($"Unable to parse the {nameof(certificate.Certificate)} property, expected a Base64 value", e);
+                    }
+
+                    X509Certificate2 newCertificate;
+                    try
+                    {
+                        newCertificate = string.IsNullOrEmpty(certificate.Password)
+                            ? new X509Certificate2(certBytes)
+                            : new X509Certificate2(certBytes, certificate.Password);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to load the new certificate.", e);
+                    }
+
+                    var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
+
+
+                    var replicationTask = Server.StartCertificateReplicationAsync(newCertificate);
+
+                    await Task.WhenAny(replicationTask, timeoutTask);
+                    if (replicationTask.IsCompleted == false)
+                        throw new TimeoutException("Timeout when trying to replace the server certificate.");
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to replace the server certificate.", e);
+                }
+            }
         }
 
         public static void ValidateCertificate(CertificateDefinition certificate, ServerStore serverStore)

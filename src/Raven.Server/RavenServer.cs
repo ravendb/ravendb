@@ -340,7 +340,7 @@ namespace Raven.Server
                         Logger.Operations("Failed to update certificate from Lets Encrypt", e);
                     return;
                 }
-                await StartCertificateReplicationAsync(newCertificate);
+                await StartCertificateReplicationAsync(newCertificate.Certificate);
             }
             catch (Exception e)
             {
@@ -349,7 +349,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task StartCertificateReplicationAsync(CertificateHolder newCertificate)
+        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate)
         {
             // the process of updating a new certificate is the same as deleting database
             // we first send the certificate to all the nodes, then we get aknowledgments
@@ -359,8 +359,8 @@ namespace Raven.Server
             // immediately.
 
             // we first register it as a valid cluster node certificate in the cluster
-            await ServerStore.RegisterServerCertificateInCluster(newCertificate.Certificate, "Cluster-wide Certificate");
-            var base64Cert = Convert.ToBase64String(newCertificate.Certificate.Export(X509ContentType.Pkcs12, (string)null));
+            await ServerStore.RegisterServerCertificateInCluster(newCertificate, "Cluster-wide Certificate");
+            var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
             await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
             {
                 Certificate = base64Cert

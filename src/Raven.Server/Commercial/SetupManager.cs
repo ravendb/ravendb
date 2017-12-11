@@ -501,7 +501,7 @@ namespace Raven.Server.Commercial
 
         private static async Task<byte[]> SetupLetsEncryptAccount(SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient, ServerStore serverStore)
         {
-            if (cache != null && cache.KeysByUrl.TryGetValue(serverStore.Configuration.Core.AcmeUrl, out var accountKey))
+            if (cache?.KeysByUrl != null && cache.KeysByUrl.TryGetValue(serverStore.Configuration.Core.AcmeUrl, out var accountKey))
             {
                 try
                 {
