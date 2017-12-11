@@ -6,22 +6,22 @@ namespace Raven.Server.Config.Categories
 {
     public class DatabaseConfiguration : ConfigurationCategory
     {
-        [Description("The time to wait before canceling query operation")]
-        [DefaultValue(5)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Databases.QueryOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [Description("The time in seconds to wait before canceling query operation")]
+        [DefaultValue(300)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.QueryOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting QueryOperationTimeout { get; set; }
 
-        [Description("The time to wait before canceling terms indexing operation")]
-        [DefaultValue(5)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Databases.IndexTermsOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [Description("The time in seconds to wait before canceling terms indexing operation")]
+        [DefaultValue(300)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.IndexTermsOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting IndexTermsOperationTimeout { get; set; }
 
-        [Description("The time to wait before canceling indexing terms operation")]
-        [DefaultValue(5)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Databases.DeleteDocsOperationTimeoutInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [Description("The time in seconds to wait before canceling indexing terms operation")]
+        [DefaultValue(300)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.DeleteDocsOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting DeleteDocsOperationTimeout { get; set; }
 
         /// <summary>
