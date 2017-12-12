@@ -51,7 +51,7 @@ class extensions {
 
         // For now, Show error only if string is a valid IPv4 with port
         if (regexIPv4WithPort.test(ipAddress)) {
-            return `Please enter the port number in the field above`;
+            return `Please enter ip address without port number`;
         }
 
         if (!regexIPv4.test(ipAddress)) {          

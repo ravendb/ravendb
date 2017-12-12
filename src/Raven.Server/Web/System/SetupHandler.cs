@@ -288,10 +288,6 @@ namespace Raven.Server.Web.System
                 jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork); // TODO handle server side.
                 jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
-                jsonObj.Remove(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl));
-                if (string.IsNullOrWhiteSpace(setupInfo.PublicServerUrl) == false)
-                    jsonObj[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = setupInfo.PublicServerUrl;
-
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
                 SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, json);
