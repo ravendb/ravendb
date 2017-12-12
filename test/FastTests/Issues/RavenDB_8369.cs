@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
-using NodaTime.Extensions;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
@@ -22,25 +21,25 @@ namespace FastTests.Issues
         [Fact]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_binary_backupwhen_delete_is_last_operation()
         {
-            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Backup);
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Backup,"My backup");
         }
 
         [Fact]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_snapshot_backupwhen_delete_is_last_operation()
         {
-            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Snapshot);
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Snapshot, "My backup");
         }
 
         [Fact]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_binary_backupwhen_delete_is_not_last_operation()
         {
-            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Backup);
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Backup, "My backup");
         }
 
         [Fact]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_snapshot_backupwhen_delete_is_not_last_operation()
         {
-            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Snapshot);
+            await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Snapshot, "My backup");
         }
 
         [Fact]
@@ -61,8 +60,8 @@ namespace FastTests.Issues
             var backupPath2 = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var backupOperationResult1 = await SetupBackupAsync(backupPath1, store, backupType);
-                var backupOperationResult2 = await SetupBackupAsync(backupPath2, store, backupType);
+                var backupOperationResult1 = await SetupBackupAsync(backupPath1, store, backupType, "Backup 1");
+                var backupOperationResult2 = await SetupBackupAsync(backupPath2, store, backupType, "Backup 2");
 
                 using (var session = store.OpenSession())
                 {
@@ -119,12 +118,12 @@ namespace FastTests.Issues
             }
         }
 
-        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType backupType)
+        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType backupType, string taskName)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var result = await SetupBackupAsync(backupPath, store, backupType);
+                var result = await SetupBackupAsync(backupPath, store, backupType, taskName);
 
                 using (var session = store.OpenSession())
                 {
@@ -167,12 +166,12 @@ namespace FastTests.Issues
             }
         }
 
-        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType backupType)
+        public async Task Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType backupType, string taskName)
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
-                var result = await SetupBackupAsync(backupPath, store, backupType);
+                var result = await SetupBackupAsync(backupPath, store, backupType, taskName);
 
                 using (var session = store.OpenSession())
                 {
@@ -223,7 +222,7 @@ namespace FastTests.Issues
         }
 
 
-        private static async Task<UpdatePeriodicBackupOperationResult> SetupBackupAsync(string backupPath, DocumentStore store, BackupType backupType)
+        private static async Task<UpdatePeriodicBackupOperationResult> SetupBackupAsync(string backupPath, DocumentStore store, BackupType backupType, string taskName)
         {
             var config = new PeriodicBackupConfiguration
             {
@@ -231,6 +230,7 @@ namespace FastTests.Issues
                 {
                     FolderPath = backupPath
                 },
+                Name = taskName,
                 FullBackupFrequency = "* */6 * * *",
                 IncrementalBackupFrequency = "* */6 * * *",
                 BackupType = backupType
