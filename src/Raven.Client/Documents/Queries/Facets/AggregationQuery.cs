@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Sparrow.Json;
 
@@ -62,6 +64,8 @@ namespace Raven.Client.Documents.Queries.Facets
     internal abstract class AggregationQueryBase
     {
         private readonly InMemoryDocumentSessionOperations _session;
+        private IndexQuery _query;
+        private Stopwatch _duration;
 
         protected AggregationQueryBase(InMemoryDocumentSessionOperations session)
         {
@@ -72,6 +76,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             var command = GetCommand(isAsync: false);
 
+            _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
             _session.RequestExecutor.Execute(command, _session.Context);
 
@@ -82,6 +87,7 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             var command = GetCommand(isAsync: true);
 
+            _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
 
@@ -102,8 +108,10 @@ namespace Raven.Client.Documents.Queries.Facets
 
         protected abstract void InvokeAfterQueryExecuted(QueryResult result);
 
-        private static Dictionary<string, FacetResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
+        private Dictionary<string, FacetResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
         {
+            InvokeAfterQueryExecuted(queryResult);
+
             var results = new Dictionary<string, FacetResult>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
@@ -111,14 +119,16 @@ namespace Raven.Client.Documents.Queries.Facets
                 results[facetResult.Name] = facetResult;
             }
 
+            QueryOperation.EnsureIsAcceptable(queryResult, _query.WaitForNonStaleResults, _duration, _session);
+
             return results;
         }
 
         private QueryCommand GetCommand(bool isAsync)
         {
-            var iq = GetIndexQuery(isAsync);
+            _query = GetIndexQuery(isAsync);
 
-            return new QueryCommand(_session.Conventions, iq);
+            return new QueryCommand(_session.Conventions, _query);
         }
 
         public override string ToString()

@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Sparrow.Json;
 
@@ -37,6 +39,8 @@ namespace Raven.Client.Documents.Queries.Suggestions
     internal abstract class SuggestionQueryBase
     {
         private readonly InMemoryDocumentSessionOperations _session;
+        private IndexQuery _query;
+        private Stopwatch _duration;
 
         protected SuggestionQueryBase(InMemoryDocumentSessionOperations session)
         {
@@ -47,6 +51,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
         {
             var command = GetCommand(isAsync: false);
 
+            _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
             _session.RequestExecutor.Execute(command, _session.Context);
 
@@ -57,20 +62,25 @@ namespace Raven.Client.Documents.Queries.Suggestions
         {
             var command = GetCommand(isAsync: true);
 
+            _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
             await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
 
             return ProcessResults(command.Result, _session.Conventions);
         }
 
-        private static Dictionary<string, SuggestionResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
+        private Dictionary<string, SuggestionResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
         {
+            InvokeAfterQueryExecuted(queryResult);
+
             var results = new Dictionary<string, SuggestionResult>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
                 var suggestionResult = (SuggestionResult)EntityToBlittable.ConvertToEntity(typeof(SuggestionResult), "suggestion/result", result, conventions);
                 results[suggestionResult.Name] = suggestionResult;
             }
+
+            QueryOperation.EnsureIsAcceptable(queryResult, _query.WaitForNonStaleResults, _duration, _session);
 
             return results;
         }
@@ -91,9 +101,9 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
         private QueryCommand GetCommand(bool isAsync)
         {
-            var iq = GetIndexQuery(isAsync);
+            _query = GetIndexQuery(isAsync);
 
-            return new QueryCommand(_session.Conventions, iq);
+            return new QueryCommand(_session.Conventions, _query);
         }
 
         public override string ToString()
