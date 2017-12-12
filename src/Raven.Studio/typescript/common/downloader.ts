@@ -6,7 +6,7 @@ class downloader {
 
     download(db: database, url: string) {
         const dbUrl = appUrl.forDatabaseQuery(db);
-       this.$downloadFrame.attr("src", dbUrl + url);
+        this.$downloadFrame.attr("src", dbUrl + url);
     }
 
     reset() {

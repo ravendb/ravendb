@@ -195,14 +195,17 @@ class databaseInfo {
         this.deletionInProgress(dto.DeletionInProgress ? Object.keys(dto.DeletionInProgress) : []);
 
         const topologyDto = dto.NodesTopology;
-        const members = this.mapNodes("Member", topologyDto.Members);
-        const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
-        const rehabs = this.mapNodes("Rehab", topologyDto.Rehabs);
+        if (topologyDto) {
 
-        const joinedNodes = _.concat<databaseGroupNode>(members, promotables, rehabs);
-        this.applyNodesStatuses(joinedNodes, topologyDto.Status);
+            const members = this.mapNodes("Member", topologyDto.Members);
+            const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
+            const rehabs = this.mapNodes("Rehab", topologyDto.Rehabs);
+            const joinedNodes = _.concat<databaseGroupNode>(members, promotables, rehabs);
+            this.applyNodesStatuses(joinedNodes, topologyDto.Status);
 
-        this.nodes(joinedNodes);
+            this.nodes(joinedNodes);
+        }
+        
         //TODO: consider in place update? of nodes?
     }
 
