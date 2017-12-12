@@ -212,7 +212,7 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
 
                 var index = GetLongFromHeaders("ETag");
-                var replicationFactor = GetIntValueQueryString("replication-factor", required: false) ?? 0;
+                var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 0;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
@@ -848,7 +848,7 @@ namespace Raven.Server.Web.System
         public async Task AdminConsole()
         {
             var name = GetStringQueryString("database", false);
-            var isServerScript = GetBoolValueQueryString("server-script", false) ?? false;
+            var isServerScript = GetBoolValueQueryString("serverScript", false) ?? false;
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var clientCert = feature?.Certificate?.FriendlyName;
 
@@ -892,7 +892,7 @@ namespace Raven.Server.Web.System
 
                 else
                 {
-                    throw new InvalidOperationException("'database' query string parmater not found, and 'server-script' query string is not found. Don't know what to apply this script on");
+                    throw new InvalidOperationException("'database' query string parmater not found, and 'serverScript' query string is not found. Don't know what to apply this script on");
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;

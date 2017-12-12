@@ -8,7 +8,7 @@ class adminJsScriptCommand extends commandBase {
 
     execute(): JQueryPromise<{Result: any}> {
         const args = {
-            'server-script': !this.targetDatabase,
+            serverScript: !this.targetDatabase,
             database: this.targetDatabase
         };
 

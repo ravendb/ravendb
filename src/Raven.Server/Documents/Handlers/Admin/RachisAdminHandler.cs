@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
                 else
                 {
-                    var isClientIndependent = GetBoolValueQueryString("client-independent", false) ?? false;
+                    var isClientIndependent = GetBoolValueQueryString("clientIndependent", false) ?? false;
                     if (isClientIndependent == false)
                         topology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
                 }
@@ -355,11 +355,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                     if (nodeInfo.ServerId == ServerStore.GetServerId())                    
                         throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because it's a synonym of the current node URL:{ServerStore.GetNodeHttpServerUrl()}");
                                        
-
-
-                    var getClusterTopologyUrl = nodeUrl + "/cluster/topology";
-
-
                     if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
                     {
                         throw new TopologyMismatchException(
@@ -383,7 +378,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         if (certificate.NotAfter < DateTime.UtcNow)
                             throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
 
-                        var expected = GetStringQueryString("expectedThumbrpint", required: false);
+                        var expected = GetStringQueryString("expectedThumbprint", required: false);
                         if (expected != null)
                         {
                             if (certificate.Thumbprint != expected)

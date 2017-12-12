@@ -15,7 +15,7 @@ class verifyDocumentsIDsCommand extends commandBase {
         if (this.docIDs.length > 0) {
             
             const args = {
-                'metadata-only' : true
+                metadataOnly : true
             }
             const url = endpoints.databases.document.docs + this.urlEncodeArgs(args);
             const payload = {

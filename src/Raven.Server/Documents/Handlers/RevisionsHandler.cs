@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var changeVectors = GetStringValuesQueryString("changeVector", required: false);
-                var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+                var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
 
                 if (changeVectors.Count > 0)
                     GetRevisionByChangeVector(context, changeVectors, metadataOnly);

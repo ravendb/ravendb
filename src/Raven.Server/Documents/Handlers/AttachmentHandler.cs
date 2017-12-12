@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var stream = streamsTempFile.StartNewStream())
                 {
                     var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), stream, Database.DatabaseShutdown);
-                    var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
+                    var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                     var cmd = new MergedPutAttachmentCommand
                     {
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Handlers
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-                var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
+                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                 var cmd = new MergedDeleteAttachmentCommand
                 {

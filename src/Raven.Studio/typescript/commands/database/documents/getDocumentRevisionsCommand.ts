@@ -18,7 +18,7 @@ class getDocumentRevisionsCommand extends commandBase {
             id: this.id, 
             start: this.skip,
             pageSize: this.take,
-            'metadata-only': this.metadataOnly
+            metadataOnly: this.metadataOnly
         }
 
         const url = endpoints.databases.revisions.revisions + this.urlEncodeArgs(args);

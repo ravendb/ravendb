@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Handlers
                 return;
             }
 
-            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
 
             DocumentQueryResult result;
             try

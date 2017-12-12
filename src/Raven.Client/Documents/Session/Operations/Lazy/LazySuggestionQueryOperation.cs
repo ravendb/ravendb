@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             {
                 Url = "/queries",
                 Method = HttpMethod.Post,
-                Query = $"?query-hash={_indexQuery.GetQueryHash(ctx)}",
+                Query = $"?queryHash={_indexQuery.GetQueryHash(ctx)}",
                 Content = new IndexQueryContent(_conventions, _indexQuery)
             };
         }

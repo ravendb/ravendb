@@ -41,7 +41,7 @@ namespace Raven.Client.ServerWide.Operations.ETL
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/etl?configuration-name={_configurationName}&transformation-name={_transformationName}";
+                url = $"{node.Url}/databases/{_databaseName}/admin/etl?configurationName={_configurationName}&transformationName={_transformationName}";
 
                 var request = new HttpRequestMessage
                 {
