@@ -1,9 +1,12 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Collections;
 
@@ -67,16 +70,21 @@ namespace Raven.Server.Documents
 
             lock (this)
             {
-                if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
-                {
-                    foreach (var mapping in mappings)
-                    {
-                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
-                    }
-                }
+                RemoveCaseSensitive(resourceName);
             }
 
             return true;
+        }
+
+        private void RemoveCaseSensitive(StringSegment resourceName)
+        {
+            if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
+            {
+                foreach (var mapping in mappings)
+                {
+                    _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                }
+            }
         }
 
         public IEnumerator<KeyValuePair<StringSegment, Task<TResource>>> GetEnumerator()
@@ -111,36 +119,44 @@ namespace Raven.Server.Documents
                 return value;
             }
         }
-
-        public Task<TResource> Replace(string databaseName, Task<TResource> task, Task<TResource> compare)
+        public IDisposable RemoveLockAndReturn(string databaseName, out TResource resource, [CallerMemberName] string caller = null)
         {
+            Task<TResource> current;
             lock (this)
             {
-                Task<TResource> existingTask = null;
-                _caseInsensitive.AddOrUpdate(databaseName, segment =>
+                var task = Task.FromException<TResource>(new DatabaseDisabledException("The database " + databaseName + " has been unloaded and locked by " + caller)
                 {
-                    if (null != compare)
-                        throw new ConcurrencyException("Attempted to replace database task instance " + databaseName +
-                                                       " with another instance but it was already replaced");
-
-                    return task;
-                }, (key, existing) =>
-                {
-                    if (existing != compare)
-                        throw new ConcurrencyException("Attempted to replace database task instance " + databaseName +
-                                                       " with another instance but it was already replaced");
-                    existingTask = existing;
-                    return task;
-                });
-                if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
-                {
-                    foreach (var mapping in mappings)
+                    Data =
                     {
-                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                        [DatabasesLandlord.DoNotRemove] = true
                     }
+                });
+               
+                if (_caseInsensitive.TryGetValue(databaseName, out  current) == false)
+                {
+                    resource = default(TResource);
+                    _caseInsensitive.TryAdd(databaseName, task);
+                    return new DisposableAction(() =>
+                    {
+                        TryRemove(databaseName, out _);
+                    });
                 }
-                return existingTask;
+                if(current.IsCompleted == false)
+                    throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})");
+                if (current.IsCompletedSuccessfully)
+                {
+                    resource = current.Result; // completed, not waiting here.
+                    _caseInsensitive.TryUpdate(databaseName, task, current);
+                    RemoveCaseSensitive(databaseName);
+                    return new DisposableAction(() =>
+                    {
+                        TryRemove(databaseName, out _);
+                    });
+                }
             }
+            current.Wait();// will throw immediately because the task failed
+            resource = default(TResource);
+            return null;// never used
         }
 
         public Task<TResource> Replace(string databaseName, Task<TResource> task)

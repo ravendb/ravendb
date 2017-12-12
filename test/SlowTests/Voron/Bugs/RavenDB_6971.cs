@@ -28,7 +28,7 @@ namespace SlowTests.Voron.Bugs
 
                 WaitForIndexing(store);
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(20));
 
@@ -68,7 +68,7 @@ namespace SlowTests.Voron.Bugs
                     // expected
                 }
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
                 try
                 {
                     store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = @"FROM Orders UPDATE { put(""orders/"", this); } " })).WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -79,7 +79,7 @@ namespace SlowTests.Voron.Bugs
                     // expected
                 }
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 RavenTestHelper.AssertNoIndexErrors(store);
             }

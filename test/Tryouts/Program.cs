@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Utils;
-using SlowTests.Server.Replication;
+using SlowTests.Server.Basic;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -30,17 +30,13 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             Console.WriteLine();
            
-            for (var i = 0; i < 10000; i++)
+            for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-
-                Parallel.For(1, 10, (x) =>
+                using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
                 {
-                    using (var test = new ReplicationSpecialCases())
-                    {
-                        test.IdenticalContentConflictResolution().Wait();
-                    }
-                });
+                    a.CanPersist().Wait();
+                }
             }
         }
 

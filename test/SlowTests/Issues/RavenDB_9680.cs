@@ -50,7 +50,7 @@ namespace SlowTests.Issues
                 // the restart is necessary to expose the issue
                 // on db load we read last etag
                 // however next created tombstone will get _the same_ etag as tombstone of users/1
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 using (var session = store.OpenSession())
                 {

@@ -779,15 +779,22 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void TimerCallback(object backupTaskDetails)
         {
-            if (_cancellationToken.IsCancellationRequested)
-                return;
+            try
+            {
+                if (_cancellationToken.IsCancellationRequested)
+                    return;
 
-            var backupDetails = (BackupTaskDetails)backupTaskDetails;
+                var backupDetails = (BackupTaskDetails)backupTaskDetails;
 
-            if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
-                return;
+                if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
+                    return;
 
-            CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
+                CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
+            }
+            catch (Exception e)
+            {
+                _logger.Operations("Error during timer callback", e);
+            }
         }
 
         public string WhoseTaskIsIt(long taskId)
@@ -841,6 +848,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         await RunPeriodicBackup(periodicBackup, isFullBackup);
                     }
+                    catch(Exception e)
+                    {
+                        _logger.Operations("Error during create backup task", e);
+                    }
                     finally
                     {
                         periodicBackup.RunningTask = null;
@@ -868,22 +879,29 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void LongPeriodTimerCallback(object backupTaskDetails)
         {
-            if (_cancellationToken.IsCancellationRequested)
-                return;
-
-            var backupDetails = (BackupTaskDetails)backupTaskDetails;
-
-            if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
-                return;
-
-            var remainingInterval = backupDetails.NextBackup - MaxTimerTimeout;
-            if (remainingInterval.TotalMilliseconds <= 0)
+            try
             {
-                CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
-                return;
-            }
+                if (_cancellationToken.IsCancellationRequested)
+                    return;
 
-            periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus));
+                var backupDetails = (BackupTaskDetails)backupTaskDetails;
+
+                if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
+                    return;
+
+                var remainingInterval = backupDetails.NextBackup - MaxTimerTimeout;
+                if (remainingInterval.TotalMilliseconds <= 0)
+                {
+                    CreateBackupTask(periodicBackup, backupDetails.IsFullBackup);
+                    return;
+                }
+
+                periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus));
+            }
+            catch (Exception e)
+            {
+                _logger.Operations("Error during long timer callback", e);
+            }
         }
 
         private bool ShouldRunBackupAfterTimerCallback(BackupTaskDetails backupInfo, out PeriodicBackup periodicBackup)
@@ -895,6 +913,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var databaseRecord = GetDatabaseRecord();
+            if (databaseRecord == null)
+                return false;
+
             var taskStatus = GetTaskStatus(databaseRecord, periodicBackup.Configuration);
             return taskStatus == TaskStatus.ActiveByCurrentNode;
         }

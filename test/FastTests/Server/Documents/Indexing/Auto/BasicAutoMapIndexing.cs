@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 index2.SetState(IndexState.Disabled);
                 await task;
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(dbName)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
                 database = await GetDatabase(dbName);
 
@@ -1066,7 +1066,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 indexStoragePath = Path.Combine(database.Configuration.Indexing.StoragePath.FullPath,
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(indexName));
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(dbName)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
                 IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.one"));
                 IOExtensions.DeleteFile(Path.Combine(indexStoragePath, "headers.two"));
@@ -1111,7 +1111,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
 
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(dbName)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
                 Assert.True(Directory.Exists(indexStoragePath));
                 IOExtensions.DeleteDirectory(indexStoragePath);
