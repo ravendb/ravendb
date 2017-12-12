@@ -25,6 +25,31 @@ namespace Raven.Client.Documents.Conventions
         [ThreadStatic]
         private static ExtensionDataGetter _currentExtensionGetter;
 
+        public static BindingFlags? MembersSearchFlag = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+        public DefaultRavenContractResolver()
+        {
+            if (MembersSearchFlag == null)
+            {
+                return; // use the JSON.Net default, primarily here because it allows user to turn this off if this is a compact issue.
+            }
+
+            var field = typeof(DefaultContractResolver).GetField("DefaultMembersSearchFlags", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (field != null)
+            {
+                field.SetValue(this, MembersSearchFlag);
+                return;
+            }
+            var prop = typeof(DefaultContractResolver).GetProperty("DefaultMembersSearchFlags", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if(prop != null)
+            {
+                prop.SetValue(this, MembersSearchFlag);
+                return;
+            }
+            throw new NotSupportedException("Cannot set DefaultMembersSearchFlags via reflection might have been removed. Set DefaultRavenContractResolver.MembersSearchFlag to null to work around this and please report it along with exact version of JSON.Net, please");
+
+        }
+
         public struct ClearExtensionData : IDisposable
         {
             private readonly ExtensionDataSetter _setter;
