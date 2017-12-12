@@ -36,6 +36,31 @@ class extensions {
         return null;
     }
 
+    
+    private static validateIpAddressWithoutPort(ipAddress: string) : string {
+        if (!ipAddress || ipAddress === 'localhost' || ipAddress === '::1') {
+            return null;
+        }       
+                
+        if (!_.includes(ipAddress, '.') && !_.includes(ipAddress, ':')) {
+            return "Please enter a valid IPv4 or IPv6 address";
+        }        
+       
+        const regexIPv4WithPort = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):(\d+)$/;
+        const regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+
+        // For now, Show error only if string is a valid IPv4 with port
+        if (regexIPv4WithPort.test(ipAddress)) {
+            return `Please enter the port number in the field above`;
+        }
+
+        if (!regexIPv4.test(ipAddress)) {          
+            // TODO: check if this is a valid IPv6....            
+        }
+        
+        return null;
+    }
+    
     private static validateDatabaseName(databaseName: string): string {
         if (!databaseName) {
             return null;
@@ -80,6 +105,13 @@ class extensions {
             validator: (val: string) => !extensions.validateDatabaseName(val),
             message: (params: any, databaseName: KnockoutObservable<string>) => {
                 return extensions.validateDatabaseName(databaseName());
+            }
+        };
+
+        (ko.validation.rules as any)['validIpAddress'] = {
+            validator: (val: string) => !extensions.validateIpAddressWithoutPort(val),
+            message: (params: any, databaseName: KnockoutObservable<string>) => {
+                return extensions.validateIpAddressWithoutPort(databaseName());
             }
         };
 
