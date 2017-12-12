@@ -15,8 +15,20 @@ namespace Voron.Util.Settings
 
         protected PathSettingBase(string path, PathSettingBase<T> baseDataDir = null)
         {
+            ValidatePath(path);
             _baseDataDir = baseDataDir;
             _path = path;
+        }
+
+        public static void ValidatePath(string path)
+        {
+            if (path!= null && 
+                (path.StartsWith("appdrive:", StringComparison.InvariantCultureIgnoreCase) || 
+                path.StartsWith("~") || 
+                path.StartsWith("$home", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                throw new ArgumentException($"The path '{path}' is illegal! Paths in RavenDB can't start with 'appdrive:', '~' or '$home'");
+            }
         }
 
         public string FullPath => _fullPath ?? (_fullPath = ToFullPath());

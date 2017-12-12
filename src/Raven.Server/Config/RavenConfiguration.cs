@@ -18,6 +18,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils.Cli;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Config
 {
@@ -84,6 +85,7 @@ namespace Raven.Server.Config
             ResourceName = resourceName;
             ResourceType = resourceType;
             _customConfigPath = customConfigPath;
+            PathSettingBase<string>.ValidatePath(_customConfigPath);
             _configBuilder = new ConfigurationBuilder();
             AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
