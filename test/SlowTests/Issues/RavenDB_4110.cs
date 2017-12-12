@@ -56,7 +56,8 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                Assert.Throws<IndexAlreadyExistException>(() => index.Execute(store));
+                var e= Assert.Throws<CommandExecutionException>(() => index.Execute(store));
+                Assert.Contains("IndexAlreadyExistException", e.Message);
             }
         }
 

@@ -113,44 +113,52 @@ namespace Raven.Server.SqlMigration
         {
             foreach (var childTable in parentTable.EmbeddedTables)
             {
-                var parentValues = GetValuesFromColumns(parentTable.GetReader(), parentTable.PrimaryKeys); // values of referenced columns
-
-                var childColumns = childTable.GetColumnsReferencingParentTable(); // values of referencing columns
-
-                SqlReader childReader;
-
-                if (childColumns.Count > parentTable.PrimaryKeys.Count || parentTable.IsEmbedded)
-                    childReader = childTable.GetReaderWhere(parentValues); // This happens in a case when we can not iterate the embedded table only once and have to use multiple queries.
-
-                else
-                    childReader = childTable.GetReader();
-
-                if (childReader.HasValue() == false && childReader.Read() == false)
-                    continue;
-
-                var continueLoop = false;
-
-                while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out var isBigger) == false)
+                using (var parentReader = parentTable.GetReader()) 
                 {
-                    if (isBigger == false && childReader.Read()) continue;
+                    var parentValues = GetValuesFromColumns(parentReader, parentTable.PrimaryKeys); // values of referenced columns
 
-                    continueLoop = true; // If parent value is greater than child value => childReader move to next. Otherwise => parentReader move to next
-                    break;
+                    var childColumns = childTable.GetColumnsReferencingParentTable(); // values of referencing columns
+
+                    using (var childReader = GetChildReader(parentTable, childColumns, childTable, parentValues))
+                    {
+                        if (childReader.HasValue() == false && childReader.Read() == false)
+                            continue;
+
+                        var continueLoop = false;
+
+                        while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out var isBigger) == false)
+                        {
+                            if (isBigger == false && childReader.Read()) continue;
+
+                            continueLoop = true; // If parent value is greater than child value => childReader move to next. Otherwise => parentReader move to next
+                            break;
+                        }
+
+                        if (continueLoop)
+                            continue;
+
+                        do
+                        {
+                            var innerDocument = FromReaderInternal(childReader, childTable);
+
+                            document.Append(childTable.NewName, innerDocument);
+
+                            if (childReader.Read() == false) break;
+
+                        } while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out _));
+                    }
                 }
-
-                if (continueLoop)
-                    continue;
-
-                do
-                {
-                    var innerDocument = FromReaderInternal(childReader, childTable);
-
-                    document.Append(childTable.NewName, innerDocument);
-
-                    if (childReader.Read() == false) break;
-
-                } while (CompareValues(parentValues, GetValuesFromColumns(childReader, childColumns), out _));
             }
+        }
+
+        private static SqlReader GetChildReader(SqlTable parentTable, List<string> childColumns, SqlEmbeddedTable childTable, List<string> parentValues)
+        {
+
+            if (childColumns.Count > parentTable.PrimaryKeys.Count || parentTable.IsEmbedded)
+                // This happens in a case when we can not iterate the embedded table only once and have to use multiple queries.
+                return childTable.GetReaderWhere(parentValues);
+
+            return childTable.GetReader();
         }
 
         private static List<string> GetValuesFromColumns(SqlReader reader, List<string> childColumnName)
