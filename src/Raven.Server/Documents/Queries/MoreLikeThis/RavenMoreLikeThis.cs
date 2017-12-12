@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 
 using Lucene.Net.Index;
@@ -43,7 +44,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
         protected override PriorityQueue<object[]> RetrieveTerms(int docNum)
         {
-            var fieldNames = GetFieldNames();
+            var fieldNames = GetFieldNames() ?? Array.Empty<string>();
 
             IDictionary<string, Int> termFreqMap = new Lucene.Net.Support.HashMap<string, Int>();
 

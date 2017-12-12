@@ -141,20 +141,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </seealso>
         public static readonly Analyzer DEFAULT_ANALYZER = new StandardAnalyzer(Version.LUCENE_29);
 
-        /// <summary> Ignore terms with less than this frequency in the source doc.</summary>
-        /// <seealso cref="MinTermFreq">
-        /// </seealso>
-        /// <seealso cref="MinTermFreq">
-        /// </seealso>
-        public const int DEFAULT_MIN_TERM_FREQ = 2;
-
-        /// <summary> Ignore words which do not occur in at least this many docs.</summary>
-        /// <seealso cref="MinDocFreq">
-        /// </seealso>
-        /// <seealso cref="MinDocFreq">
-        /// </seealso>
-        public const int DEFAULT_MIN_DOC_FREQ = 5;
-
         /// <summary>
         /// Ignore words wich occur in more than this many docs
         /// </summary>
@@ -169,10 +155,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         /// </seealso>
         public const bool DEFAULT_BOOST = false;
 
-        /// <summary> Default field names. Null is used to specify that the field names should be looked
-        /// up at runtime from the provided reader.
-        /// </summary>
-        public static readonly string[] DEFAULT_FIELD_NAMES = { "contents" };
 
         /// <summary> Ignore words less than this length or if 0 then this has no effect.</summary>
         /// <seealso cref="MinWordLen">
@@ -216,10 +198,10 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         private Analyzer _analyzer = DEFAULT_ANALYZER;
 
         /// <summary> Ignore words less frequent that this.</summary>
-        private int _minTermFreq = DEFAULT_MIN_TERM_FREQ;
+        private int _minTermFreq = 0;
 
         /// <summary> Ignore words which do not occur in at least this many docs.</summary>
-        private int _minDocFreq = DEFAULT_MIN_DOC_FREQ;
+        private int _minDocFreq = 0;
 
         /// <summary>
         /// Ignore words which occur in more than this many docs.
@@ -230,7 +212,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
         private bool _boost = DEFAULT_BOOST;
 
         /// <summary> Field name we'll analyze.</summary>
-        private string[] _fieldNames = DEFAULT_FIELD_NAMES;
+        private string[] _fieldNames = null;
 
         /// <summary> The maximum number of tokens to parse in each example doc field that is not stored with TermVector support</summary>
         private int _maxNumTokensParsed = DEFAULT_MAX_NUM_TOKENS_PARSED;
