@@ -10,7 +10,7 @@ class createDatabaseCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
         const args = {
             name: this.databaseDocument.DatabaseName,
-            'replication-factor': this.replicationFactor
+            replicationFactor: this.replicationFactor
         };
         const url = endpoints.global.adminDatabases.adminDatabases + this.urlEncodeArgs(args);
         return this.put<Raven.Client.ServerWide.Operations.DatabasePutResult>(url, JSON.stringify(this.databaseDocument), null, { dataType: undefined })

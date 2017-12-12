@@ -39,7 +39,7 @@ class queryCommand extends commandBase {
             pageSize: this.take,
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined,
-            "metadata-only": typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
+            metadataOnly: typeof(criteria.metadataOnly()) !== 'undefined' ? criteria.metadataOnly() : undefined
         });
         return url + urlArgs;
     }

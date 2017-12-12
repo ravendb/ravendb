@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers
         public Task Get()
         {
             var ids = GetStringValuesQueryString("id", required: false);
-            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostGet()
         {
-            var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Handlers
                     id = clusterId;
                 }
 
-                var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
+                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                 var cmd = new MergedPutCommand(doc, id, changeVector, Database);
 

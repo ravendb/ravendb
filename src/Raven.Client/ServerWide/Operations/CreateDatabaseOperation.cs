@@ -46,7 +46,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 url = $"{node.Url}/admin/databases?name={_databaseName}";
                 
-                url += "&replication-factor=" + _replicationFactor;
+                url += "&replicationFactor=" + _replicationFactor;
                 var databaseDocument = EntityToBlittable.ConvertEntityToBlittable(_databaseRecord, _conventions, ctx);
 
                 var request = new HttpRequestMessage

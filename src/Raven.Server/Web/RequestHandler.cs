@@ -12,20 +12,10 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Commercial;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server.Commercial;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Web.System;
 using Sparrow;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web
 {
@@ -475,7 +465,7 @@ namespace Raven.Server.Web
             httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);
             httpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
         }
-        
+
         protected void SetupCORSHeaders()
         {
             SetupCORSHeaders(HttpContext);

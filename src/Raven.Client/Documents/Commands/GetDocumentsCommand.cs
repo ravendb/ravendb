@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Commands
             if (_pageSize.HasValue)
                 pathBuilder.Append("&pageSize=").Append(_pageSize);
             if (_metadataOnly)
-                pathBuilder.Append("&metadata-only=true");
+                pathBuilder.Append("&metadataOnly=true");
 
             if (_startWith != null)
             {

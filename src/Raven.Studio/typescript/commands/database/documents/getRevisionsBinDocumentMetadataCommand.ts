@@ -18,7 +18,7 @@ class getRevisionsBinDocumentMetadataCommand extends commandBase {
             id: this.id, 
             start: 0,
             pageSize: 1,
-            'metadata-only': true
+            metadataOnly: true
         }
 
         const url = endpoints.databases.revisions.revisions + this.urlEncodeArgs(args);

@@ -573,8 +573,8 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/admin/etl", "RESET", AuthorizationStatus.Operator)]
         public async Task ResetEtl()
         {
-            var configurationName = GetStringQueryString("configuration-name"); // etl task name
-            var transformationName = GetStringQueryString("transformation-name");
+            var configurationName = GetStringQueryString("configurationName"); // etl task name
+            var transformationName = GetStringQueryString("transformationName");
 
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.RemoveEtlProcessState(_, databaseName, configurationName, transformationName), "etl-reset");
         }
