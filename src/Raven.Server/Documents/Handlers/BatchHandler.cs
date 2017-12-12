@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Handlers
                 if (waitForIndexesTimeout != null)
                 {
                     await
-                        WaitForIndexesAsync(waitForIndexesTimeout.Value, command.LastChangeVector,
+                        WaitForIndexesAsync(waitForIndexesTimeout.Value, command.LastChangeVector, command.LastTombstoneEtag,
                             command.ModifiedCollections);
                 }
 
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task WaitForIndexesAsync(TimeSpan timeout, string lastChangeVector, HashSet<string> modifiedCollections)
+        private async Task WaitForIndexesAsync(TimeSpan timeout, string lastChangeVector, long lastTombstoneEtag, HashSet<string> modifiedCollections)
         {
             // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
             // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -197,7 +197,11 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var waitForIndexItem in indexesToWait)
                         {
-                            if (waitForIndexItem.Index.IsStale(context, ChangeVectorParser.GetEtagByNode(lastChangeVector,ServerStore.NodeTag)) == false)
+                            var lastEtag = lastChangeVector != null ? ChangeVectorParser.GetEtagByNode(lastChangeVector, ServerStore.NodeTag) : 0;
+
+                            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
+
+                            if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
                                 continue;
 
                             hadStaleIndexes = true;
@@ -208,7 +212,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 throw new TimeoutException(
                                     $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                    $"indexes has caught up with the changes as of etag: {lastChangeVector}");
+                                    $"indexes has caught up with the changes as of etag: {cutoffEtag}");
                             }
                         }
                     }
@@ -256,6 +260,7 @@ namespace Raven.Server.Documents.Handlers
             public StreamsTempFile AttachmentStreamsTempFile;
             public DocumentDatabase Database;
             public string LastChangeVector;
+            public long LastTombstoneEtag;
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             public HashSet<string> ModifiedCollections;
 
@@ -337,7 +342,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 if (deleted != null)
                                 {
-                                    LastChangeVector = deleted.Value.ChangeVector;
+                                    LastTombstoneEtag = deleted.Value.Etag;
                                     ModifiedCollections?.Add(deleted.Value.Collection.Name);
                                 }
 

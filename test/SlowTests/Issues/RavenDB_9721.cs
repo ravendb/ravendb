@@ -63,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private class Users_ByName : AbstractIndexCreationTask<User>
+        public class Users_ByName : AbstractIndexCreationTask<User>
         {
             public Users_ByName()
             {
