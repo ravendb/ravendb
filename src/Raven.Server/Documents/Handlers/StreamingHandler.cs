@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -73,11 +74,13 @@ namespace Raven.Server.Documents.Handlers
         public async Task StreamQueryGet()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (TrackRequestTime("StreamQuery", doPerformanceHintIfTooLong: false))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedQueryOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+                tracker.Query = query.Query;
+                
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
                 using (var writer = new StreamCsvDocumentQueryResultWriter(HttpContext.Response, ResponseBodyStream(), context, propertiesArray))
@@ -99,13 +102,15 @@ namespace Raven.Server.Documents.Handlers
         public async Task StreamQueryPost()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (TrackRequestTime("StreamQuery", doPerformanceHintIfTooLong: false))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateTimeLimitedQueryOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream(); 
                 var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
+                tracker.Query = query.Query;
+                
                 var format = GetStringQueryString("format", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();

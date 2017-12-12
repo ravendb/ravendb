@@ -18,6 +18,9 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
         super(hint, notificationCenter);
 
         this.tableItems = this.mapItems(hint.details() as Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyDetail);
+        
+        // newest first
+        this.tableItems.reverse();
     }
 
     compositionComplete() {
@@ -29,18 +32,16 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Action, "Action", "20%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Date, "Date", "15%"),
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Date, "Date", "20%"),
                 new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Duration, "Duration (ms)", "15%"),
-                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.QueryString, "Query string", "30%")
+                new textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>(grid, x => x.Query, "Query", "45%") 
             ];
         });
 
         this.columnPreview.install(".requestLatencyDetails", ".request-latency-details-tooltip", (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, onValue: (context: any) => void) => {
             const value = column.getCellValue(details);
-            if (!_.isUndefined(value)) {
-                const json = JSON.stringify(value, null, 4);
-                const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);
+            if (value) {
+                onValue(value);
             }
         });
     }
@@ -60,7 +61,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
                     Action: key,
                     Date: item.Date,
                     Duration: item.Duration,
-                    QueryString: item.QueryString
+                    Query: item.Query
                 } as Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo));
         });
     }
