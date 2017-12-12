@@ -99,7 +99,10 @@ namespace Raven.Server.Documents.ETL
                 key: _name, details: new ExceptionDetails(e));
 
             if (LoadErrors < 100)
+            {
+                _notificationCenter.Add(LastAlert);
                 return;
+            }
 
             if (LoadErrors <= LoadSuccesses)
                 return;
