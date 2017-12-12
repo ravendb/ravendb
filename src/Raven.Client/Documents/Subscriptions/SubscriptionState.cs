@@ -32,6 +32,11 @@ namespace Raven.Client.Documents.Subscriptions
             return MentorNode;
         }
 
+        public string GetDefaultTaskName()
+        {
+            return SubscriptionName;
+        }
+
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

@@ -26,6 +26,11 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             {
                 // this is a new backup configuration
                 Configuration.TaskId = etag;
+                if (string.IsNullOrEmpty(Configuration.Name))
+                {
+                    Configuration.Name = Configuration.GetDefaultTaskName();
+                }
+                record.EnsureTaskNameIsNotUsed(Configuration.Name);
             }
 
             record.AddPeriodicBackupConfiguration(Configuration);

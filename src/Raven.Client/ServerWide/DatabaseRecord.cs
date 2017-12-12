@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.ETL;
@@ -147,6 +148,19 @@ namespace Raven.Client.ServerWide
             }
         }
 
+        public void EnsureTaskNameIsNotUsed(string taskName)
+        {
+
+            if (string.IsNullOrEmpty(taskName))
+                throw new ArgumentException("Can't validate task's name because the provided task name name is null or empty.");
+
+            if (ExternalReplications.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already an external replications task with that name");
+            if (RavenEtls.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already an etl task with that name");
+            if (PeriodicBackups.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already a backup task with that name");
+        }
         public int GetIndexesCount()
         {
             var count = 0;

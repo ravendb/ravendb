@@ -54,6 +54,11 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             return MentorNode;
         }
 
+        public string GetDefaultTaskName()
+        {
+            return $"Periodic backup, full:{FullBackupFrequency} incremental:{IncrementalBackupFrequency}";
+        }
+
         public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)
         {
             if (other == null)
