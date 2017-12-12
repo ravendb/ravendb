@@ -495,9 +495,7 @@ namespace Raven.Server.Commercial
             if (_licenseStatus.Type != LicenseType.None)
                 return;
 
-            if (TryGetLicenseFromString(out var license) == false)
-                TryGetLicenseFromPath(out license);
-
+            var license = TryGetLicenseFromString() ?? TryGetLicenseFromPath();
             if (license == null)
                 return;
 
@@ -512,18 +510,15 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private bool TryGetLicenseFromPath(out License license)
+        private License TryGetLicenseFromPath()
         {
-            license = null;
-
             var path = _serverStore.Configuration.Licensing.LicensePath;
 
             try
             {
                 using (var stream = File.Open(path.FullPath, FileMode.Open, FileAccess.Read))
                 {
-                    license = DeserializeLicense(stream);
-                    return true;
+                    return DeserializeLicense(stream);
                 }
             }
             catch (Exception e)
@@ -532,23 +527,20 @@ namespace Raven.Server.Commercial
                     Logger.Info($"Failed to read license from '{path.FullPath}' path", e);
             }
 
-            return false;
+            return null;
         }
 
-        private bool TryGetLicenseFromString(out License license)
+        private License TryGetLicenseFromString()
         {
-            license = null;
-
             var licenseString = _serverStore.Configuration.Licensing.License;
             if (string.IsNullOrWhiteSpace(licenseString))
-                return false;
+                return null;
 
             try
             {
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(licenseString)))
                 {
-                    license = DeserializeLicense(stream);
-                    return true;
+                    return DeserializeLicense(stream);
                 }
             }
             catch (Exception e)
@@ -557,7 +549,7 @@ namespace Raven.Server.Commercial
                     Logger.Info($"Failed to read license from '{RavenConfiguration.GetKey(x => x.Licensing.License)}' configuration", e);
             }
 
-            return false;
+            return null;
         }
 
         private static License DeserializeLicense(Stream stream)
