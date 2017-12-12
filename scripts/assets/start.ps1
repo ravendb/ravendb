@@ -1,7 +1,16 @@
+function Get-ScriptDirectory
+{
+    $Invocation = (Get-Variable MyInvocation -Scope 1).Value;
+    Split-Path $Invocation.MyCommand.Path;
+}
+
 $ErrorActionPreference = "Stop";
 
-$versionPath = ".\version.txt";
-$executablePath = ".\Server\Raven.Server.exe";
+$scriptDirectory = Get-ScriptDirectory;
+$versionPath = Join-Path $scriptDirectory "version.txt";
+$executable = "Raven.Server.exe";
+$executableDir = Join-Path $scriptDirectory "Server"
+$executablePath = Join-Path $executableDir $executable;
 $assemblyVersion =  & $executablePath --version;
 $version = $null;
 
@@ -15,7 +24,17 @@ if ($version -ne $assemblyVersion) {
 }
 
 $args = @( "--browser" );
-Invoke-Expression -Command "$executablePath $args";
-if ($LASTEXITCODE -ne 0) { 
-    Read-Host -Prompt "Press enter to continue..."
+
+Push-Location $executableDir;
+
+Try
+{
+    Invoke-Expression -Command ".\$executable $args";
+    if ($LASTEXITCODE -ne 0) { 
+        Read-Host -Prompt "Press enter to continue...";
+    }
+}
+Finally
+{
+    Pop-Location;
 }

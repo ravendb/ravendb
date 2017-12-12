@@ -18,9 +18,10 @@ function CopyStartScript ( $spec, $targetDir ) {
 
 function CopyStartCmd ( $targetDir ) {
     $startPs1Path = [io.path]::combine("scripts", "assets", "start.ps1")
-    $startPs1 = Get-Content $startPs1Path
-    $startPs1b64 = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($startPs1))
-    $startCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -EncodedCommand $startPs1b64`r`n"
+    $startPs1TargetPath = [io.path]::combine($targetDir, "start.ps1");
+    Copy-Item $startPs1Path $startPs1TargetPath
+    
+    $startCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\start.ps1'"" `r`n"
     $startCmdTargetPath = [io.path]::combine($targetDir, "start.cmd");
     Set-Content -Path $startCmdTargetPath $startCmdContent
 }
