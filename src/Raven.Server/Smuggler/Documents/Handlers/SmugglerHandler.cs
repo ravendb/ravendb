@@ -79,13 +79,38 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var operationId = GetLongQueryString("operationId", true);
+                var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var startDocumentEtag = GetLongQueryString("startEtag", false) ?? 0;
 
                 var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
 
-                var blittableJson = await context.ReadForMemoryAsync(stream, "DownloadOptions");
-                var options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+
+                BlittableJsonReaderObject blittableJson;
+                DatabaseSmugglerOptionsServerSide options;
+                using (context.GetManagedBuffer(out var buffer))
+                {
+                    var firstRead = await stream.ReadAsync(buffer.Buffer.Array, buffer.Buffer.Offset, buffer.Buffer.Count);
+                    buffer.Used = 0;
+                    buffer.Valid = firstRead;
+                    if(firstRead != 0)
+                    {
+                        blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                        options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
+                    }
+                    else
+                    {
+                        // no content, we'll use defaults
+                        options = new DatabaseSmugglerOptionsServerSide
+                        {
+                            OperateOnTypes = DatabaseItemType.Documents |
+                                             DatabaseItemType.Indexes |
+                                             DatabaseItemType.Identities |
+                                             DatabaseItemType.Conflicts |
+                                             DatabaseItemType.CmpXchg |
+                                             DatabaseItemType.RevisionDocuments,
+                        };
+                    }
+                }
 
                 var token = CreateOperationToken();
 
@@ -105,7 +130,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             Database,
                             "Export database: " + Database.Name,
                             Operations.OperationType.DatabaseExport,
-                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId.Value, token);
+                            onProgress => Task.Run(() => ExportDatabaseInternal(options, startDocumentEtag, onProgress, context, token), token.Token), operationId, token);
                 }
                 catch (Exception)
                 {
