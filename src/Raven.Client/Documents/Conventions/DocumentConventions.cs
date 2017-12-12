@@ -628,7 +628,7 @@ namespace Raven.Client.Documents.Conventions
             };
 
             CustomizeJsonSerializer(jsonSerializer);
-            //TODO - EFRAT
+			
             if (SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
@@ -639,20 +639,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
-
-            // TODO: Iftah
-            //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
-            //if (jsonSerializer.Converters.Count == 0)
-            //{
-            //    jsonSerializer.Converters = convertersToUse;
-            //}
-            //else
-            //{
-            //    for (int i = convertersToUse.Count - 1; i >= 0; i--)
-            //    {
-            //        jsonSerializer.Converters.Insert(0, convertersToUse[i]);
-            //    }
-            //}
+            
             return jsonSerializer;
         }
 
