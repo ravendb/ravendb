@@ -91,7 +91,7 @@ namespace Raven.Client.ServerWide
 
         public string GetDefaultTaskName()
         {
-            return $"External replication to {ConnectionString}";
+            return $"External Replication to {ConnectionString}";
         }
     }
 }

@@ -56,7 +56,7 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public string GetDefaultTaskName()
         {
-            return $"Periodic backup, full:{FullBackupFrequency} incremental:{IncrementalBackupFrequency}";
+            return $"Periodic Backup, full:{FullBackupFrequency} incremental:{IncrementalBackupFrequency}";
         }
 
         public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)

@@ -88,7 +88,7 @@ namespace Raven.Client.ServerWide.ETL
 
         public override string GetDefaultTaskName()
         {
-            return  $"Sql Etl to {ConnectionStringName}";
+            return  $"SQL ETL to {ConnectionStringName}";
         }
 
         public override DynamicJsonValue ToJson()
