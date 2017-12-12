@@ -114,6 +114,7 @@ namespace Raven.Client.Util
         public override void Close()
         {
             innerStream.Close();
+            base.Close();
         }
 #endif
 
