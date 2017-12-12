@@ -111,6 +111,7 @@ namespace Raven.Client.Util
         public override void Close()
         {
             innerStream.Close();
+            base.Close();
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
