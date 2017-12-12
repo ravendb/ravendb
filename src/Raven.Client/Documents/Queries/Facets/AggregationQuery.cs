@@ -20,15 +20,18 @@ namespace Raven.Client.Documents.Queries.Facets
         private IQueryable<T> _source;
 
         private readonly Func<IQueryable<T>, Expression> _convertExpressionIfNecessary;
+        private readonly Func<MethodInfo, Type, MethodInfo> _convertMethodIfNecessary;
         private readonly MethodInfo _aggregateByMethod;
 
         public AggregationQuery(
             IQueryable<T> source,
             Func<IQueryable<T>, Expression> convertExpressionIfNecessary,
+            Func<MethodInfo, Type, MethodInfo> convertMethodIfNecessary,
             MethodInfo aggregateByMethod) : base(((IRavenQueryInspector)source).Session)
         {
             _source = source;
             _convertExpressionIfNecessary = convertExpressionIfNecessary;
+            _convertMethodIfNecessary = convertMethodIfNecessary;
             _aggregateByMethod = aggregateByMethod;
         }
 
@@ -43,7 +46,8 @@ namespace Raven.Client.Documents.Queries.Facets
         public IAggregationQuery<T> AndAggregateBy(FacetBase facet)
         {
             var expression = _convertExpressionIfNecessary(_source);
-            _source = _source.Provider.CreateQuery<T>(Expression.Call(null, _aggregateByMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facet)));
+            var method = _convertMethodIfNecessary(_aggregateByMethod, typeof(T));
+            _source = _source.Provider.CreateQuery<T>(Expression.Call(null, method, expression, Expression.Constant(facet)));
 
             return this;
         }
