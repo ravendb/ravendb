@@ -21,5 +21,8 @@
     <!-- https://github.com/NuGet/Home/issues/4142 -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
 
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
+
   </PropertyGroup>
 </Project>
