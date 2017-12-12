@@ -47,7 +47,7 @@ namespace SlowTests.Issues
                 Assert.True(result, "Waited for 20 seconds for errors to be persisted but it did not happen.");
                 Assert.NotEmpty(errors);
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 var recoveredErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
 

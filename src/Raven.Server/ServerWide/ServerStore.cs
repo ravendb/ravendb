@@ -14,6 +14,7 @@ using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -1132,6 +1133,10 @@ namespace Raven.Server.ServerWide
                             {
                                 //we are disposing, so don't care
                             }
+                            catch (DatabaseDisabledException)
+                            {
+                                
+                            }
                         });
 
                     exceptionAggregator.Execute(() => _shutdownNotification.Dispose());
@@ -1192,8 +1197,14 @@ namespace Raven.Server.ServerWide
 
                         // intentionally inside the loop, so we get better concurrency overall
                         // since shutting down a database can take a while
-                        DatabasesLandlord.UnloadDatabaseIfDoneLoading(db, skipIfActiveInDuration: maxTimeDatabaseCanBeIdle,
-                            shouldSkip: database => database.Configuration.Core.RunInMemory);
+                        if (resourceTask == null ||
+                            resourceTask.Result.Configuration.Core.RunInMemory)
+                            continue;
+                        var idleDbInstance = resourceTask.Result;
+                        if(SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance)  < maxTimeDatabaseCanBeIdle)
+                            continue;
+
+                        DatabasesLandlord.UnloadDirectly(db);
                     }
 
                 }

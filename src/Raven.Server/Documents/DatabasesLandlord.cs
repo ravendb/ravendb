@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +25,7 @@ namespace Raven.Server.Documents
 {
     public class DatabasesLandlord : IDisposable
     {
-        private const string DoNotRemove = "DoNotRemove";
+        public const string DoNotRemove = "DoNotRemove";
         private readonly ReaderWriterLockSlim _disposing = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
         public readonly ConcurrentDictionary<StringSegment, DateTime> LastRecentlyUsed =
             new ConcurrentDictionary<StringSegment, DateTime>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
@@ -70,7 +69,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    UnloadDatabaseIfDoneLoading(t.DatabaseName)?.Dispose();
+                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, out _)?.Dispose();
                     return;
                 }
 
@@ -82,7 +81,7 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    UnloadDatabaseIfDoneLoading(t.DatabaseName)?.Dispose();
+                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, out _)?.Dispose();
                     return;
                 }
 
@@ -195,8 +194,23 @@ namespace Raven.Server.Documents
 
         private void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
         {
-            using (UnloadDatabaseIfDoneLoading(dbName))
+            using (DatabasesCache.RemoveLockAndReturn(dbName, out var database))
             {
+                if (database == null)
+                    return;
+
+                try
+                {
+                    database.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Could not dispose database: " + dbName, e);
+                }
+
+                database.DatabaseShutdownCompleted.Set();
+
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
                     RavenConfiguration configuration;
@@ -663,7 +677,7 @@ namespace Raven.Server.Documents
 
                 await Task.Delay(2000); // let it propagate the exception to the client first
 
-                UnloadDatabaseIfDoneLoading(databaseName)?.Dispose();
+                (await UnloadAndLockDatabase(databaseName, "CatastrophicFailure"))?.Dispose();
             });
         }
 
@@ -695,41 +709,18 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IDisposable UnloadDatabaseIfDoneLoading(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null,
-            [CallerMemberName]string caller = null)
+        private enum ClusterDatabaseChangeType
         {
-            var tcs = Task.FromException<DocumentDatabase>(new DatabaseDisabledException($"The database {dbName} is currently locked from {caller}")
-            {
-                Data =
-                {
-                    [DoNotRemove] = true
-                }
-            });
-            var result = new DisposableAction(() =>
-            {
-                DatabasesCache.TryRemove(dbName, out var _);
-            });
-            if (DatabasesCache.TryGetValue(dbName, out Task<DocumentDatabase> dbTask) == false)
-            {
-                DatabasesCache.Replace(dbName, tcs, null);
-                return result;
-            }
-            var dbTaskStatus = dbTask.Status;
-            if (dbTaskStatus == TaskStatus.Faulted || dbTaskStatus == TaskStatus.Canceled)
-            {
-                LastRecentlyUsed.TryRemove(dbName, out _);
-                DatabasesCache.Replace(dbName, tcs, dbTask);
-                return result;
-            }
-            if (dbTaskStatus != TaskStatus.RanToCompletion)
-                throw new InvalidOperationException($"Couldn't modify '{dbName}' while it is loading, current status {dbTaskStatus}");
+            RecordChanged,
+            ValueChanged
+        }
 
-            // will never wait, we checked that we already run to completion here
-            var database = dbTask.Result;
-
-            if (skipIfActiveInDuration != null && SystemTime.UtcNow - LastWork(database) < skipIfActiveInDuration ||
-                shouldSkip != null && shouldSkip(database))
-                return null;
+        public void UnloadDirectly(StringSegment databaseName)
+        {
+            LastRecentlyUsed.TryRemove(databaseName, out _);
+            DatabasesCache.RemoveLockAndReturn(databaseName, out var database)?.Dispose();
+            if (database == null)
+                return;
 
             try
             {
@@ -738,22 +729,10 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info("Could not dispose database: " + dbName, e);
+                    _logger.Info("Could not dispose database: " + database.Name, e);
             }
 
-            LastRecentlyUsed.TryRemove(dbName, out _);
-
-            DatabasesCache.Replace(dbName, tcs, dbTask);
-
             database.DatabaseShutdownCompleted.Set();
-
-            return result;
-        }
-
-        private enum ClusterDatabaseChangeType
-        {
-            RecordChanged,
-            ValueChanged
         }
     }
 }

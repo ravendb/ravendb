@@ -151,7 +151,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                 var index2 = await database.IndexStore.CreateIndex(indexDefinition2);
                 Assert.NotNull(index2);
 
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(dbName)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(dbName);
 
                 database = await GetDatabase(dbName);
 

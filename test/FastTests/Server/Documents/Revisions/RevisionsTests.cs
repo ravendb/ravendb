@@ -201,7 +201,7 @@ namespace FastTests.Server.Documents.Revisions
                 }
 
                 var old = GetDocumentDatabaseInstanceFor(store).Result;
-                Server.ServerStore.DatabasesLandlord.UnloadDatabaseIfDoneLoading(store.Database, null, db => false)?.Dispose();
+                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
                 using (var session = store.OpenAsyncSession())
                 {
