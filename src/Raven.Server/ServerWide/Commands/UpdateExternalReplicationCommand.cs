@@ -19,6 +19,11 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
+            if (string.IsNullOrEmpty(Watcher.Name))
+            {
+                Watcher.Name = Watcher.GetDefaultTaskName();
+            }
+            record.EnsureTaskNameIsNotUsed(Watcher.Name);
             if (Watcher == null)
                 return null;
 

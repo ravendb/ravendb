@@ -14,6 +14,7 @@ namespace Raven.Client.ServerWide
     {
         ulong GetTaskKey();
         string GetMentorNode();
+        string GetDefaultTaskName();
     }
 
     public class LeaderStamp : IDynamicJson
@@ -63,6 +64,11 @@ namespace Raven.Client.ServerWide
         public string GetMentorNode()
         {
             return _mentorNode;
+        }
+
+        public string GetDefaultTaskName()
+        {
+            return _name;
         }
     }
 

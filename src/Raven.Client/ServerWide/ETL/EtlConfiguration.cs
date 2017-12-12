@@ -80,6 +80,8 @@ namespace Raven.Client.ServerWide.ETL
             return MentorNode;
         }
 
+        public abstract string GetDefaultTaskName();
+
         public override string ToString()
         {
             return Name;

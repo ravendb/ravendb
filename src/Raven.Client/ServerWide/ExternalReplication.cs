@@ -88,5 +88,10 @@ namespace Raven.Client.ServerWide
         {
             return MentorNode;
         }
+
+        public string GetDefaultTaskName()
+        {
+            return $"External replication to {ConnectionString}";
+        }
     }
 }
