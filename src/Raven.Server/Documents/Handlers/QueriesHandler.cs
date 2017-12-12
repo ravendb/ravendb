@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task Explain(DocumentsOperationContext context, HttpMethod method)

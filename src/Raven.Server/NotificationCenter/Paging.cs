@@ -21,7 +21,7 @@ namespace Raven.Server.NotificationCenter
         private readonly string _database;
 
         private readonly object _locker = new object();
-        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string QueryString, int NumberOfResults, int PageSize, TimeSpan Duration, DateTime Occurrence)> _pagingQueue = new ConcurrentQueue<(PagingOperationType Type, string Action, string QueryString, int NumberOfResults, int PageSize, TimeSpan Duration, DateTime Occurrence)>();
+        private readonly ConcurrentQueue<(PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, TimeSpan Duration, DateTime Occurrence)> _pagingQueue = new ConcurrentQueue<(PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, TimeSpan Duration, DateTime Occurrence)>();
         private readonly DateTime[] _pagingUpdates = new DateTime[Enum.GetNames(typeof(PagingOperationType)).Length];
         private Timer _pagingTimer;
 
@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter
             _database = database;
         }
 
-        public void Add(PagingOperationType operation, string action, string queryString, int numberOfResults, int pageSize, TimeSpan duration)
+        public void Add(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, TimeSpan duration)
         {
             var now = SystemTime.UtcNow;
             var update = _pagingUpdates[(int)operation];
@@ -41,7 +41,7 @@ namespace Raven.Server.NotificationCenter
                 return;
 
             _pagingUpdates[(int)operation] = now;
-            _pagingQueue.Enqueue((operation, action, queryString, numberOfResults, pageSize, duration, now));
+            _pagingQueue.Enqueue((operation, action, details, numberOfResults, pageSize, duration, now));
 
             while (_pagingQueue.Count > 50)
                 _pagingQueue.TryDequeue(out _);
@@ -65,7 +65,7 @@ namespace Raven.Server.NotificationCenter
 
             PerformanceHint documents = null, queries = null, revisions = null;
 
-            while (_pagingQueue.TryDequeue(out (PagingOperationType Type, string Action, string QueryString, int NumberOfResults, int PageSize, TimeSpan Duration, DateTime Occurrence) tuple))
+            while (_pagingQueue.TryDequeue(out (PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, TimeSpan Duration, DateTime Occurrence) tuple))
             {
                 switch (tuple.Type)
                 {
@@ -73,21 +73,21 @@ namespace Raven.Server.NotificationCenter
                         if (documents == null)
                             documents = GetPagingPerformanceHint(PagingDocumentsId, tuple.Type);
 
-                        ((PagingPerformanceDetails)documents.Details).Update(tuple.Action, tuple.QueryString, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
+                        ((PagingPerformanceDetails)documents.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
 
                         break;
                     case PagingOperationType.Queries:
                         if (queries == null)
                             queries = GetPagingPerformanceHint(PagingQueriesId, tuple.Type);
 
-                        ((PagingPerformanceDetails)queries.Details).Update(tuple.Action, tuple.QueryString, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
+                        ((PagingPerformanceDetails)queries.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
 
                         break;
                     case PagingOperationType.Revisions:
                         if (revisions == null)
                             revisions = GetPagingPerformanceHint(PagingRevisionsId, tuple.Type);
 
-                        ((PagingPerformanceDetails)revisions.Details).Update(tuple.Action, tuple.QueryString, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
+                        ((PagingPerformanceDetails)revisions.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration, tuple.Occurrence);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();

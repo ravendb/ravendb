@@ -13,7 +13,7 @@ type pagingDetailsItemDto = {
     PageSize: number;
     Occurrence: string;
     Duration: string;
-    QueryString: string;
+    Details: string;
 }
 
 class pagingDetails extends abstractPerformanceHintDetails {
@@ -26,6 +26,9 @@ class pagingDetails extends abstractPerformanceHintDetails {
         super(hint, notificationCenter);
 
         this.tableItems = this.mapItems(hint.details() as Raven.Server.NotificationCenter.Notifications.Details.PagingPerformanceDetails);
+        
+        // newest first
+        this.tableItems.reverse();
     }
 
     compositionComplete() {
@@ -41,16 +44,14 @@ class pagingDetails extends abstractPerformanceHintDetails {
                 new textColumn<pagingDetailsItemDto>(grid, x => x.PageSize ? x.PageSize.toLocaleString() : 'n/a', "Page size", "10%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Occurrence, "Date", "15%"),
                 new textColumn<pagingDetailsItemDto>(grid, x => x.Duration, "Duration", "15%"),
-                new textColumn<pagingDetailsItemDto>(grid, x => x.QueryString, "Query string", "30%")
+                new textColumn<pagingDetailsItemDto>(grid, x => x.Details, "Details", "30%")
             ];
         });
 
         this.columnPreview.install(".pagingDetails", ".paging-details-tooltip", (details: pagingDetailsItemDto, column: textColumn<pagingDetailsItemDto>, e: JQueryEventObject, onValue: (context: any) => void) => {
             const value = column.getCellValue(details);
             if (!_.isUndefined(value)) {
-                const json = JSON.stringify(value, null, 4);
-                const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);  
+                onValue(value);  
             }
         });
     }
@@ -72,7 +73,7 @@ class pagingDetails extends abstractPerformanceHintDetails {
                     Occurrence: item.Occurrence,
                     PageSize: item.PageSize,
                     Duration: item.Duration,
-                    QueryString: item.QueryString
+                    Details: item.Details
                 } as pagingDetailsItemDto));
         });
     }

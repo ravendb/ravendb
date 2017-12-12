@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Handlers
                 WriteRevisionsJson(context, metadataOnly, revisions, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext, numberOfResults, revisions.Count, sw.Elapsed);
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetRevisionByChangeVector), HttpContext.Request.QueryString.Value, numberOfResults, revisions.Count, sw.Elapsed);
         }
 
         private void WriteRevisionsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, out int numberOfResults)
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext, count, pageSize, sw.Elapsed);
+            AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisions), HttpContext.Request.QueryString.Value, count, pageSize, sw.Elapsed);
         }
 
         [RavenAction("/databases/*/revisions/resolved", "GET", AuthorizationStatus.ValidUser)]
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
 
-                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext, count, pageSize, sw.Elapsed);
+                AddPagingPerformanceHint(PagingOperationType.Revisions, nameof(GetRevisionsBin), HttpContext.Request.QueryString.Value, count, pageSize, sw.Elapsed);
             }
 
             return Task.CompletedTask;
