@@ -15,7 +15,7 @@ class testPeriodicBackupCredentialsCommand extends commandBase {
                 type: this.type
             });
 
-        return this.post(url, JSON.stringify(this.connectionConfiguration), null, { dataType: undefined })
+        return this.post(url, JSON.stringify(this.connectionConfiguration), this.db, { dataType: undefined })
             .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
                 if (!result.Success) {
                     this.reportError(`Failed to test connection`, result.Error);
