@@ -1752,6 +1752,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
+                long? cutoffEtag = null;
 
                 while (true)
                 {
@@ -1769,8 +1770,7 @@ namespace Raven.Server.Documents.Indexes
                         documentsContext.OpenReadTransaction();
                         // we have to open read tx for mapResults _after_ we open index tx
 
-                        long? cutoffEtag = null;
-                        if (query.WaitForNonStaleResults)
+                        if (query.WaitForNonStaleResults && cutoffEtag == null)
                             cutoffEtag = GetCutoffEtag(documentsContext);
 
                         var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
@@ -1874,6 +1874,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
+                long? cutoffEtag = null;
 
                 while (true)
                 {
@@ -1891,9 +1892,8 @@ namespace Raven.Server.Documents.Indexes
                         {
                             documentsContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
-
-                            long? cutoffEtag = null;
-                            if (query.WaitForNonStaleResults)
+                            
+                            if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(documentsContext);
 
                             var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
@@ -1970,6 +1970,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
+                long? cutoffEtag = null;
 
                 while (true)
                 {
@@ -1988,8 +1989,7 @@ namespace Raven.Server.Documents.Indexes
                             documentsContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
 
-                            long? cutoffEtag = null;
-                            if (query.WaitForNonStaleResults)
+                            if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(documentsContext);
 
                             var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
@@ -2025,22 +2025,6 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
-
-        private long GetCutoffEtag(DocumentsOperationContext context)
-        {
-            long cutoffEtag = 0;
-
-            foreach (var collection in Collections)
-            {
-                var etag = GetLastEtagInCollection(context, collection);
-
-                if (etag > cutoffEtag)
-                    cutoffEtag = etag;
-            }
-
-            return cutoffEtag;
-        }
-
         public IndexEntriesQueryResult IndexEntries(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             AssertIndexState();
@@ -2102,6 +2086,22 @@ namespace Raven.Server.Documents.Indexes
                 ThrowErrored();
             }
         }
+
+        private long GetCutoffEtag(DocumentsOperationContext context)
+        {
+            long cutoffEtag = 0;
+
+            foreach (var collection in Collections)
+            {
+                var etag = GetLastEtagInCollection(context, collection);
+
+                if (etag > cutoffEtag)
+                    cutoffEtag = etag;
+            }
+
+            return cutoffEtag;
+        }
+
 
         private void ThrowErrored()
         {
