@@ -31,9 +31,7 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, DeletionInProgressStatus> DeletionInProgress;
 
         public Dictionary<string, string> DeletionInProgressChangeVector;
-
-        public string DataDirectory;
-
+        
         public DatabaseTopology Topology;
 
         // public OnGoingTasks tasks;  tasks for this node..
