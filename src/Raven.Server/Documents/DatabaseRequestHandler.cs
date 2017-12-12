@@ -115,45 +115,7 @@ namespace Raven.Server.Documents
             return new OperationCancelToken(Database.DatabaseShutdown);
         }
 
-        protected DisposableAction TrackRequestTime(string source, bool doPerformanceHintIfTooLong = true)
-        {
-            var sw = Stopwatch.StartNew();
-
-            HttpContext.Response.OnStarting(state =>
-            {
-                sw.Stop();
-                var httpContext = (HttpContext)state;
-                httpContext.Response.Headers.Add(Constants.Headers.RequestTime, sw.ElapsedMilliseconds.ToString());
-                return Task.CompletedTask;
-            }, HttpContext);
-
-            if (doPerformanceHintIfTooLong == false)
-                return null;
-
-            return new DisposableAction(() =>
-            {
-                if (sw.Elapsed <= Database.Configuration.PerformanceHints.TooLongRequestThreshold.AsTimeSpan)
-                    return;
-
-                try
-                {
-                    Database
-                        .NotificationCenter
-                        .RequestLatency
-                        .AddHint(HttpContext.Request.Path,HttpContext.Request.Query, sw.ElapsedMilliseconds, source);
-                }
-                catch (Exception e)
-                {
-                    //precaution - should never arrive here
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {HttpContext.Request.Path}", e);
-
-                    throw;
-                }
-            });
-        }
-
-        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, TimeSpan duration)
+        protected void AddPagingPerformanceHint(PagingOperationType operation, string action, string details, int numberOfResults, int pageSize, long duration)
         {
             if (numberOfResults <= Database.Configuration.PerformanceHints.MaxNumberOfResults)
                 return;

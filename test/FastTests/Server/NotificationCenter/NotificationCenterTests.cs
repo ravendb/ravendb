@@ -46,45 +46,26 @@ namespace FastTests.Server.NotificationCenter
         {
             using (var database = CreateDocumentDatabase())
             {
-                var queryParams1 = new Dictionary<string, string[]>
-                {
-                    {"Param1", new[] {"Val1", "Val2"}},
-                    {"Param2", new[] {"Val3"}}
-                };
+                database.NotificationCenter
+                    .RequestLatency
+                    .AddHint(5, "Query", "Query1");
+
 
                 database.NotificationCenter
                     .RequestLatency
-                    .AddHint("/databases/testDB",
-                        new TestRequestParams(queryParams1), 5, "TestDB");
-
-                var queryParams2 = new Dictionary<string, string[]>
-                {
-                    {"Param3", new[] {"Val4"}},
-                    {"Param4", new[] {"Val5"}}
-                };
-
-                //two notifications for TestDB2
+                    .AddHint(10, "Stream", "Query2");
+                
                 database.NotificationCenter
                     .RequestLatency
-                    .AddHint("/databases/testDB2",
-                        new TestRequestParams(queryParams2), 10, "TestDB2");
+                    .AddHint(10, "Stream", "Query3");
 
-                database.NotificationCenter
-                    .RequestLatency
-                    .AddHint("/databases/testDB2",
-                        new TestRequestParams(queryParams2), 1, "TestDB2");
-
-                database.NotificationCenter
-                    .RequestLatency
-                    .AddHint("/databases/testDB2",
-                        new TestRequestParams(queryParams2), 15, "TestDB2");                
                 
                 var storedRequestLatencyDetails = database.NotificationCenter.RequestLatency
                     .GetRequestLatencyDetails();
                 Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies.Count);
-                Assert.Equal(1, storedRequestLatencyDetails.RequestLatencies["TestDB"].Count);
+                Assert.Equal(1, storedRequestLatencyDetails.RequestLatencies["Query"].Count);
 
-                Assert.Equal(3, storedRequestLatencyDetails.RequestLatencies["TestDB2"].Count);
+                Assert.Equal(2, storedRequestLatencyDetails.RequestLatencies["Stream"].Count);
             }
         }
 

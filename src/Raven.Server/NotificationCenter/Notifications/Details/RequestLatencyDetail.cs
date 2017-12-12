@@ -19,18 +19,18 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             RequestLatencies = new ConcurrentDictionary<string, Concurrent.ConcurrentQueue<RequestLatencyInfo>>();
         }
         
-        public void Update(string queryString,  IQueryCollection requestQuery, long duration, string action)
+        public void Update(long duration, string action, string query)
         {
             if (RequestLatencies.TryGetValue(action, out var hintQueue) == false)
             {
                 var queue = new Concurrent.ConcurrentQueue<RequestLatencyInfo>();
-                queue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault()), duration, action));
+                queue.Enqueue(new RequestLatencyInfo(duration, action, query));
                 RequestLatencies.Add(action, queue);
             }
             else
             {
                 EnforceLimitOfQueueLength(hintQueue);
-                hintQueue.Enqueue(new RequestLatencyInfo(queryString, requestQuery.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault()), duration, action));
+                hintQueue.Enqueue(new RequestLatencyInfo(duration, action, query));
             }
         }
 
@@ -70,18 +70,16 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
     public struct RequestLatencyInfo : IDynamicJsonValueConvertible
     {
-        public string QueryString;
-        public Dictionary<string, string> Parameters;
         public long Duration;
         public DateTime Date;
         public string Action;
+        public string Query;
 
-        public RequestLatencyInfo(string queryString, Dictionary<string, string> parameters, long duration, string action)
+        public RequestLatencyInfo(long duration, string action, string query)
         {
-            QueryString = queryString;
-            Parameters = parameters;
             Duration = duration;
             Action = action;
+            Query = query;
             Date = DateTime.UtcNow;
         }
 
@@ -89,11 +87,10 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         {
             return new DynamicJsonValue
             {
-                [nameof(QueryString)] = QueryString,
                 [nameof(Duration)] = Duration,
-                [nameof(Parameters)] = Parameters.ToJson(),
                 [nameof(Date)] = Date,
-                [nameof(Action)] = Action
+                [nameof(Action)] = Action,
+                [nameof(Query)] = Query
             };
         }
     }

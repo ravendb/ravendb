@@ -44,7 +44,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public void Update(string action, string details, int numberOfResults, int pageSize, TimeSpan duration, DateTime occurrence)
+        public void Update(string action, string details, int numberOfResults, int pageSize, long duration, DateTime occurrence)
         {
             if (Actions.TryGetValue(action, out Queue<ActionDetails> actionDetails) == false)
                 Actions[action] = actionDetails = new Queue<ActionDetails>();
@@ -58,7 +58,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         internal class ActionDetails
         {
             public string Details { get; set; }
-            public TimeSpan Duration { get; set; }
+            public long Duration { get; set; }
             public DateTime Occurrence { get; set; }
             public int NumberOfResults { get; set; }
             public int PageSize { get; set; }

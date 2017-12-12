@@ -26,12 +26,12 @@ namespace Raven.Server.NotificationCenter
             _database = database;
         }
 
-        public void AddHint(string queryString, IQueryCollection requestQuery, long duration, string action)
+        public void AddHint(long duration, string action, string query)
         {
             lock (_addHintSyncObj)
             {
                 var requestLatencyPerformanceHint = GetOrCreatePerformanceLatencies(out var details);
-                details.Update(queryString, requestQuery, duration, action);
+                details.Update(duration, action, query);
                 _notificationCenter.Add(requestLatencyPerformanceHint);
             }
         }

@@ -12,6 +12,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Json;
+using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -27,36 +28,36 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser)]
         public async Task Post()
         {
-            using (TrackRequestTime("Query"))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query"))
             using (var token = CreateTimeLimitedQueryOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    await Debug(context, debug, token, HttpMethod.Post);
+                    await Debug(context, debug, token, tracker, HttpMethod.Post);
                     return;
                 }
 
-                await Query(context, token, HttpMethod.Post).ConfigureAwait(false);
+                await Query(context, token, tracker, HttpMethod.Post).ConfigureAwait(false);
             }
         }
 
         [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
-            using (TrackRequestTime("Query"))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query"))
             using (var token = CreateTimeLimitedQueryOperationToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
                 {
-                    await Debug(context, debug, token, HttpMethod.Get);
+                    await Debug(context, debug, token, tracker, HttpMethod.Get);
                     return;
                 }
 
-                await Query(context, token, HttpMethod.Get).ConfigureAwait(false);
+                await Query(context, token, tracker, HttpMethod.Get).ConfigureAwait(false);
             }
         }
 
@@ -81,12 +82,13 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(FacetedQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
+        private async Task Query(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method);
+            tracker.Query = indexQuery.Query;
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
@@ -130,7 +132,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
         private async Task<IndexQueryServerSide> GetIndexQuery(JsonOperationContext context, HttpMethod method)
@@ -162,12 +164,14 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteSuggestionQueryResult(context, result, numberOfResults: out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(SuggestQuery)} ({result.IndexName})", indexQuery.Query, numberOfResults, indexQuery.PageSize, result.DurationInMs);
         }
 
-        private async Task Explain(DocumentsOperationContext context, HttpMethod method)
+        private async Task Explain(DocumentsOperationContext context, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method);
+            
+            tracker.Query = indexQuery.Query;
 
             var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery);
 
@@ -185,18 +189,28 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
-            using (TrackRequestTime("DeleteByQuery"))
+            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
+            
+            try
             {
-                var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
+                using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "DeleteByQuery"))
+                {
+                    var reader = context.Read(RequestBodyStream(), "queries/delete");
+                    var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
+                    
+                    tracker.Query = query.Query;
+                    
+                    ExecuteQueryOperation(query,
+                        (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
+                        context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
 
-                var reader = context.Read(RequestBodyStream(), "queries/delete");
-                var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
-
-                ExecuteQueryOperation(query,
-                    (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
-
-                return Task.CompletedTask;
+                    return Task.CompletedTask;
+                }
+            } 
+            catch (Exception)
+            {
+                returnContextToPool.Dispose();
+                throw;
             }
         }
 
@@ -340,26 +354,27 @@ namespace Raven.Server.Documents.Handlers
             });
         }
 
-        private async Task Debug(DocumentsOperationContext context, string debug, OperationCancelToken token, HttpMethod method)
+        private async Task Debug(DocumentsOperationContext context, string debug, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
             if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
             {
-                await IndexEntries(context, token, method);
+                await IndexEntries(context, token, tracker, method);
                 return;
             }
 
             if (string.Equals(debug, "explain", StringComparison.OrdinalIgnoreCase))
             {
-                await Explain(context, method);
+                await Explain(context, tracker, method);
                 return;
             }
 
             throw new NotSupportedException($"Not supported query debug operation: '{debug}'");
         }
 
-        private async Task IndexEntries(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
+        private async Task IndexEntries(DocumentsOperationContext context, OperationCancelToken token, RequestTimeTracker tracker, HttpMethod method)
         {
             var indexQuery = await GetIndexQuery(context, method);
+            tracker.Query = indexQuery.Query;
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
             var result = await Database.QueryRunner.ExecuteIndexEntriesQuery(indexQuery, context, existingResultEtag, token);
