@@ -1771,16 +1771,7 @@ namespace Raven.Server.Documents.Indexes
 
                         long? cutoffEtag = null;
                         if (query.WaitForNonStaleResults)
-                        {
-                            cutoffEtag = 0;
-                            foreach (var collection in Collections)
-                            {
-                                var etag = GetLastEtagInCollection(documentsContext, collection);
-
-                                if (etag > cutoffEtag)
-                                    cutoffEtag = etag;
-                            }
-                        }
+                            cutoffEtag = GetCutoffEtag(documentsContext);
 
                         var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
                         if (WillResultBeAcceptable(isStale, query, wait) == false)
@@ -1903,10 +1894,9 @@ namespace Raven.Server.Documents.Indexes
 
                             long? cutoffEtag = null;
                             if (query.WaitForNonStaleResults)
-                                cutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+                                cutoffEtag = GetCutoffEtag(documentsContext);
 
                             var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
-
 
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
@@ -2000,7 +1990,7 @@ namespace Raven.Server.Documents.Indexes
 
                             long? cutoffEtag = null;
                             if (query.WaitForNonStaleResults)
-                                cutoffEtag = Collections.Max(x => DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, x));
+                                cutoffEtag = GetCutoffEtag(documentsContext);
 
                             var isStale = IsStale(documentsContext, indexContext, cutoffEtag);
 
@@ -2034,6 +2024,21 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }
+        }
+
+        private long GetCutoffEtag(DocumentsOperationContext context)
+        {
+            long cutoffEtag = 0;
+
+            foreach (var collection in Collections)
+            {
+                var etag = GetLastEtagInCollection(context, collection);
+
+                if (etag > cutoffEtag)
+                    cutoffEtag = etag;
+            }
+
+            return cutoffEtag;
         }
 
         public IndexEntriesQueryResult IndexEntries(IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)

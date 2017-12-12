@@ -9,7 +9,6 @@ namespace Raven.Server.Documents.Queries
         public static readonly QueryFieldName DocumentId = new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false);
         public static readonly QueryFieldName Count = new QueryFieldName(Constants.Documents.Indexing.Fields.CountFieldName, false);
         
-
         public QueryFieldName(string name, bool isQuoted)
         {
             Value = name;
@@ -47,6 +46,11 @@ namespace Raven.Server.Documents.Queries
             {
                 return ((Value != null ? Value.GetHashCode() : 0) * 397) ^ IsQuoted.GetHashCode();
             }
+        }
+
+        public override string ToString()
+        {
+            return Value;
         }
     }
 }
