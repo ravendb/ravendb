@@ -489,7 +489,7 @@ namespace Raven.Client.Json
 
         public override void WriteValue(object value)
         {
-            throw new NotSupportedException();
+            base.WriteValue(value);
         }
 
         public override void WriteComment(string text)
