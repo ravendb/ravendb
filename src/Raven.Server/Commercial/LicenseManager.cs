@@ -516,7 +516,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                using (var stream = File.Open(path.FullPath, FileMode.Open, FileAccess.Read))
+                using (var stream = File.Open(path.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     return DeserializeLicense(stream);
                 }
