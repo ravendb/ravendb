@@ -125,8 +125,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 try
                 {
-                    await
-                        Database.Operations.AddOperation(
+                    await Database.Operations.AddOperation(
                             Database,
                             "Export database: " + Database.Name,
                             Operations.OperationType.DatabaseExport,
@@ -354,7 +353,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     }
                 }
 
-                var operationId = GetLongQueryString("operationId");
+                var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
@@ -445,7 +444,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
                 var token = new OperationCancelToken(Database.DatabaseShutdown);
                 var result = new SmugglerResult();
-                var operationId = GetLongQueryString("operationId");
+                var operationId = GetLongQueryString("operationId", false) ?? Database.Operations.GetNextOperationId();
                 var collection = GetStringQueryString("collection", false);
                 var operationDescription = collection != null ? "Import collection: " + collection : "Import collection from CSV";
                 await Database.Operations.AddOperation(Database, operationDescription, Raven.Server.Documents.Operations.Operations.OperationType.CollectionImportFromCsv,
