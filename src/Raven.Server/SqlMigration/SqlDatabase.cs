@@ -14,11 +14,12 @@ namespace Raven.Server.SqlMigration
         public readonly IDbConnection Connection;
         public readonly SqlMigrationDocumentFactory Factory;
         public readonly DocumentsOperationContext Context;
-
+        public readonly string ConnectionString;
         private readonly Validator _validator;
 
-        public SqlDatabase(IDbConnection connection)
+        public SqlDatabase(IDbConnection connection, string connectionString)
         {
+            ConnectionString = connectionString;
             Connection = connection;
             ParentTables = new List<SqlParentTable>();
             EmbeddedTables = new List<SqlEmbeddedTable>();
@@ -31,8 +32,9 @@ namespace Raven.Server.SqlMigration
             SetForeignKeys();
         }
 
-        public SqlDatabase(IDbConnection connection, SqlMigrationDocumentFactory factory, DocumentsOperationContext context, List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite)
+        public SqlDatabase(IDbConnection connection, string connectionString, SqlMigrationDocumentFactory factory, DocumentsOperationContext context, List<SqlMigrationImportOperation.SqlMigrationTable> tablesToWrite)
         {
+            ConnectionString = connectionString;
             Connection = connection;
             ParentTables = new List<SqlParentTable>();
             EmbeddedTables = new List<SqlEmbeddedTable>();

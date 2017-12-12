@@ -47,7 +47,7 @@ namespace Raven.Server.Web.Studio
                     return Task.CompletedTask;
                 }
 
-                var database = new SqlDatabase(connection);
+                var database = new SqlDatabase(connection, ConnectionString.ConnectionString);
 
                 var tableColumns = SqlDatabase.GetSchemaResultTablesColumns(connection);
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Web.Studio
 
                     var factory = new SqlMigrationDocumentFactory(options);
 
-                    var database = new SqlDatabase(connection, factory, context, sqlMigrationTables);
+                    var database = new SqlDatabase(connection, ConnectionString.ConnectionString, factory, context, sqlMigrationTables);
 
                     database.Validate(out var errors);
 

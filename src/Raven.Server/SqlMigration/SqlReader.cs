@@ -16,11 +16,22 @@ namespace Raven.Server.SqlMigration
 
         private static readonly List<SqlReader> AllReaders = new List<SqlReader>();
 
-        public SqlReader(IDbConnection connection, string query, bool oneTimeConnection = false) //oneTimeConnection means the connection can be closed after use.
+        public SqlReader(string connectionString, string query)
         {
-            _oneTimeConnection = oneTimeConnection;
+            _oneTimeConnection = true;//oneTimeConnection means the connection can be closed after use.
 
-            _connection = _oneTimeConnection ? ConnectionFactory.OpenConnection(connection.ConnectionString) : connection;
+            _connection = ConnectionFactory.OpenConnection(connectionString);
+
+            _command = new SqlCommand(query, (SqlConnection)_connection);
+
+            AllReaders.Add(this);
+        }
+
+        public SqlReader(IDbConnection connection, string query) 
+        {
+            _oneTimeConnection = false;
+
+            _connection = connection;
 
             _command = new SqlCommand(query, (SqlConnection) _connection);
 

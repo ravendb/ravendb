@@ -33,7 +33,7 @@ namespace Raven.Server.SqlMigration
                 return Reader;
 
             var query = InitialQuery + SqlQueries.OrderByColumns(GetColumnsReferencingParentTable());
-            Reader = new SqlReader(Database.Connection, query, true);
+            Reader = new SqlReader(Database.ConnectionString, query);
             Reader.ExecuteReader();
             return Reader;
         }
@@ -48,7 +48,7 @@ namespace Raven.Server.SqlMigration
                 return Reader;
             }
 
-            Reader = new SqlReader(Database.Connection, query, true);
+            Reader = new SqlReader(Database.ConnectionString, query);
             Reader.ExecuteReader();
             return Reader;
         }
