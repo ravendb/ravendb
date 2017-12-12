@@ -23,9 +23,9 @@ namespace Raven.Client.Documents.Smuggler
         public DatabaseSmuggler(DocumentStore store, string databaseName = null)
         {
             _store = store;
-            _databaseName = databaseName;
-            if(databaseName != null)
-                _requestExecutor = store.GetRequestExecutor(databaseName);
+            _databaseName = databaseName ?? store.Database;
+            if(_databaseName != null)
+                _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
         public DatabaseSmuggler ForDatabase(string databaseName)
