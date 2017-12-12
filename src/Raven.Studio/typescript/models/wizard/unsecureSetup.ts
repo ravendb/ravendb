@@ -66,7 +66,6 @@ class unsecureSetup {
     
     toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
         return {
-            PublicServerUrl: undefined, // For now, we do not expose the 'public server url' in the studio 
             Port: this.port() ? parseInt(this.port(), 10) : 8080,
             Addresses: this.ips().map(x => x.ip())
         }

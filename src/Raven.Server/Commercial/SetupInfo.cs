@@ -74,7 +74,6 @@ namespace Raven.Server.Commercial
     public class UnsecuredSetupInfo
     {
         public List<string> Addresses { get; set; }
-        public string PublicServerUrl { get; set; }
         public int Port { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -82,7 +81,6 @@ namespace Raven.Server.Commercial
             return new DynamicJsonValue
             {
                 [nameof(Addresses)] = new DynamicJsonArray(Addresses),
-                [nameof(PublicServerUrl)] = PublicServerUrl,
                 [nameof(Port)] = Port
             };
         }
