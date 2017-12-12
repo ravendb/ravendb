@@ -254,6 +254,8 @@ namespace FastTests.Client.MoreLikeThis
                     var list = session.Query<Data>(indexName)
                         .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
                         {
+                            MinimumDocumentFrequency = 5,
+                            MinimumTermFrequency = 2,
                             Fields = new[] { "Body" }
                         }))
                         .ToList();
@@ -343,7 +345,11 @@ namespace FastTests.Client.MoreLikeThis
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<Data, DataIndex>()
-                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key))
+                        .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
+                        {
+                            MinimumTermFrequency = 2,
+                            MinimumDocumentFrequency = 5
+                        }))
                         .ToList();
 
                     Assert.Empty(list);
@@ -447,6 +453,7 @@ namespace FastTests.Client.MoreLikeThis
                             Fields = new[] { "Body" },
                             MinimumWordLength = 3,
                             MinimumDocumentFrequency = 1,
+                            MinimumTermFrequency=2,
                             Boost = true
                         }))
                         .ToList();
@@ -496,7 +503,8 @@ namespace FastTests.Client.MoreLikeThis
                         .MoreLikeThis(f => f.UsingDocument(x => x.Id == key).WithOptions(new MoreLikeThisOptions
                         {
                             StopWordsDocumentId = "Config/Stopwords",
-                            MinimumDocumentFrequency = 1
+                            MinimumDocumentFrequency = 1,
+                            MinimumTermFrequency = 2
                         }))
                         .ToList();
 
