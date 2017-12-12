@@ -30,7 +30,7 @@ namespace Raven.Client.ServerWide.ETL
 
         public override string GetDefaultTaskName()
         {
-            return $"Raven etl to {ConnectionStringName}";
+            return $"RavenDB ETL to {ConnectionStringName}";
         }
 
         public override DynamicJsonValue ToJson()
