@@ -147,7 +147,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), HttpContext, numberOfResults, pageSize, sw.Elapsed);
+            AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.Elapsed);
         }
 
         private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, bool metadataOnly)
@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
                 WriteDocumentsJson(context, metadataOnly, documents, includes, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext, numberOfResults, documents.Count, sw.Elapsed);
+            AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext.Request.QueryString.Value, numberOfResults, documents.Count, sw.Elapsed);
         }
 
         private void WriteDocumentsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, out int numberOfResults)

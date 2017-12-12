@@ -31,7 +31,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
                         [nameof(ActionDetails.PageSize)] = details.PageSize,
                         [nameof(ActionDetails.Occurrence)] = details.Occurrence,
                         [nameof(ActionDetails.Duration)] = details.Duration,
-                        [nameof(ActionDetails.QueryString)] = details.QueryString
+                        [nameof(ActionDetails.Details)] = details.Details
                     });
                 }
 
@@ -44,20 +44,20 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public void Update(string action, string queryString, int numberOfResults, int pageSize, TimeSpan duration, DateTime occurrence)
+        public void Update(string action, string details, int numberOfResults, int pageSize, TimeSpan duration, DateTime occurrence)
         {
-            if (Actions.TryGetValue(action, out Queue<ActionDetails> details) == false)
-                Actions[action] = details = new Queue<ActionDetails>();
+            if (Actions.TryGetValue(action, out Queue<ActionDetails> actionDetails) == false)
+                Actions[action] = actionDetails = new Queue<ActionDetails>();
 
-            details.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, QueryString = queryString });
+            actionDetails.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, Details = details });
 
-            while (details.Count > 10)
-                details.Dequeue();
+            while (actionDetails.Count > 10)
+                actionDetails.Dequeue();
         }
 
         internal class ActionDetails
         {
-            public string QueryString { get; set; }
+            public string Details { get; set; }
             public TimeSpan Duration { get; set; }
             public DateTime Occurrence { get; set; }
             public int NumberOfResults { get; set; }
