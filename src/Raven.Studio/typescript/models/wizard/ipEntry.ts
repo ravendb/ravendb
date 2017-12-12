@@ -7,7 +7,8 @@ class ipEntry {
    
    constructor() {
        this.ip.extend({
-           required: true
+           required: true,
+           validIpAddress: true
        });
        
        this.validationGroup = ko.validatedObservable({

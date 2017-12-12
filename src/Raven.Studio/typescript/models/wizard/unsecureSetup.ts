@@ -1,13 +1,11 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
 import ipEntry = require("models/wizard/ipEntry");
 
 class unsecureSetup {
-    static readonly localNetworks = [ "127.0.0.1", "localhost", "::1"];
+    static readonly localNetworks = [ "127.0.0.1", "localhost", "::1" ];
     
     port = ko.observable<string>();
     ips = ko.observableArray<ipEntry>([ipEntry.forIp("127.0.0.1")]);
-    publicServerUrl = ko.observable<string>();
     unsafeNetworkConfirm = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
@@ -29,15 +27,6 @@ class unsecureSetup {
     private initValidation() {
         this.port.extend({
             number: true
-        });
-
-        this.publicServerUrl.extend({
-            required: {
-                onlyIf: () => this.ips().length > 1
-            },
-            validUrl: {
-                message: "Url format expected: 'http://hostName' or 'http://hostName:port'"
-            }
         });
         
         this.unsafeNetworkConfirm.extend({
@@ -62,7 +51,6 @@ class unsecureSetup {
         
         this.validationGroup = ko.validatedObservable({
             port: this.port, 
-            publicServerUrl: this.publicServerUrl,
             unsafeNetworkConfirm: this.unsafeNetworkConfirm,
             ips: this.ips
         })
@@ -78,7 +66,7 @@ class unsecureSetup {
     
     toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
         return {
-            PublicServerUrl: this.publicServerUrl() || undefined,
+            PublicServerUrl: undefined, // For now, we do not expose the 'public server url' in the studio 
             Port: this.port() ? parseInt(this.port(), 10) : 8080,
             Addresses: this.ips().map(x => x.ip())
         }
