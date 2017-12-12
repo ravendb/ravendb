@@ -37,42 +37,6 @@ namespace Raven.Client.Documents
     ///</summary>
     public static class LinqExtensions
     {
-#if LEGACY
-        private static readonly object Locker = new object();
-
-        private static MethodInfo _includeMethod;
-
-        private static MethodInfo _whereMethod2;
-
-        private static MethodInfo _whereMethod3;
-
-        private static MethodInfo _spatialMethodString;
-
-        private static MethodInfo _spatialMethodSpatialDynamicField;
-
-        private static MethodInfo _orderByDistanceMethod;
-
-        private static MethodInfo _orderByDistanceDescendingMethod;
-
-        private static MethodInfo _orderByMethod;
-
-        private static MethodInfo _orderByDescendingMethod;
-
-        private static MethodInfo _thenByMethod;
-
-        private static MethodInfo _thenByDescendingMethod;
-
-        private static MethodInfo _moreLikeThisMethod;
-
-        private static MethodInfo _aggregateByMethod;
-
-        private static MethodInfo _groupByArrayValuesMethod;
-
-        private static MethodInfo _groupByArrayContentMethod;
-
-        private static MethodInfo _suggestMethod;
-#endif
-
         /// <summary>
         /// Includes the specified path in the query, loading the document specified in that path
         /// </summary>
@@ -121,12 +85,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetIncludeMethod();
+            var currentMethod = GetMethodInfoOf(() => source.Include(path));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(TResult));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(TResult)), expression, Expression.Constant(path)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path)));
             return (IRavenQueryable<TResult>)queryable;
         }
 
@@ -136,10 +101,10 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetAggregateByMethod();
+            var currentMethod = GetMethodInfoOf(() => source.AggregateBy(facet));
 #endif
 
-            var query = new AggregationQuery<T>(source, ConvertExpressionIfNecessary, currentMethod);
+            var query = new AggregationQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
             return query.AndAggregateBy(facet);
         }
 
@@ -180,10 +145,11 @@ namespace Raven.Client.Documents
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(AggregateUsing));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
-            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(facetSetupDocumentId)));
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod, expression, Expression.Constant(facetSetupDocumentId)));
 
-            return new AggregationQuery<T>(source, ConvertExpressionIfNecessary, currentMethod);
+            return new AggregationQuery<T>(source, ConvertExpressionIfNecessary, ConvertMethodIfNecessary, currentMethod);
         }
 
         /// <summary>
@@ -203,9 +169,12 @@ namespace Raven.Client.Documents
         public static IRavenQueryable<T> Intersect<T>(this IQueryable<T> self)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod("Intersect");
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);
-            var queryable =
-                self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
+
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression));
+
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -232,11 +201,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetSuggestMethod();
+            var currentMethod = GetMethodInfoOf(() => source.SuggestUsing(suggestion));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
-            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(suggestion)));
+
+            source = source.Provider.CreateQuery<T>(Expression.Call(null, currentMethod, expression, Expression.Constant(suggestion)));
 
             return new SuggestionQuery<T>(source);
         }
@@ -940,9 +911,10 @@ namespace Raven.Client.Documents
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(Search));
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);
 
-            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression,
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression,
                                                                       fieldSelector,
                                                                       Expression.Constant(searchTerms),
                                                                       Expression.Constant(boost),
@@ -957,9 +929,10 @@ namespace Raven.Client.Documents
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScore));
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);
 
-            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -970,9 +943,10 @@ namespace Raven.Client.Documents
         {
             var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScoreDescending));
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(self);
 
-            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression));
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1021,11 +995,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetGroupByArrayValuesMethod();
+            var currentMethod = GetMethodInfoOf(() => source.GroupByArrayValues(fieldSelector));
 #endif
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(TSource), typeof(TKey) });
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(TSource), typeof(TKey)), expression, fieldSelector));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, fieldSelector));
 
             return (IRavenQueryable<IGrouping<TKey, TSource>>)queryable;
         }
@@ -1037,11 +1013,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetGroupByArrayContentMethod();
+            var currentMethod = GetMethodInfoOf(() => source.GroupByArrayContent(fieldSelector));
 #endif
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(TSource), typeof(TKey) });
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(TSource), typeof(TKey)), expression, fieldSelector));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, fieldSelector));
 
             return (IRavenQueryable<IGrouping<IEnumerable<TKey>, TSource>>)queryable;
         }
@@ -1052,12 +1030,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetWhereMethod(3);
+            var currentMethod = GetMethodInfoOf(() => source.Where(predicate, exact));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate, Expression.Constant(exact)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1067,12 +1046,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetWhereMethod(2);
+            var currentMethod = GetMethodInfoOf(() => source.Where(predicate, exact));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, predicate, Expression.Constant(exact)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1087,12 +1067,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetSpatialMethod(typeof(string));
+            var currentMethod = GetMethodInfoOf(() => source.Spatial(fieldName, clause));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(clause)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(clause)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1107,12 +1088,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetSpatialMethod(typeof(DynamicSpatialField));
+            var currentMethod = GetMethodInfoOf(() => source.Spatial(field, clause));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(clause)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(field), Expression.Constant(clause)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1127,12 +1109,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(field, latitude, longitude));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1147,12 +1130,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 4);
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(fieldName, latitude, longitude));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1167,12 +1151,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(field, shapeWkt));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(shapeWkt)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(field), Expression.Constant(shapeWkt)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1187,12 +1172,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 3);
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistance(fieldName, shapeWkt));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1207,12 +1193,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(field, latitude, longitude));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(field), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1227,12 +1214,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 4);
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(fieldName, latitude, longitude));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1247,12 +1235,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            MethodInfo currentMethod = null; // TODO [ppekrol]
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(field, shapeWkt));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(field), Expression.Constant(shapeWkt)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(field), Expression.Constant(shapeWkt)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1267,12 +1256,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 3);
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDistanceDescending(fieldName, shapeWkt));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1287,12 +1277,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByMethod(nameof(OrderBy));
+            var currentMethod = GetMethodInfoOf(() => source.OrderBy(path, ordering));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1307,12 +1298,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByMethod(nameof(OrderByDescending));
+            var currentMethod = GetMethodInfoOf(() => source.OrderByDescending(path, ordering));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1327,12 +1319,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByMethod(nameof(ThenBy));
+            var currentMethod = GetMethodInfoOf(() => source.ThenBy(path, ordering));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1347,12 +1340,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetOrderByMethod(nameof(ThenByDescending));
+            var currentMethod = GetMethodInfoOf(() => source.ThenByDescending(path, ordering));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1362,12 +1356,13 @@ namespace Raven.Client.Documents
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #endif
 #if LEGACY
-            var currentMethod = GetMoreLikeThisMethod();
+            var currentMethod = GetMethodInfoOf(() => source.MoreLikeThis(default(MoreLikeThisBase)));
 #endif
 
+            currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(moreLikeThis)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(moreLikeThis)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1389,446 +1384,24 @@ namespace Raven.Client.Documents
             return expression;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static MethodInfo ConvertMethodIfNecessary(MethodInfo method, Type typeArgument)
+        {
+            return method.IsGenericMethodDefinition ? method.MakeGenericMethod(typeArgument) : method;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static MethodInfo ConvertMethodIfNecessary(MethodInfo method, Type[] typeArguments)
+        {
+            return method.IsGenericMethodDefinition ? method.MakeGenericMethod(typeArguments) : method;
+        }
+
 #if LEGACY
-        private static MethodInfo GetSuggestMethod()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static MethodInfo GetMethodInfoOf<T>(Expression<Func<T>> expression)
         {
-            if (_suggestMethod != null)
-                return _suggestMethod;
-
-            lock (Locker)
-            {
-                if (_suggestMethod != null)
-                    return _suggestMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(SuggestUsing))
-                        continue;
-
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != 2)
-                        continue;
-
-                    if (parameters[1].ParameterType != typeof(SuggestionBase))
-                        continue;
-
-                    _suggestMethod = method;
-                    break;
-                }
-
-                return _suggestMethod;
-            }
-        }
-
-        private static MethodInfo GetAggregateByMethod()
-        {
-            if (_aggregateByMethod != null)
-                return _aggregateByMethod;
-
-            lock (Locker)
-            {
-                if (_aggregateByMethod != null)
-                    return _aggregateByMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(AggregateBy))
-                        continue;
-
-                    var paramters = method.GetParameters();
-                    if (paramters.Length != 2)
-                        continue;
-
-                    if (paramters[1].ParameterType != typeof(FacetBase))
-                        continue;
-
-                    _aggregateByMethod = method;
-                    break;
-                }
-
-                return _aggregateByMethod;
-            }
-        }
-
-        private static MethodInfo GetMoreLikeThisMethod()
-        {
-            if (_moreLikeThisMethod != null)
-                return _moreLikeThisMethod;
-
-            lock (Locker)
-            {
-                if (_moreLikeThisMethod != null)
-                    return _moreLikeThisMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(MoreLikeThis))
-                        continue;
-
-                    var parameters = method.GetParameters();
-
-                    if (parameters[1].ParameterType != typeof(MoreLikeThisBase))
-                        continue;
-
-                    _moreLikeThisMethod = method;
-                    break;
-                }
-
-                return _moreLikeThisMethod;
-            }
-        }
-
-        private static MethodInfo GetOrderByMethod(string methodName)
-        {
-            var orderByMethod = GetOrderByMethodInfo(methodName);
-            if (orderByMethod != null)
-                return orderByMethod;
-
-            lock (Locker)
-            {
-                orderByMethod = GetOrderByMethodInfo(methodName);
-                if (orderByMethod != null)
-                    return orderByMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != methodName)
-                        continue;
-
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != 3)
-                        continue;
-
-                    if (parameters[1].ParameterType != typeof(string))
-                        continue;
-
-                    SetOrderByMethodInfo(methodName, method);
-                    break;
-                }
-
-                return GetOrderByMethodInfo(methodName);
-            }
-        }
-
-        private static void SetOrderByMethodInfo(string methodName, MethodInfo method)
-        {
-            switch (methodName)
-            {
-                case nameof(OrderBy):
-                    _orderByMethod = method;
-                    break;
-                case nameof(OrderByDescending):
-                    _orderByDescendingMethod = method;
-                    break;
-                case nameof(ThenBy):
-                    _thenByMethod = method;
-                    break;
-                case nameof(ThenByDescending):
-                    _thenByDescendingMethod = method;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private static MethodInfo GetOrderByMethodInfo(string methodName)
-        {
-            switch (methodName)
-            {
-                case nameof(OrderBy):
-                    return _orderByMethod;
-                case nameof(OrderByDescending):
-                    return _orderByDescendingMethod;
-                case nameof(ThenBy):
-                    return _thenByMethod;
-                case nameof(ThenByDescending):
-                    return _thenByDescendingMethod;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private static MethodInfo GetOrderByDistanceMethod(string methodName, int numberOfParameters)
-        {
-            var orderByDistanceMethod = GetOrderByDistanceMethodInfo(methodName);
-            if (orderByDistanceMethod != null)
-                return orderByDistanceMethod;
-
-            lock (Locker)
-            {
-                orderByDistanceMethod = GetOrderByDistanceMethodInfo(methodName);
-                if (orderByDistanceMethod != null)
-                    return orderByDistanceMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != methodName)
-                        continue;
-
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != numberOfParameters)
-                        continue;
-
-                    if (parameters[1].ParameterType != typeof(string))
-                        continue;
-
-                    SetOrderByDistanceMethodInfo(methodName, method);
-                    break;
-                }
-
-                return GetOrderByDistanceMethodInfo(methodName);
-            }
-        }
-
-        private static void SetOrderByDistanceMethodInfo(string methodName, MethodInfo method)
-        {
-            switch (methodName)
-            {
-                case nameof(OrderByDistance):
-                    _orderByDistanceMethod = method;
-                    break;
-                case nameof(OrderByDistanceDescending):
-                    _orderByDistanceDescendingMethod = method;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private static MethodInfo GetOrderByDistanceMethodInfo(string methodName)
-        {
-            switch (methodName)
-            {
-                case nameof(OrderByDistance):
-                    return _orderByDistanceMethod;
-                case nameof(OrderByDistanceDescending):
-                    return _orderByDistanceDescendingMethod;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private static MethodInfo GetSpatialMethod(Type parameterType)
-        {
-            var spatialMethod = GetSpatialMethodInfo(parameterType);
-            if (spatialMethod != null)
-                return spatialMethod;
-
-            lock (Locker)
-            {
-                spatialMethod = GetSpatialMethodInfo(parameterType);
-                if (spatialMethod != null)
-                    return spatialMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(Spatial))
-                        continue;
-
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != 3)
-                        continue;
-
-                    if (parameters[1].ParameterType != parameterType)
-                        continue;
-
-                    SetSpatialMethodInfo(parameterType, method);
-                    break;
-                }
-
-                return GetSpatialMethodInfo(parameterType);
-            }
-        }
-
-        private static MethodInfo GetGroupByArrayContentMethod()
-        {
-            var groupByMethod = GetGroupByArrayContentMethodInfo();
-            if (groupByMethod != null)
-                return groupByMethod;
-
-            lock (Locker)
-            {
-                groupByMethod = GetGroupByArrayContentMethodInfo();
-                if (groupByMethod != null)
-                    return groupByMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(GroupByArrayContent))
-                        continue;
-
-                    SetGroupByArrayContentMethodInfo(method);
-                    break;
-                }
-
-                return GetGroupByArrayContentMethodInfo();
-            }
-        }
-
-        private static MethodInfo GetGroupByArrayValuesMethod()
-        {
-            var groupByMethod = GetGroupByArrayValuesMethodInfo();
-            if (groupByMethod != null)
-                return groupByMethod;
-
-            lock (Locker)
-            {
-                groupByMethod = GetGroupByArrayValuesMethodInfo();
-                if (groupByMethod != null)
-                    return groupByMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(GroupByArrayValues))
-                        continue;
-
-                    SetGroupByArrayValuesMethodInfo(method);
-                    break;
-                }
-
-                return GetGroupByArrayValuesMethodInfo();
-            }
-        }
-
-        private static MethodInfo GetWhereMethod(int numberOfFuncArguments)
-        {
-            var whereMethod = GetWhereMethodInfo(numberOfFuncArguments);
-            if (whereMethod != null)
-                return whereMethod;
-
-            lock (Locker)
-            {
-                whereMethod = GetWhereMethodInfo(numberOfFuncArguments);
-                if (whereMethod != null)
-                    return whereMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(Where))
-                        continue;
-
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != 3)
-                        continue;
-
-                    var predicate = parameters[1];
-                    var func = predicate.ParameterType.GenericTypeArguments[0];
-                    if (func.GenericTypeArguments.Length != numberOfFuncArguments)
-                        continue;
-
-                    SetWhereMethodInfo(numberOfFuncArguments, method);
-                    break;
-                }
-
-                return GetWhereMethodInfo(numberOfFuncArguments);
-            }
-        }
-
-        private static MethodInfo GetSpatialMethodInfo(Type parameterType)
-        {
-            if (parameterType == typeof(string))
-                return _spatialMethodString;
-
-            if (parameterType == typeof(DynamicSpatialField))
-                return _spatialMethodSpatialDynamicField;
-
-            throw new NotSupportedException(parameterType.Name);
-        }
-
-        private static void SetSpatialMethodInfo(Type parameterType, MethodInfo methodInfo)
-        {
-            if (parameterType == typeof(string))
-            {
-                _spatialMethodString = methodInfo;
-                return;
-            }
-
-            if (parameterType == typeof(DynamicSpatialField))
-            {
-                _spatialMethodSpatialDynamicField = methodInfo;
-                return;
-            }
-
-            throw new NotSupportedException(parameterType.Name);
-        }
-
-        private static MethodInfo GetWhereMethodInfo(int numberOfFuncArguments)
-        {
-            switch (numberOfFuncArguments)
-            {
-                case 2:
-                    return _whereMethod2;
-                case 3:
-                    return _whereMethod3;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-        private static void SetWhereMethodInfo(int numberOfFuncArguments, MethodInfo methodInfo)
-        {
-            switch (numberOfFuncArguments)
-            {
-                case 2:
-                    _whereMethod2 = methodInfo;
-                    break;
-                case 3:
-                    _whereMethod3 = methodInfo;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private static MethodInfo GetGroupByArrayValuesMethodInfo()
-        {
-            return _groupByArrayValuesMethod;
-        }
-
-        private static void SetGroupByArrayValuesMethodInfo(MethodInfo methodInfo)
-        {
-            _groupByArrayValuesMethod = methodInfo;
-        }
-
-        private static MethodInfo GetGroupByArrayContentMethodInfo()
-        {
-            return _groupByArrayContentMethod;
-        }
-
-        private static void SetGroupByArrayContentMethodInfo(MethodInfo methodInfo)
-        {
-            _groupByArrayContentMethod = methodInfo;
-        }
-
-        private static MethodInfo GetIncludeMethod()
-        {
-            var includeMethod = _includeMethod;
-            if (includeMethod != null)
-                return includeMethod;
-
-            lock (Locker)
-            {
-                includeMethod = _includeMethod;
-                if (includeMethod != null)
-                    return includeMethod;
-
-                foreach (var method in typeof(LinqExtensions).GetMethods())
-                {
-                    if (method.Name != nameof(Include))
-                        continue;
-
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != 2)
-                        continue;
-
-                    if (parameters[1].ParameterType != typeof(string))
-                        continue;
-
-                    _includeMethod = method;
-                    break;
-                }
-
-                return _includeMethod;
-            }
+            var body = (MethodCallExpression)expression.Body;
+            return body.Method;
         }
 #endif
     }
