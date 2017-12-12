@@ -201,6 +201,10 @@ namespace FastTests
                             {
                                 continue;
                             }
+                            catch (DatabaseNotRelevantException)
+                            {
+                                continue;
+                            }
 
                             if (options.DeleteDatabaseOnDispose)
                             {

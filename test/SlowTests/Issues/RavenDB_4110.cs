@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -83,7 +84,8 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                await Assert.ThrowsAsync<IndexAlreadyExistException>(() => index.ExecuteAsync(store));
+                var c = await Assert.ThrowsAsync<CommandExecutionException>(() => index.ExecuteAsync(store));
+                Assert.Contains("IndexAlreadyExistException", c.Message);
             }
         }
     }
