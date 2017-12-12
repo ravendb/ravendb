@@ -372,10 +372,19 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
 
-                        if (certificate.NotBefore > DateTime.UtcNow)
-                            throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
+                        var now = DateTime.UtcNow;
+                        if (certificate.NotBefore.ToUniversalTime() > now)
+                        {
+                            // Because of time zone and time drift issues, we can't assume that the certificate generation will be 
+                            // proper. Because of that, we allow tolerance of the NotBefore to be a bit earlier / later than the 
+                            // current time. Clients may still fail to work with our certificate because of timing issues,
+                            // but the admin needs to setup time sync properly and there isn't much we can do at that point
+                            if ((certificate.NotBefore.ToUniversalTime() - now).TotalDays > 1)
+                                throw new InvalidOperationException(
+                                    $"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
+                        }
 
-                        if (certificate.NotAfter < DateTime.UtcNow)
+                        if (certificate.NotAfter.ToUniversalTime() < now)
                             throw new InvalidOperationException($"Cannot add node {nodeTag} with url {nodeUrl} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
 
                         var expected = GetStringQueryString("expectedThumbprint", required: false);
