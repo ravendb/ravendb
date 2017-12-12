@@ -74,6 +74,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public void OrderByDistance(DynamicSpatialField field, double latitude, double longitude)
         {
+            if (field == null)
+                throw new ArgumentNullException(nameof(field));
+
             OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude);
         }
 
@@ -86,7 +89,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public void OrderByDistance(DynamicSpatialField field, string shapeWkt)
         {
-            if (field == null) 
+            if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
             OrderByDistance($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt);
@@ -101,7 +104,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude)
         {
-            if (field == null) 
+            if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
             OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", latitude, longitude);
@@ -116,6 +119,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt)
         {
+            if (field == null)
+                throw new ArgumentNullException(nameof(field));
+
             OrderByDistanceDescending($"'{field.ToField(EnsureValidFieldName)}'", shapeWkt);
         }
 
