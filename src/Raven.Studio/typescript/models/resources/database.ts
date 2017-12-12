@@ -38,14 +38,18 @@ class database {
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.name = incomingCopy.Name;
         this.disabled(incomingCopy.Disabled);
-        this.errored(!!incomingCopy.LoadError);
+        if (!!incomingCopy.LoadError) {
+            this.errored(true);
+        }
+        
+        if (incomingCopy.NodesTopology) {
+            const nodeTag = this.clusterNodeTag();
+            const inMemberList = _.some(incomingCopy.NodesTopology.Members, x => x.NodeTag === nodeTag);
+            const inPromotableList = _.some(incomingCopy.NodesTopology.Promotables, x => x.NodeTag === nodeTag);
+            const inRehabList = _.some(incomingCopy.NodesTopology.Rehabs, x => x.NodeTag === nodeTag);
 
-        const nodeTag = this.clusterNodeTag();
-        const inMemberList = _.some(incomingCopy.NodesTopology.Members, x => x.NodeTag === nodeTag);
-        const inPromotableList = _.some(incomingCopy.NodesTopology.Promotables, x => x.NodeTag === nodeTag);
-        const inRehabList = _.some(incomingCopy.NodesTopology.Rehabs, x => x.NodeTag === nodeTag);
-
-        this.relevant(inMemberList || inPromotableList || inRehabList);
+            this.relevant(inMemberList || inPromotableList || inRehabList);
+        }
     }
 
     private attributeValue(attributes: any, bundleName: string) {

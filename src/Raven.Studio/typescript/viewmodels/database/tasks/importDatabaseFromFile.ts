@@ -1,5 +1,6 @@
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import viewModelBase = require("viewmodels/viewModelBase");
+import endpoints = require("endpoints");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
 import importDatabaseCommand = require("commands/database/studio/importDatabaseCommand");
@@ -72,53 +73,22 @@ class importDatabaseFromFile extends viewModelBase {
 
         //TODO: change input file name to be full document path
 
-        this.importCommand = ko.pureComputed(() =>
-            //TODO: review for smuggler.exe!
-             {
-                const db = this.activeDatabase();
-                if (!db) {
-                    return "";
-                }
+        this.importCommand = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return "";
+            }
 
-                const targetServer = appUrl.forServer();
-                const model = this.model;
-                const inputFilename = this.importedFileName() ? generalUtils.escapeForShell(this.importedFileName()) : "";
-                const commandTokens = ["Raven.Smuggler", "in", targetServer, inputFilename];
-
-                const databaseName = db.name;
-                commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
-
-                const types: Array<string> = [];
-                if (model.includeDocuments()) {
-                    types.push("Documents");
+            const json = JSON.stringify(this.model.toDto(), (key, value) => {
+                if (key === "TransformScript" && value === "") {
+                    return undefined;
                 }
-                if (model.includeRevisionDocuments()) {
-                    types.push("RevisionDocuments");
-                }
-                if (model.includeIndexes()) {
-                    types.push("Indexes");
-                }
-                if (model.includeIdentities()) {
-                    types.push("Identities");
-                }
-                if (types.length > 0) {
-                    commandTokens.push("--operate-on-types=" + types.join(","));
-                }
-
-                if (model.includeExpiredDocuments()) {
-                    commandTokens.push("--include-expired");
-                }
-
-                if (model.removeAnalyzers()) {
-                    commandTokens.push("--remove-analyzers");
-                }
-
-                if (model.transformScript() && this.showTransformScript()) {
-                    commandTokens.push("--transform=" + generalUtils.escapeForShell(model.transformScript()));
-                }
-
-                return commandTokens.join(" ");
+                return value;
             });
+
+            return "curl --data \"DownloadOptions=" + encodeURIComponent(json) + '" ' +
+                appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImportAsync;
+        });
 
         this.setupValidation();
     }

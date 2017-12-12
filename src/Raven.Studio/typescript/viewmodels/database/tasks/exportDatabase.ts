@@ -111,55 +111,20 @@ class exportDatabase extends viewModelBase {
         });
         
         this.exportCommand = ko.pureComputed<string>(() => {
-            //TODO: review for smuggler.exe!
             const db = this.activeDatabase();
             if (!db) {
                 return "";
             }
 
-            const targetServer = appUrl.forServer();
-            const model = this.model;
-            const outputFilename = generalUtils.escapeForShell(model.exportFileName());
-            const commandTokens = ["Raven.Smuggler", "out", targetServer, outputFilename];
+            const json = JSON.stringify(this.model.toDto(), (key, value) => {
+                if (key === "TransformScript" && value === "") {
+                    return undefined;
+                }
+                return value;
+            });
 
-            const databaseName = db.name;
-            commandTokens.push("--database=" + generalUtils.escapeForShell(databaseName));
-
-            const types: Array<string> = [];
-            if (model.includeDocuments()) {
-                types.push("Documents");
-            }
-            if (model.includeRevisionDocuments()) {
-                types.push("RevisionDocuments");
-            }
-            if (model.includeIndexes()) {
-                types.push("Indexes");
-            }
-            if (model.includeIdentities()) {
-                types.push("Identities");
-            }
-            if (types.length > 0) {
-                commandTokens.push("--operate-on-types=" + types.join(","));
-            }
-
-            if (model.includeExpiredDocuments()) {
-                commandTokens.push("--include-expired");
-            }
-
-            if (model.removeAnalyzers()) {
-                commandTokens.push("--remove-analyzers");
-            }
-
-            if (!model.includeAllCollections()) {
-                const collections = model.includedCollections();
-                commandTokens.push("--metadata-filter=@collection=" + generalUtils.escapeForShell(collections.toString()));
-            }
-
-            if (model.transformScript() && this.showTransformScript()) {
-                commandTokens.push("--transform=" + generalUtils.escapeForShell(model.transformScript()));
-            }
-
-            return commandTokens.join(" ");
+            return "curl --data \"DownloadOptions=" + encodeURIComponent(json) + '" ' + 
+                appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
         });
     }
 
