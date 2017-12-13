@@ -501,7 +501,8 @@ namespace Raven.Server.Documents.Indexes
 
             using (DrainRunningQueries())
             {
-                if (_indexingThread != null)
+                if (_indexingThread != null && 
+                    _indexingThread.ThreadState != System.Threading.ThreadState.Stopped)
                     throw new InvalidOperationException($"Index '{Name}' is executing.");
 
                 if (Configuration.Disabled)
