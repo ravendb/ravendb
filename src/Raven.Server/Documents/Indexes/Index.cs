@@ -111,9 +111,6 @@ namespace Raven.Server.Documents.Indexes
 
         internal TransactionContextPool _contextPool;
 
-        internal bool _disposed;
-        private bool _disposing;
-
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
@@ -195,6 +192,57 @@ namespace Raven.Server.Documents.Indexes
                 GetSpatialFieldFactory = GetOrAddSpatialField,
                 GetRegexFactory = GetOrAddRegex
             };
+
+            _disposeOne = new DisposeOnce<SingleAttempt>(SingleDispose);
+        }
+
+        private void SingleDispose()
+        {
+            var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
+            if (needToLock)
+                _currentlyRunningQueriesLock.EnterWriteLock();
+            try
+            {
+                _indexingProcessCancellationTokenSource?.Cancel();
+
+                //Does happen for faulty in memory indexes
+                if (DocumentDatabase != null)
+                {
+                    DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
+
+                    DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
+                }
+
+                _indexValidationStalenessCheck = null;
+
+                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
+
+                exceptionAggregator.Execute(() =>
+                {
+                    var indexingThread = _indexingThread;
+
+                    // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                    if (indexingThread != null && Thread.CurrentThread != indexingThread)
+                        indexingThread.Join();
+                });
+
+                exceptionAggregator.Execute(() => { IndexPersistence?.Dispose(); });
+
+                exceptionAggregator.Execute(() => { _environment?.Dispose(); });
+
+                exceptionAggregator.Execute(() => { _unmanagedBuffersPool?.Dispose(); });
+
+                exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
+
+                exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+                exceptionAggregator.ThrowIfNeeded();
+            }
+            finally
+            {
+                if (needToLock)
+                    _currentlyRunningQueriesLock.ExitWriteLock();
+            }
         }
 
         public static Index Open(string path, DocumentDatabase documentDatabase)
@@ -295,7 +343,7 @@ namespace Raven.Server.Documents.Indexes
 
         public AsyncManualResetEvent.FrozenAwaiter GetIndexingBatchAwaiter()
         {
-            if (_disposed)
+            if (_disposeOne.Disposed)
                 ThrowObjectDisposed();
 
             return _indexingBatchCompleted.GetFrozenAwaiter();
@@ -356,7 +404,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
             {
-                if (_disposing || _disposed)
+                if (_disposeOne.Disposed)
                     ThrowObjectDisposed();
 
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
@@ -367,7 +415,7 @@ namespace Raven.Server.Documents.Indexes
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
-            if (_disposed)
+            if (_disposeOne.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             using (DrainRunningQueries())
@@ -445,7 +493,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Start()
         {
-            if (_disposed)
+            if (_disposeOne.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
@@ -493,7 +541,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual void Stop(bool disableIndex = false)
         {
-            if (_disposed)
+            if (_disposeOne.Disposed)
                 throw new ObjectDisposedException($"Index '{Name}' was already disposed.");
 
             if (_initialized == false)
@@ -548,78 +596,11 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private DisposeOnce<SingleAttempt> _disposeOne; 
+
         public virtual void Dispose()
         {
-            _disposing = true;
-            var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
-            if (needToLock)
-                _currentlyRunningQueriesLock.EnterWriteLock();
-            try
-            {
-                if (_disposed)
-                    return;
-
-                _disposed = true;
-
-                _indexingProcessCancellationTokenSource?.Cancel();
-
-                //Does happen for faulty in memory indexes
-                if (DocumentDatabase != null)
-                {
-                    DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
-
-                    DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
-                }
-
-                _indexValidationStalenessCheck = null;
-
-                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
-
-                exceptionAggregator.Execute(() =>
-                {
-                    var indexingThread = _indexingThread;
-                    _indexingThread = null;
-
-                    // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                    if (indexingThread != null && Thread.CurrentThread != indexingThread)
-                        indexingThread.Join();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    IndexPersistence?.Dispose();
-                    // IndexPersistence = null; - let it access IndexPersistence.ContainsField in AssertKnownField when storage operation is running
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    _environment?.Dispose();
-                    _environment = null;
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    _unmanagedBuffersPool?.Dispose();
-                    _unmanagedBuffersPool = null;
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    _contextPool?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    _indexingProcessCancellationTokenSource?.Dispose();
-                });
-
-                exceptionAggregator.ThrowIfNeeded();
-            }
-            finally
-            {
-                if (needToLock)
-                    _currentlyRunningQueriesLock.ExitWriteLock();
-            }
+            _disposeOne.Dispose();
         }
 
         public bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)
@@ -1507,7 +1488,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
-            if (_storageOperation.IsRunning || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposed)
+            if (_storageOperation.IsRunning || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed)
             {
                 return new IndexProgress
                 {
@@ -2074,7 +2055,7 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized == false && _storageOperation.IsRunning == false)
                 ThrowNotIntialized();
 
-            if ((_disposed || _disposing) && _storageOperation.IsRunning == false)
+            if ((_disposeOne.Disposed) && _storageOperation.IsRunning == false)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -2840,8 +2821,7 @@ namespace Raven.Server.Documents.Indexes
             public void Dispose()
             {
                 _index._initialized = false;
-                _index._disposed = false;
-                _index._disposing = false;
+                _index._disposeOne = new DisposeOnce<SingleAttempt>(_index.SingleDispose);
 
                 try
                 {
@@ -2860,6 +2840,12 @@ namespace Raven.Server.Documents.Indexes
                         throw new InvalidOperationException("Storage operation wasn't running. It should not happen.");
                 }
             }
+        }
+
+        public void AssertNotDisposed()
+        {
+            if(_disposeOne.Disposed)
+                ThrowObjectDisposed();
         }
     }
 }

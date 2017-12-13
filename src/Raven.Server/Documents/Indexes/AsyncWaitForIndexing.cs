@@ -24,8 +24,7 @@ namespace Raven.Server.Documents.Indexes
 
         public Task WaitForIndexingAsync(AsyncManualResetEvent.FrozenAwaiter indexingBatchCompleted)
         {
-            if (_index._disposed)
-                Index.ThrowObjectDisposed();
+            _index.AssertNotDisposed();
 
             if (_isMaxTimeout)
                 return indexingBatchCompleted.WaitAsync();

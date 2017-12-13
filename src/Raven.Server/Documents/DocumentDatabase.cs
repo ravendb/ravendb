@@ -560,7 +560,7 @@ namespace Raven.Server.Documents
             //check for null to prevent NRE when disposing the DocumentDatabase
             foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
             {
-                var env = index._indexStorage?.Environment();
+                var env = index?._indexStorage?.Environment();
                 if (env != null)
                     yield return
                         new StorageEnvironmentWithType(index.Name,
