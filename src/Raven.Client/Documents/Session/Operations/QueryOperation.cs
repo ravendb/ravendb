@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Tokens;
@@ -168,12 +169,37 @@ namespace Raven.Client.Documents.Session.Operations
             EnsureIsAcceptable(result, _indexQuery.WaitForNonStaleResults, _sp, _session);
 
             _currentQueryResults = result;
-            //_currentQueryResults.EnsureSnapshot();
 
             if (Logger.IsInfoEnabled)
             {
                 var isStale = result.IsStale ? "stale " : "";
-                Logger.Info($"Query returned {result.Results.Items.Count()}/{result.TotalResults} {isStale}results");
+
+                StringBuilder parameters = null;
+
+                if (_indexQuery.QueryParameters != null && _indexQuery.QueryParameters.Count > 0)
+                {
+                    parameters = new StringBuilder();
+                    
+                    parameters.Append("(parameters: ");
+                    
+                    var first = true;
+
+                    foreach (var parameter in _indexQuery.QueryParameters)
+                    {
+                        if (first == false)
+                            parameters.Append(", ");
+
+                        parameters.Append(parameter.Key)
+                            .Append(" = ")
+                            .Append(parameter.Value);
+
+                        first = false;
+                    }
+
+                    parameters.Append(") ");
+                }
+
+                Logger.Info($"Query '{_indexQuery.Query}' {parameters}returned {result.Results.Items.Count()} {isStale}results (total index results: {result.TotalResults})");
             }
         }
 
