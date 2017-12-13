@@ -88,8 +88,8 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
         /// </summary>
-        /// <param name="shapeWKT">The shape representation in the WKT format</param>
-        public object CreateSpatialField(string shapeWKT)
+        /// <param name="shapeWkt">The shape representation in the WKT format</param>
+        public object CreateSpatialField(string shapeWkt)
         {
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }

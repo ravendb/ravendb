@@ -56,16 +56,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt, SpatialRelation relation, double distanceErrorPct)
         {
-            Spatial(propertySelector.ToPropertyPath(), shapeWKT, relation, distanceErrorPct);
+            Spatial(propertySelector.ToPropertyPath(), shapeWkt, relation, distanceErrorPct);
             return this;
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct)
         {
-            Spatial(fieldName, shapeWKT, relation, distanceErrorPct);
+            Spatial(fieldName, shapeWkt, relation, distanceErrorPct);
             return this;
         }
 
