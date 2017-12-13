@@ -222,6 +222,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(UserRegistrationInfo));
             scripter.AddType(typeof(LicenseStatus));
             scripter.AddType(typeof(LicenseLimitWarning));
+            scripter.AddType(typeof(LicenseSupportInfo));
 
             // feedback form
             scripter.AddType(typeof(FeedbackForm));
