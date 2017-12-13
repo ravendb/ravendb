@@ -10,7 +10,7 @@
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
 
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly Condition="'$(OS)' == 'Windows_NT'">true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\RavenDB.snk</AssemblyOriginatorKeyFile>
     
   </PropertyGroup>
