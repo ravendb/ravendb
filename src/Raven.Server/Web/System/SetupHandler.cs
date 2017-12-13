@@ -66,10 +66,12 @@ namespace Raven.Server.Web.System
         {
             AssertOnlyInSetupMode();
 
-            using (var reader = new StreamReader(RequestBodyStream()))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var payload = await reader.ReadToEndAsync();
-                var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                var json = context.Read(RequestBodyStream(), "license activation");
+                var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
+                
+                var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
                 var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                 HttpContext.Response.StatusCode = (int)response.StatusCode;
@@ -80,45 +82,52 @@ namespace Raven.Server.Web.System
                     {
                         await responseStream.CopyToAsync(ResponseBodyStream());
                     }
+
                     return;
                 }
 
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
+                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
 
-                    var fullResult = new UserDomainsWithIps
+                var fullResult = new UserDomainsAndLicenseInfo
+                {
+                    UserDomainsWithIps = new UserDomainsWithIps
                     {
                         Email = results.Email,
                         Domains = new Dictionary<string, List<SubDomainAndIps>>()
-                    };
+                    }
+                };
 
-                    foreach (var domain in results.Domains)
+                foreach (var domain in results.Domains)
+                {
+                    var list = new List<SubDomainAndIps>();
+                    foreach (var subDomain in domain.Value)
                     {
-                        var list = new List<SubDomainAndIps>();
-                        foreach (var subDomain in domain.Value)
+                        try
                         {
-                            try
+                            list.Add(new SubDomainAndIps
                             {
-                                list.Add(new SubDomainAndIps
-                                {
-                                    SubDomain = subDomain,
-                                    Ips = Dns.GetHostAddresses(subDomain + "." + SetupManager.RavenDbDomain).Select(ip => ip.ToString()).ToList(),
-                                });
-                            }
-                            catch (Exception)
-                            {
-                                continue;
-                            }
+                                SubDomain = subDomain,
+                                Ips = Dns.GetHostAddresses(subDomain + "." + SetupManager.RavenDbDomain).Select(ip => ip.ToString()).ToList(),
+                            });
                         }
-                        fullResult.Domains.Add(domain.Key, list);
+                        catch (Exception)
+                        {
+                            continue;
+                        }
                     }
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
-                        context.Write(writer, blittable);
-                    }
+
+                    fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
+                }
+
+                var licenseStatus = ServerStore.LicenseManager.GetLicenseStatus(licenseInfo.License);
+                fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
+                fullResult.LicenseType = licenseStatus.Type;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
+                    context.Write(writer, blittable);
                 }
             }
         }
@@ -425,5 +434,10 @@ namespace Raven.Server.Web.System
                 url += ":" + port;
             return url;
         }
+    }
+
+    public class LicenseInfo
+    {
+        public License License { get; set; }
     }
 }

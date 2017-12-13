@@ -2,6 +2,8 @@
 
 class licenseInfo {
     license = ko.observable<string>();
+    licenseType = ko.observable<Raven.Server.Commercial.LicenseType>();
+    maxClusterSize = ko.observable<number>();
     
     validationGroup: KnockoutValidationGroup;
     

@@ -14,14 +14,14 @@ class nodes extends setupStep {
     });
     
     editedNode = ko.observable<nodeInfo>();
-    
-    canAddNode = ko.pureComputed(() => /* this.model.nodes().length < serverSetup.nodesTags.length */ true);
-    
+        
     defineServerUrl: KnockoutComputed<boolean>;
     showDnsInfo: KnockoutComputed<boolean>;
     provideCertificates: KnockoutComputed<boolean>;
     showAgreement: KnockoutComputed<boolean>;
     showFullDomain: KnockoutComputed<boolean>;
+   
+    maxNodesAddedMsg: KnockoutComputed<string>;
     
     constructor() {
         super();
@@ -47,8 +47,23 @@ class nodes extends setupStep {
         });
 
         this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
-        this.showFullDomain = ko.pureComputed(() => this.model.mode() == "LetsEncrypt");
-        this.showAgreement = ko.pureComputed(() => this.model.mode() == "LetsEncrypt");
+        this.showFullDomain = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
+        this.showAgreement = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");       
+       
+        this.maxNodesAddedMsg = ko.pureComputed(() => {   
+            const numberOfNodesAdded = this.model.nodes().length;
+            const maxNodesAllowed = this.model.license().maxClusterSize();
+            
+            // Limit number of nodes that can be added according to license, if in 'LetsEncrypt' flow
+            if (this.model.mode() === 'LetsEncrypt') {
+                
+                if (numberOfNodesAdded === maxNodesAllowed) {
+                    return `Only ${maxNodesAllowed} nodes are allowed with your current ${this.model.license().licenseType()} license edition`;
+                }
+            }
+            
+            return null;
+        });
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
