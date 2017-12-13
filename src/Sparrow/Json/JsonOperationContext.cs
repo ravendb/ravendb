@@ -780,12 +780,6 @@ namespace Sparrow.Json
             throw new ObjectDisposedException(nameof(JsonOperationContext));
         }
 
-        protected virtual void InternalResetAndRenew()
-        {
-            Reset();
-            Renew();
-        }
-
         protected internal virtual void Renew()
         {
             _arenaAllocator.RenewArena();
