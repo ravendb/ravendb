@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance<TValue>(DynamicSpatialField field, double latitude, double longitude)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(DynamicSpatialField field, double latitude, double longitude)
         {
             OrderByDistance(field, latitude, longitude);
             return this;
