@@ -28,10 +28,11 @@
     <span class="token keyword">this</span>.DocumentCollection = <span class="token keyword">this</span>["@metadata"]["@collection"];
 <span class="token punctuation">}</span></pre>    
 
-    <p>You can use following functions in your patch script:
+    <p>You can use following functions in your patch script:</p>
     <ul>
-        <li><code>PutDocument(documentId, document)</code> - puts document with given name and data</li>
-        <li><code>LoadDocument(documentIdToLoad)</code> - loads document by id
+        <li><code>put(documentId, document)</code> - puts document with given name and data</li>
+        <li><code>load(documentIdToLoad)</code> - loads document by id</li>
+        <li><code>del(documentIdToRemove)</code> - deletes document by id</li>
         <li><code>output(message)</code> - allows to output debug info when testing patches</li>
     </ul>
 </div>
