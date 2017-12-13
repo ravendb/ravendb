@@ -698,7 +698,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistance<TValue>(DynamicSpatialField field, double latitude, double longitude);
+        TSelf OrderByDistance(DynamicSpatialField field, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
