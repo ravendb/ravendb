@@ -87,12 +87,14 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
         public Lazy<Dictionary<string, SuggestionResult>> ExecuteLazy(Action<Dictionary<string, SuggestionResult>> onEval = null)
         {
-            return ((DocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, GetIndexQuery(isAsync: false), InvokeAfterQueryExecuted, ProcessResults), onEval);
+            _query = GetIndexQuery(isAsync: false);
+            return ((DocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
         public Lazy<Task<Dictionary<string, SuggestionResult>>> ExecuteLazyAsync(Action<Dictionary<string, SuggestionResult>> onEval = null)
         {
-            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, GetIndexQuery(isAsync: true), InvokeAfterQueryExecuted, ProcessResults), onEval);
+            _query = GetIndexQuery(isAsync: true);
+            return ((AsyncDocumentSession)_session).AddLazyOperation(new LazySuggestionQueryOperation(_session.Conventions, _query, InvokeAfterQueryExecuted, ProcessResults), onEval);
         }
 
         protected abstract IndexQuery GetIndexQuery(bool isAsync);
