@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -160,6 +161,7 @@ namespace Raven.Server.Documents
             }
             current.Wait();// will throw immediately because the task failed
             resource = default(TResource);
+            Debug.Assert(false, "Should never reach this place");
             return null;// never used
         }
 

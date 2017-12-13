@@ -69,7 +69,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _)?.Dispose();
+                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _).Dispose();
                     return;
                 }
 
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _)?.Dispose();
+                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _).Dispose();
                     return;
                 }
 
@@ -228,9 +228,8 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
-
-                NotifyLeaderAboutRemoval(dbName);
             }
+            NotifyLeaderAboutRemoval(dbName);
         }
 
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
@@ -703,7 +702,7 @@ namespace Raven.Server.Documents
         public void UnloadDirectly(StringSegment databaseName, [CallerMemberName] string caller = null)
         {
             LastRecentlyUsed.TryRemove(databaseName, out _);
-            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _, caller)?.Dispose();
+            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _, caller).Dispose();
         }
 
         private void CompleteDatabaseUnloading(DocumentDatabase database)

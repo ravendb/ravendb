@@ -33,10 +33,13 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                using (var a = new FastTests.Server.Documents.Indexing.Static.BasicStaticMapReduceIndexing())
+                Parallel.For(0, 1, _ =>
                 {
-                    a.CanPersist().Wait();
-                }
+                    using (var a = new SlowTests.Issues.RavenDB_8498())
+                    {
+                        a.SholdBeAbleToDeleteADatabaseViaRequestBody();
+                    }
+                });
             }
         }
 

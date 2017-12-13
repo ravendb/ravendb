@@ -74,7 +74,7 @@ namespace Raven.Server.Routing
             var databasesLandlord = context.RavenServer.ServerStore.DatabasesLandlord;
             var database = databasesLandlord.TryGetOrCreateResourceStore(databaseName);
 
-            if (database.IsCompleted)
+            if (database.IsCompletedSuccessfully)
             {
                 context.Database = database.Result;
 
