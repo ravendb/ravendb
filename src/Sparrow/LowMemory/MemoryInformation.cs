@@ -68,11 +68,6 @@ namespace Sparrow.LowMemory
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetPhysicallyInstalledSystemMemory(out long totalMemoryInKb);
 
-        /// <summary>
-        /// This value is in MB
-        /// </summary>
-        public static int MemoryLimit { get; set; }
-
         public static long GetRssMemoryUsage(int processId)
         {
             var path = $"/proc/{processId}/status";
