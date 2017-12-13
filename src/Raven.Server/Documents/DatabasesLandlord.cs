@@ -69,7 +69,7 @@ namespace Raven.Server.Documents
                 if (record == null)
                 {
                     // was removed, need to make sure that it isn't loaded 
-                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, out _)?.Dispose();
+                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _)?.Dispose();
                     return;
                 }
 
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
 
                 if (record.Disabled)
                 {
-                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, out _)?.Dispose();
+                    DatabasesCache.RemoveLockAndReturn(t.DatabaseName, CompleteDatabaseUnloading, out var _)?.Dispose();
                     return;
                 }
 
@@ -194,23 +194,8 @@ namespace Raven.Server.Documents
 
         private void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
         {
-            using (DatabasesCache.RemoveLockAndReturn(dbName, out var database))
+            using (DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out var database))
             {
-                if (database == null)
-                    return;
-
-                try
-                {
-                    database.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info("Could not dispose database: " + dbName, e);
-                }
-
-                database.DatabaseShutdownCompleted.Set();
-
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
                     RavenConfiguration configuration;
@@ -718,7 +703,11 @@ namespace Raven.Server.Documents
         public void UnloadDirectly(StringSegment databaseName)
         {
             LastRecentlyUsed.TryRemove(databaseName, out _);
-            DatabasesCache.RemoveLockAndReturn(databaseName, out var database)?.Dispose();
+            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _)?.Dispose();
+        }
+
+        private void CompleteDatabaseUnloading(DocumentDatabase database)
+        {
             if (database == null)
                 return;
 
