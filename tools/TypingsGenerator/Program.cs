@@ -45,6 +45,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Raven.Server.Web.Studio;
@@ -188,7 +189,7 @@ namespace TypingsGenerator
 
             // smuggler
             scripter.AddType(typeof(DatabaseSmugglerImportOptions));
-            scripter.AddType(typeof(DatabaseSmugglerExportOptions));
+            scripter.AddType(typeof(DatabaseSmugglerOptionsServerSide));
             scripter.AddType(typeof(SmugglerResult));
             scripter.AddType(typeof(SingleDatabaseMigrationConfiguration));
             scripter.AddType(typeof(OfflineMigrationResult));

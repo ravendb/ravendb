@@ -79,14 +79,13 @@ class importDatabaseFromFile extends viewModelBase {
                 return "";
             }
 
-            const json = JSON.stringify(this.model.toDto(), (key, value) => {
-                if (key === "TransformScript" && value === "") {
-                    return undefined;
-                }
-                return value;
-            });
+            const args = this.model.toDto();
+            if (!args.TransformScript) {
+                delete args.TransformScript;
+            }
+            const json = JSON.stringify(args);
 
-            return "curl --data \"DownloadOptions=" + encodeURIComponent(json) + '" ' +
+            return "curl -F 'importOptions=" + json.replace('"', '\\"') + "' -F 'file=@\"Dump of Database.ravendbdump\"' " +
                 appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImportAsync;
         });
 

@@ -106,24 +106,25 @@ class exportDatabase extends viewModelBase {
             if (!db) {
                 return false;
             }
-            
+
             return db.hasRevisionsConfiguration();
         });
-        
+
         this.exportCommand = ko.pureComputed<string>(() => {
             const db = this.activeDatabase();
             if (!db) {
                 return "";
             }
 
-            const json = JSON.stringify(this.model.toDto(), (key, value) => {
-                if (key === "TransformScript" && value === "") {
-                    return undefined;
-                }
-                return value;
-            });
+            const args = this.model.toDto();
+            if (!args.TransformScript) {
+                delete args.TransformScript;
+            }
+            const fileName = args.FileName;
+            delete args.FileName;
+            const json = JSON.stringify(args);
 
-            return "curl --data \"DownloadOptions=" + encodeURIComponent(json) + '" ' + 
+            return 'curl -o "' + fileName + '.ravendbdump" --data "DownloadOptions=' + encodeURIComponent(json) + '" ' +
                 appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
         });
     }
@@ -176,7 +177,7 @@ class exportDatabase extends viewModelBase {
             });
     }
 
-    private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerExportOptions) {
+    private startDownload(args: Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide) {
         const $form = $("#exportDownloadForm");
         const db = this.activeDatabase();
         const $downloadOptions = $("[name=DownloadOptions]", $form);
@@ -186,12 +187,10 @@ class exportDatabase extends viewModelBase {
                 const url = endpoints.databases.smuggler.smugglerExport;
                 const operationPart = "?operationId=" + operationId;
                 $form.attr("action", appUrl.forDatabaseQuery(db) + url + operationPart);
-                $downloadOptions.val(JSON.stringify(args, (key, value) => {
-                    if (key === "TransformScript" && value === "") {
-                        return undefined;
-                    }
-                    return value;
-                }));
+                if (!args.TransformScript) {
+                    delete args.TransformScript;
+                }
+                $downloadOptions.val(JSON.stringify(args));
                 $form.submit();
 
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
