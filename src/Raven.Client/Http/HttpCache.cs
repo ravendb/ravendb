@@ -96,7 +96,7 @@ namespace Raven.Client.Http
                 // Hitting this on DEBUG and/or VALIDATE and getting a higher number than 0 means we have a leak.
                 // On release we will leak, but wont crash. 
                 if (_usages > 0)
-                    throw new Exception("Detected a leak on HttpCache when running the finalizer.");
+                    throw new LowMemoryException("Detected a leak on HttpCache when running the finalizer. See: http://issues.hibernatingrhinos.com/issue/RavenDB-9737");
 #endif
             }
         }
@@ -158,51 +158,56 @@ namespace Raven.Client.Http
             if (!_isFreeSpaceRunning.Raise())
                 return;
 
-            Debug.Assert(_isFreeSpaceRunning);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
-
-            // Using the current total size will always ensure that under low memory conditions
-            // we are making our best effort to actually get some memory back to the system in
-            // the worst of conditions.
-            var sizeToClear = _totalSize / 2;
-
-            var sizeCleared = 0L;            
-            var start = SystemTime.UtcNow;
-            foreach (var item in _items)
+            try
             {
-                // We are aggresively targetting whatever it is in our hands as 
-                // long as it havent been touched since we started to free space.
-                var lastServerUpdate = item.Value.LastServerUpdate;
-                if (lastServerUpdate > start)
-                    continue;
+                Debug.Assert(_isFreeSpaceRunning);
 
-                // In case that we have already achieved out target, only free those 
-                // items not having been accessed in the last minute.
-                if (sizeCleared > sizeToClear)
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
+
+                // Using the current total size will always ensure that under low memory conditions
+                // we are making our best effort to actually get some memory back to the system in
+                // the worst of conditions.
+                var sizeToClear = _totalSize / 2;
+
+                var sizeCleared = 0L;
+                var start = SystemTime.UtcNow;
+                foreach (var item in _items)
                 {
-                    var itemAge = start - lastServerUpdate;
-                    if (itemAge.TotalMinutes <= 1)
+                    // We are aggresively targetting whatever it is in our hands as 
+                    // long as it havent been touched since we started to free space.
+                    var lastServerUpdate = item.Value.LastServerUpdate;
+                    if (lastServerUpdate > start)
                         continue;
+
+                    // In case that we have already achieved out target, only free those 
+                    // items not having been accessed in the last minute.
+                    if (sizeCleared > sizeToClear)
+                    {
+                        var itemAge = start - lastServerUpdate;
+                        if (itemAge.TotalMinutes <= 1)
+                            continue;
+                    }
+
+                    // We remove the item because there is no grounds to reject it.
+                    if (_items.TryRemove(item.Key, out var value) == false)
+                        continue;
+
+                    value.ReleaseRef();
+
+                    if (item.Value != value)
+                    {
+                        item.Value.ReleaseRef();
+                        sizeCleared += item.Value.Size;
+                    }
+
+                    sizeCleared += value.Size;
                 }
-
-                // We remove the item because there is no grounds to reject it.
-                if (_items.TryRemove(item.Key, out var value) == false)
-                    continue;
-
-                value.ReleaseRef();
-
-                if (item.Value != value)
-                {
-                    item.Value.ReleaseRef();
-                    sizeCleared += item.Value.Size;
-                }
-
-                sizeCleared += value.Size;
             }
-
-            _isFreeSpaceRunning.Lower();
+            finally
+            {
+                _isFreeSpaceRunning.Lower();
+            }            
         }
 
         public struct ReleaseCacheItem : IDisposable
