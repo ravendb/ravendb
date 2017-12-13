@@ -219,9 +219,9 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {WebUrl}");
 
-                ServerStore.TriggerDatabases();
-
                 _tcpListenerStatus = StartTcpListener();
+
+                ServerStore.TriggerDatabases();
 
                 StartSnmp();
 
