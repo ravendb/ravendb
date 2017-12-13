@@ -119,7 +119,7 @@ namespace Raven.Server.Documents
                 return value;
             }
         }
-        public IDisposable RemoveLockAndReturn(string databaseName, out TResource resource, [CallerMemberName] string caller = null)
+        public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null)
         {
             Task<TResource> current;
             lock (this)
@@ -148,6 +148,7 @@ namespace Raven.Server.Documents
                     resource = current.Result; // completed, not waiting here.
                     _caseInsensitive.TryUpdate(databaseName, task, current);
                     RemoveCaseSensitive(databaseName);
+                    onSuccess?.Invoke(current.Result);
                     return new DisposableAction(() =>
                     {
                         TryRemove(databaseName, out _);
