@@ -145,15 +145,18 @@ namespace Raven.Server.Documents
                     throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})");
                 if (current.IsCompletedSuccessfully)
                 {
-                    resource = current.Result; // completed, not waiting here.
                     _caseInsensitive.TryUpdate(databaseName, task, current);
                     RemoveCaseSensitive(databaseName);
-                    onSuccess?.Invoke(current.Result);
-                    return new DisposableAction(() =>
-                    {
-                        TryRemove(databaseName, out _);
-                    });
                 }
+            }
+            if (current.IsCompletedSuccessfully)
+            {
+                resource = current.Result; // completed, not waiting here.
+                onSuccess?.Invoke(current.Result);
+                return new DisposableAction(() =>
+                {
+                    TryRemove(databaseName, out _);
+                });
             }
             current.Wait();// will throw immediately because the task failed
             resource = default(TResource);

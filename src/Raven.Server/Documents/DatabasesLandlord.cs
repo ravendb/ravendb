@@ -700,10 +700,10 @@ namespace Raven.Server.Documents
             ValueChanged
         }
 
-        public void UnloadDirectly(StringSegment databaseName)
+        public void UnloadDirectly(StringSegment databaseName, [CallerMemberName] string caller = null)
         {
             LastRecentlyUsed.TryRemove(databaseName, out _);
-            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _)?.Dispose();
+            DatabasesCache.RemoveLockAndReturn(databaseName, CompleteDatabaseUnloading, out var _, caller)?.Dispose();
         }
 
         private void CompleteDatabaseUnloading(DocumentDatabase database)
