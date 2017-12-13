@@ -59,7 +59,7 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/license/support", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/support", "GET", AuthorizationStatus.ValidUser)]
         public async Task LicenseSupport()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
