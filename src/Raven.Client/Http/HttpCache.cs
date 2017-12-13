@@ -158,43 +158,56 @@ namespace Raven.Client.Http
             if (!_isFreeSpaceRunning.Raise())
                 return;
 
-            Debug.Assert(_isFreeSpaceRunning);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
-
-            var sizeCleared = 0L;
-            var sizeToClear = _maxSize / 4;
-            var start = SystemTime.UtcNow;
-
-            foreach (var item in _items)
+            try
             {
-                var lastServerUpdate = item.Value.LastServerUpdate;
-                if (lastServerUpdate > start)
-                    continue;
+                Debug.Assert(_isFreeSpaceRunning);
 
-                if (sizeCleared > sizeToClear)
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
+
+                // Using the current total size will always ensure that under low memory conditions
+                // we are making our best effort to actually get some memory back to the system in
+                // the worst of conditions.
+                var sizeToClear = _totalSize / 2;
+
+                var sizeCleared = 0L;
+                var start = SystemTime.UtcNow;
+                foreach (var item in _items)
                 {
-                    var itemAge = start - lastServerUpdate;
-                    if (itemAge.TotalMinutes <= 1)
+                    // We are aggresively targetting whatever it is in our hands as 
+                    // long as it havent been touched since we started to free space.
+                    var lastServerUpdate = item.Value.LastServerUpdate;
+                    if (lastServerUpdate > start)
                         continue;
+
+                    // In case that we have already achieved out target, only free those 
+                    // items not having been accessed in the last minute.
+                    if (sizeCleared > sizeToClear)
+                    {
+                        var itemAge = start - lastServerUpdate;
+                        if (itemAge.TotalMinutes <= 1)
+                            continue;
+                    }
+
+                    // We remove the item because there is no grounds to reject it.
+                    if (_items.TryRemove(item.Key, out var value) == false)
+                        continue;
+
+                    value.ReleaseRef();
+
+                    if (item.Value != value)
+                    {
+                        item.Value.ReleaseRef();
+                        sizeCleared += item.Value.Size;
+                    }
+
+                    sizeCleared += value.Size;
                 }
-
-                if (_items.TryRemove(item.Key, out var value) == false)
-                    continue;
-
-                value.ReleaseRef();
-
-                if (item.Value != value)
-                {
-                    item.Value.ReleaseRef();
-                    sizeCleared += item.Value.Size;
-                }
-
-                sizeCleared += value.Size;
             }
-
-            _isFreeSpaceRunning.Lower();
+            finally
+            {
+                _isFreeSpaceRunning.Lower();
+            }            
         }
 
         public struct ReleaseCacheItem : IDisposable
