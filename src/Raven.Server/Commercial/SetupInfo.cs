@@ -162,6 +162,23 @@ namespace Raven.Server.Commercial
         }
     }
 
+    public class UserDomainsAndLicenseInfo
+    {
+        public UserDomainsWithIps UserDomainsWithIps { get; set; }
+        public int MaxClusterSize { get; set; }
+        public LicenseType LicenseType { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(UserDomainsWithIps)] = UserDomainsWithIps.ToJson(),
+                [nameof(MaxClusterSize)] = MaxClusterSize,
+                [nameof(LicenseType)] = LicenseType
+            };
+        }
+    }
+    
     public class UserDomainsWithIps
     {
         public string Email { get; set; }

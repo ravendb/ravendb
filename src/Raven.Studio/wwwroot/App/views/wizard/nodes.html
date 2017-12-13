@@ -11,7 +11,7 @@
             <i class="icon-warning"></i> Configuration will overwrite existing DNS records for domain <strong data-bind="text: model.domain().fullDomain"></strong>. 
         </div>
         <div class="margin-bottom">
-            <button type="button" class="btn btn-primary" data-bind="click: $root.addNode, enable: $root.canAddNode">
+            <button type="button" class="btn btn-primary" data-bind="click: $root.addNode, enable: !$root.maxNodesAddedMsg(), attr: { 'title': $root.maxNodesAddedMsg }">
                 <i class="icon-plus"></i> <span>Add node</span>
             </button>
         </div>

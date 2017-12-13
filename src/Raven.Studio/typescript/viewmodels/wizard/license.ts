@@ -52,11 +52,12 @@ class license extends setupStep {
     private loadRegistrationInfo() {
         return new registrationInfoCommand(this.model.license().toDto())
             .execute()
-            .done((result: Raven.Server.Commercial.UserDomainsWithIps) => {
-                this.model.userDomains(result);
+            .done((result: Raven.Server.Commercial.UserDomainsAndLicenseInfo) => {
+                this.model.userDomains(result.UserDomainsWithIps);
+                this.model.license().licenseType(result.LicenseType);
+                this.model.license().maxClusterSize(result.MaxClusterSize);
             });
     }
-
 }
 
 export = license;
