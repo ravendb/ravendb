@@ -42,26 +42,22 @@ namespace Sparrow.Json
         private long FreeAllPooledMemory()
         {
             long size = 0;
+
             foreach (var stack in _freeSegments)
             {
-                AllocatedMemoryData allocatedMemoryDatas;
-                while (stack.TryPop(out allocatedMemoryDatas))
+                while (stack.TryPop(out var allocatedMemoryDatas))
                 {
                     size += allocatedMemoryDatas.SizeInBytes;
                     NativeMemory.Free(allocatedMemoryDatas.Address, allocatedMemoryDatas.SizeInBytes, allocatedMemoryDatas.AllocatingThread);
-
 #if MEM_GUARD
 #if MEM_GUARD_STACK
-            allocatedMemoryDatas.FreedBy = Environment.StackTrace;
+                    allocatedMemoryDatas.FreedBy = Environment.StackTrace;
 #endif
-            GC.SuppressFinalize(allocatedMemoryDatas);
+                    GC.SuppressFinalize(allocatedMemoryDatas);
 #endif
                 }
-
-
-
-
             }
+
             return size;
         }
 
@@ -108,7 +104,6 @@ namespace Sparrow.Json
 
             _isDisposed = true;
             GC.SuppressFinalize(this);
-
         }
 
         public AllocatedMemoryData Allocate(int size)
@@ -136,8 +131,7 @@ namespace Sparrow.Json
                 };
             }
 
-            AllocatedMemoryData list;
-            if (_freeSegments[index].TryPop(out list))
+            if (_freeSegments[index].TryPop(out AllocatedMemoryData list))
             {
                 return list;
             }

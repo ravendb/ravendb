@@ -27,7 +27,7 @@ namespace Raven.Client.Http
         /// </summary>
         public int NumberOfItems => _items.Count;
 
-        public HttpCache(long maxSize = 1024 * 1024L * 512L)
+        public HttpCache(long maxSize)
         {
             _maxSize = maxSize;
             _unmanagedBuffersPool = new UnmanagedBuffersPool(nameof(HttpCache), "Client");
@@ -40,32 +40,43 @@ namespace Raven.Client.Http
             public byte* Ptr;
             public int Size;
             public DateTime LastServerUpdate;
-            public int Usages;
-            public int Utilization;
+
             public int Generation;
             public AllocatedMemoryData Allocation;
             public HttpCache Cache;
 
-            public bool AddRef()
+            private int _usages;
+
+            public HttpCacheItem()
             {
-                Interlocked.Increment(ref Utilization);
-                return Interlocked.Increment(ref Usages) > 1;
+                this._usages = 1;
+                this.LastServerUpdate = SystemTime.UtcNow;
             }
 
-            public void Release()
+            public bool AddRef()
             {
-                if (Interlocked.Decrement(ref Usages) > 0)
+                // May return false if the memory has been already released.
+                return Interlocked.Increment(ref _usages) > 1;
+            }
+
+            public void ReleaseRef()
+            {
+                // Check if we are ready to return the memory
+                if (Interlocked.Decrement(ref _usages) > 0)
                     return;
 
-                if (Interlocked.CompareExchange(ref Usages, -(1000 * 1000), 0) != 0)
+                // Check if someone havent entered here yet. 
+                if (Interlocked.CompareExchange(ref _usages, -(1000 * 1000), 0) != 0)
                     return;
 
+                // Do the actual deallocation. 
                 if (Allocation != null)
                 {
                     Cache._unmanagedBuffersPool.Return(Allocation);
                     Interlocked.Add(ref Cache._totalSize, -Size);
                 }
                 Allocation = null;
+
                 GC.SuppressFinalize(this);
 
                 if (Logger.IsInfoEnabled)
@@ -76,51 +87,48 @@ namespace Raven.Client.Http
 
             public void Dispose()
             {
-                Release();
+                ReleaseRef();
             }
 
             ~HttpCacheItem()
             {
-                try
-                {
-                    Release();
-                }
-                catch (ObjectDisposedException)
-                {
-                    // nothing that can be done here
-                }
+#if !RELEASE
+                // Hitting this on DEBUG and/or VALIDATE and getting a higher number than 0 means we have a leak.
+                // On release we will leak, but wont crash. 
+                if (_usages > 0)
+                    throw new LowMemoryException("Detected a leak on HttpCache when running the finalizer. See: http://issues.hibernatingrhinos.com/issue/RavenDB-9737");
+#endif
             }
-
         }
 
         /// <summary>
         /// Used to check if the FreeSpace routine is running. Avoids creating 
         /// many tasks that shouldn't be run.
         /// </summary>
-        private MultipleUseFlag _isFreeSpaceRunning = new MultipleUseFlag();
+        private readonly MultipleUseFlag _isFreeSpaceRunning = new MultipleUseFlag();
 
         public unsafe void Set(string url, string changeVector, BlittableJsonReaderObject result)
         {
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
-            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize && _isFreeSpaceRunning.Raise())
+            if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
             {
                 Task.Run(() => FreeSpace());
             }
+
             var httpCacheItem = new HttpCacheItem
             {
-                Usages = 1,
                 ChangeVector = changeVector,
                 Ptr = mem.Address,
                 Size = result.Size,
                 Allocation = mem,
-                LastServerUpdate = SystemTime.UtcNow,
                 Cache = this,
                 Generation = Generation
             };
+
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
-                oldItem.Release();
+                oldItem.ReleaseRef();
                 return httpCacheItem;
             });
         }
@@ -129,18 +137,16 @@ namespace Raven.Client.Http
         {
             var httpCacheItem = new HttpCacheItem
             {
-                Usages = 1,
                 ChangeVector = "404 Response",
                 Ptr = null,
                 Size = 0,
                 Allocation = null,
-                LastServerUpdate = SystemTime.UtcNow,
                 Cache = this,
                 Generation = Generation
             };
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
-                oldItem.Release();
+                oldItem.ReleaseRef();
                 return httpCacheItem;
             });
         }
@@ -149,6 +155,9 @@ namespace Raven.Client.Http
 
         private void FreeSpace()
         {
+            if (!_isFreeSpaceRunning.Raise())
+                return;
+
             Debug.Assert(_isFreeSpaceRunning);
 
             if (Logger.IsInfoEnabled)
@@ -158,54 +167,44 @@ namespace Raven.Client.Http
             var sizeToClear = _maxSize / 4;
             var start = SystemTime.UtcNow;
 
-            var items = _items.OrderBy(x => x.Value.LastServerUpdate)
-                .ToList();
-
-            foreach (var item in items)
+            foreach (var item in _items)
             {
                 var lastServerUpdate = item.Value.LastServerUpdate;
                 if (lastServerUpdate > start)
                     continue;
 
-                var itemAge = SystemTime.UtcNow - lastServerUpdate;
                 if (sizeCleared > sizeToClear)
                 {
+                    var itemAge = start - lastServerUpdate;
                     if (itemAge.TotalMinutes <= 1)
-                        break; // we already met the quota, and we are in new items, just drop it
+                        continue;
+                }
 
-                    if (item.Value.Utilization == 0)
-                    {
-                        sizeCleared += FreeItem(item);
-                    }
-                }
-                else
+                if (_items.TryRemove(item.Key, out var value) == false)
+                    continue;
+
+                value.ReleaseRef();
+
+                if (item.Value != value)
                 {
-                    sizeCleared += FreeItem(item);
+                    item.Value.ReleaseRef();
+                    sizeCleared += item.Value.Size;
                 }
+
+                sizeCleared += value.Size;
             }
 
             _isFreeSpaceRunning.Lower();
         }
 
-        private long FreeItem(KeyValuePair<string, HttpCacheItem> item)
-        {
-            HttpCacheItem value;
-            if (_items.TryRemove(item.Key, out value) == false)
-            {
-                return 0;
-            }
-            value.Release();
-            if (item.Value != value)
-            {
-                item.Value.Release();
-                return item.Value.Size + value.Size;
-            }
-            return value.Size;
-        }
-
         public struct ReleaseCacheItem : IDisposable
         {
-            public HttpCacheItem Item;
+            public readonly HttpCacheItem Item;
+
+            public ReleaseCacheItem(HttpCacheItem item)
+            {
+                Item = item;
+            }
 
             public TimeSpan Age
             {
@@ -213,6 +212,7 @@ namespace Raven.Client.Http
                 {
                     if (Item == null)
                         return TimeSpan.MaxValue;
+
                     return SystemTime.UtcNow - Item.LastServerUpdate;
                 }
             }
@@ -229,32 +229,29 @@ namespace Raven.Client.Http
 
             public void Dispose()
             {
-                if (Item != null)
-                {
-                    Item.Release();
-                    Item = null;
-                }
+                this.Item?.ReleaseRef();
             }
         }
 
         public unsafe ReleaseCacheItem Get(JsonOperationContext context, string url, out string changeVector, out BlittableJsonReaderObject obj)
         {
-            HttpCacheItem item;
-            if (_items.TryGetValue(url, out item))
+            if (_items.TryGetValue(url, out var item))
             {
                 if (item.AddRef())
                 {
-                    var releaser = new ReleaseCacheItem
-                    {
-                        Item = item
-                    };
+                    var releaser = new ReleaseCacheItem(item);
+
                     changeVector = item.ChangeVector;
+
                     obj = item.Ptr != null ? new BlittableJsonReaderObject(item.Ptr, item.Size, context) : null;
+
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Url returned from the cache with etag: {changeVector}. {url}.");
+
                     return releaser;
                 }
             }
+
             obj = null;
             changeVector = null;
             return new ReleaseCacheItem();
@@ -266,8 +263,7 @@ namespace Raven.Client.Http
             // snapshot. This does not lock.
             foreach (var item in _items)
             {
-                HttpCacheItem value;
-                if (_items.TryRemove(item.Key, out value) == false)
+                if (_items.TryRemove(item.Key, out var value) == false)
                     continue;
 
                 value.Dispose();
@@ -285,8 +281,7 @@ namespace Raven.Client.Http
 
         public void LowMemory()
         {
-            if (_isFreeSpaceRunning.Raise())
-                FreeSpace();
+            FreeSpace();
         }
 
         public void LowMemoryOver()
