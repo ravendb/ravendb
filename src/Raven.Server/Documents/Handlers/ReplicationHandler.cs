@@ -290,14 +290,6 @@ namespace Raven.Server.Documents.Handlers
             return true;
         }
 
-        [RavenAction("/databases/*/replication/topology", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetReplicationTopology()
-        {
-            // TODO: Remove this, use "/databases/*/topology" instead
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser)]
         public Task GetReplicationActiveConnections()
         {

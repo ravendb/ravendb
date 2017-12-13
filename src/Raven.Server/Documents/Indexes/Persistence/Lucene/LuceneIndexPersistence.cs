@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _directory,
                 _converter,
                 writeTransaction,
-                this // TODO arek - 'this' :/
+                this
                 );
         }
 
@@ -200,9 +200,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         internal IndexSearcherHolder RecreateSuggestionsSearcher(Transaction asOfTx, string fieldKey)
         {
-            // TODO: Retrieve from hash-table the appropriate searcher holder
-            //       Set the index searcher on the holder
-            //       Return holder.
             var holder = _suggestionsIndexSearcherHolders[fieldKey];
             holder.SetIndexSearcher(asOfTx);
             return holder;
@@ -221,7 +218,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             try
             {
                 _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-                // TODO [ppekrol] support for IndexReaderWarmer?
                 return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
                     IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase, state);
             }
@@ -248,7 +244,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 try
                 {
                     var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
-                    // TODO [ppekrol] support for IndexReaderWarmer?
                     var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
                                         snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
                                         _index._indexStorage.DocumentDatabase, state);

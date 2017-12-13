@@ -229,8 +229,6 @@ namespace Raven.Server.Documents.ETL
 
             RavenDestinations = _databaseRecord.RavenEtls;
             SqlDestinations = _databaseRecord.SqlEtls;
-
-            // TODO arek remove destinations which has been removed or modified - EtlStorage.Remove
         }
 
         private void NotifyAboutWork(DocumentChange documentChange)

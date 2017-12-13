@@ -52,7 +52,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 BatchSize = 1024,
                 OperateOnTypes = types,
-                //TODO: ExportDeletions = state != null,
+                ExportDeletions = state != null,
                 StartDocsEtag = state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty,
                 StartDocsDeletionEtag = state?.LastDocDeleteEtag ?? LastEtagsInfo.EtagEmpty,
                 StartAttachmentsEtag = state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty,

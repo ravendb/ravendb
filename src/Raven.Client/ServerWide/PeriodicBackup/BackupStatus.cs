@@ -59,7 +59,7 @@ namespace Raven.Client.ServerWide.PeriodicBackup
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
-            json[nameof(BackupDirectory)] = BackupDirectory; //TODO: json[BackupDirectory] = BackupDirectory;
+            json[nameof(BackupDirectory)] = BackupDirectory;
             json[nameof(TempFolderUsed)] = TempFolderUsed;
             return json;
         }
