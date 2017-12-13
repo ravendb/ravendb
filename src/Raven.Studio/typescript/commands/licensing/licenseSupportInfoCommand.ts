@@ -10,7 +10,7 @@ class licenseSupportInfoCommand extends commandBase {
     execute(): JQueryPromise<Raven.Server.Commercial.LicenseSupportInfo> {
         const url = endpoints.global.license.licenseSupport;
 
-        return this.post(url, null, null)
+        return this.query(url, null, null, x => x)
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to get license support info", response.responseText, response.statusText);
             });
