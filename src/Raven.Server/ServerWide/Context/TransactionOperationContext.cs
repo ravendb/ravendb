@@ -32,13 +32,15 @@ namespace Raven.Server.ServerWide.Context
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
         where TTransaction : RavenTransaction
     {
-        public ByteStringContext Allocator;
+        public readonly ByteStringContext Allocator;
+        public readonly TransactionPersistentContext PersistentContext;
+
         public TTransaction Transaction;
-        public TransactionPersistentContext PersistentContext = new TransactionPersistentContext();
 
         protected TransactionOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag):
             base(initialSize, longLivedSize, lowMemoryFlag)
         {
+            PersistentContext = new TransactionPersistentContext();
             Allocator = new ByteStringContext(lowMemoryFlag);
         }
 
@@ -108,26 +110,7 @@ namespace Raven.Server.ServerWide.Context
         {
             base.Dispose();
 
-            Allocator?.Dispose();
-            Allocator = null;
-            PersistentContext = null;
-        }
-
-        protected override void InternalResetAndRenew()
-        {
-            base.Reset();
-            CloseTransaction();
-
-            // we skip on creating / disposing the allocator
-
-            base.Renew();
-        }
-
-        protected internal override void Renew()
-        {
-            base.Renew();
-            if (Allocator == null)
-                Allocator = new ByteStringContext(LowMemoryFlag);
+            Allocator.Dispose();
         }
 
         protected internal override void Reset(bool forceResetLongLivedAllocator = false)
@@ -136,7 +119,7 @@ namespace Raven.Server.ServerWide.Context
 
             CloseTransaction();
 
-            Allocator?.Reset();
+            Allocator.Reset();
         }
     }
 }
