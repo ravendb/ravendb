@@ -12,8 +12,6 @@ namespace Raven.Client.FileSystem
 {
     public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
     {
-        private IDisposable conflictCacheRemoval; 
-
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
         /// </summary>
@@ -24,9 +22,6 @@ namespace Raven.Client.FileSystem
             : base(filesStore, listeners, id)
         {
             Commands = asyncFilesCommands;
-            conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
-                                             .ForConflicts()
-                                             .Subscribe<ConflictNotification>(this.OnFileConflict);
         }
 
         /// <summary>
@@ -146,27 +141,6 @@ namespace Raven.Client.FileSystem
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
             var searchResults = await Commands.SearchOnDirectoryAsync(directory);
             return searchResults.Files.ToArray();
-        }
-
-        internal void OnFileConflict(ConflictNotification notification)
-        {
-            if ( notification.Status == ConflictStatus.Detected)
-            {
-                conflicts.Add(notification.FileName);                
-            }
-            else
-            {
-                entitiesByKey.Remove(notification.FileName);
-                conflicts.Remove(notification.FileName);
-            }            
-        }
-
-        public override void Dispose ()
-        {
-            base.Dispose();
-
-            if (this.conflictCacheRemoval != null)
-                this.conflictCacheRemoval.Dispose();
         }
     }
 }
