@@ -629,6 +629,15 @@ namespace Raven.Server.Rachis
                     }
                     return;
                 }
+                if (clusterTopology.Members.Count == 1)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
+                    }
+                    SwitchToSingleLeader(context);
+                    return;
+                }
             }
 
             if (Log.IsInfoEnabled)
