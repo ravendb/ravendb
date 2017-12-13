@@ -437,7 +437,7 @@ namespace Raven.Server.Documents.Replication
                 newDestinations = new List<ExternalReplication>();
            
             var addedDestinations = new List<ExternalReplication>();
-            var removedDestiantions = newDestinations.ToList();
+            var removedDestiantions = current.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
                 if(newDestination.Disabled)

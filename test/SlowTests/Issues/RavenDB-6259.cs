@@ -6,6 +6,7 @@ using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
             using (var slave = GetDocumentStore())
             {
                 slave.ExecuteIndex(new PersonAndAddressIndex());
-                await SetupReplicationAsync(master, slave);
+                var res = await SetupReplicationAsync(master, slave);
 
 
                 using (var session = master.OpenAsyncSession())
@@ -68,9 +69,9 @@ namespace SlowTests.Issues
                 {
                     Assert.NotEmpty(session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(13))).ToList());
                 }
-
-                // delete replications to slave
-                await SetupReplicationAsync(master);
+                //delete the replication master->slave
+                var removeTaskId = res.First().TaskId;
+                await master.Maintenance.Server.SendAsync(new DeleteOngoingTaskOperation(master.Database, removeTaskId, OngoingTaskType.Replication));
 
                 using (var session = master.OpenAsyncSession())
                 {
