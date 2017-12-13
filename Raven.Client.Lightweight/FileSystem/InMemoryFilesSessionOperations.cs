@@ -54,11 +54,6 @@ namespace Raven.Client.FileSystem
         protected readonly HashSet<string> knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Current file conflicts
-        /// </summary>
-        protected readonly HashSet<string> conflicts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        /// <summary>
         /// all the listeners for this session
         /// </summary>
         protected readonly FilesSessionListeners theListeners;
@@ -286,7 +281,6 @@ namespace Raven.Client.FileSystem
                 
                 foreach (var op in changes.Operations)
                 {
-                    AssertConflictsAreNotAffectingOperation(op);
                     var operationResult = await op.Execute((IAsyncFilesSession)this).ConfigureAwait(false);
                     if (operationResult != null)
                         results.Add(operationResult);
@@ -387,18 +381,6 @@ namespace Raven.Client.FileSystem
 
                 AddToCache(existingFileHeader.FullPath, existingFileHeader);
             }
-        }
-
-        private void AssertConflictsAreNotAffectingOperation(IFilesOperation operation)
-        {
-            string fileName = null;
-            if (operation.GetType() == typeof(UploadFileOperation) || operation.GetType() == typeof(RenameFileOperation) || operation.GetType() == typeof(UpdateMetadataOperation))
-            {
-                fileName = operation.FileName;
-            }
-
-            if (fileName != null && conflicts.Contains(fileName))
-                throw new NotSupportedException( string.Format("There is a conflict over file: {0}. Update or remove operations are not supported", fileName));
         }
 
         public bool EntityChanged(FileHeader fileHeader)
