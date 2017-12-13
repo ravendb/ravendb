@@ -25,7 +25,7 @@ class exportDatabaseModel {
         this.initValidation();
     }
 
-    toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerExportOptions {
+    toDto(): Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
         if (this.includeDocuments()) {
             operateOnTypes.push("Documents");
@@ -51,7 +51,7 @@ class exportDatabaseModel {
             RemoveAnalyzers: this.removeAnalyzers(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
             MaxStepsForTransformScript: 10 * 1000
-        } as Raven.Client.Documents.Smuggler.DatabaseSmugglerExportOptions;
+        } as Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide;
     }
 
     private initValidation() {

@@ -85,7 +85,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var stream = TryGetRequestFromStream("DownloadOptions") ?? RequestBodyStream();
 
 
-                BlittableJsonReaderObject blittableJson;
                 DatabaseSmugglerOptionsServerSide options;
                 using (context.GetManagedBuffer(out var buffer))
                 {
@@ -94,7 +93,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     buffer.Valid = firstRead;
                     if(firstRead != 0)
                     {
-                        blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
+                        var blittableJson = await context.ParseToMemoryAsync(stream, "DownloadOptions", BlittableJsonDocumentBuilder.UsageMode.None, buffer);
                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
                     }
                     else
