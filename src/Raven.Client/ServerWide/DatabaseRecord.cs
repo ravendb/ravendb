@@ -156,9 +156,12 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name {taskName} there is already an External Replications task with that name");
             if (RavenEtls.Any(x => x.Name == taskName))
                 throw new InvalidOperationException($"Can't use task name {taskName} there is already an ETL task with that name");
+            if (SqlEtls.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already a SQL ETL task with that name");
             if (PeriodicBackups.Any(x => x.Name == taskName))
                 throw new InvalidOperationException($"Can't use task name {taskName} there is already a Backup task with that name");
         }
+
         public int GetIndexesCount()
         {
             var count = 0;
