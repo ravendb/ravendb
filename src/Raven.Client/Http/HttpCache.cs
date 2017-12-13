@@ -163,16 +163,23 @@ namespace Raven.Client.Http
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
 
-            var sizeCleared = 0L;
-            var sizeToClear = _maxSize / 4;
-            var start = SystemTime.UtcNow;
+            // Using the current total size will always ensure that under low memory conditions
+            // we are making our best effort to actually get some memory back to the system in
+            // the worst of conditions.
+            var sizeToClear = _totalSize / 2;
 
+            var sizeCleared = 0L;            
+            var start = SystemTime.UtcNow;
             foreach (var item in _items)
             {
+                // We are aggresively targetting whatever it is in our hands as 
+                // long as it havent been touched since we started to free space.
                 var lastServerUpdate = item.Value.LastServerUpdate;
                 if (lastServerUpdate > start)
                     continue;
 
+                // In case that we have already achieved out target, only free those 
+                // items not having been accessed in the last minute.
                 if (sizeCleared > sizeToClear)
                 {
                     var itemAge = start - lastServerUpdate;
@@ -180,6 +187,7 @@ namespace Raven.Client.Http
                         continue;
                 }
 
+                // We remove the item because there is no grounds to reject it.
                 if (_items.TryRemove(item.Key, out var value) == false)
                     continue;
 
