@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations.ETL;
 using Raven.Server.NotificationCenter.Notifications;
@@ -92,7 +93,7 @@ namespace SlowTests.Server.Documents.ETL
         }
 
         [Fact]
-        public async Task Raises_alert_if_ETLs_have_the_same_name()
+        public async Task EnsureETLsHaveUniqueNamesAndThrowsIfNotUnique()
         {
             using (var store = GetDocumentStore())
             {
@@ -122,30 +123,30 @@ namespace SlowTests.Server.Documents.ETL
                     });
 
 
-                    AddEtl(store, new RavenEtlConfiguration()
+                    Assert.Throws<CommandExecutionException>(() =>
                     {
-                        ConnectionStringName = "test",
-                        Name = "myEtl",
-                        Transforms =
+                        AddEtl(store, new RavenEtlConfiguration()
                         {
-                            new Transformation()
+                            ConnectionStringName = "test",
+                            Name = "myEtl",
+                            Transforms =
                             {
-                                Name = "TransformOrders",
-                                Collections = { "Orders" }
+                                new Transformation()
+                                {
+                                    Name = "TransformOrders",
+                                    Collections =
+                                    {
+                                        "Orders"
+                                    }
+                                }
                             }
-                        }
-                    }, new RavenConnectionString()
-                    {
-                        Name = "test",
-                        TopologyDiscoveryUrls = new[] { "http://127.0.0.1:8080" },
-                        Database = "Northwind",
+                        }, new RavenConnectionString()
+                        {
+                            Name = "test",
+                            TopologyDiscoveryUrls = new[] {"http://127.0.0.1:8080"},
+                            Database = "Northwind",
+                        });
                     });
-
-                    var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
-
-                    Assert.True(alert.Item1);
-
-                    Assert.Equal("Invalid ETL configuration for 'myEtl' (Northwind@http://127.0.0.1:8080). Reason: ETL with name 'myEtl' is already defined.", alert.Item2[nameof(AlertRaised.Message)]);
                 }
             }
         }
