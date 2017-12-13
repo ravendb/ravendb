@@ -1070,7 +1070,8 @@ namespace Raven.Server.Documents
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
-                        revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, nonPersistentFlags, flags);
+                        revisionsStorage.Delete(context, id, lowerId, collectionName, local.Tombstone.ChangeVector,
+                            modifiedTicks, nonPersistentFlags, flags);
                     }
                 }
 
@@ -1081,7 +1082,7 @@ namespace Raven.Server.Documents
                     collectionName,
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
-                    changeVector,
+                    local.Tombstone.ChangeVector,
                     local.Tombstone.Flags | documentFlags ).Etag;
 
                 // We have to raise the notification here because even though we have deleted
