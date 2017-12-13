@@ -64,8 +64,7 @@ namespace Sparrow.Json
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
         {
-            T ctx;
-            var disposable = AllocateOperationContext(out ctx);
+            var disposable = AllocateOperationContext(out T ctx);
             context = ctx;
 
             return disposable;
