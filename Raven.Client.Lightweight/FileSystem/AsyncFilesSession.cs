@@ -14,8 +14,6 @@ namespace Raven.Client.FileSystem
 {
     public class AsyncFilesSession : InMemoryFilesSessionOperations, IAsyncFilesSession, IAsyncAdvancedFilesSessionOperations
     {
-        private IDisposable conflictCacheRemoval; 
-
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncFilesSession"/> class.
         /// </summary>
@@ -26,9 +24,6 @@ namespace Raven.Client.FileSystem
             : base(filesStore, listeners, id)
         {
             Commands = asyncFilesCommands;
-            conflictCacheRemoval = filesStore.Changes(this.FileSystemName)
-                                             .ForConflicts()
-                                             .Subscribe(new FileConflictObserver(this));
         }
 
         /// <summary>
@@ -148,47 +143,6 @@ namespace Raven.Client.FileSystem
             var directoryName = directory.StartsWith("/") ? directory : "/" + directory;
             var searchResults = await Commands.SearchOnDirectoryAsync(directory).ConfigureAwait(false);
             return searchResults.Files.ToArray();
-        }
-
-
-
-        public class FileConflictObserver : IObserver<ConflictNotification>
-        {
-            private readonly AsyncFilesSession asyncFilesSession;
-
-            public FileConflictObserver(AsyncFilesSession asyncFilesSession)
-            {
-                this.asyncFilesSession = asyncFilesSession;
-            }
-
-            public void OnNext(ConflictNotification notification)
-            {
-                if (notification.Status == ConflictStatus.Detected)
-                {
-                    asyncFilesSession.conflicts.Add(notification.FileName);
-                }
-                else
-                {
-                    asyncFilesSession.entitiesByKey.Remove(notification.FileName);
-                    asyncFilesSession.conflicts.Remove(notification.FileName);
-                }
-            }
-
-            public void OnError(Exception error)
-            {
-            }
-
-            public void OnCompleted()
-            {
-            }
-        }
-
-        public override void Dispose ()
-        {
-            base.Dispose();
-
-            if (this.conflictCacheRemoval != null)
-                this.conflictCacheRemoval.Dispose();
         }
 
         public Task<IAsyncEnumerator<FileHeader>> StreamFileHeadersAsync(Etag fromEtag, int pageSize = int.MaxValue)
