@@ -192,8 +192,6 @@ namespace Raven.Server.Documents
                     ptr[i + idSize + maxStrSize] = (byte)ch;
                 }
 
-                // TODO: We may remove this before RTM, but given the criticality of this code I would prefer this assertion to be here until then. 
-                Debug.Assert(Encoding.GetByteCount(pChars, strLength) == strLength);
                 _jsonParserState.FindEscapePositionsIn(ptr, strLength, escapePositionsSize);
             }
             
@@ -277,7 +275,6 @@ namespace Raven.Server.Documents
 
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
-            // TODO: Optimize this
             return GetLowerIdSliceAndStorageKey(context, str, out var _, out strSlice);
         }
     }

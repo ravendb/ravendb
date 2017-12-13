@@ -78,7 +78,6 @@ namespace SlowTests.Client
 
                 var databaseStatistics = store.Maintenance.Send(new GetStatisticsOperation());
 
-                //TODO - after we have hilo need to be 1
                 Assert.Equal(0, databaseStatistics.CountOfDocuments);
             }
         }

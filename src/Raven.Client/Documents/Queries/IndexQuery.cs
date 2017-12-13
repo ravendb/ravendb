@@ -84,16 +84,6 @@ namespace Raven.Client.Documents.Queries
         public bool ShowTimings { get; set; }
 #endif
 
-        /// <summary>
-        /// Gets the custom query string variables.
-        /// </summary>
-        /// <returns></returns>
-        protected virtual string GetCustomQueryStringVariables()
-        {
-            //TODO: Can remove this 
-            return string.Empty;
-        }
-
         public virtual bool Equals(IndexQuery<T> other)
         {
             if (ReferenceEquals(null, other))

@@ -59,8 +59,6 @@ namespace SlowTests.Server.Replication
                     await session.SaveChangesAsync();
 
                     id = user.Id;
-                    //TODO : uncomment this when the topology endpoint is implemented
-                    //await source.Replication.WaitAsync(etag: session.Advanced.GetEtagFor(user));
                 }
 
                 var fetchedUser = WaitForDocumentToReplicate<User>(destination, id, 2_000);

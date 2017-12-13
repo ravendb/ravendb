@@ -142,7 +142,6 @@ namespace Raven.Server.Documents.Replication
                         break;
                     case State.Whitespace:
                         if (char.IsWhiteSpace(changeVector[current]) ||
-                            changeVector[current] == '=' || // TODO: Remove me
                             changeVector[current] == ',')
                         {
                             start++;

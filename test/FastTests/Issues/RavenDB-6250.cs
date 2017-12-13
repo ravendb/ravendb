@@ -23,7 +23,6 @@ namespace FastTests.Issues
         [Fact]
         public void All_operations_has_details_providers()
         {
-            // TODO Add DatabaseRestore to alreadyHandledInStudio after handle it in studio
             var alreadyHandledInStudio = new HashSet<Operations.OperationType>
             {
                 Operations.OperationType.UpdateByIndex,

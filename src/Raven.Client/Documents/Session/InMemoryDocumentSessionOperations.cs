@@ -493,21 +493,6 @@ more responsive application.
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
 
-        //TODO
-        /*internal void EnsureNotReadVetoed(RavenJObject metadata)
-        {
-            var readVeto = metadata["Raven-Read-Veto"] as RavenJObject;
-            if (readVeto == null)
-                return;
-
-            var s = readVeto.Value<string>("Reason");
-            throw new ReadVetoException(
-                "Document could not be read because of a read veto." + Environment.NewLine +
-                "The read was vetoed by: " + readVeto.Value<string>("Trigger") + Environment.NewLine +
-                "Veto reason: " + s
-            );
-        }*/
-
         /// <summary>
         /// Stores the specified entity in the session. The entity will be saved when SaveChanges is called.
         /// </summary>

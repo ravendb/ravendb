@@ -40,7 +40,7 @@ select new
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
                         var bytes = new byte[4096];
-                        new Random(2).NextBytes(bytes); // TODO arek - seed
+                        new Random(2).NextBytes(bytes);
 
                         var randomLocation = Encoding.ASCII.GetString(bytes);
 

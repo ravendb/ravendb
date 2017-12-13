@@ -520,7 +520,7 @@ namespace RachisTests
                     int curId = 0;
                     var afterSlash = x.Id.Substring(x.Id.LastIndexOf("/", StringComparison.OrdinalIgnoreCase) + 1);
                     curId = int.Parse(afterSlash.Substring(0, afterSlash.Length - 2));
-                    Assert.True(curId >= proggress.MaxId);// todo: change back to '>'
+                    Assert.True(curId >= proggress.MaxId);
                     usersCount.Add(x);
                     proggress.MaxId = curId;
                 }

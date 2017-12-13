@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Operations
         {
             try
             {
-                return exception.ToString(); //TODO: use toAsyncString()
+                return exception.ToString();
             }
             catch (Exception)
             {
