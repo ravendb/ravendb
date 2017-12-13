@@ -61,19 +61,19 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return (radius / Constants.Documents.Indexing.Spatial.EarthMeanRadiusKm) * RadiansToDegrees;
         }
 
-        private static string TranslateCircleRadius(string shapeWKT, SpatialUnits units)
+        private static string TranslateCircleRadius(string shapeWkt, SpatialUnits units)
         {
-            var match = CircleShape.Match(shapeWKT);
+            var match = CircleShape.Match(shapeWkt);
             if (match.Success == false)
-                return shapeWKT;
+                return shapeWkt;
 
             var radCapture = match.Groups[3];
             var radius = double.Parse(radCapture.Value, CultureInfo.InvariantCulture);
 
             radius = TranslateCircleRadius(radius, units);
 
-            return shapeWKT.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
-                   shapeWKT.Substring(radCapture.Index + radCapture.Length);
+            return shapeWkt.Substring(0, radCapture.Index) + radius.ToString("F6", CultureInfo.InvariantCulture) +
+                   shapeWkt.Substring(radCapture.Index + radCapture.Length);
         }
 
         private const double DegreesToRadians = Math.PI / 180;

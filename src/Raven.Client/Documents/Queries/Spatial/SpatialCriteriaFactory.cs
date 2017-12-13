@@ -10,29 +10,29 @@ namespace Raven.Client.Documents.Queries.Spatial
         {
         }
 
-        public SpatialCriteria RelatesToShape(string shapeWKT, SpatialRelation relation, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        public SpatialCriteria RelatesToShape(string shapeWkt, SpatialRelation relation, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return new WktCriteria(shapeWKT, relation, distErrorPercent);
+            return new WktCriteria(shapeWkt, relation, distErrorPercent);
         }
 
-        public SpatialCriteria Intersects(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        public SpatialCriteria Intersects(string shapeWkt, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shapeWKT, SpatialRelation.Intersects, distErrorPercent);
+            return RelatesToShape(shapeWkt, SpatialRelation.Intersects, distErrorPercent);
         }
 
-        public SpatialCriteria Contains(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        public SpatialCriteria Contains(string shapeWkt, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shapeWKT, SpatialRelation.Contains, distErrorPercent);
+            return RelatesToShape(shapeWkt, SpatialRelation.Contains, distErrorPercent);
         }
 
-        public SpatialCriteria Disjoint(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        public SpatialCriteria Disjoint(string shapeWkt, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shapeWKT, SpatialRelation.Disjoint, distErrorPercent);
+            return RelatesToShape(shapeWkt, SpatialRelation.Disjoint, distErrorPercent);
         }
 
-        public SpatialCriteria Within(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        public SpatialCriteria Within(string shapeWkt, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shapeWKT, SpatialRelation.Within, distErrorPercent);
+            return RelatesToShape(shapeWkt, SpatialRelation.Within, distErrorPercent);
         }
 
         public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)

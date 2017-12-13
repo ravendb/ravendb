@@ -46,17 +46,17 @@ namespace Raven.Client.Documents.Queries.Spatial
 
     public class WktCriteria : SpatialCriteria
     {
-        private readonly string _shapeWKT;
+        private readonly string _shapeWkt;
 
-        internal WktCriteria(string shapeWKT, SpatialRelation relation, double distanceErrorPct)
+        internal WktCriteria(string shapeWkt, SpatialRelation relation, double distanceErrorPct)
             : base(relation, distanceErrorPct)
         {
-            _shapeWKT = shapeWKT;
+            _shapeWkt = shapeWkt;
         }
 
         protected override ShapeToken GetShapeToken(Func<object, string> addQueryParameter)
         {
-            return ShapeToken.Wkt(addQueryParameter(_shapeWKT));
+            return ShapeToken.Wkt(addQueryParameter(_shapeWkt));
         }
     }
 

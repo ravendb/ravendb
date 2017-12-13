@@ -108,9 +108,9 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return false;
         }
 
-        public Shape ReadShape(string shapeWKT, SpatialUnits? unitOverride = null)
+        public Shape ReadShape(string shapeWkt, SpatialUnits? unitOverride = null)
         {
-            return _shapeStringReadWriter.ReadShape(shapeWKT, unitOverride);
+            return _shapeStringReadWriter.ReadShape(shapeWkt, unitOverride);
         }
 
         private string WriteShape(Shape shape)
