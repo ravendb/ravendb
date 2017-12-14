@@ -349,9 +349,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                         throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because this url is already used by node {possibleNode.NodeTag}");
                     }
 
-                    if (nodeInfo.TopologyId == clusterTopology.TopologyId)
-                        throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because it's already in the cluster under tag :{nodeInfo.NodeTag} and URL: {clusterTopology.GetUrlFromTag(nodeInfo.NodeTag)}");
-
                     if (nodeInfo.ServerId == ServerStore.GetServerId())                    
                         throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because it's a synonym of the current node URL:{ServerStore.GetNodeHttpServerUrl()}");
                                        
