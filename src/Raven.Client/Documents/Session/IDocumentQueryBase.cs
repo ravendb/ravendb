@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Sparrow.Json;
 
@@ -388,6 +389,26 @@ namespace Raven.Client.Documents.Session
         /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
         /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
         TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
+        ///     Ability to use one factory to determine spatial shape that will be used in query.
+        /// </summary>
+        /// <param name="path">Spatial field name.</param>
+        /// <param name="clause">function with spatial criteria factory</param>
+        TSelf Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        /// <summary>
+        ///     Ability to use one factory to determine spatial shape that will be used in query.
+        /// </summary>
+        /// <param name="fieldName">Spatial field name.</param>
+        /// <param name="clause">function with spatial criteria factory</param>
+        TSelf Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        TSelf Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        TSelf Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
+
+        TSelf MoreLikeThis(MoreLikeThisBase moreLikeThis);
 
         TSelf CmpXchg(string key, T value);
     }

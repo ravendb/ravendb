@@ -119,24 +119,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<TProjection> SelectFields<TProjection>();
 
         /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
-        /// </summary>
-        /// <param name="path">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
-        IDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
-        IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        IDocumentQuery<T> Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        IDocumentQuery<T> Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        /// <summary>
         /// Changes the return type of the query
         /// </summary>
         IDocumentQuery<TResult> OfType<TResult>();
@@ -144,8 +126,6 @@ namespace Raven.Client.Documents.Session
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
         IGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
-
-        IDocumentQuery<T> MoreLikeThis(MoreLikeThisBase moreLikeThis);
 
         IDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForDocumentQuery<T>> builder);
 
