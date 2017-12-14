@@ -151,14 +151,14 @@ namespace Raven.Client.ServerWide
             if (string.IsNullOrEmpty(taskName))
                 throw new ArgumentException("Can't validate task's name because the provided task name is null or empty.");
 
-            //if (ExternalReplications.Any(x => x.Name == taskName))
-            //    throw new InvalidOperationException($"Can't use task name {taskName} there is already an External Replications task with that name");
-            //if (RavenEtls.Any(x => x.Name == taskName))
-            //    throw new InvalidOperationException($"Can't use task name {taskName} there is already an ETL task with that name");
-            //if (SqlEtls.Any(x => x.Name == taskName))
-            //    throw new InvalidOperationException($"Can't use task name {taskName} there is already a SQL ETL task with that name");
-            //if (PeriodicBackups.Any(x => x.Name == taskName))
-            //    throw new InvalidOperationException($"Can't use task name {taskName} there is already a Backup task with that name");
+            if (ExternalReplications.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already an External Replications task with that name");
+            if (RavenEtls.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already an ETL task with that name");
+            if (SqlEtls.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already a SQL ETL task with that name");
+            if (PeriodicBackups.Any(x => x.Name == taskName))
+                throw new InvalidOperationException($"Can't use task name {taskName} there is already a Backup task with that name");
         }
 
         public int GetIndexesCount()
