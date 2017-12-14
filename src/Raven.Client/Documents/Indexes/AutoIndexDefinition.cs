@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
