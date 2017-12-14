@@ -568,7 +568,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, key.ToLowerInvariant(), out Slice databaseValueNameLowered))
                 using (var value = EntityToBlittable.ConvertEntityToBlittable(keyValue.Value, DocumentConventions.Default, context))
                 {
-                    UpdateValue(++index, items, databaseValueNameLowered, databaseValueName, value);
+                    UpdateValue(index, items, databaseValueNameLowered, databaseValueName, value);
                 }
             }
         }
