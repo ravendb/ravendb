@@ -10,7 +10,7 @@ namespace Raven.Server.Storage.Schema
     {
         internal class CurrentVersion
         {
-            public const int ServerVersion = 10;
+            public const int ServerVersion = 11;
 
             public const int ConfigurationVersion = 10;
 
@@ -68,6 +68,8 @@ namespace Raven.Server.Storage.Schema
                 if (schemaUpdateType == null)
                     return false;
 
+                versionAfterUpgrade++;
+
                 switch (_storageType)
                 {
                     case StorageType.Server:
@@ -75,7 +77,10 @@ namespace Raven.Server.Storage.Schema
                     case StorageType.Configuration:
                         break;
                     case StorageType.Documents:
-                        while (SkippedDocumentsVersion.Contains(++versionAfterUpgrade));
+                        while (SkippedDocumentsVersion.Contains(versionAfterUpgrade))
+                        {
+                            versionAfterUpgrade++;
+                        }
                         break;
                     case StorageType.Index:
                         break;

@@ -62,7 +62,6 @@ namespace Raven.Server.ServerWide
             Value
         }
 
-        private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
         private static readonly Slice CmpXchg;
         public static readonly Slice Identities;
@@ -71,7 +70,6 @@ namespace Raven.Server.ServerWide
         {
             Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
             Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CmpXchg);
-            Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
             Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
 
             ItemsSchema = new TableSchema();
@@ -82,13 +80,6 @@ namespace Raven.Server.ServerWide
             {
                 StartIndex = 0,
                 Count = 1
-            });
-
-            ItemsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
-            {
-                Name = EtagIndexName,
-                IsGlobal = true,
-                StartIndex = 3
             });
 
             CmpXchgItemsSchema = new TableSchema();
