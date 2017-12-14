@@ -49,7 +49,7 @@ namespace Voron.Data.Tables
                 {
                     var readResult = _tableTree.Read(TableSchema.ActiveSectionSlice);
                     if (readResult == null)
-                        throw new InvalidDataException($"Could not find active sections for {Name}");
+                        throw new VoronErrorException($"Could not find active sections for {Name}");
 
                     long pageNumber = readResult.Reader.ReadLittleEndianInt64();
 
@@ -367,7 +367,7 @@ namespace Voron.Data.Tables
                 OnDataMoved(idToMove, newId, pos, itemSize);
 
                 if (ActiveDataSmallSection.TryWriteDirect(newId, itemSize, out byte* writePos) == false)
-                    throw new InvalidDataException($"Cannot write to newly allocated size in {Name} during delete");
+                    throw new VoronErrorException($"Cannot write to newly allocated size in {Name} during delete");
 
                 Memory.Copy(writePos, pos, itemSize);
             }
@@ -377,7 +377,7 @@ namespace Voron.Data.Tables
 
         private void ThrowInvalidAttemptToRemoveValueFromIndexAndNotFindingIt(long id, Slice indexDefName)
         {
-            throw new InvalidOperationException(
+            throw new VoronErrorException(
                 $"Invalid index {indexDefName} on {Name}, attempted to delete value but the value from {id} wasn\'t in the index");
         }
 
@@ -450,7 +450,7 @@ namespace Voron.Data.Tables
                 id = AllocateFromSmallActiveSection(builder,size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new InvalidOperationException(
+                    throw new VoronErrorException(
                         $"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
 
                 // Memory Copy into final position.
@@ -524,7 +524,6 @@ namespace Voron.Data.Tables
                         if (SliceComparer.AreEqual(oldVal, newVal) == false ||
                             forceUpdate)
                         {
-                          
                             var indexTree = GetTree(indexDef);
                             var fst = GetFixedSizeTree(indexTree, oldVal.Clone(_tx.Allocator), 0);
                             fst.Delete(id);
@@ -539,11 +538,12 @@ namespace Voron.Data.Tables
                     var index = GetFixedSizeTree(indexDef);
                     var oldKey = indexDef.GetValue(ref oldVer);
                     var newKey = indexDef.GetValue(_tx.Allocator, newVer);
-                    if (oldKey != newKey || 
-                        forceUpdate)
+
+                    if (oldKey != newKey || forceUpdate)
                     {
                         index.Delete(oldKey);
-                        index.Add(newKey, idAsSlice);
+                        if (index.Add(newKey, idAsSlice) == false)
+                            ThrowInvalidDuplicateFixedSizeTreeKey(newKey, indexDef);
                     }
                 }
             }
@@ -565,7 +565,7 @@ namespace Voron.Data.Tables
                 id = AllocateFromSmallActiveSection(null, size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
-                    throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
+                    throw new VoronErrorException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
             }
             else
             {
@@ -638,7 +638,7 @@ namespace Voron.Data.Tables
                 foreach (var indexDef in _schema.FixedSizeIndexes.Values)
                 {
                     var index = GetFixedSizeTree(indexDef);
-                    long key = indexDef.GetValue(ref value);
+                    var key = indexDef.GetValue(ref value);
                     if (index.Add(key, idAsSlice) == false)
                         ThrowInvalidDuplicateFixedSizeTreeKey(key, indexDef);
                 }
@@ -647,7 +647,7 @@ namespace Voron.Data.Tables
 
         private void ThrowInvalidDuplicateFixedSizeTreeKey(long key, TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
-            throw new InvalidOperationException("Attempt to add duplicate value " + key + " to " + indexDef.Name + " on " + Name);
+            throw new VoronErrorException("Attempt to add duplicate value " + key + " to " + indexDef.Name + " on " + Name);
         }
 
         public FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
@@ -734,7 +734,7 @@ namespace Voron.Data.Tables
 
             var treeHeader = _tableTree.DirectRead(name);
             if (treeHeader == null)
-                throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
+                throw new VoronErrorException($"Cannot find tree {name} in table {Name}");
 
             tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: _tablePageAllocator);
             _treesBySliceCache[name] = tree;
@@ -1452,12 +1452,15 @@ namespace Voron.Data.Tables
 
         private static void ThrowNonNegativeNumberOfEntriesToDelete()
         {
-            throw new ArgumentOutOfRangeException("Number of entries should not be negative");
+            throw new VoronErrorException("Number of entries should not be negative");
         }
 
         public void PrepareForCommit()
         {
             AssertValidTable();
+
+            AssertValidIndexes();
+
             if (_treesBySliceCache == null)
                 return;
 
@@ -1475,6 +1478,28 @@ namespace Voron.Data.Tables
                     var header = (TreeRootHeader*)ptr;
                     tree.State.CopyTo(header);
                 }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertValidIndexes()
+        {
+            var pk = _schema.Key;
+            if (pk != null && pk.IsGlobal == false)
+            {
+                var tree = GetTree(pk);
+                if (tree.State.NumberOfEntries != NumberOfEntries)
+                    throw new InvalidDataException($"Mismatch in primary key size to table size: {tree.State.NumberOfEntries} != {NumberOfEntries}");
+            }
+
+            foreach (var fst in _schema.FixedSizeIndexes)
+            {
+                if (fst.Value.IsGlobal)
+                    continue;
+
+                var tree = GetFixedSizeTree(fst.Value);
+                if (tree.NumberOfEntries != NumberOfEntries)
+                    throw new InvalidDataException($"Mismatch in fixed sized tree {fst.Key} size to table size: {tree.NumberOfEntries} != {NumberOfEntries}");
             }
         }
 
