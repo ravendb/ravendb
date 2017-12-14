@@ -581,11 +581,14 @@ namespace Raven.Server.Documents.Indexes
 
         public Index ResetIndex(string name)
         {
-            var index = GetIndex(name);
-            if (index == null)
-                IndexDoesNotExistException.ThrowFor(name);
+            lock (_locker)
+            {
+                var index = GetIndex(name);
+                if (index == null)
+                    IndexDoesNotExistException.ThrowFor(name);
 
-            return ResetIndexInternal(index);
+                return ResetIndexInternal(index);
+            }
         }
 
         public async Task<bool> TryDeleteIndexIfExists(string name)
@@ -634,9 +637,7 @@ namespace Raven.Server.Documents.Indexes
         {
             lock (_locker)
             {
-                _indexes.TryRemoveByName(index.Name, index);
-
-               try
+                try
                 {
                     index.Dispose();
                 }
@@ -646,6 +647,7 @@ namespace Raven.Server.Documents.Indexes
                         _logger.Info($"Could not dispose index '{index.Name}'.", e);
                 }
 
+                _indexes.TryRemoveByName(index.Name, index);
 
                 _documentDatabase.Changes.RaiseNotifications(new IndexChange
                 {
@@ -662,7 +664,16 @@ namespace Raven.Server.Documents.Indexes
 
                 var indexTempPath = index.Configuration.TempPath?.Combine(name);
 
-                IOExtensions.DeleteDirectory(indexPath.FullPath);
+                try
+                {
+                    IOExtensions.DeleteDirectory(indexPath.FullPath);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Failed to delete the index {name} directory", e);
+                    throw;
+                }
 
                 if (indexTempPath != null)
                     IOExtensions.DeleteDirectory(indexTempPath.FullPath);
@@ -791,7 +802,14 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 DeleteIndexInternal(index);
+            }
+            catch (Exception toe)
+            {
+                throw new IndexDeletionException($"Failed to reset index: {index.Name}.", toe);
+            }
 
+            try
+            {
                 var definitionBase = index.Definition;
                 if (definitionBase is AutoMapIndexDefinition)
                     index = AutoMapIndex.CreateNew((AutoMapIndexDefinition)definitionBase, _documentDatabase);
@@ -824,7 +842,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation."+
+                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation." +
                                                  $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
             }
         }
@@ -1076,9 +1094,9 @@ namespace Raven.Server.Documents.Indexes
         public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
             bool lockTaken = false;
+            Monitor.TryEnter(_locker, 16, ref lockTaken);
             try
             {
-                Monitor.TryEnter(_locker, 16, ref lockTaken);
                 if (lockTaken == false)
                     return false;
 
