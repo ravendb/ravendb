@@ -132,10 +132,12 @@ namespace Raven.Client.Documents.Session
         protected bool ShowQueryTimings;
 #endif
 
+#if FEATURE_EXPLAIN_SCORES
         /// <summary>
         /// Determine if scores of query results should be explained
         /// </summary>
         protected bool ShouldExplainScores;
+#endif
 
         public bool IsDistinct => SelectTokens.First?.Value is DistinctToken;
 
@@ -1008,7 +1010,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 #if FEATURE_SHOW_TIMINGS
                 ShowTimings = ShowQueryTimings,
 #endif
+#if FEATURE_EXPLAIN_SCORES
                 ExplainScores = ShouldExplainScores
+#endif
             };
 
             if (PageSize != null)

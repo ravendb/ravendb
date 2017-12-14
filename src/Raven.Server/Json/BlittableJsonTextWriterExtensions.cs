@@ -363,9 +363,11 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
+#if FEATURE_EXPLAIN_SCORES
             writer.WritePropertyName(nameof(query.ExplainScores));
             writer.WriteBool(query.ExplainScores);
             writer.WriteComma();
+#endif
 
             writer.WritePropertyName(nameof(query.PageSize));
             writer.WriteInteger(query.PageSize);

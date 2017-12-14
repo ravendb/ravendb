@@ -475,10 +475,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         TSelf Distinct();
 
+#if FEATURE_EXPLAIN_SCORES
         /// <summary>
         ///     Adds explanations of scores calculated for queried documents to the query result
         /// </summary>
         TSelf ExplainScores();
+#endif
 
         /// <summary>
         ///     Specifies a fuzziness factor to the single word term in the last where clause

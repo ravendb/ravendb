@@ -683,12 +683,14 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+#if FEATURE_EXPLAIN_SCORES
         /// <inheritdoc />
         public IAsyncDocumentQuery<T> ExplainScores()
         {
             ShouldExplainScores = true;
             return this;
         }
+#endif
 
         /// <inheritdoc />
         public async Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken))
@@ -839,7 +841,9 @@ namespace Raven.Client.Documents.Session
 #if FEATURE_SHOW_TIMINGS
                 ShowQueryTimings = ShowQueryTimings,
 #endif
+#if FEATURE_EXPLAIN_SCORES
                 ShouldExplainScores = ShouldExplainScores,
+#endif
                 IsIntersect = IsIntersect,
                 DefaultOperator = DefaultOperator
             };
