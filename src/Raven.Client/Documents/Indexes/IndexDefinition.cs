@@ -9,7 +9,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
