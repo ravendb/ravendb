@@ -138,7 +138,7 @@ namespace Raven.Server.Documents
                 // queue is notified about this catasropic error and we wait
                 // just a bit more to verify that nothing racy can still get 
                 // there
-                for (int i = 0; i < 3; i++)
+                while (_runTransactions)
                 {
                     while (_operations.TryDequeue(out MergedTransactionCommand result))
                     {
@@ -147,7 +147,7 @@ namespace Raven.Server.Documents
                     }
                     try
                     {
-                        _waitHandle.Wait(50, _shutdown);
+                        _waitHandle.Wait(_shutdown);
                         _waitHandle.Reset();
                     }
                     catch (OperationCanceledException)
@@ -366,16 +366,23 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#0} operations in async manner, will retry independently",
                                     e);
                             }
-                            if (calledCompletePreviousTx == false)
+                            using (previous)
+                            using (context.Transaction)
                             {
-                                CompletePreviousTransaction(previous, ref previousPendingOps,
-                                    // if this previous threw, it won't throw again
-                                    throwOnError: false);
+                                if (calledCompletePreviousTx == false)
+                                {
+                                    CompletePreviousTransaction(previous, ref previousPendingOps,
+                                        // if this previous threw, it won't throw again
+                                        throwOnError: false);
+                                }
+                                else
+                                {
+                                    throw;
+                                }
+                                NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
+                                return;
                             }
-                            previous.Dispose();
-                            context.Transaction.Dispose();
-                            NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
-                            return;
+                          
                         }
                         previous.Dispose();
 
