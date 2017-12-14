@@ -164,11 +164,6 @@ namespace Raven.Server.Documents.Queries
                         continue;
                     }
 
-                    if (_resultsRetriever.Filter(_inner.Current, _query.Metadata))
-                    {
-                        continue;
-                    }
-                    
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
@@ -361,9 +356,9 @@ namespace Raven.Server.Documents.Queries
 
                                     AddId(id.Value.ToString());
                                 }
-                                else if (_metadata.FillIds != null)
+                                else if (_metadata.WhereMethods.ContainsKey(QueryMetadata.WhereMethod.FillIdsMethod))
                                 {
-                                    AddId(_metadata.FillIds.EvaluateSingleMethod(_resultsRetriever, null).ToString());
+                                    AddId(_metadata.WhereMethods[QueryMetadata.WhereMethod.FillIdsMethod].EvaluateSingleMethod(_resultsRetriever, null).ToString());
                                 }
                                 break;
                         }

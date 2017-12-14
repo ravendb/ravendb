@@ -442,48 +442,13 @@ namespace Raven.Client.Util
             }
         }
 
-        public class CmpXchgMatchSupport : JavascriptConversionExtension
+        public class CmpXchgSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
 
-                if (methodCallExpression?.Method.Name != "CmpXchgMatch")
-                    return;
-
-                if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery) 
-                    && (methodCallExpression.Object == null || methodCallExpression.Object.Type != typeof(IDocumentSession)))
-                    return;
-
-                var key = methodCallExpression.Arguments[0];
-                var value = methodCallExpression.Arguments[1];
-
-                if (string.IsNullOrEmpty(key.ToString()))
-                {
-                    throw new NotSupportedException("");                    
-                }
-
-                context.PreventDefault();
- 
-                var writer = context.GetWriter();
-                using (writer.Operation(methodCallExpression))
-                {
-                    writer.Write("cmpxchg.match(");
-                    context.Visitor.Visit(key);
-                    writer.Write(",");
-                    context.Visitor.Visit(value);
-                    writer.Write(")");
-                }
-            }
-        }
-        
-        public class CmpXchgValueSupport : JavascriptConversionExtension
-        {
-            public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
-                var methodCallExpression = context.Node as MethodCallExpression;
-
-                if (methodCallExpression?.Method.Name != "CmpXchgValue")
+                if (methodCallExpression?.Method.Name != "CmpXchg")
                     return;
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery) 
