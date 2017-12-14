@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>4.0.0-custom-40</Version>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RuntimeFrameworkVersion>2.0.3</RuntimeFrameworkVersion>
     <AssemblyName>Tests.Infrastructure</AssemblyName>
