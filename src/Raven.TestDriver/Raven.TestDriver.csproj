@@ -1,10 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
+    <Version></Version>
     <Description></Description>
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
-    <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFrameworks>netstandard1.3;netstandard2.0</TargetFrameworks>
     <AssemblyName>Raven.TestDriver</AssemblyName>

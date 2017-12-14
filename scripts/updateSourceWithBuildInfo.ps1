@@ -11,16 +11,24 @@ function UpdateSourceWithBuildInfo ( $projectDir, $buildNumber, $version ) {
 function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
     # This is a workaround for the following issue:
     # dotnet pack - version suffix missing from ProjectReference: https://github.com/NuGet/Home/issues/4337
-    
-    $srcCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "src") -Include *.csproj
-    $testCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "test") -Include *.csproj
-    $toolsCsprojs = Get-ChildItem -Recurse -Path $(Join-Path $projectDir -ChildPath "tools") -Include *.csproj
 
-    foreach ($csproj in $($srcCsprojs + $testCsprojs + $toolsCsprojs)) {
-        "Set version in $csproj..."
-        $text = $([System.IO.File]::ReadAllText($csproj)) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>"
-        [System.IO.File]::WriteAllText($csproj, $text, [System.Text.Encoding]::UTF8)
-    }
+    Write-Host "Set version in Directory.build.props..."
+
+    $src = $(Join-Path $projectDir -ChildPath "src");
+    $testDriverCsproj = [io.path]::Combine($src, "Raven.TestDriver", "Raven.TestDriver.csproj")
+    $clientCsproj = [io.path]::Combine($src, "Raven.Client", "Raven.Client.csproj")
+
+    # https://github.com/Microsoft/msbuild/issues/1721
+    UpdateVersionInFile $testDriverCsproj $version
+    UpdateVersionInFile $clientCsproj $version
+
+    $buildProps = Join-Path -Path $projectDir -ChildPath "Directory.Build.props"
+    UpdateVersionInFile $buildProps $version
+}
+
+function UpdateVersionInFile ( $file, $version ) {
+    $text = $([System.IO.File]::ReadAllText($file)) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>"
+    [System.IO.File]::WriteAllText($file, $text, [System.Text.Encoding]::UTF8)
 }
 
 function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit ) {
