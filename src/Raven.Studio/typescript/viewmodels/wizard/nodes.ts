@@ -97,6 +97,8 @@ class nodes extends setupStep {
         if (this.model.nodes().length) {
             this.editedNode(this.model.nodes()[0]);
         }
+
+        this.setupDisableReasons();
     }
     
     save() {
