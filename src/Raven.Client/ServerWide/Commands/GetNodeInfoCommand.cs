@@ -15,8 +15,7 @@ namespace Raven.Client.ServerWide.Commands
         public int NumberOfCores;
         public double InstalledMemoryInGb;
         public double UsableMemoryInGb;
-        public Guid ServerId;
-    }
+        public Guid ServerId;        public RachisState CurrentState;    }
 
     public class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
