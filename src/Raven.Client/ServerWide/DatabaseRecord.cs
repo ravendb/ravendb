@@ -46,8 +46,6 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, string> Settings = new Dictionary<string, string>();
 
-        public Dictionary<string, string> SecuredSettings;
-
         public RevisionsConfiguration Revisions;
 
         public ExpirationConfiguration Expiration;

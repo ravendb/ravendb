@@ -17,13 +17,6 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StreamingHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/streams/docs", "HEAD", AuthorizationStatus.ValidUser)]
-        public Task StreamDocsHead()
-        {
-            //why is this action exists in 3.0?
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser)]
         public Task StreamDocsGet()
         {
