@@ -97,6 +97,11 @@ namespace Raven.Client.Documents.Session
         ///     Create the index query object for this query
         /// </summary>
         IndexQuery GetIndexQuery();
+
+        /// <summary>
+        /// Add a named parameter to the query
+        /// </summary>
+        TSelf AddParameter(string name, object value);
     }
 
     public interface IFilterDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

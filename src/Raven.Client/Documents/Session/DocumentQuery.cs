@@ -85,6 +85,20 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.AddParameter(string name, object value)
+        {
+            AddParameter(name, value);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.AddParameter(string name, object value)
+        {
+            AddParameter(name, value);
+            return this;
+        }
+
+        /// <inheritdoc />
         IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WaitForNonStaleResults(TimeSpan? waitTimeout)
         {
             WaitForNonStaleResults(waitTimeout);
@@ -595,13 +609,6 @@ namespace Raven.Client.Documents.Session
         {
             GroupBy(field, fields);
             return new GroupByDocumentQuery<T>(this);
-        }
-
-        /// <inheritdoc />
-        IDocumentQuery<T> IRawDocumentQuery<T>.AddParameter(string name, object value)
-        {
-            AddParameter(name, value);
-            return this;
         }
 
         /// <inheritdoc />
