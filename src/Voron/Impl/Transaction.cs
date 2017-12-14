@@ -255,6 +255,23 @@ namespace Voron.Impl
             DeleteTree(nameSlice);
         }
 
+        public void DeleteFixedTree(string name)
+        {
+            var tree = FixedTreeFor(name);
+
+            while (true)
+            {
+                using (var it = tree.Iterate())
+                {
+                    if (it.Seek(long.MinValue) == false)
+                        break;
+
+                    var currentKey = it.CurrentKey;
+                    tree.Delete(currentKey);
+                }
+            }   
+        }
+
         public void DeleteTree(Slice name)
         {
             if (_lowLevelTransaction.Flags == TransactionFlags.ReadWrite == false)
