@@ -79,6 +79,11 @@ namespace Raven.Client.Documents.Session
         string IndexName { get; }
 
         /// <summary>
+        ///     Whether we should apply distinct operation to the query on the server side
+        /// </summary>
+        bool IsDistinct { get; }
+
+        /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
         /// </summary>
         Task<QueryResult> GetQueryResultAsync(CancellationToken token = default(CancellationToken));
@@ -108,31 +113,13 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TProjection> SelectFields<TProjection>();
 
         /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
-        /// </summary>
-        /// <param name="path">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
-        IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
-        IAsyncDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        IAsyncDocumentQuery<T> Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        IAsyncDocumentQuery<T> Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        /// <summary>
         /// Changes the return type of the query
         /// </summary>
         IAsyncDocumentQuery<TResult> OfType<TResult>();
 
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
-        IAsyncDocumentQuery<T> MoreLikeThis(MoreLikeThisBase moreLikeThis);
+        IAsyncGroupByDocumentQuery<T> GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields);
 
         IAsyncDocumentQuery<T> MoreLikeThis(Action<IMoreLikeThisBuilderForAsyncDocumentQuery<T>> builder);
 

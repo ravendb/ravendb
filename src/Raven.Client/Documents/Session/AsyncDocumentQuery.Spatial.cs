@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Session
     public partial class AsyncDocumentQuery<T>
     {
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             Spatial(path.ToPropertyPath(), criteria);
@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             Spatial(fieldName, criteria);
@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Spatial(DynamicSpatialField field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             Spatial(field, criteria);
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Spatial(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             var dynamicField = field(DynamicSpatialFieldFactory<T>.Instance);

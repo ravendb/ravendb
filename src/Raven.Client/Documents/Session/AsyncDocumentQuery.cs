@@ -356,6 +356,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy((string Name, GroupByMethod Method) field, params (string Name, GroupByMethod Method)[] fields)
+        {
+            GroupBy(field, fields);
+            return new AsyncGroupByDocumentQuery<T>(this);
+        }
+
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
             OrderBy(field, ordering);
