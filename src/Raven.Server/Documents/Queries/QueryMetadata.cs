@@ -102,8 +102,6 @@ namespace Raven.Server.Documents.Queries
 
         public bool HasIncludeOrLoad;
 
-        public ExpressionEvaluator CmpXchgMethod;
-
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
         {
             IndexFieldNames.Add(GetIndexFieldName(fieldName, parameters));
@@ -1201,27 +1199,22 @@ namespace Raven.Server.Documents.Queries
             public override void VisitBooleanMethod(QueryExpression leftSide, QueryExpression rightSide, OperatorType operatorType, BlittableJsonReaderObject parameters)
             {
                 if (leftSide is FieldExpression fe)
+                {
                     _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0, operatorType: operatorType);
+                    if (rightSide is MethodExpression meRight)
+                    {
+                        _metadata.WhereMethods.Add(WhereMethod.RightSideMethod, new SingleMethodEvaluator(_metadata, meRight, parameters)); 
+                    }
+                }
                 if (leftSide is MethodExpression me)
                 {
                     var methodType = QueryMethod.GetMethodType(me.Name);
                     switch (methodType)
                     {
-                        case MethodType.CmpXchg: // WHERE cmpxchg([<Func> | <Value>]) = <Value>
-                            if (!(rightSide is ValueExpression val))
-                            {
-                                throw new ArgumentException("Right side of the cmpxchg expression must be value type.");
-                            }
-                            if (me.Arguments == null || me.Arguments.Count != 1)
-                            {
-                                throw new ArgumentException("The cmpxchg expression must have exaclty one argument");
-                            }
-                            _metadata.CmpXchgMethod = new ExpressionEvaluator(_metadata, operatorType, me, val, parameters);
-                            break;
                         case MethodType.Id:// WHERE id() = [<Func> | <Value>]
                             if (rightSide is MethodExpression meRight)
                             {
-                                _metadata.FillIds = new SingleMethodEvaluator(_metadata, meRight, parameters);
+                                _metadata.WhereMethods.Add(WhereMethod.FillIdsMethod, new SingleMethodEvaluator(_metadata, meRight, parameters)); 
                                 _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType);
                             }
                             else
@@ -1235,6 +1228,8 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Count:
                             VisitFieldToken(leftSide, rightSide, parameters, null);
                             break;
+                        default:
+                            throw new ArgumentException($"The method {methodType} on the left side inside the WHERE clausel is not supported.");
                     }
                 }
             }
@@ -1560,7 +1555,12 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public SingleMethodEvaluator FillIds;
+        public enum WhereMethod
+        {
+            FillIdsMethod,
+            RightSideMethod
+        }
+        public readonly Dictionary<WhereMethod, SingleMethodEvaluator> WhereMethods = new Dictionary<WhereMethod, SingleMethodEvaluator>();
 
         public class SingleMethodEvaluator
         {
@@ -1604,6 +1604,9 @@ namespace Raven.Server.Documents.Queries
                             continue;
                         }
 
+                        if (doc == null) 
+                            continue;
+                        
                         if (_metadata.Query.From.Alias.HasValue)
                         {
                             var alias = _metadata.Query.From.Alias.Value;
@@ -1663,6 +1666,7 @@ namespace Raven.Server.Documents.Queries
                     value = (string)new SingleMethodEvaluator(_metadata, me, _parameters).EvaluateSingleMethod(revtriver, doc);
                 }
 
+                //TODO: evalute the expression to any type with any supported operator
                 switch (_operatorType)
                 {
                     case OperatorType.Equal:
@@ -1678,7 +1682,7 @@ namespace Raven.Server.Documents.Queries
                     //                                    case OperatorType.GreaterThanEqual:
                     //                                        return value >= parameterValue;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException($"Evaluation failed due to the invalid operator {_operatorType}");
                 }
             }
         }

@@ -177,13 +177,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.CmpXchg(string key, T value)
-        {
-            CmpXchg(key, value);
-            return this;
-        }
-
-        /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Intersect()
         {
             Intersect();

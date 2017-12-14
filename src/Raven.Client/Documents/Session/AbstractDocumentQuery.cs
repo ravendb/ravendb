@@ -587,13 +587,21 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
             }
 
-            var transformToEqualValue = TransformValue(whereParams);
-
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
+            
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
-
-            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            tokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
+            
+            if (whereParams.Value is MethodCall mc)
+            {
+                //var parameter = AddQueryParameter(mc.Value);
+                tokens.AddLast(WhereToken.MethodCall(whereParams.FieldName, mc.Value.ToString(), SearchOperator.Or));
+                return;
+            }
+            
+            var transformToEqualValue = TransformValue(whereParams);
+            var addQueryParameter = AddQueryParameter(transformToEqualValue);
+            tokens.AddLast(WhereToken.Equals(whereParams.FieldName, addQueryParameter, whereParams.Exact));
         }
 
         /// <summary>
@@ -798,15 +806,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             NegateIfNeeded(tokens, fieldName);
 
             tokens.AddLast(WhereToken.Regex(fieldName, AddQueryParameter(TransformValue(new WhereParams { Value = pattern, FieldName = fieldName }))));
-        }
-
-        public void CmpXchg(string key, object value)
-        {
-            var tokens = GetCurrentWhereTokens();
-            AppendOperatorIfNeeded(tokens);
-            NegateIfNeeded(tokens, key);
-
-            tokens.AddLast(WhereToken.CmpXchg(key, AddQueryParameter(value), SearchOperator.Or));
         }
 
         /// <summary>
@@ -1453,7 +1452,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return string.Empty;
 
             var type = whereParams.Value.GetType().GetNonNullableType();
-
+            
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
                 return whereParams.Value;
             if (type == typeof(string))
@@ -1497,7 +1496,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return whereParams.Value;
         }
 
-        private string AddQueryParameter(object value)
+        public string AddQueryParameter(object value)
         {
             var parameterName = $"p{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);
@@ -1505,7 +1504,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private LinkedList<QueryToken> GetCurrentWhereTokens()
+        public LinkedList<QueryToken> GetCurrentWhereTokens()
         {
             if (_isInMoreLikeThis == false)
                 return WhereTokens;

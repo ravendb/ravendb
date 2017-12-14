@@ -375,7 +375,6 @@ namespace Raven.Client.Documents.Linq
                 Equals(((ConstantExpression)expression.Right).Value, 0))
             {
                 var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-
                 _documentQuery.WhereEquals(
                     new WhereParams
                     {
@@ -384,9 +383,10 @@ namespace Raven.Client.Documents.Linq
                         AllowWildcards = false,
                         Exact = _insideExact
                     });
+
                 return;
             }
-
+           
             if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
             {
                 VisitEquals(Expression.Equal(expression.Right, expression.Left));
@@ -394,11 +394,10 @@ namespace Raven.Client.Documents.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
-
             _documentQuery.WhereEquals(new WhereParams
             {
                 FieldName = memberInfo.Path,
-                Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+                Value =  GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
                 AllowWildcards = false,
                 IsNestedPath = memberInfo.IsNestedPath,
                 Exact = _insideExact
@@ -847,10 +846,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (declaringType == typeof(RavenQuery))
             {
-                VisitRavenQueryMethodCall(expression);
+                //
                 return;
             }
-
+            
             if (declaringType == typeof(String))
             {
                 VisitStringMethodCall(expression);
@@ -905,18 +904,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _documentQuery.WhereRegex(
                 memberInfo.Path,
                 GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
-        }
-
-        private void VisitRavenQueryMethodCall(MethodCallExpression expression)
-        {
-            if (expression.Arguments.Count != 2)
-            {
-                throw new NotSupportedException(string.Format("CmpXchg.Match() overload with {0} arguments is not supported. " +
-                                                              "Only CmpXchg.Match(string key, T value) overload is supported." +
-                                                              "Expression: {1}.", expression.Arguments.Count, expression));
-            }
-            var memberInfo = GetMember(expression.Arguments[1]);
-            _documentQuery.CmpXchg(expression.Arguments[0].ToString(), GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo)).ToString());
         }
 
         private void VisitLinqExtensionsMethodCall(MethodCallExpression expression)
@@ -1964,8 +1951,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.StringSupport(),
                     new JavascriptConversionExtensions.ConstSupport(),
                     new JavascriptConversionExtensions.MetadataSupport(),
-                    new JavascriptConversionExtensions.CmpXchgValueSupport(),
-                    new JavascriptConversionExtensions.CmpXchgMatchSupport(),
+                    new JavascriptConversionExtensions.CmpXchgSupport(),
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
@@ -2199,8 +2185,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.ConstSupport(),
                     new JavascriptConversionExtensions.LoadSupport(),
                     new JavascriptConversionExtensions.MetadataSupport(),
-                    new JavascriptConversionExtensions.CmpXchgValueSupport(),
-                    new JavascriptConversionExtensions.CmpXchgMatchSupport(),
+                    new JavascriptConversionExtensions.CmpXchgSupport(),
                     new JavascriptConversionExtensions.ValueTypeParseSupport(),
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
