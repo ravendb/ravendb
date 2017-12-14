@@ -288,23 +288,42 @@ namespace Raven.Server.Rachis
         public InstallSnapshot ReadInstallSnapshot(JsonOperationContext context)
         {
             // we explicitly not disposing this here, because we need to access the topology
-            var json = context.ParseToMemory(_stream, "rachis-snapshot",
-                BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
-            json.BlittableValidation();
-            ValidateMessage(nameof(InstallSnapshot), json);
-            return JsonDeserializationRachis<InstallSnapshot>.Deserialize(json);
+            BlittableJsonReaderObject json = null;
+
+            try
+            {
+                json = context.ParseToMemory(_stream, "rachis-snapshot",
+                    BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
+                json.BlittableValidation();
+                ValidateMessage(nameof(InstallSnapshot), json);
+                return JsonDeserializationRachis<InstallSnapshot>.Deserialize(json);
+            }
+            catch
+            {
+                json?.Dispose();
+                throw;
+            }
         }
 
         public RachisEntry ReadRachisEntry(JsonOperationContext context)
         {
             // we explicitly not disposing this here, because we need to access the entry
-            var json = context.ParseToMemory(_stream, "rachis-entry",
-                BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
-            json.BlittableValidation();
-            ValidateMessage(nameof(RachisEntry), json);
-            return JsonDeserializationRachis<RachisEntry>.Deserialize(json);
-        }
+            BlittableJsonReaderObject json = null;
 
+            try
+            {
+                json = context.ParseToMemory(_stream, "rachis-entry",
+                    BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
+                json.BlittableValidation();
+                ValidateMessage(nameof(RachisEntry), json);
+                return JsonDeserializationRachis<RachisEntry>.Deserialize(json);
+            }
+            catch
+            {
+                json?.Dispose();
+                throw;
+            }
+        }
 
         public void Send(JsonOperationContext context, AppendEntriesResponse aer)
         {
