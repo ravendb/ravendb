@@ -11,10 +11,12 @@
             <i class="icon-warning"></i> Configuration will overwrite existing DNS records for domain <strong data-bind="text: model.domain().fullDomain"></strong>. 
         </div>
         <div class="margin-bottom">
-            <button type="button" class="btn btn-primary" data-bind="click: $root.addNode, enable: !$root.maxNodesAddedMsg(), attr: { 'title': $root.maxNodesAddedMsg }">
-                <i class="icon-plus"></i> <span>Add node</span>
-            </button>
-        </div>
+            <span class="has-disable-reason" data-bind="attr: { 'data-original-title': $root.maxNodesAddedMsg() ? $root.maxNodesAddedMsg() : '' }" data-placement="right">
+                <button type="button" class="btn btn-primary" data-bind="enable: !$root.maxNodesAddedMsg(), click:  $root.addNode">
+                    <i class="icon-plus"></i> <span>Add node</span>
+                </button>
+            </span>
+        </div>        
         <div class="row">
             <div class="col-md-6">
                 <div class="nodes-list margin-bottom" data-bind="foreach: model.nodes">
