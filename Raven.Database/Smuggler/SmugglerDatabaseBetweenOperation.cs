@@ -30,11 +30,11 @@ namespace Raven.Smuggler
     {
         public Action<string> OnShowProgress { get; set; } 
 
-        public async Task Between(SmugglerBetweenOperations betweenOperations, SmugglerDatabaseOptions databaseOptions)
+        public async Task Between(SmugglerBetweenOperations betweenOperations, SmugglerDatabaseOptions databaseOptions, IDisposable exportOperationDisposer)
         {
             var exportOperations = betweenOperations.From;
             var importOperations = betweenOperations.To;
-
+            
             exportOperations.Configure(databaseOptions);
             exportOperations.Initialize(databaseOptions);
 
@@ -84,7 +84,7 @@ namespace Raven.Smuggler
                 incremental.LastAttachmentsEtag = await ExportAttachments(exportOperations, importOperations, databaseOptions).ConfigureAwait(false);
             }
 
-            await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes).ConfigureAwait(false);
+            await ExportIdentities(exportOperations, importOperations, databaseOptions.OperateOnTypes, exportOperationDisposer).ConfigureAwait(false);
 
             if (databaseOptions.Incremental)
             {
@@ -108,11 +108,12 @@ namespace Raven.Smuggler
             }
         }
 
-        private async Task ExportIdentities(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, ItemType operateOnTypes)
+        private async Task ExportIdentities(ISmugglerDatabaseOperations exportOperations, ISmugglerDatabaseOperations importOperations, ItemType operateOnTypes, IDisposable exportOperationDisposer)
         {
             ShowProgress("Exporting Identities");
 
             var identities = await exportOperations.GetIdentities().ConfigureAwait(false);
+            exportOperationDisposer?.Dispose(); //we don't need it anymore, so let us get rid of it
 
             ShowProgress("Got {0} following identities: {1}", identities.Count, string.Join(", ", identities.Select(x => x.Key)));
 
@@ -132,13 +133,11 @@ namespace Raven.Smuggler
 
                 return false;
             }).ToList();
-
+            
             ShowProgress("After filtering {0} the following identities need to be exported: {1}", filteredIdentities.Count, string.Join(", ", filteredIdentities.Select(x => x.Key)));
-
             foreach (var identityInfo in filteredIdentities)
             {
                 await importOperations.SeedIdentityFor(identityInfo.Key, identityInfo.Value).ConfigureAwait(false);
-
                 ShowProgress("Identity '{0}' exported with value {1}", identityInfo.Key, identityInfo.Value);
             }
 
