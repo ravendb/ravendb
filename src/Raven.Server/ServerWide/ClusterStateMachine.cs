@@ -220,15 +220,15 @@ namespace Raven.Server.ServerWide
                         CompareExchange(context, type, cmd, index, out var removeItem);
                         leader?.SetStateOf(index, removeItem);
                         break;
-                     case nameof(InstallUpdatedServerCertificateCommand):
-                         InstallUpdatedServerCertificate(context, cmd, index);
-                         break;
-                     case nameof(RecheckStatusOfServerCertificateCommand):
-                         NotifyValueChanged(context,type, index);// just need to notify listeners
-                         break;
-                     case nameof(ConfirmReceiptServerCertificateCommand):
-                         ConfirmReceiptServerCertificate(context, cmd, index);
-                         break;
+                    case nameof(InstallUpdatedServerCertificateCommand):
+                        InstallUpdatedServerCertificate(context, cmd, index);
+                        break;
+                    case nameof(RecheckStatusOfServerCertificateCommand):
+                        NotifyValueChanged(context, type, index); // just need to notify listeners
+                        break;
+                    case nameof(ConfirmReceiptServerCertificateCommand):
+                        ConfirmReceiptServerCertificate(context, cmd, index);
+                        break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index, leader);
                         break;
@@ -251,6 +251,11 @@ namespace Raven.Server.ServerWide
                         AddDatabase(context, cmd, index, leader);
                         break;
                 }
+            }
+            catch (VoronErrorException e)
+            {
+                NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
+                //throw;
             }
             catch (Exception e)
             {
@@ -340,31 +345,25 @@ namespace Raven.Server.ServerWide
 
             foreach (var record in ReadAllDatabases(context))
             {
-                try
+                using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
+                using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
                 {
-                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
-                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
+                    if (record.DeletionInProgress != null)
                     {
-                        if (record.DeletionInProgress != null)
+                        record.DeletionInProgress.Remove(removed);
+                        if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0)
                         {
-                            record.DeletionInProgress.Remove(removed);
-                            if (record.DeletionInProgress.Count == 0 && record.Topology.Count == 0)
-                            {
-                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
-                                continue;
-                            }
+                            DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                            continue;
                         }
-
-                        var updated = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
-
-                        UpdateValue(index, items, lowerKey, key, updated);
                     }
-                    NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
+
+                    var updated = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
+
+                    UpdateValue(index, items, lowerKey, key, updated);
                 }
-                catch (Exception e)
-                {
-                    NotifyLeaderAboutError(index, leader, e);
-                }
+
+                NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
             }
         }
 

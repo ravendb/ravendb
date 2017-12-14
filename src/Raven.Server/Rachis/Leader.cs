@@ -16,6 +16,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Sparrow.Collections.LockFree;
 using Sparrow.Threading;
+using Voron.Exceptions;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
@@ -347,6 +348,17 @@ namespace Raven.Server.Rachis
                 {
                     _engine.Log.Info("Error when running leader behavior", e);
                 }
+
+                if (e is VoronErrorException)
+                {
+                    _engine.Notify(AlertRaised.Create(
+                        null,
+                        "Error when running leader behavior",
+                        e.Message,
+                        AlertType.ClusterTopologyWarning,
+                        NotificationSeverity.Error, details: new ExceptionDetails(e)));
+                }
+
                 try
                 {
                     _engine.SwitchToCandidateState("An error occurred during our leadership." + Environment.NewLine + e);
