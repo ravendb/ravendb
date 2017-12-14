@@ -388,8 +388,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
         /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
         TSelf RelatesToShape(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
-
-        TSelf CmpXchg(string key, T value);
     }
 
     public interface IGroupByDocumentQueryBase<T, TSelf> where TSelf : IDocumentQueryBase<T, TSelf>

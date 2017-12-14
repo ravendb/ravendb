@@ -161,13 +161,13 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken CmpXchg(string fieldName, string parameterName, SearchOperator op)
+        public static WhereToken MethodCall(string fieldName, string parameterName, SearchOperator op)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.CmpXchgMatch,
+                WhereOperator = WhereOperator.MethodCall,
                 SearchOperator = op
             };
         }
@@ -304,9 +304,6 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Regex:
                     writer.Append("regex(");
                     break;
-                case  WhereOperator.CmpXchgMatch:
-                    writer.Append("cmpxchg.match(");
-                    break;
             }
 
             WriteField(writer, FieldName);
@@ -334,7 +331,7 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Equals:
                     writer
-                        .Append(" = $")
+                        .Append(" = ")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.NotEquals:
@@ -372,11 +369,11 @@ namespace Raven.Client.Documents.Session.Tokens
 
                     writer.Append(")");
                     break;
-                case WhereOperator.CmpXchgMatch:
-                    writer
-                        .Append(", $")
-                        .Append(ParameterName);
-                    writer.Append(")");
+                case WhereOperator.MethodCall:
+                    writer.Append(" = cmpxchg(\"");
+                   // writer.Append("$");
+                    writer.Append(ParameterName);
+                    writer.Append("\")");
                     break;
                 case WhereOperator.Lucene:
                 case WhereOperator.StartsWith:
@@ -440,6 +437,5 @@ namespace Raven.Client.Documents.Session.Tokens
                     .Append(")");
             }
         }
-
     }
 }
