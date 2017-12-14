@@ -246,7 +246,7 @@ namespace Raven.Server.ServerWide
             catch (VoronErrorException e)
             {
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
-                //throw;
+                throw;
             }
             catch (Exception e)
             {
