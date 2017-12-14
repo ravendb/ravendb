@@ -15,7 +15,7 @@ namespace SlowTests.Server.Replication
     public class ReplicationResolveConflictsOnConfigurationChange : ReplicationTestBase
     {
 
-        public async Task<List<ModifyOngoingTaskResult>> GenerateConflicts(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
+        public async Task<List<ModifyOngoingTaskResult>> GenerateConflictsAndSetupMasterMasterReplication(DocumentStore store1, DocumentStore store2, string id = "foo/bar")
         {
             using (var session = store1.OpenSession())
             {
@@ -67,7 +67,7 @@ namespace SlowTests.Server.Replication
                     }
                 }))
             {
-                await GenerateConflicts(store1, store2);
+                await GenerateConflictsAndSetupMasterMasterReplication(store1, store2);
                 var config = new ConflictSolver
                 {
                     ResolveByCollection = new Dictionary<string, ScriptResolver>
@@ -80,7 +80,7 @@ namespace SlowTests.Server.Replication
                         }
                     }
                 };
-                await SetupReplicationAsync(store1, config, store2);
+                await UpdateConflictResolver(store1, config.ResolveByCollection, config.ResolveToLatest);
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Resolved"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Resolved"));
@@ -113,7 +113,7 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await GenerateConflicts(store1, store2);
+                await GenerateConflictsAndSetupMasterMasterReplication(store1, store2);
 
                 await SetReplicationConflictResolutionAsync(store1, StraightforwardConflictResolution.ResolveToLatest);
 
