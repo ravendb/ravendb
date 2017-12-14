@@ -554,9 +554,6 @@ namespace Raven.Server.Rachis
             {
                 _engine.Timeout.Defer(_connection.Source);
 
-                // TODO: cancellation
-                //_cancellationTokenSource.Token.ThrowIfCancellationRequested();
-
                 connection.Send(context, new LogLengthNegotiationResponse
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Negotiation,

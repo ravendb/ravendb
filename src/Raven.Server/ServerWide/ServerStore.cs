@@ -561,8 +561,6 @@ namespace Raven.Server.ServerWide
                     NotificationCenter.Add(DatabaseChanged.Create(t.DatabaseName, DatabaseChangeType.RemoveNode));
                     break;
             }
-
-            //TODO: send different commands to studio when necessary
         }
 
         private void OnValueChanged(object sender, (long Index, string Type) t)

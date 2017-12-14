@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public virtual void Commit(IndexingStatsScope stats)
         {
-            if (_writer != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
+            if (_writer != null )
             {
                 using (stats.For(IndexingOperation.Lucene.FlushToDisk))
                 {

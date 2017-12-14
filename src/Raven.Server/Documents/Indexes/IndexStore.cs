@@ -510,10 +510,7 @@ namespace Raven.Server.Documents.Indexes
             if (existingIndex == null)
                 return IndexCreationOptions.Create;
 
-            //if (existingIndex.Definition.IsTestIndex) // TODO [ppekrol]
-            //    return IndexCreationOptions.Update;
             differences = IndexDefinitionCompareDifferences.None;
-
 
             var indexDef = indexDefinition as IndexDefinition;
             if (indexDef != null)
@@ -970,7 +967,6 @@ namespace Raven.Server.Documents.Indexes
         public void RunIdleOperations()
         {
             AsyncHelpers.RunSync(HandleUnusedAutoIndexes);
-            //DeleteSurpassedAutoIndexes(); // TODO [ppekrol]
         }
 
         private async Task HandleUnusedAutoIndexes()

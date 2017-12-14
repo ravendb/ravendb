@@ -944,9 +944,6 @@ namespace Raven.Client.Http
 
         private static Task HandleConflict(JsonOperationContext context, HttpResponseMessage response)
         {
-            // TODO: Conflict resolution
-            // current implementation is temporary 
-
             return ExceptionDispatcher.Throw(context, response);
         }
 

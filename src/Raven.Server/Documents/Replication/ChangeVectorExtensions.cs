@@ -65,7 +65,6 @@ namespace Raven.Server.Documents.Replication
 
         public static int FromBase26(string tag)
         {
-            //TODO: validation of valid chars
             var val = 0;
             for (int i = 0; i < tag.Length; i++)
             {

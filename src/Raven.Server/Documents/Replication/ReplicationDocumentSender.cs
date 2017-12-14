@@ -281,9 +281,6 @@ namespace Raven.Server.Documents.Replication
                         var value = item.Value;
                         if (value.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                         {
-                            // TODO: Why are we disposing here?
-                            // Shouldn't the all context be disposed here?
-                            // If not, should we dispose all strings here?
                             value.Stream.Dispose();
                         }
                         else

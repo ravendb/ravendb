@@ -271,7 +271,6 @@ namespace Sparrow.LowMemory
                 {
                     AvailableMemory = availableRam,
                     TotalPhysicalMemory = totalPhysicalMemory,
-                    //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-8468
                     InstalledMemory = totalPhysicalMemory,
                     MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
                     {

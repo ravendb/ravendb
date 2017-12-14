@@ -179,7 +179,6 @@ namespace Raven.Server.Rachis
                         while (_leader.Running && disposeRequested == false)
                         {
                             disposeRequested = _dispose; // we give last loop before closing
-                            // TODO: how to close
                             entries.Clear();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
@@ -198,7 +197,7 @@ namespace Raven.Server.Rachis
                                             entries.Add(entry);
                                             totalSize += entry.Size;
                                             if (totalSize > Constants.Size.Megabyte)
-                                                break; // TODO: Configurable?
+                                                break;
                                         }
 
                                         appendEntries = new AppendEntries

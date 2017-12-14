@@ -38,8 +38,6 @@ namespace Raven.Server.Web.System
 
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
-
-            //TODO: fill all required information (see: RavenDB-5438) - return Raven.Client.Data.DatabasesInfo
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 context.OpenReadTransaction();
@@ -419,13 +417,13 @@ namespace Raven.Server.Web.System
                 Disabled = disabled,
                 TotalSize = size,
 
-                IsAdmin = true, //TODO: implement me!
+                IsAdmin = true, 
                 IsEncrypted = dbRecord.Encrypted,
                 UpTime = online ? (TimeSpan?)GetUptime(db) : null,
                 BackupInfo = GetBackupInfo(db),
 
                 Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
-                RejectClients = false, //TODO: implement me!
+                RejectClients = false,
                 LoadError = null,
                 IndexingErrors = db?.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0,
 

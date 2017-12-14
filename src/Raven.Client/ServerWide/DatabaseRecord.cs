@@ -46,7 +46,6 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, string> Settings = new Dictionary<string, string>();
 
-        //todo: see how we can protect this
         public Dictionary<string, string> SecuredSettings;
 
         public RevisionsConfiguration Revisions;

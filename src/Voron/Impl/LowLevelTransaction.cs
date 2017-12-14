@@ -82,9 +82,9 @@ namespace Voron.Impl
         // BEGIN: Structures that are safe to pool.
         private readonly HashSet<long> _dirtyPages;
         private readonly Dictionary<long, long> _dirtyOverflowPages;
-        private readonly Stack<long> _pagesToFreeOnCommit; // TODO: This can be a regular list. There is no reason why we need to use an stack here. 
+        private readonly Stack<long> _pagesToFreeOnCommit;
         private readonly Dictionary<long, PageFromScratchBuffer> _scratchPagesTable;
-        private readonly HashSet<PagerState> _pagerStates; // TODO: Understand if it makes sense for this to be a list instead. 
+        private readonly HashSet<PagerState> _pagerStates;
         private readonly Dictionary<int, PagerState> _scratchPagerStates;
         // END: Structures that are safe to pool.
 
@@ -99,7 +99,7 @@ namespace Voron.Impl
         private TransactionHeader* _txHeader;
 
         private readonly HashSet<PageFromScratchBuffer> _transactionPages;
-        private readonly HashSet<long> _freedPages; // TODO: This can be a list. No need for fast access to it as we are scanning sequentially anyways. 
+        private readonly HashSet<long> _freedPages;
         private readonly List<PageFromScratchBuffer> _unusedScratchPages;
 
 

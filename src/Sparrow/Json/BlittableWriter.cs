@@ -66,7 +66,6 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(ulong value)
         {
-            // todo: write something more performant here..
             var s = value.ToString("G", CultureInfo.InvariantCulture);
             return WriteValue(s, out BlittableJsonToken token);
         }
@@ -88,7 +87,6 @@ namespace Sparrow.Json
 
         public int WriteValue(double value)
         {
-            // todo: write something more performant here..
             var s = EnsureDecimalPlace(value, value.ToString("G17", CultureInfo.InvariantCulture));
             BlittableJsonToken token;
             return WriteValue(s, out token);

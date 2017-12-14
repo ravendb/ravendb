@@ -897,7 +897,6 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Out of memory occurred for '{Name}'.", oome);
-                                    // TODO [ppekrol] GC?
 
                                     scope.AddMemoryError(oome);
                                 }
@@ -1125,7 +1124,6 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error || analyzerErrors < AnalyzerErrorLimit)
                 return;
 
-            // TODO we should create notification here?
             _errorStateReason = $"State was changed due to excessive number of analyzer errors ({analyzerErrors}).";
             SetState(IndexState.Error);
         }
@@ -1139,7 +1137,6 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error || unexpectedErrors < UnexpectedErrorsLimit)
                 return;
 
-            // TODO we should create notification here?
             _errorStateReason = $"State was changed due to excessive number of unexpected errors ({unexpectedErrors}).";
             SetState(IndexState.Error);
         }
@@ -1149,7 +1146,6 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error)
                 return;
 
-            // TODO we should create notification here?
             _errorStateReason = "State was changed due to a critical error.";
             SetState(IndexState.Error);
         }
@@ -1166,7 +1162,6 @@ namespace Raven.Server.Documents.Indexes
             if (State == IndexState.Error || writeErrors < WriteErrorsLimit)
                 return;
 
-            // TODO we should create notification here?
             _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
             SetState(IndexState.Error);
         }
@@ -1177,8 +1172,6 @@ namespace Raven.Server.Documents.Indexes
 
             if (_logger.IsOperationsEnabled)
                 _logger.Operations($"Data corruption occurred for '{Name}'.", e);
-
-            // TODO we should create notification here?
 
             _errorStateReason = $"State was changed due to data corruption with message '{e.Message}'";
             try
@@ -1202,8 +1195,6 @@ namespace Raven.Server.Documents.Indexes
 
             if (_logger.IsOperationsEnabled)
                 _logger.Operations(message);
-
-            // TODO we should create notification here?
 
             _errorStateReason = message;
             SetState(IndexState.Error);

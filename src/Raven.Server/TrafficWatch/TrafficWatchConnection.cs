@@ -100,7 +100,7 @@ namespace Raven.Server.TrafficWatch
                 [nameof(change.DatabaseName)] = change.DatabaseName,
                 [nameof(change.CustomInfo)] = change.CustomInfo,
                 [nameof(change.InnerRequestsCount)] = change.InnerRequestsCount
-                //[nameof(change.QueryTimings)] = notification.QueryTimings // TODO :: implement this
+                //[nameof(change.QueryTimings)] = notification.QueryTimings
             };
 
             _bufferStream.SetLength(0);

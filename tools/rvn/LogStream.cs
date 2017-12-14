@@ -97,7 +97,7 @@ namespace rvn
 
         private static void WorkaroundSetPipePathForPosix(NamedPipeClientStream client, string pipeName)
         {
-            if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
+            if (PlatformDetails.RunningOnPosix)
             {
                 var pathField = client.GetType().GetField("_normalizedPipePath", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (pathField == null)

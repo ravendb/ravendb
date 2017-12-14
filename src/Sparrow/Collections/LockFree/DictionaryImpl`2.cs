@@ -12,7 +12,6 @@ namespace Sparrow.Collections.LockFree
     internal abstract class DictionaryImpl<TKey, TValue>
         : DictionaryImpl
     {
-        // TODO: move to leafs
         internal IEqualityComparer<TKey> _keyComparer;
 
         internal static Func<ConcurrentDictionary<TKey, TValue>, int, DictionaryImpl<TKey, TValue>> CreateRefUnsafe =

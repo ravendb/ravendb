@@ -115,7 +115,6 @@ namespace SlowTests.Issues
                     Assert.NotNull(details);
                     Assert.Equal(1L, details[nameof(WarnIndexOutputsPerDocument.NumberOfExceedingDocuments)]);
                     Assert.Equal(3, details[nameof(WarnIndexOutputsPerDocument.MaxNumberOutputsPerDocument)]);
-                    //TODO:Need to invastigate why id is returning as lowered
                     Assert.Equal("users/2-a", details[nameof(WarnIndexOutputsPerDocument.SampleDocumentId)]);
                 }
 

@@ -23,9 +23,7 @@ namespace Raven.Server.Documents.Queries
             metadata = _cache[metadataHash % CacheSize];
             if (metadata == null)
                 return false;
-            //TODO: Here we assume that if the hashes are the same, then the values are the same
-            //TODO: this isn't always the case, but the problem is that this is perf sensitive
-            //TODO: place and we don't want to do a lot of comparisons all the time here
+
             if (metadata.CacheKey != metadataHash)
             {
                 var nextProbe = Hashing.Mix(metadataHash) % CacheSize;

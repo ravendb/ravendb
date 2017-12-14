@@ -273,7 +273,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteNull();
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.Null
@@ -332,7 +332,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.Boolean
@@ -349,7 +349,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.Integer
@@ -366,7 +366,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.LazyNumber
@@ -383,7 +383,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.LazyNumber
@@ -400,7 +400,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.LazyNumber
@@ -417,7 +417,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.LazyNumber
@@ -434,7 +434,7 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             var valuePos = _writer.WriteValue(value);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = BlittableJsonToken.LazyNumber
@@ -452,7 +452,7 @@ namespace Sparrow.Json
             var currentState = _continuationState.Pop();
             BlittableJsonToken stringToken;
             var valuePos = _writer.WriteValue(value, out stringToken, _mode);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = stringToken
@@ -472,7 +472,7 @@ namespace Sparrow.Json
             
 
             var valuePos = _writer.WriteValue(value, out stringToken,UsageMode.None,null);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = stringToken
@@ -493,7 +493,7 @@ namespace Sparrow.Json
             //public unsafe int WriteValue(byte* buffer, int size, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
             //var valuePos = _writer.WriteValue(value, out stringToken, UsageMode.None, null);
             var valuePos = _writer.WriteValue(value, out stringToken, UsageMode.None);
-            _writeToken = new WriteToken //todo: figure out if we really need those WriteTokens
+            _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
                 WrittenToken = stringToken
@@ -553,7 +553,6 @@ namespace Sparrow.Json
             return currentState;
         }
 
-        //todo: consider allowing more forgiving functionality that will pop all states and close relevant objects/arrays
         public void FinalizeDocument()
         {
             var documentToken = _writeToken.WrittenToken;

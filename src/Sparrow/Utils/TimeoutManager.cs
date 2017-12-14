@@ -5,9 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-// TODO: Use our own fast ConcurrentDictionary
-// Here be dragons. Doing this change immediatelly generates "waited for 15s
-// but command was not applied" errors across the board in FastTests.
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
@@ -52,10 +49,6 @@ namespace Sparrow.Utils
             {
                 if (timeout > uint.MaxValue - 1) // Timer cannot have an interval bigger than this value
                     timeout = uint.MaxValue - 1;
-                // TODO: Use the ctor which take uint once it is available.
-                // https://github.com/dotnet/corefx/blob/master/src/System.Threading.Timer/ref/System.Threading.Timer.cs#L18
-                // https://github.com/dotnet/coreclr/blob/master/src/mscorlib/src/System/Threading/Timer.cs#L710
-                // https://github.com/dotnet/coreclr/blob/c55f023f542e63e93a300752432de7bcc4104b3b/src/mscorlib/src/System/Threading/Timer.cs#L710
                 var period = TimeSpan.FromMilliseconds(timeout);
                 _timer = new Timer(TimerCallback, null, period, period);
             }

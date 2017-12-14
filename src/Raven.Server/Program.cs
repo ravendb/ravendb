@@ -170,7 +170,7 @@ namespace Raven.Server
                 catch (Exception e)
                 {
                     if (e.ToString().Contains(@"'WriteReqPool'") &&
-                        e.ToString().Contains("System.ObjectDisposedException")) // TODO : Remove this check in dotnet 2.0 - https://github.com/aspnet/KestrelHttpServer/issues/1231
+                        e.ToString().Contains("System.ObjectDisposedException"))
                     {
                         Console.WriteLine("Ignoring Kestrel's Exception : 'Cannot access a disposed object. Object name: 'WriteReqPool'");
                         Console.Out.Flush();

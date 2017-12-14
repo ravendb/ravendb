@@ -67,7 +67,7 @@ namespace Raven.Traffic
 
                 var state = new JsonParserState();
                 using (context.GetManagedBuffer(out var buffer))
-                using (var parser = new UnmanagedJsonParser(context, state, "")) //TODO: FIXME
+                using (var parser = new UnmanagedJsonParser(context, state, ""))
                 {
                     builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None,
                         nameof(TrafficRec) + "." + nameof(Receive), parser, state);
@@ -210,7 +210,7 @@ namespace Raven.Traffic
                                     notification.DatabaseName = GetStringFromJson(reader, "DatabaseName");
                                     notification.CustomInfo = GetStringFromJson(reader, "CustomInfo");
                                     notification.InnerRequestsCount = GetIntFromJson(reader, "InnerRequestsCount");
-                                    // notification.QueryTimings = GetRavenJObjectFromJson(reader, "QueryTimings"); // TODO (TrafficWatch) : Handle this both server and client sides
+                                    // notification.QueryTimings = GetRavenJObjectFromJson(reader, "QueryTimings");
 
                                     if (config.PrintOutput)
                                         Console.Write("\rRequest #{0} Stored...\t\t ", ++requestsCounter);

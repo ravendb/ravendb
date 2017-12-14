@@ -515,10 +515,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                             .Select(x => new
                             {
                                 Country = x.Key,
-                                OrderedQuantity = x.Sum(order => order.Lines.Sum(line => line.Quantity)),
-                                // TODO arek - to support queries like below we would need to distinguish between
-                                // map operation (Sum) and reduce operation (Average) for a single index field 
-                                //OrderedQuantity2 = x.Average(order => order.Lines.Sum(line => line.Quantity))
+                                OrderedQuantity = x.Sum(order => order.Lines.Sum(line => line.Quantity))
                             })
                             .OrderBy(x => x.Country)
                             .ToList();

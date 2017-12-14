@@ -83,7 +83,6 @@ namespace Voron.Data.BTrees
         }
 
 
-        // TODO: Refactor this.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public TreeNodeHeader* Search(LowLevelTransaction tx, Slice key)
         {

@@ -88,9 +88,6 @@ namespace Raven.Server.Documents.Queries
                         case "skipDuplicateChecking":
                             result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
                             break;
-                            // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ExplainScores
-                            // TODO: ShowTimings and spatial stuff
-                            // TODO: We also need to make sure that we aren't using headers
                     }
                 }
                 catch (Exception e)

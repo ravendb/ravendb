@@ -4,7 +4,6 @@ namespace Micro.Benchmark.PageLocatorImpl
 {
     public class LowLevelTransactionStub
     {
-        // TODO: implement register shuffling here.
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         public static MyPage ModifyPage(long pageNumber)
         {
@@ -14,7 +13,6 @@ namespace Micro.Benchmark.PageLocatorImpl
             }
         }
 
-        // TODO: implement register shuffling here.
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         public static MyPage GetPage(long pageNumber)
         {
@@ -24,7 +22,6 @@ namespace Micro.Benchmark.PageLocatorImpl
             }
         }
 
-        // TODO: implement register shuffling here.
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         public static MyPageStruct ModifyPageStruct(long pageNumber)
         {
@@ -34,7 +31,6 @@ namespace Micro.Benchmark.PageLocatorImpl
             }
         }
 
-        // TODO: implement register shuffling here.
         [MethodImpl(MethodImplOptions.NoOptimization | MethodImplOptions.NoInlining)]
         public static MyPageStruct GetPageStruct(long pageNumber)
         {

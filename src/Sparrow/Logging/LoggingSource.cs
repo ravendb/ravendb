@@ -201,8 +201,6 @@ namespace Sparrow.Logging
                                nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
                 if (File.Exists(fileName) && new FileInfo(fileName).Length >= maxFileSize)
                     continue;
-                // TODO: If avialable file size on the disk is too small, emit a warning, and return a Null Stream, instead
-                // TODO: We don't want to have the debug log kill us
                 var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024,
                     false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
@@ -405,7 +403,6 @@ namespace Sparrow.Logging
             {
                 var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
                 Console.WriteLine(msg);
-                //TODO: Log to event viewer in Windows and sys trace in Linux?
             }
         }
 

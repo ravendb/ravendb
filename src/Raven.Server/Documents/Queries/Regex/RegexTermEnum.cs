@@ -58,7 +58,6 @@ namespace Lucene.Net.Search
         /// <summary>Equality measure on the term </summary>
         public override float Difference()
         {
-            // TODO: adjust difference based on distance of searchTerm.text() and term().text()
             return 1.0F;
         }
 

@@ -86,7 +86,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (string.IsNullOrWhiteSpace(field.Analyzer))
                 return null;
 
-            // TODO [ppekrol] can we use one instance like with KeywordAnalyzer and StandardAnalyzer?
             var analyzerInstance = IndexingExtensions.CreateAnalyzerInstance(name, field.Analyzer);
 
             if (forQuerying)

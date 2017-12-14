@@ -416,7 +416,6 @@ namespace Sparrow.Json.Parsing
                 if (current is DateTimeOffset)
                 {
                     var dateTime = (DateTimeOffset)current;
-                    // TODO: Implement faster ToString method: GetDefaultRavenFormat
                     var s = dateTime.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
 
                     SetStringBuffer(s);

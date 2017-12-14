@@ -78,10 +78,6 @@ namespace Raven.Server.Https
                            sslPolicyErrors == SslPolicyErrors.None;
                 });
 
-            //TODO: bring this back when our version of Kestrel have this feature
-            //var timeoutFeature = context.Features.Get<Microsoft.AspNetCore.Server.Kestrel.Core.Features.IConnectionTimeoutFeature>();
-            //timeoutFeature.SetTimeout(_options.HandshakeTimeout);
-
             try
             {
                 await sslStream.AuthenticateAsServerAsync(
@@ -101,11 +97,6 @@ namespace Raven.Server.Https
                     _logger.Info("Failed to authenticate client", ex);
                 sslStream.Dispose();
                 return _closedAdaptedConnection;
-            }
-            finally
-            {
-                //TODO: restore this
-                //timeoutFeature.CancelTimeout();
             }
 
             // Always set the feature even though the cert might be null

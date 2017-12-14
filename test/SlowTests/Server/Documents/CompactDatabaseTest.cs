@@ -13,7 +13,6 @@ using Xunit;
 
 namespace SlowTests.Server.Documents
 {
-    // TODO Add more tests for compacting documents + indexes, documents alone and indexes alone
     public class CompactDatabaseTest : RavenTestBase
     {
         [Fact]

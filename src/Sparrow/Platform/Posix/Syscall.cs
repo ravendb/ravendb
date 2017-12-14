@@ -32,7 +32,7 @@ namespace Sparrow.Platform.Posix
         public static int gettid()
         {
             if (PlatformDetails.RunningOnMacOsx)
-                return 0; // TODO : Implement for OSX, note gettid is problematic in OSX. Ref : https://github.com/dotnet/coreclr/issues/12444
+                return 0;
 
             return (int)syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
         }
@@ -328,7 +328,6 @@ namespace Sparrow.Platform.Posix
                         matchSize = mountNameSize;
                         switch (m.DriveFormat)
                         {
-                            // TODO : Add other types
                             case "cifs":
                             case "nfs":
                                 syncAllowed = false;

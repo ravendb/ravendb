@@ -19,7 +19,7 @@ using Raven.Client.Exceptions.Cluster;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    // todo: implement functionality for limiting amount of opened subscriptions
+
     public class SubscriptionStorage : IDisposable
     {
         private readonly DocumentDatabase _db;
@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Subscriptions
         private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
         {
             subscriptionData.Connection = subscriptionConnectionState.Connection;
-            if (history) // TODO: Only valid for this node
+            if (history) // Only valid for this node
                 SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
         }
 
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 subscriptionData.Connection = subscriptionConnectionState.Connection;
 
-                if (history)//TODO: Only valid if this is my subscription
+                if (history)//Only valid if this is my subscription
                     SetSubscriptionHistory(subscriptionConnectionState, subscriptionData);
             }
         }

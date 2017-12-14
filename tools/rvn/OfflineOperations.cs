@@ -9,7 +9,6 @@ using Voron.Impl.Compaction;
 
 namespace rvn
 {
-    // TODO: Implement correctly get-key, put-key, trust, encrypt, decrypt
     internal class OfflineOperations
     {
         private const string SecretKeyEncrypted = "secret.key.encrypted";

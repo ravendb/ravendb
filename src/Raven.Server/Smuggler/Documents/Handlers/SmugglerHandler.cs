@@ -209,7 +209,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         }
                         catch (Exception)
                         {
-                            //TODO : add logging, _silently_ skipping is a bad idea
                             continue;
                         }
 

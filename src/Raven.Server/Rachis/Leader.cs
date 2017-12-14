@@ -859,7 +859,6 @@ namespace Raven.Server.Rachis
                 return "A";
             }
 
-            //TODO: handle properly
             if (clusterTopology.LastNodeId[clusterTopology.LastNodeId.Length - 1] + 1 > 'Z')
             {
                 return clusterTopology.LastNodeId + "A";

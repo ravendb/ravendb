@@ -301,7 +301,6 @@ namespace Voron
                 });
 
                 // have to be before the journal check, so we'll fail on files in use
-                // TODO: Need to verify behavior on Linux, might need to maintain a file lock
                 DeleteAllTempBuffers();
 
 

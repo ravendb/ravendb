@@ -12,12 +12,11 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         public RecursivePrefixTreeStrategyThatSupportsWithin(SpatialPrefixTree grid, string fieldName)
             : base(grid, fieldName)
         {
-            _prefixGridScanLevel = grid.GetMaxLevels() - 4;//TODO this default constant is dependent on the prefix grid size
+            _prefixGridScanLevel = grid.GetMaxLevels() - 4;
         }
 
         public void SetPrefixGridScanLevel(int prefixGridScanLevel)
         {
-            //TODO if negative then subtract from maxlevels
             _prefixGridScanLevel = prefixGridScanLevel;
         }
 

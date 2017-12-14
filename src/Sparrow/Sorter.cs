@@ -127,7 +127,7 @@ namespace Sparrow
 
                 T pivot = keys[middle];
                 int p;
-                if (pivot == null) // TODO: When we know that T is a struct use conditional compilation to avoid the check (CoreCLR 2.0)
+                if (pivot == null) 
                 {
                     p = PickPivotAndPartitionUnlikely(keys, lo, hi, middle);
                     goto PickPivotUnlikely;
@@ -391,7 +391,7 @@ namespace Sparrow
 
                 T pivot = keys[middle];
                 int p;
-                if (pivot == null) // TODO: When we know that T is a struct use conditional compilation to avoid the check (CoreCLR 2.0)
+                if (pivot == null)
                 {
                     p = PickPivotAndPartitionUnlikely(keys, values, lo, hi, middle);
                     goto PickPivotUnlikely;

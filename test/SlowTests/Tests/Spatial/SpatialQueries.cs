@@ -100,10 +100,6 @@ namespace SlowTests.Tests.Spatial
                 Assert.NotEqual(null, nearbyDocs);
                 Assert.Equal(3, nearbyDocs.Length);
 
-                //TODO
-                //var dist = DistanceUtils.GetInstance();
-                //Assert.Equal(true, nearbyDocs.All(x => dist.GetDistanceMi(x.Latitude, x.Longitude, lat, lng) < radius));
-
                 session.Dispose();
             }
         }

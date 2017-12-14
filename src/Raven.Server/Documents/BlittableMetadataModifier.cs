@@ -114,7 +114,6 @@ namespace Raven.Server.Documents
             return AboutToReadPropertyNameInternal(reader, state);
         }
 
-        // TODO: When we hit CoreCLR 2.0 see if we can devirtualize this code with some generics shenanigans
         private unsafe bool AboutToReadPropertyNameInternal(UnmanagedJsonParser reader, JsonParserState state)
         {
             if (_state != State.None)
@@ -146,7 +145,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        // TODO: When we hit CoreCLR 2.0 see if we can devirtualize this code with some generics shenanigans
         private unsafe bool AboutToReadPropertyNameInternal(ObjectJsonParser reader, JsonParserState state)
         {
             if (_state != State.None)
@@ -178,7 +176,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        // TODO: When we hit CoreCLR 2.0 see if we can devirtualize this code with some generics shenanigans
         private unsafe bool AboutToReadPropertyNameInternal(IJsonParser reader, JsonParserState state)
         {
             if (_state != State.None)

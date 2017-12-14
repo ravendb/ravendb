@@ -85,9 +85,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                //TODO: When https://github.com/dotnet/corefx/issues/10157 is done, add managed 
-                //TODO: allocations per thread to the stats as well
-
                 var djv = MemoryStatsInternal();
 
                 using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))

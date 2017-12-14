@@ -1085,8 +1085,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.IsType<FaultyInMemoryIndex>(index);
                 Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexName, index.Name);
-
-                // TODO arek: verify that alert was created as well
             }
         }
 
