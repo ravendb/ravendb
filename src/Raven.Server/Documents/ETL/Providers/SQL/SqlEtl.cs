@@ -159,8 +159,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
 
-            // TODO arek - those constraints can be changed later on
-
             if (simulateSqlEtl.Configuration.Transforms.Count != 1)
             {
                 throw new InvalidOperationException($"Invalid number of transformations. You have provided {simulateSqlEtl.Configuration.Transforms.Count} " +

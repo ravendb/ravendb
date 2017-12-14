@@ -23,8 +23,6 @@ namespace Raven.Server.ServerWide.Memory
 
             var currentlyAllocated = new Size(threadStats.TotalAllocated, SizeUnit.Bytes);
 
-            //TODO: This has to be exposed via debug endpoint
-
             // we run out our memory quota, so we need to see if we can increase it or break
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
 
@@ -60,9 +58,6 @@ namespace Raven.Server.ServerWide.Memory
                 // same time and each thinking that they have enough space
                 if (memoryAssumedFreeOrCheapToFree < currentMaximumAllowedMemory)
                 {
-                    // TODO: We probably need to make a note of this in log & expose in stats
-                    // TODO: to explain why we aren't increasing the memory in use
-
                     if (logger.IsInfoEnabled)
                     {
                         logger.Info(

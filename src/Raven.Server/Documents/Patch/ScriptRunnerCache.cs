@@ -94,7 +94,6 @@ namespace Raven.Server.Documents.Patch
                     _cleaning.TryEnter(ref taken);
                     if (taken)
                     {
-                        // TODO: Alert if we are doing this cleanup too often 
                         var numRemaining = CleanTheCache();
                         Interlocked.Add(ref _numberOfCachedScripts, -(count - numRemaining));
                     }

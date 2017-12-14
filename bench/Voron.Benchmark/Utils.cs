@@ -150,7 +150,6 @@ namespace Voron.Benchmark
                             while (tree.State.NumberOfEntries > generationTreeSize)
                             {
                                 var keyIndex = generator.Next(treeKeys.Count);
-                                // TODO: next two lines will run too slow for big datasets
                                 tree.Delete(treeKeys[keyIndex]);
                                 treeKeys.RemoveAt(keyIndex);
                             }
@@ -160,7 +159,6 @@ namespace Voron.Benchmark
                             while (deletions > 0 && tree.State.NumberOfEntries > 0)
                             {
                                 var keyIndex = generator.Next(treeKeys.Count);
-                                // TODO: next two lines will run too slow for big datasets
                                 tree.Delete(treeKeys[keyIndex]);
                                 treeKeys.RemoveAt(keyIndex);
                                 deletions--;
@@ -274,7 +272,6 @@ namespace Voron.Benchmark
                             while (table.NumberOfEntries > generationTableSize)
                             {
                                 var keyIndex = generator.Next(tableKeys.Count);
-                                // TODO: next two lines will run too slow for big datasets
                                 table.DeleteByKey(tableKeys[keyIndex]);
                                 tableKeys.RemoveAt(keyIndex);
                             }
@@ -284,7 +281,6 @@ namespace Voron.Benchmark
                             while (deletions > 0 && table.NumberOfEntries > 0)
                             {
                                 var keyIndex = generator.Next(tableKeys.Count);
-                                // TODO: next two lines will run too slow for big datasets
                                 table.DeleteByKey(tableKeys[keyIndex]);
                                 tableKeys.RemoveAt(keyIndex);
                                 deletions--;

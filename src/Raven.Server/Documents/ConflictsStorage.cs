@@ -242,7 +242,6 @@ namespace Raven.Server.Documents
 
         public void ThrowOnDocumentConflict(DocumentsOperationContext context, Slice lowerId)
         {
-            //TODO: don't forget to refactor this method
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var conflicts = GetConflictsFor(context, prefixSlice);
@@ -735,7 +734,6 @@ namespace Raven.Server.Documents
                     ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, expectedChangeVector);
 
                     var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out long etag);
-                    // TODO: Do not send here strings. Use lazy strings instead.
                     context.Transaction.AddAfterCommitNotification(new DocumentChange
                     {
                         Type = DocumentChangeTypes.Delete,

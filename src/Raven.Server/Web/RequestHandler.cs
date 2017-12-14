@@ -148,7 +148,6 @@ namespace Raven.Server.Web
             return raw;
         }
 
-        //TODO: remove this
         protected long? GetLongFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];
@@ -458,8 +457,7 @@ namespace Raven.Server.Web
 
         public static void SetupCORSHeaders(HttpContext httpContext)
         {
-            // TODO: handle this properly when using https
-            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+
             httpContext.Response.Headers.Add("Access-Control-Allow-Origin", httpContext.Request.Headers["Origin"]);
             httpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
             httpContext.Response.Headers.Add("Access-Control-Allow-Headers", httpContext.Request.Headers["Access-Control-Request-Headers"]);

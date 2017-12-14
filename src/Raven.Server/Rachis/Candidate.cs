@@ -239,7 +239,6 @@ namespace Raven.Server.Rachis
             _running.Lower();
             _stateChange.TrySetResult(null);
             _peersWaiting.Set();
-            //TODO: shutdown notification of some kind?
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"Candidate {_engine.Tag}: Dispose");

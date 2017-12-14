@@ -469,7 +469,7 @@ namespace Raven.Server.Documents
                     attachments.Add(new DynamicJsonValue
                     {
                         [nameof(AttachmentName.Name)] = attachment.Name,
-                        [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
+                        [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
                         [nameof(AttachmentName.Size)] = attachment.Size
                     });
@@ -752,7 +752,7 @@ namespace Raven.Server.Documents
                     return;
                 }
 
-                var tombstoneEtag = _documentsStorage.GenerateNextEtag(); // TODO: Create tombstone here.
+                var tombstoneEtag = _documentsStorage.GenerateNextEtag(); 
                 var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
                 context.LastDatabaseChangeVector = changeVector;
 

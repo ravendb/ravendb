@@ -257,7 +257,6 @@ namespace FastTests.Server.Documents.Revisions
 
         public Task ReplicateExpiredAndDeletedRevisions(/*bool useSession*/)
         {
-            // TODO
             return Task.CompletedTask;
         }
 

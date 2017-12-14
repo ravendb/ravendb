@@ -446,7 +446,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ReadHeaderResponseAndThrowIfUnAuthorized()
         {
-            const int timeout = 2 * 60 * 1000; // TODO: configurable
+            const int timeout = 2 * 60 * 1000; 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
@@ -669,7 +669,7 @@ namespace Raven.Server.Documents.Replication
         {
             while (true)
             {
-                var timeout = 2 * 60 * 1000; // TODO: configurable
+                var timeout = 2 * 60 * 1000;
                 DebuggerAttachedTimeout.OutgoingReplication(ref timeout);
 
                 using (var replicationBatchReplyMessage = _interruptibleRead.ParseToMemory(

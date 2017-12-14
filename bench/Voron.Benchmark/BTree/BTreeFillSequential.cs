@@ -28,7 +28,6 @@ namespace Voron.Benchmark.BTree
 
         /// <summary>
         /// Random seed. If -1, uses time for seeding.
-        /// TODO: make this nullable. See https://github.com/PerfDotNet/BenchmarkDotNet/issues/271
         /// </summary>
         [Params(-1)]
         public int RandomSeed { get; set; } = -1;
@@ -68,7 +67,6 @@ namespace Voron.Benchmark.BTree
             }
         }
 
-        // TODO: Fix. See: https://github.com/PerfDotNet/BenchmarkDotNet/issues/258
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction * Configuration.Transactions)]
         public void FillSeqOneTransaction()
         {
@@ -88,7 +86,6 @@ namespace Voron.Benchmark.BTree
             }
         }
 
-        // TODO: Fix. See: https://github.com/PerfDotNet/BenchmarkDotNet/issues/258
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction * Configuration.Transactions)]
         public void FillSeqMultipleTransaction()
         {

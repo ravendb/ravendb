@@ -71,7 +71,6 @@ namespace Raven.Client.Documents.Session
         {
             if (IsLoaded(id))
                 return new Lazy<T>(() => Load<T>(id));
-            //TODO - DisableAllCaching
             var lazyLoadOperation = new LazyLoadOperation<T>(this, new LoadOperation(this).ById(id)).ById(id);
             return AddLazyOperation(lazyLoadOperation, onEval);
         }

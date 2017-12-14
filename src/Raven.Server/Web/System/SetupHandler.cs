@@ -294,7 +294,7 @@ namespace Raven.Server.Web.System
                 dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
 
                 jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured);
-                jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork); // TODO handle server side.
+                jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork);
                 jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);

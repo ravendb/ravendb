@@ -80,8 +80,7 @@ namespace Voron.Benchmark
 
                 Add(BaselineValidator.FailOnError);
                 Add(JitOptimizationsValidator.FailOnError);
-                // TODO: Uncomment next line. See https://github.com/PerfDotNet/BenchmarkDotNet/issues/272
-                //Add(ExecutionValidator.FailOnError);
+
                 Add(EnvironmentAnalyser.Default);
             }
         }

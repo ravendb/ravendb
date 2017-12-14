@@ -285,7 +285,6 @@ namespace Voron.Data.BTrees
             }
         }
 
-        //TODO: write a test for this
         public long MultiCount(Slice key)
         {
             TreeNodeHeader* node;

@@ -174,8 +174,6 @@ namespace Raven.Server.Utils
                 if (type.StartsWith(TypeList) == false)
                     return blittableJsonObject;
 
-                // TODO [ppekrol] probably we will have to support many more cases here
-
                 if (blittableJsonObject.TryGet(ValuesPropertyName, out BlittableJsonReaderArray values))
                     return values;
 

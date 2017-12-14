@@ -888,13 +888,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new ArgumentOutOfRangeException(nameof(fuzzy), "Fuzzy distance must be between 0.0 and 1.0");
             }
 
-            //var ch = QueryText[QueryText.Length - 1]; // TODO [ppekrol]
-            //if (ch == '"' || ch == ']')
-            //{
-            //    // this check is overly simplistic
-            //    throw new InvalidOperationException("Fuzzy factor can only modify single word terms");
-            //}
-
             whereToken.Fuzzy = fuzzy;
         }
 
@@ -919,12 +912,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             {
                 throw new ArgumentOutOfRangeException(nameof(proximity), "Proximity distance must be a positive number");
             }
-
-            //if (QueryText[QueryText.Length - 1] != '"') // TODO [ppekrol]
-            //{
-            //    // this check is overly simplistic
-            //    throw new InvalidOperationException("Proximity distance can only modify a phrase");
-            //}
 
             whereToken.Proximity = proximity;
         }

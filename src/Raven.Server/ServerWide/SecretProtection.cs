@@ -515,7 +515,6 @@ namespace Raven.Server.ServerWide
                 var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
 
                 // There is a difference in the ASN string between Linux and Windows, see RavenDB-8489
-                // TODO: see if there is a better way to extract the oids, and not rely on the ASN string
                 supported = (extensionString.Contains("Client Authentication") && extensionString.Contains("Server Authentication"))
                             || (extensionString.Contains("1.3.6.1.5.5.7.3.2") && extensionString.Contains("1.3.6.1.5.5.7.3.1"));
             }

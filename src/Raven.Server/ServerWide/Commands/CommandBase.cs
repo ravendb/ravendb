@@ -21,7 +21,6 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (json.TryGet("Type", out string type) == false)
             {
-                // TODO: maybe add further validation?
                 throw new ArgumentException("Command must contain 'Type' field.");
             }
 

@@ -23,7 +23,7 @@ namespace Voron.Platform.Posix
             {
                 if (Syscall.madvise(new IntPtr(range.VirtualAddress), (UIntPtr)range.NumberOfBytes.ToPointer(), MAdvFlags.MADV_WILLNEED) == -1)
                 {
-                    // ignore this error. TODO : Log ?
+                    // ignore this error.
                 }
             }
         }

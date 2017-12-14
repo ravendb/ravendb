@@ -49,7 +49,6 @@ namespace Voron.Benchmark.BTree
 
         /// <summary>
         /// Random seed used to generate values. If -1, uses time for seeding.
-        /// TODO: make this nullable. See https://github.com/PerfDotNet/BenchmarkDotNet/issues/271
         /// </summary>
         [Params(-1)]
         public int RandomSeed { get; set; } = -1;
@@ -96,14 +95,12 @@ namespace Voron.Benchmark.BTree
                 treeKeyIndex++;
             }
 
-            // TODO: parallell maybe?
             for (var i = 0; i < ReadParallelism; i++)
             {
                 _sortedKeysPerThread[i].Sort(SliceComparer.Instance);
             }
         }
 
-        // TODO: Fix. See: https://github.com/PerfDotNet/BenchmarkDotNet/issues/258
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction * Configuration.Transactions / 2)]
         public void ReadRandomOneTransaction()
         {
@@ -137,7 +134,6 @@ namespace Voron.Benchmark.BTree
             countdownEvent.Wait();
         }
 
-        // TODO: Fix. See: https://github.com/PerfDotNet/BenchmarkDotNet/issues/258
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction * Configuration.Transactions / 2)]
         public void ReadSeqOneTransaction()
         {
@@ -171,8 +167,6 @@ namespace Voron.Benchmark.BTree
             countdownEvent.Wait();
         }
 
-        // TODO: Fix. See: https://github.com/PerfDotNet/BenchmarkDotNet/issues/258
-        // TODO: this is specially bad in this case, since the operations are actually *Parallelism
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction*Configuration.Transactions / 2)]
         public void IterateAllKeysOneTransaction()
         {
@@ -209,7 +203,6 @@ namespace Voron.Benchmark.BTree
             countdownEvent.Wait();
         }
 
-        // TODO: Fix. See: https://github.com/PerfDotNet/BenchmarkDotNet/issues/258
         [Benchmark(OperationsPerInvoke = Configuration.RecordsPerTransaction * Configuration.Transactions / 2)]
         public void IterateThreadKeysOneTransaction()
         {

@@ -1090,7 +1090,6 @@ namespace Raven.Server.Documents
                 // that. Another issue is that the last tombstone etag has changed, and we need 
                 // to let the indexes catch up to us here, even if they'll just do a noop.
 
-                // TODO: Do not send here strings. Use lazy strings instead.
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     Type = DocumentChangeTypes.Delete,
@@ -1154,7 +1153,6 @@ namespace Raven.Server.Documents
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector);
 
-                // TODO: Do not send here strings. Use lazy strings instead.
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     Type = DocumentChangeTypes.Delete,

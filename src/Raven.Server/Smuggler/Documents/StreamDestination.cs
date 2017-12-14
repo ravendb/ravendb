@@ -222,7 +222,6 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         progress.Attachments.ErroredCount++;
 
-                        // TODO: How should we handle errors here?
                         throw new ArgumentException($"Hash field is mandatory in attachment's metadata: {attachment}");
                     }
 

@@ -58,7 +58,7 @@ namespace Sparrow.Meters
         protected override void MarkInternalWindowEnd()
         {
             if (_lastState == null)
-                throw new IOException("_lastState equels to null when trying to set end of intervalWindow!"); // TODO : do not throw.. just log and ignore
+                throw new IOException("_lastState equels to null when trying to set end of intervalWindow!");
 
             _lastState.End = DateTime.UtcNow;
 

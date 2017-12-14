@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Handlers
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                //TODO: select small context size (maybe pool just for them?)
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     try

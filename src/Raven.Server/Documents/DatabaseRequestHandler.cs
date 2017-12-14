@@ -68,7 +68,6 @@ namespace Raven.Server.Documents
                 DatabaseRecord dbRecord;
                 using (context.OpenReadTransaction())
                 {
-                    //TODO: maybe have a timeout here for long loading operations
                     dbRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
                 }
                 if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))

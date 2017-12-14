@@ -1082,8 +1082,6 @@ namespace Sparrow
             if (bytesToSkip > value.Length)
                 throw new ArgumentException($"'{nameof(bytesToSkip)}' cannot be bigger than '{nameof(value)}.Length' 0.");
 
-            // TODO: If origin and destination are immutable, we can create external references.
-
             int size = value.Length - bytesToSkip;
             var result = AllocateInternal(size, type);
             Memory.Copy(result._pointer->Ptr, value._pointer->Ptr + bytesToSkip, size);
@@ -1095,8 +1093,6 @@ namespace Sparrow
         public ByteString Clone(ByteString value, ByteStringType type = ByteStringType.Mutable)
         {
             Debug.Assert(value._pointer != null, $"{nameof(value)} cant be null.");
-
-            // TODO: If origin and destination are immutable, we can create external references.
 
             var result = AllocateInternal(value.Length, type);
             Memory.Copy(result._pointer->Ptr, value._pointer->Ptr, value._pointer->Length);
@@ -1478,16 +1474,6 @@ namespace Sparrow
             GC.SuppressFinalize(this);
 
             _disposed = true;
-
-#if VALIDATE
-            /* TODO arek
-            foreach (var item in _immutableTracker.ToArray())
-            {
-                var storage = (ByteStringStorage*)item.Value.Item1.ToPointer();
-
-                ValidateAndUnregister(storage);
-            } */
-#endif
 
             foreach (var segment in _wholeSegments)
             {

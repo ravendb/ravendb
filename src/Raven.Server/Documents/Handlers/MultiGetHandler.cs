@@ -103,8 +103,6 @@ namespace Raven.Server.Documents.Handlers
 
                         if (method == HttpMethod.Post.Method && request.TryGet("Content", out object content))
                         {
-                            //TODO - remove "if" when deleting the old client and 
-                            //change object content to BlittableJsonReaderArray content.
                             if (content is LazyStringValue)
                             {
                                 var requestBody = GetRequestBody(content.ToString());

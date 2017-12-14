@@ -249,7 +249,7 @@ namespace Raven.Server.Documents
                 _sendQueue.Enqueue(new ChangeValue
                 {
                     ValueToSend = value,
-                    AllowSkip = change.Type == IndexChangeTypes.BatchCompleted //TODO: make sure it makes sense
+                    AllowSkip = change.Type == IndexChangeTypes.BatchCompleted
                 });
         }
 

@@ -9,7 +9,7 @@ namespace Raven.Server.Documents
         public long StorageId;
 
         public TombstoneType Type;
-        public LazyStringValue LowerId; // TODO: Change to Key
+        public LazyStringValue LowerId;
 
         public long Etag;
         public long DeletedEtag;

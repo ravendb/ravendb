@@ -41,9 +41,6 @@ namespace Raven.Server
         {
             app.UseWebSockets(new WebSocketOptions
             {
-                // TODO: KeepAlive causes "Unexpect reserved bit set" (we are sending our own heartbeats, so we do not need this)
-                //KeepAliveInterval = Debugger.IsAttached ? 
-                //    TimeSpan.FromHours(24) : TimeSpan.FromSeconds(30), 
                 KeepAliveInterval = TimeSpan.FromHours(24),
                 ReceiveBufferSize = 4096
             });
@@ -177,11 +174,6 @@ namespace Raven.Server
                 if (context.RequestAborted.IsCancellationRequested)
                     return;
 
-                //TODO: special handling for argument exception (400 bad request)
-                //TODO: operation canceled (timeout)
-                //TODO: Invalid data exception 422
-
-                //TODO: Proper json output, not like this
                 MaybeSetExceptionStatusCode(context, e);
 
                 using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
@@ -234,9 +226,9 @@ namespace Raven.Server
                     RequestUri = context.Request.GetEncodedUrl(),
                     AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
                     DatabaseName = database ?? "N/A",
-                    CustomInfo = "", // TODO: Implement
-                    InnerRequestsCount = 0, // TODO: Implement
-                    QueryTimings = null // TODO: Implement
+                    CustomInfo = "", 
+                    InnerRequestsCount = 0, 
+                    QueryTimings = null
                 };
 
                 TrafficWatchManager.DispatchMessage(twn);

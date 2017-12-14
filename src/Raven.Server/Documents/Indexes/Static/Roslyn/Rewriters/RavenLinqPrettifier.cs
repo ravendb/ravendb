@@ -71,9 +71,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         SyntaxFactory.Identifier(selectorExp.ParameterList.Parameters[1].Identifier.ValueText),
                         (ExpressionSyntax)Visit(sourceExpBody)));
 
-                    //TODO : aviv - try to remove 'this0', 'this1', etc.. from sourceExp and selectorExp,
-                    //TODO          so that we can avoid adding 'let' clauses to QueryBody 
-
                     return SyntaxFactory.QueryExpression(
                         innerQueryExp.FromClause,
                         SyntaxFactory.QueryBody(

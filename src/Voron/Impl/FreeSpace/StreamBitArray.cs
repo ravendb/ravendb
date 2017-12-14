@@ -89,7 +89,6 @@ namespace Voron.Impl.FreeSpace
                 8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
             };
 
-        // TODO: Remove and use the version that is in Sparrow.
         private static int HighestBitSet(int v)
         {
 

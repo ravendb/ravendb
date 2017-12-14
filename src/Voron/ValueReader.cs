@@ -109,7 +109,6 @@ namespace Voron
             return val;
         }
 
-        //TODO: Move this to Sparrow Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static long SwapBitShift(long value)
         {

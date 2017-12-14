@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
             if (statements.Count == 0)
                 return modifiedParameterList;
-            return modifiedParameterList.WithBody(modifiedParameterList.Body.WithStatements(modifiedParameterList.Body.Statements.InsertRange(0, statements))); //TODO: deal with indentation
+            return modifiedParameterList.WithBody(modifiedParameterList.Body.WithStatements(modifiedParameterList.Body.Statements.InsertRange(0, statements)));
         }
     }
 }

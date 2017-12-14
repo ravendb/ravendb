@@ -137,8 +137,6 @@ namespace Sparrow.Binary
             if (bitsLeft % BitsPerByte != 0)
                 rotations++;
 
-            // TODO: Can we just write it in Little Endian Format (aka in reverse order)?
-
             // We write the value and shift
             for (i = 0; i < rotations; i++)
             {

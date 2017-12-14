@@ -708,7 +708,7 @@ namespace Sparrow.Compression
                     {
                         /* match can be copied as a single segment from external dictionary */
                         match = dictEnd - (lowPrefix - match);                        
-                        UnmanagedMemory.Move(op, match, length); // TODO: Check if move is required.
+                        UnmanagedMemory.Move(op, match, length); 
                         op += length;
                     }
                     else

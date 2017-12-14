@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Conventions
             PrettifyGeneratedLinqExpressions = true;
 
             JsonContractResolver = new DefaultRavenContractResolver();
-            CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
+            CustomizeJsonSerializer = serializer => { }; 
 
             BulkInsert = new BulkInsertConventions(this);
 

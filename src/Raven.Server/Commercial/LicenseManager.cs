@@ -1071,8 +1071,6 @@ namespace Raven.Server.Commercial
             {
                 foreach (var databaseRecord in _serverStore.Cluster.ReadAllDatabases(context))
                 {
-                    //TODO: check monitoring existance
-
                     if (databaseRecord.Encrypted)
                         encryptedDatabasesCount++;
 

@@ -312,8 +312,6 @@ namespace Sparrow.Json
         {
             Debug.Assert(required > 0);
 
-            // TODO: protect from documents larger than 1GB
-
             // Grow by doubling segment size until we get to 1 MB, then just use 1 MB segments
             // otherwise a document with 17 MB will waste 15 MB and require very big allocations
             var segmentSize = Math.Max(Bits.NextPowerOf2(required), _head.Allocation.SizeInBytes * 2);

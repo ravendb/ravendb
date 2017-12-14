@@ -202,7 +202,6 @@ namespace Raven.Server.Utils
 
         private static void WorkaroundPipePathForPosix(NamedPipeServerStream pipe, string pipeName)
         {
-            // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
             var pathField = pipe.GetType().GetField("_path", BindingFlags.NonPublic | BindingFlags.Instance);
             if (pathField == null)
             {

@@ -316,8 +316,7 @@ namespace Sparrow.Json
                     {
                         if (ChangeTypeToString(result, out string timeSpanString) == false)
                             ThrowFormatException(result, result.GetType().FullName, "string");
-                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false
-                        ) // todo: format might be problematic here
+                        if (TimeSpan.TryParseExact(timeSpanString, "c", CultureInfo.InvariantCulture, out TimeSpan timeSpan) == false) 
                             ThrowFormatException(result, result.GetType().FullName, "TimeSpan");
                         obj = (T)(object)timeSpan;
                     }
@@ -685,7 +684,6 @@ namespace Sparrow.Json
 
         public int[] GetPropertiesByInsertionOrder()
         {
-            //TODO: Move all callers to use the other overload
             var props = new int[_propCount];
             var offsets = new int[_propCount];
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);

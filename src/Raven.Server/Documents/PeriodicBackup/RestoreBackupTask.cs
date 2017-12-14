@@ -488,9 +488,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 settingsKey: RestoreSettings.SettingsFileName,
                 onSettings: settingsStream =>
                 {
-                    //TODO: decrypt this file using the _restoreConfiguration.EncryptionKey
-                    //http://issues.hibernatingrhinos.com/issue/RavenDB-7546
-
                     using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var json = context.Read(settingsStream, "read database settings for restore");

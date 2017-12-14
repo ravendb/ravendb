@@ -173,7 +173,6 @@ namespace Voron.Platform.Posix
 
         public override void Sync(long totalUnsynced)
         {
-            //TODO: Is it worth it to change to just one call for msync for the entire file?
             var currentState = GetPagerStateAndAddRefAtomically();
             try
             {
