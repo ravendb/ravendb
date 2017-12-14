@@ -157,3 +157,7 @@ Foreach ($spec in $targets) {
 }
 
 write-host "Done creating packages."
+
+if ($versionObj.BuildType.ToLower() -eq 'stable') {
+    BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType
+}
