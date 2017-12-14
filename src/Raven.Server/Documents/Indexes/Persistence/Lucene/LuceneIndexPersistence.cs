@@ -12,7 +12,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
-
+using Sparrow.Threading;
 using Voron;
 using Voron.Impl;
 
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexSearcherHolder _indexSearcherHolder;
 
-        private bool _disposed;
+        private DisposeOnce<SingleAttempt>_disposeOnce;
 
         private bool _initialized;
         private readonly Dictionary<string, IndexField> _fields;
@@ -51,6 +51,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _index = index;
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
+            _disposeOnce = new DisposeOnce<SingleAttempt>(() =>
+            {
+                DisposeWriters();
+
+                _indexSearcherHolder?.Dispose();
+                _converter?.Dispose();
+                _directory?.Dispose();
+
+                foreach (var directory in _suggestionsDirectories)
+                {
+                    directory.Value?.Dispose();
+                }
+            });
 
             var fields = index.Definition.IndexFields.Values;
 
@@ -286,27 +299,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Dispose()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
-            _disposed = true;
-
-            DisposeWriters();
-
-            _indexSearcherHolder?.Dispose();
-            _converter?.Dispose();
-            _directory?.Dispose();
-
-            foreach (var directory in _suggestionsDirectories)
-            {
-                directory.Value?.Dispose();
-            }
+            _disposeOnce.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void CheckDisposed()
         {
-            if (_disposed)
+            if (_disposeOnce.Disposed)
                 throw new ObjectDisposedException($"Index persistence for index '{_index.Definition.Name}' was already disposed.");
         }
 
