@@ -858,7 +858,20 @@ namespace Voron.Impl
                 return;// never reached
             }
 
-            AsyncCommit.Wait();
+            try
+            {
+                AsyncCommit.Wait();
+            }
+            catch (Exception e)
+            {
+                // an exception being thrown while / after / somewhere in the middle 
+                // of writing to the journal means that we don't know what the current
+                // state of the journal is. We have to shut down and run recovery to 
+                // come to a known good state
+                _env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+
+                throw;
+            }
 
             if (AsyncCommit.Result)
                 Environment.LastWorkTime = DateTime.UtcNow;
@@ -928,7 +941,7 @@ namespace Voron.Impl
 
         private void CommitStage3_DisposeTransactionResources()
         {
-            // an exception being throw after the transaction has been committed to disk 
+            // an exception being thrown after the transaction has been committed to disk 
             // will corrupt the in memory state, and require us to restart (and recover) to 
             // be in a valid state
             try
