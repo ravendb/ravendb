@@ -45,6 +45,7 @@ using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -1833,6 +1834,28 @@ namespace Raven.Server.Documents.Indexes
 
                             var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
+                            if (query.Metadata.WhereMethods.TryGetValue(QueryMetadata.WhereMethod.RightSideMethod, out var method))
+                            {
+                                try
+                                {
+                                    if (query.Metadata.Query.Where is BinaryExpression be && be.Right is MethodExpression me)
+                                    {
+                                        var value = method.EvaluateSingleMethod((QueryResultRetrieverBase)retriever, null);
+                                        query.Metadata.WhereMethods.Remove(QueryMetadata.WhereMethod.RightSideMethod);
+                                        query.QueryParameters.Modifications = new DynamicJsonValue
+                                        {
+                                            [me.Name] = value
+                                        };
+                                        query.QueryParameters = documentsContext.ReadObject(query.QueryParameters, "add-parameter");
+                                        be.Right = new ValueExpression(me.Name, ValueTokenType.Parameter);
+                                    }
+                                }
+                                catch
+                                {
+                                    //
+                                }
+                            }
+                            
                             if (query.Metadata.IsMoreLikeThis)
                             {
                                 documents = reader.MoreLikeThis(

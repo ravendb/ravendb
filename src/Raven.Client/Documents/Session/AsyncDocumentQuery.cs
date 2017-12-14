@@ -271,13 +271,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.CmpXchg(string key, T value)
-        {
-            CmpXchg(key, value);
-            return this;
-        }
-
-        /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AndAlso()
         {
             AndAlso();

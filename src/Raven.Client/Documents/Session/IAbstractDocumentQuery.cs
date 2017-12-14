@@ -7,6 +7,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {
@@ -173,11 +174,6 @@ namespace Raven.Client.Documents.Session
         ///   Matches fields where Regex.IsMatch(filed, pattern)
         /// </summary>
         void WhereRegex(string fieldName, string pattern);
-
-        /// <summary>
-        ///   Matches where CmpXchg.Match(key, value)
-        /// </summary>
-        void CmpXchg(string key, object value);
 
         /// <summary>
         ///   Add an AND to the query
@@ -361,5 +357,6 @@ namespace Raven.Client.Documents.Session
         string LoadParameter(object id);
 
         void SuggestUsing(SuggestionBase suggestion);
+
     }
 }

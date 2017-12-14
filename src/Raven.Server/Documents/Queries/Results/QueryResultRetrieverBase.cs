@@ -146,12 +146,6 @@ namespace Raven.Server.Documents.Queries.Results
             return ReturnProjection(result, doc, score, _context);
         }
 
-         public bool Filter(Document doc, QueryMetadata queryMetadata)
-        {
-            return queryMetadata.CmpXchgMethod?.EvaluateExpression(this, doc) == false;
-        }
-        
-        
         public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();

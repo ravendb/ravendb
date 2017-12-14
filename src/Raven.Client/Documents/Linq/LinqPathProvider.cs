@@ -248,6 +248,17 @@ namespace Raven.Client.Documents.Linq
                     value = ((LambdaExpression)expression).Compile().DynamicInvoke();
                     return true;
                 case ExpressionType.Call:
+                    if (expression is MethodCallExpression mce)
+                    {
+                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
+                            mce.Method.Name == nameof(RavenQuery.CmpXchg))
+                        {
+                            if (GetValueFromExpressionWithoutConversion(mce.Arguments[0], out value) == false)
+                                return false;
+                            value = new MethodCall("cmpxchg", value);
+                            return true;
+                        }
+                    }
                     value = Expression.Lambda(expression).Compile().DynamicInvoke();
                     return true;
                 case ExpressionType.Convert:
@@ -362,6 +373,18 @@ namespace Raven.Client.Documents.Linq
                 }
                 cur = cur.Expression as MemberExpression;
             }
+        }
+    }
+
+    public class MethodCall
+    {
+        public string Name { get; }
+        public object Value { get; }
+
+        public MethodCall(string name, object value)
+        {
+            Name = name;
+            Value = value;
         }
     }
 }
