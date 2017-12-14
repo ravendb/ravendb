@@ -103,8 +103,6 @@ namespace Raven.Client.Documents.Session
             //MapReduce indexes return reduce results that don't have @id property
             metadata.TryGetId(out string id);
 
-            //TODO - Investigate why ConvertToEntity fails if we don't call ReadObject before
-            json = Context.ReadObject(json, id);
             var entity = QueryOperation.Deserialize<T>(id, json, metadata, fieldsToFetch, true, this);
 
             var streamResult = new StreamResult<T>
