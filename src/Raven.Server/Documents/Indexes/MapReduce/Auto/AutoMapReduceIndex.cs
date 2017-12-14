@@ -55,9 +55,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return instance;
         }
 
-        protected override void InitializeInternal()
+        protected override void OnInitialization()
         {
-            base.InitializeInternal();
+            base.OnInitialization();
 
             _reduceKeyProcessor = new ReduceKeyProcessor(Definition.GroupByFields.Count, _unmanagedBuffersPool);
         }
@@ -262,9 +262,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             }
         }
 
-        public override void Dispose()
+        protected override void DisposeIndex()
         {
-            base.Dispose();
+            base.DisposeIndex();
             _reduceKeyProcessor.ReleaseBuffer();
         }
 

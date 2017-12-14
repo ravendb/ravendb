@@ -502,8 +502,22 @@ namespace Raven.Server.Web.System
             if (db == null)
                 return 0;
 
-            return
-                db.GetAllStoragesEnvironment().Sum(env => env.Environment.Stats().AllocatedDataFileSizeInBytes);
+            return db.GetAllStoragesEnvironment().Sum(env =>
+                {
+
+                    try
+                    {
+                        return env.Environment.Stats().AllocatedDataFileSizeInBytes;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return 0;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        return 0;
+                    }
+                });
         }
 
         private static NodeId GetNodeId(InternalReplication node, string responsible = null)

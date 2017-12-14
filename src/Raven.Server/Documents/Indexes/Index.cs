@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Indexes
         private StorageEnvironment _environment;
 
         internal TransactionContextPool _contextPool;
-
+        
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
@@ -161,7 +161,6 @@ namespace Raven.Server.Documents.Indexes
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private Func<bool> _indexValidationStalenessCheck = () => true;
-        protected readonly StorageOperationWrapper _storageOperation;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
@@ -186,17 +185,20 @@ namespace Raven.Server.Documents.Indexes
             if (Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
                 HandleAllDocs = true;
 
-            _storageOperation = new StorageOperationWrapper(this);
             _queryBuilderFactories = new QueryBuilderFactories
             {
                 GetSpatialFieldFactory = GetOrAddSpatialField,
                 GetRegexFactory = GetOrAddRegex
             };
 
-            _disposeOne = new DisposeOnce<SingleAttempt>(SingleDispose);
+            _disposeOne = new DisposeOnce<SingleAttempt>(() =>
+            {
+                using (DrainRunningQueries())
+                    DisposeIndex();
+            });
         }
 
-        private void SingleDispose()
+        protected virtual void DisposeIndex()
         {
             var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
             if (needToLock)
@@ -362,39 +364,48 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name}' was already initialized.");
 
-                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+                var options = CreateStorageEnvironmentOptions(documentDatabase, configuration);
 
-                var indexPath = configuration.StoragePath.Combine(name);
-
-                var indexTempPath = configuration.TempPath?.Combine(name);
-
-                var options = configuration.RunInMemory
-                    ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath,
-                        documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
-                    : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
-                        documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
-
-                options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-                options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
-
-                options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
-                options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
-                options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                Sodium.CloneKey(out options.MasterKey, documentDatabase.MasterKey);
-
+                StorageEnvironment storageEnvironment = null;
                 try
                 {
-                    Initialize(new StorageEnvironment(options), documentDatabase, configuration, performanceHints);
+                    storageEnvironment = new StorageEnvironment(options);
+                    Initialize(storageEnvironment, documentDatabase, configuration, performanceHints);
                 }
                 catch (Exception)
                 {
+                    storageEnvironment?.Dispose();
                     options.Dispose();
                     throw;
                 }
             }
+        }
+
+        private StorageEnvironmentOptions CreateStorageEnvironmentOptions(DocumentDatabase documentDatabase, IndexingConfiguration configuration)
+        {
+            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+
+            var indexPath = configuration.StoragePath.Combine(name);
+
+            var indexTempPath = configuration.TempPath?.Combine(name);
+
+            var options = configuration.RunInMemory
+                ? StorageEnvironmentOptions.CreateMemoryOnly(indexPath.FullPath, indexTempPath?.FullPath,
+                    documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification)
+                : StorageEnvironmentOptions.ForPath(indexPath.FullPath, indexTempPath?.FullPath, null,
+                    documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification);
+
+            options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
+            options.OnRecoveryError += documentDatabase.HandleOnRecoveryError;
+
+            options.SchemaVersion = SchemaUpgrader.CurrentVersion.IndexVersion;
+            options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Index, null, null);
+            options.CompressTxAboveSizeInBytes = documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+            options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+            options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+            options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+            Sodium.CloneKey(out options.MasterKey, documentDatabase.MasterKey);
+            return options;
         }
 
         internal ExitWriteLock DrainRunningQueries()
@@ -409,10 +420,14 @@ namespace Raven.Server.Documents.Indexes
 
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
+
             return new ExitWriteLock(_currentlyRunningQueriesLock);
         }
 
-        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
+        protected void Initialize(
+            StorageEnvironment environment, 
+            DocumentDatabase documentDatabase, 
+            IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
             if (_disposeOne.Disposed)
@@ -423,58 +438,64 @@ namespace Raven.Server.Documents.Indexes
                 if (_initialized)
                     throw new InvalidOperationException($"Index '{Name}' was already initialized.");
 
-                try
-                {
-                    Debug.Assert(Definition != null);
-
-                    DocumentDatabase = documentDatabase;
-                    Configuration = configuration;
-                    PerformanceHints = performanceHints;
-
-                    _environment = environment;
-                    var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
-                    _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
-                    _contextPool = new TransactionContextPool(_environment);
-                    _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
-                    _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
-                    _indexStorage.Initialize(_environment);
-                    IndexPersistence = new LuceneIndexPersistence(this);
-                    IndexPersistence.Initialize(_environment);
-
-                    LoadValues();
-
-                    DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
-
-                    DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
-
-                    _indexValidationStalenessCheck = () =>
-                    {
-                        if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
-                            return true;
-
-                        using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-                        using (documentsContext.OpenReadTransaction())
-                        {
-                            return IsStale(documentsContext);
-                        }
-                    };
-
-                    InitializeInternal();
-
-                    if (LastIndexingTime != null)
-                        _didWork = true;
-
-                    _initialized = true;
-                }
-                catch (Exception)
-                {
-                    Dispose();
-                    throw;
-                }
+                InitializeInternal(environment, documentDatabase, configuration, performanceHints);
             }
         }
 
-        protected virtual void InitializeInternal()
+        private void InitializeInternal(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
+            PerformanceHintsConfiguration performanceHints)
+        {
+            try
+            {
+                Debug.Assert(Definition != null);
+
+                DocumentDatabase = documentDatabase;
+                Configuration = configuration;
+                PerformanceHints = performanceHints;
+
+                _environment = environment;
+                var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name);
+                _unmanagedBuffersPool = new UnmanagedBuffersPoolWithLowMemoryHandling($"Indexes//{safeName}");
+                _contextPool = new TransactionContextPool(_environment);
+                _indexStorage = new IndexStorage(this, _contextPool, documentDatabase);
+                _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
+                _indexStorage.Initialize(_environment);
+                IndexPersistence = new LuceneIndexPersistence(this);
+                IndexPersistence.Initialize(_environment);
+
+                LoadValues();
+
+                DocumentDatabase.DocumentTombstoneCleaner.Subscribe(this);
+
+                DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
+
+                _indexValidationStalenessCheck = () =>
+                {
+                    if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
+                        return true;
+
+                    using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                    using (documentsContext.OpenReadTransaction())
+                    {
+                        return IsStale(documentsContext);
+                    }
+                };
+
+                OnInitialization();
+
+                if (LastIndexingTime != null)
+                    _didWork = true;
+
+                _initialized = true;
+            }
+            catch (Exception)
+            {
+                Dispose();
+                throw;
+            }
+        }
+
+        protected virtual void OnInitialization()
         {
             _indexWorkers = CreateIndexWorkExecutors();
         }
@@ -501,44 +522,49 @@ namespace Raven.Server.Documents.Indexes
 
             using (DrainRunningQueries())
             {
-                if (_indexingThread != null && 
-                    _indexingThread != Thread.CurrentThread &&
-                    _indexingThread.ThreadState != System.Threading.ThreadState.Stopped)
-                    throw new InvalidOperationException($"Index '{Name}' is executing.");
-
-                if (Configuration.Disabled)
-                    return;
-
-                if (State == IndexState.Disabled)
-                    return;
-
-                SetState(IndexState.Normal);
-
-                _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
-                _indexDisabled = false;
-
-                _indexingThread = new Thread(() =>
-                {
-                    try
-                    {
-                        LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
-                        ExecuteIndexing();
-                    }
-                    catch (Exception e)
-                    {
-                        if (_logger.IsInfoEnabled)
-                        {
-                            _logger.Info("Failed to execute indexing in " + IndexingThreadName, e);
-                        }
-                    }
-                })
-                {
-                    Name = IndexingThreadName,
-                    IsBackground = true
-                };
-
-                _indexingThread.Start();
+                StartIndexingThread();
             }
+        }
+
+        private void StartIndexingThread()
+        {
+            if (_indexingThread != null &&
+                _indexingThread != Thread.CurrentThread &&
+                _indexingThread.ThreadState != System.Threading.ThreadState.Stopped)
+                throw new InvalidOperationException($"Index '{Name}' is executing.");
+
+            if (Configuration.Disabled)
+                return;
+
+            if (State == IndexState.Disabled)
+                return;
+
+            SetState(IndexState.Normal);
+
+            _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
+            _indexDisabled = false;
+
+            _indexingThread = new Thread(() =>
+            {
+                try
+                {
+                    LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+                    ExecuteIndexing();
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info("Failed to execute indexing in " + IndexingThreadName, e);
+                    }
+                }
+            })
+            {
+                Name = IndexingThreadName,
+                IsBackground = true
+            };
+
+            _indexingThread.Start();
         }
 
         public virtual void Stop(bool disableIndex = false)
@@ -551,27 +577,32 @@ namespace Raven.Server.Documents.Indexes
 
             using (DrainRunningQueries())
             {
-                if (_indexingThread == null)
-                    return;
-
-                if (disableIndex)
-                {
-                    _indexDisabled = true;
-                    _mre.Set();
-                }
-                else
-                {
-                    _indexingProcessCancellationTokenSource.Cancel();
-                }
-
-                var indexingThread = _indexingThread;
-                _indexingThread = null;
-
-                // cancellation was requested, the thread will exit the indexing loop and terminate.
-                // if we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                if (Thread.CurrentThread != indexingThread)
-                    indexingThread.Join();
+                WaitForIndexingThreadToExit(disableIndex);
             }
+        }
+
+        private void WaitForIndexingThreadToExit(bool disableIndex)
+        {
+            if (_indexingThread == null)
+                return;
+
+            if (disableIndex)
+            {
+                _indexDisabled = true;
+                _mre.Set();
+            }
+            else
+            {
+                _indexingProcessCancellationTokenSource.Cancel();
+            }
+
+            var indexingThread = _indexingThread;
+            _indexingThread = null;
+
+            // cancellation was requested, the thread will exit the indexing loop and terminate.
+            // if we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+            if (Thread.CurrentThread != indexingThread)
+                indexingThread.Join();
         }
 
         public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)
@@ -589,7 +620,7 @@ namespace Raven.Server.Documents.Indexes
                 Definition = definition;
                 Configuration = configuration;
 
-                InitializeInternal();
+                OnInitialization();
 
                 _priorityChanged.Raise();
 
@@ -600,33 +631,36 @@ namespace Raven.Server.Documents.Indexes
 
         private DisposeOnce<SingleAttempt> _disposeOne; 
 
-        public virtual void Dispose()
+        public void Dispose()
         {
             _disposeOne.Dispose();
         }
 
         public bool IsStale(DocumentsOperationContext databaseContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
-            Debug.Assert(databaseContext.Transaction != null);
-
-            if (_storageOperation.IsRunning)
+            using (CurrentlyInUse(out var valid))
             {
-                stalenessReasons?.Add("Storage operation is running.");
+                Debug.Assert(databaseContext.Transaction != null);
 
-                return true;
-            }
+                if (valid == false)
+                {
+                    stalenessReasons?.Add("Storage operation is running.");
 
-            if (Type == IndexType.Faulty)
-            {
-                stalenessReasons?.Add("Index is faulty.");
+                    return true;
+                }
 
-                return true;
-            }
+                if (Type == IndexType.Faulty)
+                {
+                    stalenessReasons?.Add("Index is faulty.");
 
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-            using (indexContext.OpenReadTransaction())
-            {
-                return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
+                    return true;
+                }
+
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (indexContext.OpenReadTransaction())
+                {
+                    return IsStale(databaseContext, indexContext, cutoff, stalenessReasons);
+                }
             }
         }
 
@@ -644,26 +678,30 @@ namespace Raven.Server.Documents.Indexes
             if (Type == IndexType.Faulty)
                 return (true, (long)IndexProgressStatus.Faulty);
 
-            if (_storageOperation.IsRunning)
-                return (true, (long)IndexProgressStatus.RunningStorageOperation);
-
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
-            using (indexContext.OpenReadTransaction())
+            using (CurrentlyInUse(out var valid))
             {
-                var isStale = IsStale(databaseContext, indexContext);
+                if (valid == false)
+                    return (true, (long)IndexProgressStatus.RunningStorageOperation);
 
-                if (isStale)
-                    return (true, (long)IndexProgressStatus.Stale);
-
-                long lastEtag = 0;
-                foreach (var collection in Collections)
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+                using (indexContext.OpenReadTransaction())
                 {
-                    lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
-                }
+                    var isStale = IsStale(databaseContext, indexContext);
 
-                return (false, lastEtag);
+                    if (isStale)
+                        return (true, (long)IndexProgressStatus.Stale);
+
+                    long lastEtag = 0;
+                    foreach (var collection in Collections)
+                    {
+                        lastEtag = Math.Max(lastEtag, _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection));
+                    }
+
+                    return (false, lastEtag);
+                }
             }
         }
+
 
         protected virtual bool IsStale(DocumentsOperationContext databaseContext, TransactionOperationContext indexContext, long? cutoff = null, List<string> stalenessReasons = null)
         {
@@ -1308,29 +1346,38 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual List<IndexingError> GetErrors()
         {
-            if (_storageOperation.IsRunning)
-                return new List<IndexingError>();
+            using (CurrentlyInUse(out var valid))
+            {
+                if (valid == false)
+                    return new List<IndexingError>();
 
-            return _indexStorage.ReadErrors();
+                return _indexStorage.ReadErrors();
+            }
         }
 
         public long GetErrorCount()
         {
-            if (_storageOperation.IsRunning)
-                return 0;
+            using (CurrentlyInUse(out var valid))
+            {
+                if (valid == false)
+                    return 0;
 
-            if (Type == IndexType.Faulty)
-                return 1;
+                if (Type == IndexType.Faulty)
+                    return 1;
 
-            return _indexStorage.ReadErrorsCount();
+                return _indexStorage.ReadErrorsCount();
+            }
         }
 
         public DateTime? GetLastIndexingErrorTime()
         {
-            if (_storageOperation.IsRunning || Type == IndexType.Faulty)
-                return DateTime.MinValue;
+            using (CurrentlyInUse(out var valid))
+            {
+                if (valid == false || Type == IndexType.Faulty)
+                    return DateTime.MinValue;
 
-            return _indexStorage.ReadLastIndexingErrorTime();
+                return _indexStorage.ReadLastIndexingErrorTime();
+            }
         }
 
         public virtual void SetPriority(IndexPriority priority)
@@ -1481,60 +1528,63 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
-            if (_storageOperation.IsRunning || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed)
+            using (CurrentlyInUse(out var valid))
             {
-                return new IndexProgress
+                if (valid == false || DocumentDatabase.DatabaseShutdown.IsCancellationRequested || _disposeOne.Disposed)
                 {
-                    Name = Name,
-                    Type = Type
-                };
-            }
-
-            if (_contextPool == null)
-                throw new ObjectDisposedException("Index " + Name);
-
-            if (documentsContext.Transaction == null)
-                throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
-
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenReadTransaction())
-            {
-                var progress = new IndexProgress
-                {
-                    Name = Name,
-                    Type = Type,
-                    IsStale = IsStale(documentsContext, context)
-                };
-
-                var stats = _indexStorage.ReadStats(tx);
-
-                progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
-                foreach (var collection in Collections)
-                {
-                    var collectionStats = stats.Collections[collection];
-
-                    var lastEtags = GetLastEtags(collection,
-                        collectionStats.LastProcessedDocumentEtag,
-                        collectionStats.LastProcessedTombstoneEtag);
-
-                    var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
+                    return new IndexProgress
                     {
-                        LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
-                        LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                        Name = Name,
+                        Type = Type
                     };
-
-                    progressStats.NumberOfDocumentsToProcess =
-                        DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
-                            documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
-                    progressStats.TotalNumberOfDocuments = totalCount;
-
-                    progressStats.NumberOfTombstonesToProcess =
-                        DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
-                            documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
-                    progressStats.TotalNumberOfTombstones = totalCount;
                 }
 
-                return progress;
+                if (_contextPool == null)
+                    throw new ObjectDisposedException("Index " + Name);
+
+                if (documentsContext.Transaction == null)
+                    throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
+
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var progress = new IndexProgress
+                    {
+                        Name = Name,
+                        Type = Type,
+                        IsStale = IsStale(documentsContext, context)
+                    };
+
+                    var stats = _indexStorage.ReadStats(tx);
+
+                    progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
+                    foreach (var collection in Collections)
+                    {
+                        var collectionStats = stats.Collections[collection];
+
+                        var lastEtags = GetLastEtags(collection,
+                            collectionStats.LastProcessedDocumentEtag,
+                            collectionStats.LastProcessedTombstoneEtag);
+
+                        var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
+                        {
+                            LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
+                            LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                        };
+
+                        progressStats.NumberOfDocumentsToProcess =
+                            DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
+                                documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
+                        progressStats.TotalNumberOfDocuments = totalCount;
+
+                        progressStats.NumberOfTombstonesToProcess =
+                            DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
+                                documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
+                        progressStats.TotalNumberOfTombstones = totalCount;
+                    }
+
+                    return progress;
+                }
             }
         }
 
@@ -1557,72 +1607,75 @@ namespace Raven.Server.Documents.Indexes
         public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
             DocumentsOperationContext documentsContext = null)
         {
-            if (_storageOperation.IsRunning)
+            using (CurrentlyInUse(out var valid))
             {
-                return new IndexStats()
+                if (valid == false)
                 {
-                    Name = Name,
-                    Type = Type
-                };
-            }
-
-            if (_contextPool == null)
-                throw new ObjectDisposedException("Index " + Name);
-
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenReadTransaction())
-            using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
-            {
-                var stats = _indexStorage.ReadStats(tx);
-
-                stats.Name = Name;
-                stats.Type = Type;
-                stats.EntriesCount = reader.EntriesCount();
-                stats.LockMode = Definition.LockMode;
-                stats.Priority = Definition.Priority;
-                stats.State = State;
-                stats.Status = Status;
-
-                stats.MappedPerSecondRate = MapsPerSec.OneMinuteRate;
-                stats.ReducedPerSecondRate = ReducesPerSec.OneMinuteRate;
-
-                stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
-                stats.LastQueryingTime = _lastQueryingTime;
-
-                if (calculateStaleness || calculateLag)
-                {
-                    if (documentsContext == null)
-                        throw new InvalidOperationException("Cannot calculate staleness or lag without valid context.");
-
-                    if (documentsContext.Transaction == null)
-                        throw new InvalidOperationException(
-                            "Cannot calculate staleness or lag without valid transaction.");
-
-                    if (calculateStaleness)
-                        stats.IsStale = IsStale(documentsContext, context);
-
-                    if (calculateLag)
+                    return new IndexStats()
                     {
-                        foreach (var collection in Collections)
-                        {
-                            var collectionStats = stats.Collections[collection];
-
-                            var lastDocumentEtag =
-                                DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
-                            var lastTombstoneEtag =
-                                DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
-
-                            collectionStats.DocumentLag = Math.Max(0,
-                                lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
-                            collectionStats.TombstoneLag = Math.Max(0,
-                                lastTombstoneEtag - collectionStats.LastProcessedTombstoneEtag);
-                        }
-                    }
+                        Name = Name,
+                        Type = Type
+                    };
                 }
 
-                stats.Memory = GetMemoryStats();
+                if (_contextPool == null)
+                    throw new ObjectDisposedException("Index " + Name);
 
-                return stats;
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
+                {
+                    var stats = _indexStorage.ReadStats(tx);
+
+                    stats.Name = Name;
+                    stats.Type = Type;
+                    stats.EntriesCount = reader.EntriesCount();
+                    stats.LockMode = Definition.LockMode;
+                    stats.Priority = Definition.Priority;
+                    stats.State = State;
+                    stats.Status = Status;
+
+                    stats.MappedPerSecondRate = MapsPerSec.OneMinuteRate;
+                    stats.ReducedPerSecondRate = ReducesPerSec.OneMinuteRate;
+
+                    stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
+                    stats.LastQueryingTime = _lastQueryingTime;
+
+                    if (calculateStaleness || calculateLag)
+                    {
+                        if (documentsContext == null)
+                            throw new InvalidOperationException("Cannot calculate staleness or lag without valid context.");
+
+                        if (documentsContext.Transaction == null)
+                            throw new InvalidOperationException(
+                                "Cannot calculate staleness or lag without valid transaction.");
+
+                        if (calculateStaleness)
+                            stats.IsStale = IsStale(documentsContext, context);
+
+                        if (calculateLag)
+                        {
+                            foreach (var collection in Collections)
+                            {
+                                var collectionStats = stats.Collections[collection];
+
+                                var lastDocumentEtag =
+                                    DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(documentsContext, collection);
+                                var lastTombstoneEtag =
+                                    DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(documentsContext, collection);
+
+                                collectionStats.DocumentLag = Math.Max(0,
+                                    lastDocumentEtag - collectionStats.LastProcessedDocumentEtag);
+                                collectionStats.TombstoneLag = Math.Max(0,
+                                    lastTombstoneEtag - collectionStats.LastProcessedTombstoneEtag);
+                            }
+                        }
+                    }
+
+                    stats.Memory = GetMemoryStats();
+
+                    return stats;
+                }
             }
         }
 
@@ -2045,10 +2098,10 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 ThrowCompactionInProgress();
 
-            if (_initialized == false && _storageOperation.IsRunning == false)
+            if (_initialized == false )
                 ThrowNotIntialized();
 
-            if ((_disposeOne.Disposed) && _storageOperation.IsRunning == false)
+            if (_disposeOne.Disposed)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -2191,6 +2244,20 @@ namespace Raven.Server.Documents.Indexes
             return new QueryDoneRunning(this, executingQueryInfo);
         }
 
+        protected QueryDoneRunning CurrentlyInUse(out bool available)
+        {
+            var queryDoneRunning = new QueryDoneRunning(this, null);
+            available = queryDoneRunning.TryHoldLock();
+            return queryDoneRunning;
+        }
+        
+        protected QueryDoneRunning CurrentlyInUse()
+        {
+            var queryDoneRunning = new QueryDoneRunning(this, null);
+            queryDoneRunning.HoldLock();
+            return queryDoneRunning;
+        }
+        
         private static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
         private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
@@ -2266,33 +2333,33 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetIndexEtag()
         {
-            if (_storageOperation.IsRunning)
-                return -1;
-
-            if (_storageOperation.TryGetReadLock(TimeSpan.FromSeconds(1), out var storageLock) == false)
-                return -1;
-
-            using (storageLock)
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
+            using (CurrentlyInUse(out var valid))
             {
-                using (indexContext.OpenReadTransaction())
-                using (documentsContext.OpenReadTransaction())
+                if (valid == false)
+                    return DateTime.UtcNow.Ticks; // must be always different
+                
+                using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 {
-                    return CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext);
+                    using (indexContext.OpenReadTransaction())
+                    using (documentsContext.OpenReadTransaction())
+                    {
+                        return CalculateIndexEtag(IsStale(documentsContext, indexContext), documentsContext, indexContext);
+                    }
                 }
             }
         }
 
         public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
-            using (storageLock)
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (CurrentlyInUse())
             {
-                using (var tx = context.OpenReadTransaction())
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    return GetLastProcessedDocumentTombstonesPerCollection(tx);
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        return GetLastProcessedDocumentTombstonesPerCollection(tx);
+                    }
                 }
             }
         }
@@ -2496,26 +2563,6 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public IDisposable StorageOperation()
-        {
-            if (Monitor.TryEnter(_storageOperation) == false)
-                throw new InvalidOperationException($"Storage operation on index '{Name}' is already running");
-
-            _storageOperation.Init();
-
-            try
-            {
-                Dispose();
-            }
-            catch
-            {
-                Monitor.Exit(_storageOperation);
-                throw;
-            }
-
-            return _storageOperation;
-        }
-
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result)
         {
             if (_isCompactionInProgress)
@@ -2543,55 +2590,63 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var storageEnvironmentOptions = _environment.Options;
+                  
+                    ShutdownEnvironment();
 
-                    using (StorageOperation())
+                    var environmentOptions =
+                        (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
+                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
+                        DocumentDatabase.CatastrophicFailureNotification);
+                    srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                    srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                    srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                    srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+                    srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                    srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+                    Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
+
+                    compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+
+
+                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
+                            DocumentDatabase.CatastrophicFailureNotification))
                     {
-                        var environmentOptions =
-                            (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
-                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
-                            DocumentDatabase.CatastrophicFailureNotification);
-                        srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                        srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                        srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                        srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                        srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                        srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+                        compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                        compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                        compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+                        compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                        compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                        compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                         Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
-                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
-
-                        using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
-                                DocumentDatabase.CatastrophicFailureNotification))
+                        StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {
-                            compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                            compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                            compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                            compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                            compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                            compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                            Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
-
-                            StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
-                            {
-                                result.Progress.TreeProgress = progressReport.TreeProgress;
-                                result.Progress.TreeTotal = progressReport.TreeTotal;
-                                result.Progress.TreeName = progressReport.TreeName;
-                                result.Progress.GlobalProgress = progressReport.GlobalProgress;
-                                result.Progress.GlobalTotal = progressReport.GlobalTotal;
-                                result.AddMessage(progressReport.Message);
-                                onProgress?.Invoke(result.Progress);
-                            });
-                        }
-
-                        // reset tree name back to null after processing
-                        result.TreeName = null;
-
-                        IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
-                        IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
+                            result.Progress.TreeProgress = progressReport.TreeProgress;
+                            result.Progress.TreeTotal = progressReport.TreeTotal;
+                            result.Progress.TreeName = progressReport.TreeName;
+                            result.Progress.GlobalProgress = progressReport.GlobalProgress;
+                            result.Progress.GlobalTotal = progressReport.GlobalTotal;
+                            result.AddMessage(progressReport.Message);
+                            onProgress?.Invoke(result.Progress);
+                        });
                     }
 
+                    // reset tree name back to null after processing
+                    result.TreeName = null;
+
+                    IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
+                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
+
+                    RestartEnvironment();
                     result.SizeAfterCompactionInMb = CalculateIndexStorageSizeInBytes(Name) / 1024 / 1024;
+                }
+                catch (Exception e)
+                {
+                    if(_logger.IsOperationsEnabled)
+                        _logger.Operations("Unable to complete compaction, index is not usable and my require db restart or reset of the index to recover", e);
+                    Dispose();
+                    throw;
                 }
                 finally
                 {
@@ -2601,6 +2656,38 @@ namespace Raven.Server.Documents.Indexes
                     _isCompactionInProgress = false;
                 }
             }
+        }
+
+        public void RestartEnvironment()
+        {
+            if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+                throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
+            
+            var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
+            try
+            {
+                _environment = new StorageEnvironment(options);
+                InitializeInternal(_environment, DocumentDatabase,Configuration,PerformanceHints);
+            }
+            catch
+            {
+                Dispose();
+                options.Dispose();
+                throw;
+            }
+            StartIndexingThread();
+        }
+
+        public void ShutdownEnvironment()
+        {
+            if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+                throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
+            
+            // here we ensure that we aren't currently running any indexing,
+            // because we'll shut down the environment for this index, reads
+            // are handled using the DrainRunningQueries porition
+            WaitForIndexingThreadToExit(disableIndex: false);
+            _environment.Dispose();
         }
 
         public long CalculateIndexStorageSizeInBytes(string indexName)
@@ -2700,7 +2787,7 @@ namespace Raven.Server.Documents.Indexes
             });
         }
 
-        private struct QueryDoneRunning : IDisposable
+        protected struct QueryDoneRunning : IDisposable
         {
             readonly Index _parent;
             private readonly ExecutingQueryInfo _queryInfo;
@@ -2715,11 +2802,21 @@ namespace Raven.Server.Documents.Indexes
 
             public void HoldLock()
             {
-                var timeout = _parent._storageOperation.IsRunning ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(3);
+                var timeout =  TimeSpan.FromSeconds(3);
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
                     ThrowLockTimeoutException();
 
                 _hasLock = true;
+            }
+            
+            public bool TryHoldLock()
+            {
+                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(0) == false)
+                    return false;
+
+                _hasLock = true;
+
+                return true;
             }
 
             private void ThrowLockTimeoutException()
@@ -2738,7 +2835,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (_hasLock)
                     _parent._currentlyRunningQueriesLock.ExitReadLock();
-                _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
+                if (_queryInfo != null)
+                    _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
             }
         }
 
@@ -2754,84 +2852,6 @@ namespace Raven.Server.Documents.Indexes
             public void Dispose()
             {
                 _rwls?.ExitWriteLock();
-            }
-        }
-
-        protected struct ExitReadLock : IDisposable
-        {
-            public static ExitReadLock Default = default(ExitReadLock);
-
-            readonly ReaderWriterLockSlim _rwls;
-
-            public ExitReadLock(ReaderWriterLockSlim rwls)
-            {
-                _rwls = rwls;
-            }
-
-            public void Dispose()
-            {
-                _rwls?.ExitReadLock();
-            }
-        }
-
-        protected class StorageOperationWrapper : IDisposable
-        {
-            private readonly Index _index;
-            private bool _wasRunning;
-            private readonly MultipleUseFlag _isRunning = new MultipleUseFlag();
-            private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
-
-            public StorageOperationWrapper(Index index)
-            {
-                _index = index;
-            }
-
-            public bool IsRunning => _isRunning.IsRaised();
-
-            public void Init()
-            {
-                if (!_isRunning.Raise())
-                    throw new InvalidOperationException("Storage operation is already running");
-
-                _lock.EnterWriteLock();
-
-                _wasRunning = _index._indexingThread != null;
-            }
-
-            public bool TryGetReadLock(TimeSpan timeout, out ExitReadLock @lock)
-            {
-                if (_lock.IsReadLockHeld || _lock.TryEnterReadLock(timeout) == false)
-                {
-                    @lock = ExitReadLock.Default;
-                    return false;
-
-                }
-
-                @lock = new ExitReadLock(_lock);
-                return true;
-            }
-
-            public void Dispose()
-            {
-                _index._initialized = false;
-                _index._disposeOne = new DisposeOnce<SingleAttempt>(_index.SingleDispose);
-
-                try
-                {
-                    _index.Initialize(_index.DocumentDatabase, _index.Configuration, _index.PerformanceHints);
-
-                    if (_wasRunning)
-                        _index.Start();
-                }
-                finally
-                {
-                    _lock.ExitWriteLock();
-
-                    Monitor.Exit(_index._storageOperation);
-
-                    if (!_isRunning.Lower())
-                        throw new InvalidOperationException("Storage operation wasn't running. It should not happen.");
-                }
             }
         }
 

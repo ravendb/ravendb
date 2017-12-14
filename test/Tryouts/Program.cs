@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Utils;
 using SlowTests.Server.Basic;
+using SlowTests.Issues;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -33,11 +34,11 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 1, _ =>
+                Parallel.For(0, 10, _ =>
                 {
-                    using (var a = new SlowTests.Issues.RavenDB_8498())
+                    using (var a = new RavenDB_3232())
                     {
-                        a.SholdBeAbleToDeleteADatabaseViaRequestBody();
+                        a.ReplaceOfNonStaleIndex();
                     }
                 });
             }

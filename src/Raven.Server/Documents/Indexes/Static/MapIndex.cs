@@ -151,31 +151,32 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
-            using (storageLock)
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (CurrentlyInUse())
             {
-                using (var tx = context.OpenReadTransaction())
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    var etags = GetLastProcessedDocumentTombstonesPerCollection(tx);
-
-                    if (_referencedCollections.Count <= 0)
-                        return etags;
-
-                    foreach (var collection in Collections)
+                    using (var tx = context.OpenReadTransaction())
                     {
-                        if (_compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
-                            throw new InvalidOperationException("Should not happen ever!");
+                        var etags = GetLastProcessedDocumentTombstonesPerCollection(tx);
 
-                        foreach (var referencedCollection in referencedCollections)
+                        if (_referencedCollections.Count <= 0)
+                            return etags;
+
+                        foreach (var collection in Collections)
                         {
-                            var etag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, referencedCollection);
-                            if (etags.TryGetValue(referencedCollection.Name, out long currentEtag) == false || etag < currentEtag)
-                                etags[referencedCollection.Name] = etag;
-                        }
-                    }
+                            if (_compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
+                                throw new InvalidOperationException("Should not happen ever!");
 
-                    return etags;
+                            foreach (var referencedCollection in referencedCollections)
+                            {
+                                var etag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, referencedCollection);
+                                if (etags.TryGetValue(referencedCollection.Name, out long currentEtag) == false || etag < currentEtag)
+                                    etags[referencedCollection.Name] = etag;
+                            }
+                        }
+
+                        return etags;
+                    }
                 }
             }
         }

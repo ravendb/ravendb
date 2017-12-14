@@ -1130,14 +1130,17 @@ namespace Raven.Server.Documents.Indexes
                         try
                         {
                             using (newIndex.DrainRunningQueries())
-                            using (newIndex.StorageOperation())
                             {
                                 var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
                                 var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
 
+                                newIndex.ShutdownEnvironment();
+                                
                                 IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
                                     newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
 
+                                newIndex.RestartEnvironment();
+                                
                                 if (newIndex.Configuration.TempPath != null)
                                 {
                                     IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
