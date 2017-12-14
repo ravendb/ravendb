@@ -57,17 +57,11 @@ namespace Raven.Client.Documents.Session
         Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null);
     }
 
-
     public interface IAsyncRawDocumentQuery<T> :
         IQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
-        /// <summary>
-        /// Add a named parameter to the query
-        /// </summary>
-        IAsyncDocumentQuery<T> AddParameter(string name, object value);
     }
-
 
     /// <summary>
     ///     Asynchronous query against a raven index

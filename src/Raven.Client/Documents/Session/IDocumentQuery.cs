@@ -6,11 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
 
 namespace Raven.Client.Documents.Session
@@ -68,10 +66,6 @@ namespace Raven.Client.Documents.Session
         IQueryBase<T, IRawDocumentQuery<T>>,
         IDocumentQueryBase<T>, IEnumerable<T>
     {
-        /// <summary>
-        /// Add a named parameter to the query
-        /// </summary>
-        IDocumentQuery<T> AddParameter(string name, object value);
     }
 
     /// <summary>
