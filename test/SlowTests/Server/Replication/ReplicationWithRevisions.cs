@@ -158,7 +158,7 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await GenerateConflict(storeA, storeB);
+                await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB);
 
                 Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
                 Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
@@ -202,7 +202,7 @@ namespace SlowTests.Server.Replication
                 }
             }))
             {
-                await GenerateConflict(storeA, storeB, configureVersioning);
+                await GenerateConflictAndSetupMasterMasterReplication(storeA, storeB, configureVersioning);
 
                 Assert.Equal(2, WaitUntilHasConflict(storeA, "foo/bar").Length);
                 Assert.Equal(2, WaitUntilHasConflict(storeB, "foo/bar").Length);
@@ -224,7 +224,7 @@ namespace SlowTests.Server.Replication
                     ResolveToLatest = true
                 };
 
-                await SetupReplicationAsync(storeA, config, storeB);
+                await UpdateConflictResolver(storeA, config.ResolveByCollection, config.ResolveToLatest);
 
                 Assert.True(WaitForDocument(storeA, "foo/bar"));
                 Assert.True(WaitForDocument(storeB, "foo/bar"));
@@ -356,7 +356,7 @@ namespace SlowTests.Server.Replication
         }
 
 
-        private async Task GenerateConflict(DocumentStore storeA, DocumentStore storeB, bool configureVersioning = true)
+        private async Task GenerateConflictAndSetupMasterMasterReplication(DocumentStore storeA, DocumentStore storeB, bool configureVersioning = true)
         {
             var user = new User { Name = "Name" };
             var user2 = new User { Name = "Name2" };
