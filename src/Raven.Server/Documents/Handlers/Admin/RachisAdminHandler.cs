@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
@@ -166,6 +167,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.InstalledMemoryInGb)] = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
                     json[nameof(NodeInfo.UsableMemoryInGb)] = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
                     json[nameof(NodeInfo.ServerId)] = ServerStore.GetServerId().ToString();
+                    json[nameof(NodeInfo.CurrentState)] = ServerStore.CurrentRachisState;
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -351,11 +353,22 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (nodeInfo.ServerId == ServerStore.GetServerId())                    
                         throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because it's a synonym of the current node URL:{ServerStore.GetNodeHttpServerUrl()}");
-                                       
-                    if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
+                    
+                    if (nodeInfo.TopologyId != null)
                     {
-                        throw new TopologyMismatchException(
-                            $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
+                        if (topologyId != nodeInfo.TopologyId)
+                        {
+                            throw new TopologyMismatchException(
+                                $"Adding a new node to cluster failed. The new node is already in another cluster. " +
+                                $"Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
+                        }
+
+                        if (nodeInfo.CurrentState != RachisState.Passive)
+                        {
+                            throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster " +
+                                                                $"because it's already in the cluster under tag :{nodeInfo.NodeTag} " +
+                                                                $"and URL: {clusterTopology.GetUrlFromTag(nodeInfo.NodeTag)}");
+                        }
                     }
 
                     var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag ? null : nodeInfo.NodeTag;
