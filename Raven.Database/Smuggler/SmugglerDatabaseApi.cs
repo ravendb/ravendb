@@ -55,13 +55,13 @@ namespace Raven.Smuggler
                     await new SmugglerDatabaseBetweenOperation
                     {
                         OnShowProgress = betweenOptions.ReportProgress
-        }
+                    }
                     .Between(new SmugglerBetweenOperations
                     {
                         From = exportOperations,
                         To = importOperations,
                         IncrementalKey = betweenOptions.IncrementalKey
-                    }, Options)
+                    }, Options, exportBulkOperation)
                     .ConfigureAwait(false);
                 }
             }
