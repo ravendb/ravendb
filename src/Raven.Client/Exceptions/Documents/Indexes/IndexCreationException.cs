@@ -16,6 +16,5 @@ namespace Raven.Client.Exceptions.Documents.Indexes
             : base(message, innerException)
         {
         }
-
     }
 }
