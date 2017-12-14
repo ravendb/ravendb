@@ -84,9 +84,6 @@ namespace Raven.Server.Web.System
             {
                 if (record.Settings != null && record.Settings.TryGetValue(key, out _))
                     throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseRecord.Settings)}. This is a server-wide configuration key and can only be set at server level.");
-
-                if (record.SecuredSettings != null && record.SecuredSettings.TryGetValue(key, out _))
-                    throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseRecord.SecuredSettings)}. This is a server-wide configuration key and can only be set at server level.");
             }
         }
     }
