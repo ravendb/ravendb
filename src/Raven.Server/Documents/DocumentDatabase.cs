@@ -388,56 +388,47 @@ namespace Raven.Server.Documents
                     exceptionAggregator.Execute(() =>
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
-                        _indexStoreTask = null;
                     });
                 }
 
                 exceptionAggregator.Execute(() =>
                 {
                     IndexStore?.Dispose();
-                    IndexStore = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     ExpiredDocumentsCleaner?.Dispose();
-                    ExpiredDocumentsCleaner = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     PeriodicBackupRunner?.Dispose();
-                    PeriodicBackupRunner = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     DocumentTombstoneCleaner?.Dispose();
-                    DocumentTombstoneCleaner = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     ReplicationLoader?.Dispose();
-                    ReplicationLoader = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     EtlLoader?.Dispose();
-                    EtlLoader = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     Operations?.Dispose(exceptionAggregator);
-                    Operations = null;
                 });
 
                 exceptionAggregator.Execute(() =>
                 {
                     NotificationCenter?.Dispose();
-                    NotificationCenter = null;
                 });
                 
                 exceptionAggregator.Execute(() =>
@@ -453,7 +444,6 @@ namespace Raven.Server.Documents
                 exceptionAggregator.Execute(() =>
                 {
                     DocumentsStorage?.Dispose();
-                    DocumentsStorage = null;
                 });
 
                 exceptionAggregator.Execute(() =>
