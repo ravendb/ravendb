@@ -28,11 +28,9 @@ import extensions = require("common/extensions");
 import notificationCenter = require("common/notifications/notificationCenter");
 
 import getClientBuildVersionCommand = require("commands/database/studio/getClientBuildVersionCommand");
-import getSupportCoverageCommand = require("commands/auth/getSupportCoverageCommand");
 import getServerBuildVersionCommand = require("commands/resources/getServerBuildVersionCommand");
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
-import licensingStatus = require("viewmodels/common/licensingStatus");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
@@ -334,19 +332,6 @@ class shell extends viewModelBase {
             .done((result: clientBuildVersionDto) => {
                 this.clientBuildVersion(result);
             });
-    }
-
-    fetchSupportCoverage() {
-        new getSupportCoverageCommand()
-            .execute()
-            .done((result: supportCoverageDto) => {
-                license.supportCoverage(result);
-            });
-    }
-
-    showLicenseStatusDialog() {
-        const dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
-        app.showBootstrapDialog(dialog);
     }
 
     navigateToClusterSettings() {

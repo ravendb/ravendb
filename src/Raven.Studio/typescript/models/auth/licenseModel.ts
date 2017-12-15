@@ -1,11 +1,12 @@
 /// <reference path="../../../typings/tsd.d.ts" />
 
-import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand");
+import getLicenseStatusCommand = require("commands/licensing/getLicenseStatusCommand");
 import buildInfo = require("models/resources/buildInfo");
+import licenseSupportInfoCommand = require("commands/licensing/licenseSupportInfoCommand");
 
 class licenseModel {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
-    static supportCoverage = ko.observable<supportCoverageDto>();
+    static supportCoverage = ko.observable<Raven.Server.Commercial.LicenseSupportInfo>();
 
     private static baseUrl = "https://ravendb.net/license/request";
 
@@ -29,6 +30,14 @@ class licenseModel {
         return url;
     }
 
+    static fetchSupportCoverage(): JQueryPromise<Raven.Server.Commercial.LicenseSupportInfo> {
+        return new licenseSupportInfoCommand()
+            .execute()
+            .done((result: Raven.Server.Commercial.LicenseSupportInfo) => {
+                licenseModel.supportCoverage(result);
+            });
+    }
+    
     static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         return new getLicenseStatusCommand()
             .execute()

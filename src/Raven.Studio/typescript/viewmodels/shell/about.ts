@@ -13,7 +13,7 @@ class about extends viewModelBase {
 
     spinners = {
         deactivatingLicense: ko.observable<boolean>(false)
-    }
+    };
 
     formattedExpiration = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
@@ -70,7 +70,7 @@ class about extends viewModelBase {
                 }
                 this.spinners.deactivatingLicense(true);
                 new deactivateLicenseCommand().execute()
-	    	    .done(() => {
+                .done(() => {
                         license.fetchLicenseStatus()
                         messagePublisher.reportWarning("Your license was successfully deactivated");
                     })

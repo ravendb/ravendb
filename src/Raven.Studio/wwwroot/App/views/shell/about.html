@@ -1,45 +1,83 @@
 <div id="about-page" class="content-margin">
+
     <div class="row">
-        <div class="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2 col-lg-6 col-lg-offset-3">
-            <div class="row">
-                <div class="col-sm-12 text-center">
-                    <i class="icon-logo text-primary"></i>
-                    <h3 class="text-center">Server: <span data-bind="text: serverVersion().FullVersion"></span></h3>
-                    <h3 class="text-center">Studio: <span data-bind="text: clientVersion()"></span></h3>
+        <div class="col-md-6">
+            <i class="icon-logo text-primary"></i>
+            <p>
+                <small>Copyright &copy; 2009 - 2017 Hibernating Rhinos. All rights reserved</small>
+            </p>
+            
+            <table>
+                <tr>
+                    <th>Server version</th>
+                    <td><span data-bind="text: serverVersion().FullVersion"></span></td>
+                </tr>
+                <tr>
+                    <th>Studio version</th>
+                    <td><span data-bind="text: clientVersion()"></span></td>
+                </tr>
+            </table>
+            
+            <p>
+                Care to share your thoughts on our product?<br />
+                <a data-bind="click: openFeedbackForm" class="btn btn-info">
+                    <i class="icon-rocket"></i>
+                    <span>Send feedback</span>
+                </a>
+            </p>
+
+        </div>
+        <div class="col-md-6">
+            <div class="flex-horizontal">
+                <div class="roundborder">
+                    <i class="icon-document"></i>
                 </div>
-                <div class="col-sm-6 text-center">
-                       <div>
-                        <div class="roundborder">
-                            <i class="icon-document"></i>
-                        </div>
-                        <h3>LICENSE</h3>
-                        <h4 data-bind="text: licenseType"></h4>
-                    </div>
+                <div class="flex-grow padding">
                     <div>
-                        <div data-bind="visible: formattedExpiration">
-                            Expires on: <span data-bind="text: formattedExpiration"></span>
-                        </div>
+                        <h2>License information</h2>
+                        
+                        <table>
+                            <tr>
+                                <th>Type</th>
+                                <td data-bind="text: licenseType"></td>
+                            </tr>
+                            <tr data-bind="visible: formattedExpiration">
+                                <th>Expires</th>
+                                <td><span data-bind="text: formattedExpiration"></span></td>
+                            </tr>
+                        </table>
+                        
                         <div data-bind="visible: shortDescription">
                             <span data-bind="text: shortDescription"></span>
                         </div>
                     </div>
-                    <button class="btn btn-lg" data-bind="click: register, visible: !registered()">Register</button>
-                    <button class="btn btn-lg" data-bind="click: deactivateLicense, visible: registered, disable: spinners.deactivatingLicense, css: { 'btn-spinner': spinners.deactivatingLicense }"> Deactivate</button>
+                    <button class="btn btn-primary" data-bind="click: register, visible: !registered()">Register</button>
                 </div>
-                <div class="col-sm-6 text-center">                   
-                        <div>
-                            <div class="roundborder">
-                                <i class="icon-help"></i>
-                            </div>
-                            <h3>SUPPORT</h3>
-                            <!--<p data-bind="visible: formattedExpiration">&nbsp;</p>-->
-                            <!--<p data-bind="visible: shortDescription">&nbsp;</p>-->
-                        </div>
-                    <a data-bind="click: openFeedbackForm" class="btn btn-lg">Feedback</a>
+                <div>
+                    <button class="btn btn-danger"
+                            data-bind="click: deactivateLicense, visible: registered, disable: spinners.deactivatingLicense, css: { 'btn-spinner': spinners.deactivatingLicense }">
+                        <i class="icon-cancel"></i>
+                        <span>Deactivate</span>
+                    </button>
                 </div>
             </div>
-            <hr />
-            <p class="text-center"><small>Copyright &copy; 2009 - 2017 Hibernating Rhinos. All rights reserved</small></p>
+            <div class="flex-horizontal">
+                <div class="roundborder">
+                    <i class="icon-help"></i>
+                </div>
+                <div class="flex-grow padding">
+                    <h2>Support plan</h2>
+                    
+                    <div>Type: Community</div>
+                </div>
+                <div>
+                    <a href="https://ravendb.net/support" target="_blank" class="btn btn-success">
+                        <i class="icon-support"></i>
+                        <span>Upgrade</span>
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
