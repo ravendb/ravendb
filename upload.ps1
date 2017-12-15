@@ -14,4 +14,7 @@ $uploader = [io.path]::combine($projectDir, '..', 'Uploader', 'S3Uploader.exe')
 $versionInfo = GetVersionInfo
 $files = Get-ChildItem $ARTIFACTS
 
+$filesString = $files -join "`r`n"
+write-host "Found artifacts: `r`n$filesString"
+
 Upload "$uploader" $versionInfo $files $DryRun

@@ -1,19 +1,25 @@
 # TODO @gregolsky update regexes for stable
 $CATEGORIES = @(
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-windows-x64', "RavenDB for Windows x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-windows-x86', "RavenDB for Windows x86"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-linux-x64', "RavenDB for Linux x64"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-osx-x64', "RavenDB for OSX"),
-    @('RavenDB-[0-9]\.[0-9]\.[0-9]-[a-zA-Z]+-([0-9-]+)-raspberry-pi', "RavenDB for Raspberry Pi")
+    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-windows-x64', "RavenDB for Windows x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-windows-x86', "RavenDB for Windows x86"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-linux-x64', "RavenDB for Linux x64"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-osx-x64', "RavenDB for OSX"),
+    @('RavenDB-[0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-([0-9-]+))?-raspberry-pi', "RavenDB for Raspberry Pi")
 )
 function Get-UploadCategory ( $filename ) {
     $result = [io.path]::GetFilenameWithoutExtension($filename)
+    $foundCategory = $null;
     foreach ($category in $CATEGORIES) {
         $categoryPattern = $category[0]
         if ($filename -match $categoryPattern) {
             $result = $category[1]
+            $foundCategory = $category[1]
             break
         }
+    }
+
+    if ([string]::IsNullOrEmpty($foundCategory)) {
+        throw "Could not determine category for $filename."
     }
 
     $result
