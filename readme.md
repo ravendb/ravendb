@@ -45,7 +45,7 @@ Each Pull Request will be checked against following rules:
  <br><br>
 
 ## Setup & Run
-### Prerequsites:
+### Prerequisites:
 
 #### Windows
 Microsoft Visual C++ 2015 Redistributable Package should be installed prior to RavenDB launch.
