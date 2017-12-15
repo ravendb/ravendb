@@ -374,14 +374,12 @@ class databaseCreationModel {
 
     toDto(): Raven.Client.ServerWide.DatabaseRecord {
         const settings: dictionary<string> = {};
-        const securedSettings: dictionary<string> = {};
 
         settings[configuration.core.dataDirectory] = _.trim(this.path.dataPath()) || null;
 
         return {
             DatabaseName: this.name(),
             Settings: settings,
-            SecuredSettings: securedSettings,
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
             Topology: this.topologyToDto()
