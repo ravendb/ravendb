@@ -637,6 +637,8 @@ namespace Raven.Server.Documents.Indexes
         {
             lock (_locker)
             {
+                _indexes.TryRemoveByName(index.Name, index);
+
                 try
                 {
                     index.Dispose();
@@ -646,8 +648,6 @@ namespace Raven.Server.Documents.Indexes
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not dispose index '{index.Name}'.", e);
                 }
-
-                _indexes.TryRemoveByName(index.Name, index);
 
                 _documentDatabase.Changes.RaiseNotifications(new IndexChange
                 {
