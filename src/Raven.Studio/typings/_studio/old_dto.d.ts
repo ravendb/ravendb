@@ -30,11 +30,6 @@ interface clientBuildVersionDto {
     Version: string;
 }
 
-interface supportCoverageDto {
-    Status: string;
-    EndsAt: string;
-}
-
 interface userInfoDto {
     Remark: string;
     User: string;
