@@ -71,8 +71,7 @@ class registration extends dialogViewModelBase {
         let error: string = null;
         if (licenseStatus.Type === "Invalid") {
             error = "Invalid license";
-        }
-        else if (licenseStatus.Expired) {
+        } else if (licenseStatus.Expired) {
             const expiration = moment(licenseStatus.Expiration);
             error = "License expired";
             if (expiration.isValid()) {

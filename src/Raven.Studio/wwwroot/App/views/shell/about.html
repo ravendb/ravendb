@@ -29,8 +29,8 @@
         </div>
         <div class="col-md-6">
             <div class="flex-horizontal">
-                <div class="roundborder">
-                    <i class="icon-document"></i>
+                <div data-bind="attr: { class: 'roundborder ' + licenseCssClass() }">
+                    <i class="icon-license-information"></i>
                 </div>
                 <div class="flex-grow padding">
                     <div>
@@ -45,11 +45,11 @@
                                 <th>Expires</th>
                                 <td><span data-bind="text: formattedExpiration"></span></td>
                             </tr>
+                            <tr data-bind="visible: shortDescription">
+                                <th>Limits</th>
+                                <td><span data-bind="text: shortDescription"></span></td>
+                            </tr>
                         </table>
-                        
-                        <div data-bind="visible: shortDescription">
-                            <span data-bind="text: shortDescription"></span>
-                        </div>
                     </div>
                     <button class="btn btn-primary" data-bind="click: register, visible: !registered()">Register</button>
                 </div>
@@ -62,16 +62,21 @@
                 </div>
             </div>
             <div class="flex-horizontal">
-                <div class="roundborder">
-                    <i class="icon-help"></i>
+                <div data-bind="attr: { class: 'roundborder ' + supportCssClass() }">
+                    <i class="icon-support"></i>
                 </div>
                 <div class="flex-grow padding">
                     <h2>Support plan</h2>
                     
-                    <div>Type: Community</div>
+                    <table>
+                        <tr>
+                            <th>Type</th>
+                            <td><span data-bind="text: supportLabel"></span></td>
+                        </tr>
+                    </table>
                 </div>
                 <div>
-                    <a href="https://ravendb.net/support" target="_blank" class="btn btn-success">
+                    <a href="https://ravendb.net/support" target="_blank" class="btn btn-success" data-bind="visible: canUpgradeSupport">
                         <i class="icon-support"></i>
                         <span>Upgrade</span>
                     </a>

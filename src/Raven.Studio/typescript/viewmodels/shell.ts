@@ -127,6 +127,12 @@ class shell extends viewModelBase {
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
         const clientCertifiateTask = clientCertificateModel.fetchClientCertificate();
+        
+        licenseTask.done((result) => {
+            if (result.Type !== "None") {
+                license.fetchSupportCoverage();
+            }
+        });
 
         $.when<any>(licenseTask, topologyTask, clientCertifiateTask)
             .done(() => {

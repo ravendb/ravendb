@@ -30,16 +30,8 @@ class footer {
     urlForIndexingErrors = ko.pureComputed(() => appUrl.forIndexErrors(this.db()));
     urlForAbout = appUrl.forAbout();
 
-    licenseClass = ko.pureComputed<string>(() => {
-        const status = license.licenseStatus();
-        if (!status || status.Type === "None") {
-            return "btn-warning";
-        }
-        if (status.Type === "Invalid") {
-            return "btn-danger";
-        }
-        return "btn-success";
-    });
+    licenseClass = license.licenseCssClass;
+    supportClass = license.supportCssClass;
 
     forDatabase(db: database) {
         this.db(db);

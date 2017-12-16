@@ -8,8 +8,23 @@ import messagePublisher = require("common/messagePublisher");
 
 class about extends viewModelBase {
 
+    licenseCssClass = license.licenseCssClass;
+    supportCssClass = license.supportCssClass;
+    
+    supportLabel = license.supportLabel;
+    
     clientVersion = shell.clientVersion;
     serverVersion = buildInfo.serverBuildVersion;
+    
+    canUpgradeSupport = ko.pureComputed(() => {
+        const support = license.supportCoverage();
+        if (!support || !support.Status) {
+            return true;
+        }
+        
+        return support.Status !== "ProductionSupport";
+    });
+    
 
     spinners = {
         deactivatingLicense: ko.observable<boolean>(false)
@@ -35,7 +50,7 @@ class about extends viewModelBase {
             return "Invalid license";
         }
 
-        return licenseStatus.Type + " License";
+        return licenseStatus.Type;
     });
 
     shortDescription = ko.pureComputed(() => {
@@ -70,8 +85,9 @@ class about extends viewModelBase {
                 }
                 this.spinners.deactivatingLicense(true);
                 new deactivateLicenseCommand().execute()
-                .done(() => {
+                    .done(() => {
                         license.fetchLicenseStatus()
+                            .done(() => license.fetchSupportCoverage());
                         messagePublisher.reportWarning("Your license was successfully deactivated");
                     })
                     .always(() => this.spinners.deactivatingLicense(false));

@@ -1,0 +1,36 @@
+﻿footer .footer-item {
+    .license {
+        &.valid {
+            background-color: @btn-success-bg;
+            border-color: @btn-success-border;
+            color: @brand-success-light;
+        }
+        
+        &.invalid, &.no-license {
+            background-color: @btn-danger-bg;
+            border-color: @btn-danger-border;
+            color: @brand-danger-light;
+        }
+        
+        &.expired {
+            background-color: @btn-warning-bg;
+            border-color: @btn-warning-border;
+            color: @brand-warning-light;
+        }
+    }
+    
+    .support {
+        &.no-support, &.partial-support {
+            background-color: @btn-warning-bg;
+            border-color: @btn-warning-border;
+            color: @brand-warning-light;
+        }
+        
+        &.production-support, &.professional-support {
+            background-color: @btn-success-bg;
+            border-color: @btn-success-border;
+            color: @brand-success-light;
+        }
+    }
+}
+
