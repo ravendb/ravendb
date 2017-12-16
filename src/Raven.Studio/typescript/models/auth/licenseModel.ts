@@ -67,8 +67,10 @@ class licenseModel {
         }
         if (status.Status.includes("Expired")) {
             return 'expired';
+        } else if (status.Type === "Invalid") {
+            return 'invalid';
         } else {
-            return 'commercial';
+            return 'valid';
         }
     });
 
@@ -88,6 +90,26 @@ class licenseModel {
                 return 'no-support';
         }
     });
+    
+    static supportLabel = ko.pureComputed(() => {
+        const licenseStatus = licenseModel.licenseStatus();
+        if (!licenseStatus || licenseStatus.Type === "None") {
+            return 'Community';
+        }
+        
+        const supportInfo = licenseModel.supportCoverage();
+        const supportType = supportInfo.Status || "NoSupport";
+        switch (supportType) {
+            case 'ProductionSupport':
+                return 'Production';
+            case 'ProfessionalSupport':
+                return 'Professional';
+            case 'PartialSupport':
+                return 'Partial';
+            default:
+                return 'Community';
+        }
+    })
 }
 
 export = licenseModel;
