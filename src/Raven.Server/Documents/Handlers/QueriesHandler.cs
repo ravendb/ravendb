@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Post()
         {
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query"))
-            using (var token = CreateTimeLimitedQueryOperationToken())
+            using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
         public async Task Get()
         {
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query"))
-            using (var token = CreateTimeLimitedQueryOperationToken())
+            using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);

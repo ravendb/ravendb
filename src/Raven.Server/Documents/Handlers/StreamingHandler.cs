@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers
         {
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
-            using (var token = CreateTimeLimitedQueryOperationToken())
+            using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Handlers
         {
             // ReSharper disable once ArgumentsStyleLiteral
             using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
-            using (var token = CreateTimeLimitedQueryOperationToken())
+            using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream(); 
