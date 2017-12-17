@@ -843,7 +843,7 @@ namespace Raven.Server
                                         if (Logger.IsInfoEnabled)
                                         {
                                             Logger.Info(
-                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason:{header.Info}");
                                         }
                                         return;
                                     }
