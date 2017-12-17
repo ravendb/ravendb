@@ -186,7 +186,6 @@ namespace Raven.Server
                         [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
                     };
 
-
 #if EXCEPTION_ERROR_HUNT
                     var f = Guid.NewGuid() + ".error";
                     File.WriteAllText(f,
@@ -195,10 +194,7 @@ namespace Raven.Server
 
                     MaybeAddAdditionalExceptionData(djv, e);
 
-                    
-                    var response = context.Response;
-                    
-                    using (var writer = new BlittableJsonTextWriter(ctx, response.Body))
+                    using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
                     {
                         var json = ctx.ReadObject(djv, "exception");
                         writer.WriteObject(json);
@@ -224,7 +220,7 @@ namespace Raven.Server
                     ElapsedMilliseconds = elapsedMilliseconds,
                     ResponseStatusCode = context.Response.StatusCode,
                     RequestUri = context.Request.GetEncodedUrl(),
-                    AbsoluteUri = $@"{context.Request.Scheme}://{context.Request.Host}",
+                    AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                     DatabaseName = database ?? "N/A",
                     CustomInfo = "", 
                     InnerRequestsCount = 0, 
