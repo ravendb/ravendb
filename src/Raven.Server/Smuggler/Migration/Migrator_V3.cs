@@ -8,39 +8,35 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public class Migrator_V3: AbstractMigrator
+    public class Migrator_V3 : AbstractLegacyMigrator
     {
-        private readonly HttpClient _client;
-        private readonly string _migrationStateKey;
         private readonly MajorVersion _majorVersion;
+        private readonly int _buildVersion;
 
         public Migrator_V3(
+            string migrationStateKey,
             string serverUrl,
             string databaseName,
             SmugglerResult result,
             Action<IOperationProgress> onProgress,
             DocumentDatabase database,
             HttpClient client,
-            string migrationStateKey,
             MajorVersion majorVersion,
+            int buildVersion,
             OperationCancelToken cancelToken)
-            : base(serverUrl, databaseName, result, onProgress, database, cancelToken)
+            : base(migrationStateKey, serverUrl, databaseName, result, onProgress, database, client, cancelToken)
         {
-            _client = client;
-            _migrationStateKey = migrationStateKey;
             _majorVersion = majorVersion;
+            _buildVersion = buildVersion;
         }
 
         public override async Task Execute()
@@ -80,12 +76,14 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             var exportOptions = JsonConvert.SerializeObject(exportData);
-            await MigrateDatabase(exportOptions);
+            var canGetLastStateByOperationId = _buildVersion >= 35215;
 
-            await SaveLastState(operationId);
+            await MigrateDatabase(exportOptions, readLegacyEtag: canGetLastStateByOperationId == false);
+
+            await SaveLastState(canGetLastStateByOperationId, operationId);
         }
 
-        private async Task MigrateDatabase(string json)
+        private async Task<SmugglerResult> MigrateDatabase(string json, bool readLegacyEtag)
         {
             var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/exportDatabase";
             var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -94,7 +92,7 @@ namespace Raven.Server.Smuggler.Migration
                 Content = content
             };
 
-            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -109,10 +107,13 @@ namespace Raven.Server.Smuggler.Migration
             using (var source = new StreamSource(stream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
-                var options = new DatabaseSmugglerOptionsServerSide();
+                var options = new DatabaseSmugglerOptionsServerSide
+                {
+                    ReadLegacyEtag = readLegacyEtag
+                };
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
-                smuggler.Execute();
+                return smuggler.Execute();
             }
         }
 
@@ -120,7 +121,7 @@ namespace Raven.Server.Smuggler.Migration
         {
             var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/next-operation-id";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _client.SendAsync(request, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -134,37 +135,50 @@ namespace Raven.Server.Smuggler.Migration
             return long.Parse(str);
         }
 
-        private async Task SaveLastState(long operationId)
+        private async Task SaveLastState(bool canGetLastStateByOperationId, long operationId)
         {
-            var retries = 0;
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                while (retries++ < 15)
-                {
-                    var operationStatus = await GetOperationStatus(DatabaseName, operationId, context);
-                    if (operationStatus == null)
-                        return;
+                var operationStateBlittable = canGetLastStateByOperationId
+                    ? await GetLastStateByOperationId(operationId, context)
+                    : GenerateOperationState(context);
 
-                    if (operationStatus.TryGet("Completed", out bool completed) == false)
-                        return;
-
-                    if (completed == false)
-                    {
-                        await Task.Delay(1000, CancelToken.Token);
-                        continue;
-                    }
-
-                    if (operationStatus.TryGet("OperationState", out BlittableJsonReaderObject operationStateBlittable) == false)
-                    {
-                        // OperationState was added in the latest release of v3.5
-                        return;
-                    }
-
-                    var blittableCopy = context.ReadObject(operationStateBlittable, _migrationStateKey);
-                    var cmd = new MergedPutCommand(blittableCopy, _migrationStateKey, null, Database);
-                    await Database.TxMerger.Enqueue(cmd);
+                if (operationStateBlittable == null)
                     return;
+
+                var blittableCopy = context.ReadObject(operationStateBlittable, MigrationStateKey);
+                await SaveLastOperationState(blittableCopy);
+            }
+        }
+
+        private async Task<BlittableJsonReaderObject> GetLastStateByOperationId(long operationId, TransactionOperationContext context)
+        {
+            var retries = 0;
+            while (true)
+            {
+                if (++retries > 15)
+                    return null;
+
+                var operationStatus = await GetOperationStatus(DatabaseName, operationId, context);
+                if (operationStatus == null)
+                    return null;
+
+                if (operationStatus.TryGet("Completed", out bool completed) == false)
+                    return null;
+
+                if (completed == false)
+                {
+                    await Task.Delay(1000, CancelToken.Token);
+                    continue;
                 }
+
+                if (operationStatus.TryGet("OperationState", out BlittableJsonReaderObject operationStateBlittable) == false)
+                {
+                    // OperationState was added in the latest release of v3.5
+                    return null;
+                }
+
+                return operationStateBlittable;
             }
         }
 
@@ -173,7 +187,7 @@ namespace Raven.Server.Smuggler.Migration
         {
             var url = $"{ServerUrl}/databases/{databaseName}/operation/status?id={operationId}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _client.SendAsync(request, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the operation status was deleted before we could get it
@@ -192,22 +206,9 @@ namespace Raven.Server.Smuggler.Migration
             return await context.ReadForMemoryAsync(responseStream, "migration-operation-state");
         }
 
-        private LastEtagsInfo GetLastMigrationState()
-        {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var document = Database.DocumentsStorage.Get(context, _migrationStateKey);
-                if (document == null)
-                    return null;
-
-                return JsonDeserializationServer.OperationState(document.Data);
-            }
-        }
-
         public override void Dispose()
         {
-            _client.Dispose();
+            HttpClient.Dispose();
         }
     }
 }

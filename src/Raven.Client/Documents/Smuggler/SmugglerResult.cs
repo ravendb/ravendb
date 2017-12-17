@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Smuggler
 
         public bool ShouldPersist => true;
 
-        public class SmugglerProgress : SmugglerProgressBase, IOperationProgress
+        public string LegacyLastDocumentEtag { get; set; }        public string LegacyLastAttachmentEtag { get; set; }        public class SmugglerProgress : SmugglerProgressBase, IOperationProgress
         {
             protected readonly SmugglerResult _result;
 

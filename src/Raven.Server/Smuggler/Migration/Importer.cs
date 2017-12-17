@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
@@ -12,8 +16,8 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -25,25 +29,21 @@ namespace Raven.Server.Smuggler.Migration
 {
     public class Importer : AbstractMigrator
     {
-        private readonly string _migrationStateKey;
         private readonly RequestExecutor _requestExecutor;
-        private readonly HttpClient _client;
 
         public Importer(
+            string migrationStateKey,
             string serverUrl, 
             string sourceDatabaseName, 
             SmugglerResult result, 
             Action<IOperationProgress> onProgress, 
             DocumentDatabase database, 
-            string migrationStateKey, 
             OperationCancelToken cancelToken) 
-            : base(serverUrl, sourceDatabaseName, result, onProgress, database, cancelToken)
+            : base(migrationStateKey, serverUrl, sourceDatabaseName, result, onProgress, database, cancelToken)
         {
-            _migrationStateKey = migrationStateKey;
-
             _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(ServerUrl, DatabaseName, Database.ServerStore.Server.Certificate.Certificate, DocumentConventions.Default);
 
-            _client = _requestExecutor.HttpClient;
+            HttpClient = _requestExecutor.HttpClient;
         }
 
         public override async Task Execute()
@@ -97,8 +97,7 @@ namespace Raven.Server.Smuggler.Migration
                     };
                 
                     var importInfoBlittable = EntityToBlittable.ConvertEntityToBlittable(importInfo, DocumentConventions.Default, context);
-                    var cmd = new MergedPutCommand(importInfoBlittable, _migrationStateKey, null, Database);
-                    await Database.TxMerger.Enqueue(cmd);
+                    await SaveLastOperationState(importInfoBlittable);
                     return;
                 }
             }
@@ -109,7 +108,7 @@ namespace Raven.Server.Smuggler.Migration
         {
             var url = $"{ServerUrl}/databases/{databaseName}/operations/state?id={operationId}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _client.SendAsync(request, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 // the operation state was deleted before we could get it
@@ -132,14 +131,18 @@ namespace Raven.Server.Smuggler.Migration
         {
             var startDocumentEtag = importInfo?.LastEtag ?? 0;
             var url = $"{ServerUrl}/databases/{DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}";
-            var json = JsonConvert.SerializeObject(new DatabaseSmugglerOptionsServerSide());
+            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide();
+            if (importInfo != null)
+                databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.Tombstones;
+
+            var json = JsonConvert.SerializeObject(databaseSmugglerOptionsServerSide);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = content
             };
 
-            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -176,11 +179,36 @@ namespace Raven.Server.Smuggler.Migration
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var document = Database.DocumentsStorage.Get(context, _migrationStateKey);
+                var document = Database.DocumentsStorage.Get(context, MigrationStateKey);
                 if (document == null)
                     return null;
 
                 return JsonDeserializationServer.ImportInfo(document.Data);
+            }
+        }
+
+        public static async Task<List<string>> GetDatabasesToMigrate(string serverUrl, HttpClient httpClient, CancellationToken cancelToken)
+        {
+            var url = $"{serverUrl}/databases?namesOnly=true";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await httpClient.SendAsync(request, cancelToken);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to get databases to migrate from server: {serverUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var responseStream = await response.Content.ReadAsStreamAsync();
+                var databaseList = await context.ReadForMemoryAsync(responseStream, "databases-list");
+
+                if (databaseList.TryGet(nameof(DatabasesInfo.Databases), out BlittableJsonReaderArray names) == false)
+                    throw new InvalidDataException($"Response is invalid, property {nameof(DatabasesInfo.Databases)} doesn't exist");
+
+                return names.Select(x => x.ToString()).ToList();
             }
         }
 

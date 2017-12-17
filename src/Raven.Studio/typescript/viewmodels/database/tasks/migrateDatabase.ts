@@ -22,11 +22,11 @@ class migrateDatabase extends viewModelBase {
         this.bindToCurrentInstance("detectServerVersion");
 
         const debouncedDetection = _.debounce(() => this.detectServerVersion(), 700);
-        
+
         this.model.serverUrl.subscribe(() => {
             this.model.serverMajorVersion(null);
             debouncedDetection();
-        })
+        });
     }
     
     attached() {
@@ -50,8 +50,10 @@ class migrateDatabase extends viewModelBase {
             .done(buildInfo => {
                 if (buildInfo.MajorVersion !== "Unknown") {
                     this.model.serverMajorVersion(buildInfo.MajorVersion);
+                    this.model.buildVersion(buildInfo.BuildVersion);
                 } else {
                     this.model.serverMajorVersion(null);
+                    this.model.buildVersion(null);
                 }
             })
             .fail((response: JQueryXHR) => {
