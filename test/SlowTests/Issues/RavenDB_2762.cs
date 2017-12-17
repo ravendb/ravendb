@@ -35,8 +35,6 @@ namespace SlowTests.Issues
                     Maps = { "from doc in docs from name in doc.Names select new { Name = name.Length / (name.Length - 1) }" }
                 }));
 
-                WaitForIndexing(store);
-
                 IndexingError[] errors = null;
                 var result = SpinWait.SpinUntil(() =>
                 {
