@@ -476,7 +476,8 @@ namespace Raven.Server.Documents.Replication
                             [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, 
                             [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
                             [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop)
+                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop),
+                            [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on replication tcp version ours:{TcpConnectionHeaderMessage.ReplicationTcpVersion} theirs:{headerResponse.Version}"
                         });
                         writer.Flush();
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");

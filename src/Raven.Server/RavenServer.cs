@@ -813,6 +813,7 @@ namespace Raven.Server
                         TcpConnectionHeaderMessage header = null;
                         string error = null;
                         int version = 0;
+                        bool matchingVersion = false;
                         using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
                             int retries = TcpConnectionHeaderMessage.NumberOfRetriesForSendingTcpHeader;
@@ -847,8 +848,8 @@ namespace Raven.Server
                                         return;
                                     }
                                 }
-
-                                if (MatchingOperationVersion(header, out error, out version) == false)
+                                matchingVersion = MatchingOperationVersion(header, out error, out version);
+                                if (matchingVersion == false)
                                 {
                                     RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
                                     if (Logger.IsInfoEnabled)
@@ -862,7 +863,11 @@ namespace Raven.Server
                                 }
                                 break;
                             }
-
+                            if (matchingVersion == false)
+                            {
+                                //Couldn't agree on tcp operation version, will drop the connection now.
+                                return;
+                            }
                             bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
                             //At this stage the error is not relevant.
                             RespondToTcpConnection(stream, context, null, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, version);
