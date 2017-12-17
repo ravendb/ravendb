@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -29,6 +26,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly ServerStore _serverStore;
         private readonly CancellationToken _cancellationToken;
         private MajorVersion _buildMajorVersion;
+        private int _buildVersion;
 
         public Migrator(
             MigrationConfigurationBase configuration, 
@@ -56,6 +54,7 @@ namespace Raven.Server.Smuggler.Migration
             
             _serverStore = serverStore;
             _buildMajorVersion = configuration.BuildMajorVersion;
+            _buildVersion = configuration.BuildVersion;
             _cancellationToken = cancellationToken;
         }
 
@@ -66,7 +65,8 @@ namespace Raven.Server.Smuggler.Migration
 
             var buildInfo = await GetBuildInfo();
             
-            this._buildMajorVersion = buildInfo.MajorVersion;
+            _buildMajorVersion = buildInfo.MajorVersion;
+            _buildVersion = buildInfo.BuildVersion;
 
             if (buildInfo.MajorVersion == MajorVersion.Unknown)
             {
@@ -139,7 +139,9 @@ namespace Raven.Server.Smuggler.Migration
             if (databasesToMigrate == null || databasesToMigrate.Count == 0)
             {
                 // migrate all databases
-                databasesToMigrate = await GetDatabasesToMigrate();
+                databasesToMigrate = _buildMajorVersion == MajorVersion.V4
+                    ? await Importer.GetDatabasesToMigrate(_serverUrl, _client, _cancellationToken)
+                    : await AbstractLegacyMigrator.GetDatabasesToMigrate(_serverUrl, _client, _cancellationToken);
             }
 
             if (databasesToMigrate.Count == 0)
@@ -192,15 +194,16 @@ namespace Raven.Server.Smuggler.Migration
                             switch (majorVersion)
                             {
                                 case MajorVersion.V2:
-                                    migrator = new Migrator_V2(_serverUrl, sourceDatabaseName, result, onProgress, database, _client, cancelToken);
+                                    migrator = new Migrator_V2(migrationStateKey, _serverUrl, sourceDatabaseName, 
+                                        result, onProgress, database, _client, cancelToken);
                                     break;
                                 case MajorVersion.V30:
                                 case MajorVersion.V35:
-                                    migrator = new Migrator_V3(_serverUrl, sourceDatabaseName, result, onProgress, 
-                                        database, _client, migrationStateKey, majorVersion, cancelToken);
+                                    migrator = new Migrator_V3(migrationStateKey, _serverUrl, sourceDatabaseName, 
+                                        result, onProgress, database, _client, majorVersion, _buildVersion, cancelToken);
                                     break;
                                 case MajorVersion.V4:
-                                    migrator = new Importer(_serverUrl, sourceDatabaseName, result, onProgress, database, migrationStateKey, cancelToken);
+                                    migrator = new Importer(migrationStateKey, _serverUrl, sourceDatabaseName, result, onProgress, database, cancelToken);
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException(nameof(majorVersion), majorVersion, null);
@@ -275,30 +278,6 @@ namespace Raven.Server.Smuggler.Migration
         private async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
             return await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-        }
-
-        private async Task<List<string>> GetDatabasesToMigrate()
-        {
-            var url = $"{_serverUrl}/databases";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
-            var response = await _client.SendAsync(request, _cancellationToken);
-            if (response.IsSuccessStatusCode == false)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get databases to migrate from server: {_serverUrl}, " +
-                                                    $"status code: {response.StatusCode}, " +
-                                                    $"error: {responseString}");
-            }
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var responseStream = await response.Content.ReadAsStreamAsync();
-                using (var reader = new StreamReader(responseStream, Encoding.UTF8))
-                {
-                    var jsonStr = reader.ReadToEnd();
-                    return JsonConvert.DeserializeObject<List<string>>(jsonStr);
-                }
-            }
         }
     }
 }
