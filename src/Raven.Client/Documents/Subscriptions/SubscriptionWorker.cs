@@ -209,6 +209,16 @@ namespace Raven.Client.Documents.Subscriptions
                         case TcpConnectionStatus.AuthorizationFailed:
                             throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
                         case TcpConnectionStatus.TcpVersionMismatch:
+                            //Kindly request the server to drop the connection
+                            serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
+                            {
+                                Operation = TcpConnectionHeaderMessage.OperationTypes.Drop,
+                                DatabaseName = databaseName,
+                                OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion
+                            });
+                            header = Encodings.Utf8.GetBytes(serializeObject);
+                            await _stream.WriteAsync(header, 0, header.Length).ConfigureAwait(false);
+                            await _stream.FlushAsync().ConfigureAwait(false);
                             throw new InvalidOperationException($"Can't connect to database {databaseName} because: {reply.Message}");
                     }
                         

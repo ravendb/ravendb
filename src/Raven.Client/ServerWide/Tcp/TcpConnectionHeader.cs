@@ -7,6 +7,7 @@ namespace Raven.Client.ServerWide.Tcp
         public enum OperationTypes
         {
             None,
+            Drop,
             Subscription,
             Replication,
             Cluster,
@@ -21,6 +22,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public int OperationVersion { get; set; }
 
+        public static readonly int NumberOfRetriesForSendingTcpHeader = 2;
         public static readonly int ClusterTcpVersion = 10;
         public static readonly int HeartbeatsTcpVersion = 20;
         public static readonly int ReplicationTcpVersion = 30;
@@ -32,6 +34,8 @@ namespace Raven.Client.ServerWide.Tcp
             {
                 case OperationTypes.None:
                     return -1;
+                case OperationTypes.Drop:
+                    return -2;
                 case OperationTypes.Subscription:
                     return SubscriptionTcpVersion;
                 case OperationTypes.Replication:
