@@ -1594,7 +1594,11 @@ namespace Raven.Server.Documents.Queries
                     }
                     else if (argument is ValueExpression v)
                     {
-                        list.Add(v.Token.ToString());
+                        if (_parameters.TryGetMember(v.Token, out var result) == false)
+                        {
+                            result = v.Token;
+                        }
+                        list.Add(result.ToString());
                     }
                     else if (argument is FieldExpression f)
                     {
@@ -1636,54 +1640,6 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
                 return revtriver.InvokeFunction(_expression.Name, _query, list.ToArray());
-            }
-        }
-
-        public class ExpressionEvaluator
-        {
-            private readonly QueryMetadata _metadata;
-            private readonly OperatorType _operatorType;
-            private readonly QueryExpression _left;
-            private readonly ValueExpression _right;
-            private readonly BlittableJsonReaderObject _parameters;
-
-            public ExpressionEvaluator(QueryMetadata metadata, OperatorType operatorType, QueryExpression left, ValueExpression right, BlittableJsonReaderObject parameters)
-            {
-                _metadata = metadata;
-                _operatorType = operatorType;
-                _left = left;
-                _right = right;
-                _parameters = parameters;
-            }
-
-            public bool EvaluateExpression(QueryResultRetrieverBase revtriver, Document doc)
-            {
-                var parameterValue = _right.Token.ToString();
-                string value = null;
-
-                if (_left is MethodExpression me)
-                {
-                    value = (string)new SingleMethodEvaluator(_metadata, me, _parameters).EvaluateSingleMethod(revtriver, doc);
-                }
-
-                //TODO: evalute the expression to any type with any supported operator
-                switch (_operatorType)
-                {
-                    case OperatorType.Equal:
-                        return value == parameterValue;
-                    case OperatorType.NotEqual:
-                        return value != parameterValue;
-                    //                                    case OperatorType.LessThan:
-                    //                                        return value < parameterValue;
-                    //                                    case OperatorType.GreaterThan:
-                    //                                        return value > parameterValue;
-                    //                                    case OperatorType.LessThanEqual:
-                    //                                        return value <= parameterValue;
-                    //                                    case OperatorType.GreaterThanEqual:
-                    //                                        return value >= parameterValue;
-                    default:
-                        throw new ArgumentOutOfRangeException($"Evaluation failed due to the invalid operator {_operatorType}");
-                }
             }
         }
 

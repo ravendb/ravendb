@@ -531,8 +531,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.Lucene(fieldName, AddQueryParameter(whereClause)));
+            var whereToken = WhereToken.Create(WhereOperator.Lucene, fieldName, AddQueryParameter(whereClause));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -592,16 +592,31 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             
-            if (whereParams.Value is MethodCall mc)
-            {
-                //var parameter = AddQueryParameter(mc.Value);
-                tokens.AddLast(WhereToken.MethodCall(whereParams.FieldName, mc.Value.ToString(), SearchOperator.Or));
+            if (IfValueIsMethod(WhereOperator.Equals, whereParams, tokens)) 
                 return;
-            }
             
             var transformToEqualValue = TransformValue(whereParams);
             var addQueryParameter = AddQueryParameter(transformToEqualValue);
-            tokens.AddLast(WhereToken.Equals(whereParams.FieldName, addQueryParameter, whereParams.Exact));
+            var whereToken = WhereToken.Create(WhereOperator.Equals, whereParams.FieldName, addQueryParameter, 
+                new WhereToken.WhereOptions(whereParams.Exact));
+            tokens.AddLast(whereToken);
+        }
+
+        private bool IfValueIsMethod(WhereOperator op, WhereParams whereParams, LinkedList<QueryToken> tokens)
+        {
+            if (whereParams.Value is MethodCall mc)
+            {
+                var args = new string[mc.Args.Length];
+                for (var index = 0; index < mc.Args.Length; index++)
+                {
+                    args[index] = AddQueryParameter(mc.Args[index]);
+                }
+                var token = WhereToken.Create(op, whereParams.FieldName, null,
+                    new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
+                tokens.AddLast(token);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -635,7 +650,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-            tokens.AddLast(WhereToken.NotEquals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
+            
+            if (IfValueIsMethod(WhereOperator.NotEquals, whereParams, tokens)) 
+                return;
+            
+            var whereToken = WhereToken.Create(WhereOperator.NotEquals, whereParams.FieldName, AddQueryParameter(transformToEqualValue),
+                new WhereToken.WhereOptions(whereParams.Exact));
+            tokens.AddLast(whereToken);
         }
 
         ///<summary>
@@ -657,7 +678,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
 
-            tokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray()), exact));
+            var whereToken = WhereToken.Create(WhereOperator.In, fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray()),
+                new WhereToken.WhereOptions(exact));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -681,8 +704,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(tokens, whereParams.FieldName);
-
-            tokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
+            var whereToken = WhereToken.Create(WhereOperator.StartsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -706,8 +729,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
             NegateIfNeeded(tokens, whereParams.FieldName);
-
-            tokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
+            var whereToken = WhereToken.Create(WhereOperator.EndsWith, whereParams.FieldName, AddQueryParameter(transformToEqualValue));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -728,7 +751,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }, forRange: true));
             var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }, forRange: true));
 
-            tokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName, exact));
+            var whereToken = WhereToken.Create(WhereOperator.Between, fieldName, null, new WhereToken.WhereOptions(exact, fromParameterName, toParameterName));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -743,8 +767,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            var parameter = AddQueryParameter(value == null
+                ? "*"
+                : TransformValue(new WhereParams
+                {
+                    Value = value,
+                    FieldName = fieldName
+                }, forRange: true));
+            var whereToken = WhereToken.Create(WhereOperator.GreaterThan, fieldName, parameter, new WhereToken.WhereOptions(exact));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -759,8 +790,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            var parameter = AddQueryParameter(value == null
+                ? "*"
+                : TransformValue(new WhereParams
+                {
+                    Value = value,
+                    FieldName = fieldName
+                }, forRange: true));
+            var whereToken = WhereToken.Create(WhereOperator.GreaterThanOrEqual, fieldName, parameter, new WhereToken.WhereOptions(exact));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -775,8 +813,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            var parameter = AddQueryParameter(value == null
+                ? "NULL"
+                : TransformValue(new WhereParams
+                {
+                    Value = value,
+                    FieldName = fieldName
+                }, forRange: true));
+            var whereToken = WhereToken.Create(WhereOperator.LessThan, fieldName, parameter, new WhereToken.WhereOptions(exact));
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -789,8 +834,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
+            var parameter = AddQueryParameter(value == null
+                ? "NULL"
+                : TransformValue(new WhereParams
+                {
+                    Value = value,
+                    FieldName = fieldName
+                }, forRange: true));
+            var whereToken = WhereToken.Create(WhereOperator.LessThanOrEqual, fieldName, parameter, new WhereToken.WhereOptions(exact));
+            tokens.AddLast(whereToken);
         }
 
 
@@ -804,8 +856,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.Regex(fieldName, AddQueryParameter(TransformValue(new WhereParams { Value = pattern, FieldName = fieldName }))));
+            var parameter = AddQueryParameter(TransformValue(new WhereParams
+            {
+                Value = pattern,
+                FieldName = fieldName
+            }));
+            var whereToken = WhereToken.Create(WhereOperator.Regex, fieldName, parameter);
+            tokens.AddLast(whereToken);
         }
 
         /// <summary>
@@ -862,7 +919,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (boost <= 0m)
                 throw new ArgumentOutOfRangeException(nameof(boost), "Boost factor must be a positive number");
 
-            whereToken.Boost = boost;
+            whereToken.Options.Boost = boost;
         }
 
         /// <summary>
@@ -887,7 +944,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new ArgumentOutOfRangeException(nameof(fuzzy), "Fuzzy distance must be between 0.0 and 1.0");
             }
 
-            whereToken.Fuzzy = fuzzy;
+            whereToken.Options.Fuzzy = fuzzy;
         }
 
         /// <summary>
@@ -912,7 +969,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new ArgumentOutOfRangeException(nameof(proximity), "Proximity distance must be a positive number");
             }
 
-            whereToken.Proximity = proximity;
+            whereToken.Options.Proximity = proximity;
         }
 
         /// <summary>
@@ -1018,8 +1075,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
             NegateIfNeeded(tokens, fieldName);
-
-            tokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
+            var whereToken = WhereToken.Create(WhereOperator.Search, fieldName, AddQueryParameter(searchTerms), new WhereToken.WhereOptions(@operator));
+            tokens.AddLast(whereToken);
         }
 
         /// <inheritdoc />
@@ -1100,7 +1157,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
 
-            tokens.AddLast(WhereToken.Exists(fieldName));
+            tokens.AddLast(WhereToken.Create(WhereOperator.Exists, fieldName, null));
         }
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
@@ -1114,7 +1171,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var array = TransformEnumerable(fieldName, UnpackEnumerable(values))
                 .ToArray();
 
-            tokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(array), exact: false));
+            var whereToken = WhereToken.Create(WhereOperator.In, fieldName, AddQueryParameter(array), new WhereToken.WhereOptions(false));
+            
+            tokens.AddLast(whereToken);
         }
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
@@ -1134,7 +1193,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
             }
 
-            tokens.AddLast(WhereToken.AllIn(fieldName, AddQueryParameter(array)));
+            var whereToken = WhereToken.Create(WhereOperator.AllIn, fieldName, AddQueryParameter(array));
+            
+            tokens.AddLast(whereToken);
         }
 
         public void AddRootType(Type type)
@@ -1326,7 +1387,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
             var token = DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or;
 
-            if (lastWhere?.SearchOperator != null)
+            if (lastWhere.Options?.SearchOperator != null)
                 token = QueryOperatorToken.Or; // default to OR operator after search if AND was not specified explicitly
 
             tokens.AddLast(token);
@@ -1496,7 +1557,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             return whereParams.Value;
         }
 
-        public string AddQueryParameter(object value)
+        private string AddQueryParameter(object value)
         {
             var parameterName = $"p{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);
@@ -1504,7 +1565,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LinkedList<QueryToken> GetCurrentWhereTokens()
+        private LinkedList<QueryToken> GetCurrentWhereTokens()
         {
             if (_isInMoreLikeThis == false)
                 return WhereTokens;

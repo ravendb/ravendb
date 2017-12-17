@@ -2363,31 +2363,20 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
         }
 
         [Fact]
-        public async Task QueryCmpXchg(){
+        public async Task QueryCmpXchgWhere(){
         
             using (var store = GetDocumentStore())
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom","Jerry", 0));
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera","Zeus", 0));
-                
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Gaya","Uranus", 0));
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com","users/2", 0));
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com","users/1", 0));
-                            
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("ActiveUser",new User
-                {
-                    Name = "foo",
-                    IsActive = true
-                }, 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("NotActiveUser",new User
-                {
-                    Name = "bar",
-                    IsActive = false
-                }, 0));
-                
+              
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", IsActive = true}, "users/2");
-                    session.Store(new User { Name = "Zeus", IsActive = false}, "users/1");
+                    session.Store(new User { Name = "Jerry"}, "users/2");
+                    session.Store(new User { Name = "Zeus"}, "users/1");
                     session.SaveChanges();
                 }
 
@@ -2396,16 +2385,80 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     var query = from u in session.Query<User>()
                         where u.Name == RavenQuery.CmpXchg<string>("Hera")
                         select u;
-                    Assert.Equal("FROM Users WHERE Name = cmpxchg(\"Hera\")", query.ToString());
-                    var rql = query.ToString();
-                    var queryResult = session.Advanced.RawQuery<User>(rql).ToList();
-                    
+                    Assert.Equal("FROM Users WHERE Name = cmpxchg($p0)", query.ToString());
+                    var queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
                     
-                    rql = "FROM Users WHERE id() = cmpxchg(\"Zeus@gmail.com\")";
+                    query = from u in session.Query<User>()
+                        where u.Name != RavenQuery.CmpXchg<string>("Hera")
+                        select u;
+                    Assert.Equal("FROM Users WHERE Name != cmpxchg($p0)", query.ToString());
+                    queryResult = query.ToList();
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Jerry", queryResult[0].Name);
+
+                    var rql = "FROM Users WHERE id() = cmpxchg(\"Zeus@gmail.com\")";
                     queryResult = session.Advanced.RawQuery<User>(rql).ToList();
-                    
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Zeus", queryResult[0].Name);
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-9850")]
+        public async Task QueryCmpXchgWhereWithProperty()
+        {
+
+            using (var store = GetDocumentStore())
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom", "Jerry", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera", "Zeus", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com", "users/2", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com", "users/1", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<Linked>("ActiveUser", new Linked
+                {
+                    Name = "Uranus",
+                    Next = new Linked
+                    {
+                        Name = "Cronus",
+                        Next = new Linked
+                        {
+                            Name = "Zeus"
+                        }
+                    },
+                    Users = new List<User>
+                    {
+                        new User
+                        {
+                            Name = "foo/bar",
+                            IsActive = true
+                        }
+                    }
+                }, 0));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", IsActive = true }, "users/2");
+                    session.Store(new User { Name = "Zeus", IsActive = false }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                        where u.Name == RavenQuery.CmpXchg<Linked>("ActiveUser").Next.Next.Name
+                        select u;
+                    Assert.Equal("FROM Users WHERE Name = cmpxchg($p0).Next.Next.Name", query.ToString());
+                    var queryResult = query.ToList();
+//                    Assert.Equal(1, queryResult.Count);
+//                    Assert.Equal("Zeus", queryResult[0].Name);
+
+                    query = from u in session.Query<User>()
+                        where u.IsActive == RavenQuery.CmpXchg<Linked>("ActiveUser").Users[0].IsActive
+                        select u;
+                    Assert.Equal("FROM Users WHERE IsActive = cmpxchg($p0).Users[0].IsActive", query.ToString());
+                    queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
                 }
@@ -3536,7 +3589,14 @@ FROM Orders as o LOAD o.Company as company, company.EmployeesIds as _docs_1[] SE
                 }
             }
         }
-        
+
+        private class Linked
+        {
+            public List<User> Users;
+            public string Name;
+            public Linked Next;
+        }
+
         private class UserGroup
         {
             public List<User> Users { get; set; }

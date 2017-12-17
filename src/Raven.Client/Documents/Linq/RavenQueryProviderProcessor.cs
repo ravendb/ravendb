@@ -1530,7 +1530,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             switch (body.NodeType)
             {
                 case ExpressionType.MemberAccess:
-                    var groupByExpression = _linqPathProvider.GetMemberExpression(lambdaExpression);
+                    var groupByExpression = LinqPathProvider.GetMemberExpression(lambdaExpression);
 
                     var singleGroupByFieldName = GetSelectPath(groupByExpression);
 
@@ -1652,7 +1652,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         void AddPart()
                         {
-                            var field = _linqPathProvider.GetMemberExpression(methodArgument);
+                            var field = LinqPathProvider.GetMemberExpression(methodArgument);
 
                             var path = GetSelectPath(field);
 
@@ -1839,7 +1839,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                             || field.Expression is LabelExpression
                             || (field.Expression is MemberExpression member && HasComputation(member) == false))
                         {
-                            var expression = _linqPathProvider.GetMemberExpression(field.Expression);
+                            var expression = LinqPathProvider.GetMemberExpression(field.Expression);
                             var renamedField = GetSelectPathOrConstantValue(expression);
 
                             AddToFieldsToFetch(renamedField, GetSelectPath(field.Member));

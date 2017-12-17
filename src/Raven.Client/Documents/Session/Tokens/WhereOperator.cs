@@ -20,7 +20,6 @@ namespace Raven.Client.Documents.Session.Tokens
         Spatial_Contains,
         Spatial_Disjoint,
         Spatial_Intersects,
-        Regex,
-        MethodCall
+        Regex
     }
 }

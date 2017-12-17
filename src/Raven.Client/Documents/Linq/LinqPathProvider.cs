@@ -203,7 +203,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Get the member expression from the expression
         /// </summary>
-        public MemberExpression GetMemberExpression(Expression expression)
+        public static MemberExpression GetMemberExpression(Expression expression)
         {
             var unaryExpression = expression as UnaryExpression;
             if (unaryExpression != null)
@@ -250,12 +250,17 @@ namespace Raven.Client.Documents.Linq
                 case ExpressionType.Call:
                     if (expression is MethodCallExpression mce)
                     {
+                        var args = new Object[mce.Arguments.Count];
+                        for (var index = 0; index < mce.Arguments.Count; index++)
+                        {
+                            if (GetValueFromExpressionWithoutConversion(mce.Arguments[index], out value) == false)
+                                return false;
+                            args[index] = value;
+                        }
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.CmpXchg))
                         {
-                            if (GetValueFromExpressionWithoutConversion(mce.Arguments[0], out value) == false)
-                                return false;
-                            value = new MethodCall("cmpxchg", value);
+                            value = new MethodCall("cmpxchg", args);
                             return true;
                         }
                     }
@@ -316,6 +321,12 @@ namespace Raven.Client.Documents.Linq
                 obj = ((ConstantExpression)memberExpression.Expression).Value;
             else if (memberExpression.Expression is MemberExpression)
                 obj = GetMemberValue((MemberExpression)memberExpression.Expression);
+            else if (memberExpression.Expression is MethodCallExpression && GetValueFromExpressionWithoutConversion(memberExpression.Expression, out var value) &&
+                     value is MethodCall mc)
+            {
+                mc.AccessPath = memberExpression.Member.Name;
+                return mc;
+            }
             //Fix for the issue here http://github.com/ravendb/ravendb/issues/#issue/145
             //Needed to allow things like ".Where(x => x.TimeOfDay > DateTime.MinValue)", where Expression is null
             //(applies to DateTime.Now as well, where "Now" is a property
@@ -323,6 +334,11 @@ namespace Raven.Client.Documents.Linq
             else if (memberExpression.Expression != null)
                 throw new NotSupportedException("Expression type not supported: " + memberExpression.Expression.GetType().FullName);
 
+            if (obj is MethodCall m)
+            {
+                m.AccessPath += "." + memberExpression.Member.Name;
+                return m;
+            }
             // Get value
             var memberInfo = memberExpression.Member;
             if (memberInfo is PropertyInfo)
@@ -339,7 +355,7 @@ namespace Raven.Client.Documents.Linq
         }
 
 
-        private void AssertNoComputation(MemberExpression memberExpression)
+        private static void AssertNoComputation(MemberExpression memberExpression)
         {
             var cur = memberExpression;
 
@@ -379,12 +395,14 @@ namespace Raven.Client.Documents.Linq
     public class MethodCall
     {
         public string Name { get; }
-        public object Value { get; }
+        public object[] Args { get; }
+        public string AccessPath;
 
-        public MethodCall(string name, object value)
+        public MethodCall(string name, object[] value, string accessPath = null)
         {
             Name = name;
-            Value = value;
+            Args = value;
+            AccessPath = accessPath;
         }
     }
 }
