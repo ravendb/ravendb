@@ -567,6 +567,8 @@ namespace Voron.Impl
                 Flags = PageFlags.Single
             };
 
+            _pageLocator.SetWritable(pageNumber, newPage);
+
             TrackWritablePage(newPage);
 
 #if VALIDATE

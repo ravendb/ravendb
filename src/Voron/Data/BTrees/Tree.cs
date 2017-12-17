@@ -1250,10 +1250,10 @@ namespace Voron.Data.BTrees
             {
                 var readOnlyOverflowPage = GetReadOnlyTreePage(updatedNode->PageNumber);
 
-                if (len <= readOnlyOverflowPage.OverflowSize)
-                {
-                    var availableOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
+                var availableOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
+                if (len <= availableOverflows)
+                {
                     var requestedOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(len);
 
                     var overflowsToFree = availableOverflows - requestedOverflows;
