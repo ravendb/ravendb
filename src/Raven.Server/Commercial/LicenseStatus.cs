@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -8,36 +7,19 @@ namespace Raven.Server.Commercial
 {
     public class LicenseStatus
     {
-        public LicenseStatus()
-        {
-            Message = "No installed license";
-        }
-
-        public bool Error { get; set; }
-
         public Guid? Id { get; set; }
 
         public Dictionary<string, object> Attributes { get; set; }
 
-        public string Message { get; set; }
+        public string ErrorMessage { get; set; }
 
         public string Status => Attributes == null ? "AGPL - Open Source" : "Commercial";
-
-        public string FormattedExpiration
-        {
-            get
-            {
-                var expiration = Expiration;
-                return expiration?.ToString("d", CultureInfo.CurrentCulture);
-                
-            }
-        }
 
         public LicenseType Type
         {
             get
             {
-                if (Error)
+                if (ErrorMessage != null)
                     return LicenseType.Invalid;
 
                 if (Attributes == null)
@@ -102,9 +84,7 @@ namespace Raven.Server.Commercial
                 switch (maxClusterSize)
                 {
                     case null:
-                        return 3;
-                    case 0:
-                        return int.MaxValue;
+                        return 1;
                     default:
                         return maxClusterSize.Value;
                 }
@@ -136,8 +116,7 @@ namespace Raven.Server.Commercial
             return new DynamicJsonValue
             {
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
-                [nameof(Error)] = Error,
-                [nameof(Message)] = Message,
+                [nameof(ErrorMessage)] = ErrorMessage,
                 [nameof(MaxCores)] = MaxCores,
                 [nameof(MaxMemory)] = MaxMemory,
                 [nameof(MaxClusterSize)] = MaxClusterSize,
@@ -145,7 +124,6 @@ namespace Raven.Server.Commercial
                 [nameof(Expiration)] = Expiration,
                 [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
-                [nameof(FormattedExpiration)] = FormattedExpiration,
                 [nameof(Type)] = Type.ToString(),
                 [nameof(Id)] = Id?.ToString(),
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),

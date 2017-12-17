@@ -71,11 +71,14 @@ class registration extends dialogViewModelBase {
         let error: string = null;
         if (licenseStatus.Type === "Invalid") {
             error = "Invalid license";
+            if (licenseStatus.ErrorMessage) {
+                error += `: ${licenseStatus.ErrorMessage}`;
+            }
         } else if (licenseStatus.Expired) {
             const expiration = moment(licenseStatus.Expiration);
             error = "License expired";
             if (expiration.isValid()) {
-                error += ` on ${expiration.format("Do of MMMM, YYYY")}`;
+                error += ` on ${expiration.format("YYYY MMMM Do")}`;
             }
         }
         this.error(error);

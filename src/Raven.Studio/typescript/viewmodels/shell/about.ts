@@ -2,9 +2,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import shell = require("viewmodels/shell");
 import license = require("models/auth/licenseModel");
 import registration = require("viewmodels/shell/registration");
-import deactivateLicenseCommand = require("commands/licensing/deactivateLicenseCommand");
+import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import buildInfo = require("models/resources/buildInfo");
 import messagePublisher = require("common/messagePublisher");
+import generalUtils = require("common/generalUtils");
 
 class about extends viewModelBase {
 
@@ -27,17 +28,26 @@ class about extends viewModelBase {
     
 
     spinners = {
-        deactivatingLicense: ko.observable<boolean>(false)
+        forceLicenseUpdate: ko.observable<boolean>(false)
     };
 
     formattedExpiration = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
 
-        if (!licenseStatus || !licenseStatus.FormattedExpiration) {
+        if (!licenseStatus || !licenseStatus.Expiration) {
             return null;
         }
 
-        return licenseStatus.FormattedExpiration;
+        const dateFormat = "YYYY MMMM Do";
+        const expiration = moment(licenseStatus.Expiration);
+        const now = moment();
+        if (now.isBefore(expiration)) {
+            const fromDuration = generalUtils.formatDurationByDate(expiration, false);
+            return `in ${fromDuration} (${expiration.format(dateFormat)})`;
+        }
+
+        const duration = generalUtils.formatDurationByDate(expiration, true);
+        return `${duration} ago (${expiration.format(dateFormat)})`;
     });
 
     licenseType = ko.pureComputed(() => {
@@ -75,22 +85,22 @@ class about extends viewModelBase {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
-    deactivateLicense() {
+    forceLicenseUpdate() {
         this.confirmationMessage(
-                "Deactivate",
-                "Are you sure that you want to deactivate this license?")
+                "Force License Update",
+                "Are you sure that you want to force license update?")
             .done(can => {
                 if (!can) {
                     return;
                 }
-                this.spinners.deactivatingLicense(true);
-                new deactivateLicenseCommand().execute()
+
+                this.spinners.forceLicenseUpdate(true);
+                new forceLicenseUpdateCommand().execute()
                     .done(() => {
                         license.fetchLicenseStatus()
                             .done(() => license.fetchSupportCoverage());
-                        messagePublisher.reportWarning("Your license was successfully deactivated");
                     })
-                    .always(() => this.spinners.deactivatingLicense(false));
+                    .always(() => this.spinners.forceLicenseUpdate(false));
             });
     }
 

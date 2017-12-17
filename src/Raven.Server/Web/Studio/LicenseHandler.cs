@@ -24,8 +24,13 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/admin/license/activate", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task Activate()
         {
-            License license;
+            if (ServerStore.Configuration.Licensing.CanActivate == false)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+                return;
+            }
 
+            License license;
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var json = context.Read(RequestBodyStream(), "license activation");
@@ -37,23 +42,15 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/admin/license/deactivate", "POST", AuthorizationStatus.ClusterAdmin)]
-        public async Task Deactivate()
+        [RavenAction("/admin/license/forceUpdate", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task ForceUpdate()
         {
-            if (ServerStore.Configuration.Licensing.CanDeactivate == false)
+            if (ServerStore.Configuration.Licensing.CanForceUpdate == false)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
                 return;
             }
 
-            await ServerStore.LicenseManager.DeactivateLicense();
-
-            NoContentStatus();
-        }
-
-        [RavenAction("/admin/license/forceUpdate", "POST", AuthorizationStatus.ClusterAdmin)]
-        public async Task ForceUpdate()
-        {
             await ServerStore.LicenseManager.LeaseLicense();
 
             NoContentStatus();

@@ -12,7 +12,11 @@ class licenseActivateCommand extends commandBase {
 
         return this.post(url, JSON.stringify(this.licensePayload), null, { dataType: undefined })
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to activate license", response.responseText, response.statusText);
+                const message = response.status === 405 ?
+                    "License activation has been disabled on this server" : 
+                    "Failed to activate license";
+
+                this.reportError(message, response.responseText, response.statusText);
             });
     }
 }

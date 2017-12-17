@@ -10,6 +10,8 @@ namespace Raven.Server.Commercial
 
         public string Message { get; set; }
 
+        public string ErrorMessage { get; set; }
+
         public NotificationSeverity NotificationSeverity { get; set; }
     }
 }
