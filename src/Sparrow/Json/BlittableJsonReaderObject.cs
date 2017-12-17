@@ -674,8 +674,7 @@ namespace Sparrow.Json
 
                 // Get the relative "In Document" position of the property Name
                 var propRelativePos = (int)(_propNames - propertyNameOffset - _mem);
-                byte offset;
-                var size = ReadVariableSizeInt(propRelativePos, out offset);
+                var size = ReadVariableSizeInt(propRelativePos, out var offset);
 
                 hash = Hashing.XXHash64.Calculate( _mem + propRelativePos + offset, (ulong)size, hash);
             }

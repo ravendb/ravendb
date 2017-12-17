@@ -31,7 +31,12 @@ namespace Raven.Server.Documents.Queries
                 if (metadata == null || metadata.CacheKey != metadataHash)
                     return false;
             }
-            return true;
+
+            // we don't compare the query parameters because they don't matter
+            // for the query plan that we use, at any rate, they will either error
+            // if the query uses them and it is missing or they are there and will
+            // noop because they aren't being used
+            return (query.Query != metadata.QueryText);
         }
 
         public void MaybeAddToCache(QueryMetadata metadata, string indexName)

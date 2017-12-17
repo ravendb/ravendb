@@ -236,16 +236,14 @@ namespace Raven.Server
 
         private void MaybeAddAdditionalExceptionData(DynamicJsonValue djv, Exception exception)
         {
-            var indexCompilationException = exception as IndexCompilationException;
-            if (indexCompilationException != null)
+            if (exception is IndexCompilationException indexCompilationException)
             {
                 djv[nameof(IndexCompilationException.IndexDefinitionProperty)] = indexCompilationException.IndexDefinitionProperty;
                 djv[nameof(IndexCompilationException.ProblematicText)] = indexCompilationException.ProblematicText;
                 return;
             }
 
-            var documentConflictException = exception as DocumentConflictException;
-            if (documentConflictException != null)
+            if (exception is DocumentConflictException documentConflictException)
             {
                 djv[nameof(DocumentConflictException.DocId)] = documentConflictException.DocId;
                 djv[nameof(DocumentConflictException.LargestEtag)] = documentConflictException.LargestEtag;
