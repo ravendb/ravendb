@@ -810,44 +810,62 @@ namespace Raven.Server
 
                     try
                     {
-                        TcpConnectionHeaderMessage header;
+                        TcpConnectionHeaderMessage header = null;
+                        string error = null;
+                        int version = 0;
                         using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
-                            using (var headerJson = await context.ParseToMemoryAsync(
-                                stream,
-                                "tcp-header",
-                                BlittableJsonDocumentBuilder.UsageMode.None,
-                                tcp.PinnedBuffer,
-                                ServerStore.ServerShutdown,
-                                // we don't want to allow external (and anonymous) users to send us unlimited data
-                                // a maximum of 2 KB for the header is big enough to include any valid header that
-                                // we can currently think of
-                                maxSize: 1024 * 2
-                            ))
+                            int retries = TcpConnectionHeaderMessage.NumberOfRetriesForSendingTcpHeader;
+                            while (retries > 0 )
                             {
-                                header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-                                if (Logger.IsInfoEnabled)
+                                using (var headerJson = await context.ParseToMemoryAsync(
+                                    stream,
+                                    "tcp-header",
+                                    BlittableJsonDocumentBuilder.UsageMode.None,
+                                    tcp.PinnedBuffer,
+                                    ServerStore.ServerShutdown,
+                                    // we don't want to allow external (and anonymous) users to send us unlimited data
+                                    // a maximum of 2 KB for the header is big enough to include any valid header that
+                                    // we can currently think of
+                                    maxSize: 1024 * 2
+                                ))
                                 {
-                                    Logger.Info(
-                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                    header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
+                                    if (Logger.IsInfoEnabled)
+                                    {
+                                        Logger.Info(
+                                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                    }
+                                    //In the case where we have missmatched version but the other side doesn't know how to handle it.
+                                    if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
+                                    {
+                                        if (Logger.IsInfoEnabled)
+                                        {
+                                            Logger.Info(
+                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                        }
+                                        return;
+                                    }
                                 }
-                            }
 
-                            if (MatchingOperationVersion(header, out var error) == false)
-                            {
-                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch);
-                                if (Logger.IsInfoEnabled)
+                                if (MatchingOperationVersion(header, out error, out version) == false)
                                 {
-                                    Logger.Info(
-                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
-                                        $" {error}");
+                                    RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
+                                    if (Logger.IsInfoEnabled)
+                                    {
+                                        Logger.Info(
+                                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
+                                            $" {error} retries left:{retries}");
+                                    }
+                                    retries--;
+                                    continue;
                                 }
-                                return; //we will not accept not matching versions
+                                break;
                             }
 
                             bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
-
-                            RespondToTcpConnection(stream, context, error, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed);
+                            //At this stage the error is not relevant.
+                            RespondToTcpConnection(stream, context, null, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, version);
 
                             if (authSuccessful == false)
                             {
@@ -887,13 +905,16 @@ namespace Raven.Server
             });
         }
 
-        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status)
+        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status,int version)
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
                 writer.WriteString(status.ToString());
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Version));
+                writer.WriteInteger(version);
                 if (error != null)
                 {
                     writer.WriteComma();
@@ -905,9 +926,9 @@ namespace Raven.Server
             }
         }
 
-        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error)
+        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error,out int version)
         {
-            var version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
+            version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
             if (version == header.OperationVersion)
             {
                 error = null;

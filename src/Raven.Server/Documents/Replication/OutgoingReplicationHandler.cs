@@ -421,13 +421,13 @@ namespace Raven.Server.Documents.Replication
             {
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
+                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, // _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                     [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                     [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 });
                 writer.Flush();
-                ReadHeaderResponseAndThrowIfUnAuthorized();
+                ReadHeaderResponseAndThrowIfUnAuthorized(documentsContext, writer);
                 //start request/response for fetching last etag
                 var request = new DynamicJsonValue
                 {
@@ -444,7 +444,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void ReadHeaderResponseAndThrowIfUnAuthorized()
+        private void ReadHeaderResponseAndThrowIfUnAuthorized(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer)
         {
             const int timeout = 2 * 60 * 1000; 
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
@@ -470,7 +470,18 @@ namespace Raven.Server.Documents.Replication
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
+                        //Kindly request the server to drop the connection
+                        documentsContext.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database, 
+                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop.ToString(),
+                            [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.GetOperationTcpVersion(TcpConnectionHeaderMessage.OperationTypes.Drop)
+                        });
+                        writer.Flush();
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                    default:
+                        throw new InvalidOperationException($"{Destination.FromString()} replied with unknown status {headerResponse.Status}, message:{headerResponse.Message}");
                 }
             }
         }

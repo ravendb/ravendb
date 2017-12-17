@@ -1270,6 +1270,18 @@ namespace Raven.Server.ServerWide
                             case TcpConnectionStatus.AuthorizationFailed:
                                 throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
+                                //Kindly request the server to drop the connection
+                                msg = new DynamicJsonValue
+                                {
+                                    [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                                    [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop,
+                                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion
+                                };
+                                using (var writer = new BlittableJsonTextWriter(context, stream))
+                                using (var msgJson = context.ReadObject(msg, "message"))
+                                {
+                                    context.Write(writer, msgJson);
+                                }
                                 throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
                         }
                     }

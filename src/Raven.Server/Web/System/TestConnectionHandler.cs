@@ -81,6 +81,7 @@ namespace Raven.Server.Web.System
                                 result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
                                 break;
                             case TcpConnectionStatus.TcpVersionMismatch:
+                                WriteOperationHeaderToRemote(writer, drop:true);
                                 result["Success"] = false;
                                 result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of mismatching tcp version {headerResponse.Message}";
                                 break;
@@ -92,12 +93,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer)
+        private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer, bool drop = false)
         {
+            var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Heartbeats;
             writer.WriteStartObject();
             {
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
-                writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                writer.WriteString(operation.ToString());
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
                 writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);

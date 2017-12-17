@@ -274,6 +274,8 @@ namespace Raven.Server.ServerWide.Maintenance
                                 throw new UnauthorizedAccessException(
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
+                                //Kindly request the server to drop the connection
+                                WriteOperationHeaderToRemote(writer, drop:true);
                                 throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with mismatching tcp version {headerResponse.Message}");
                         }                        
                     }
@@ -284,12 +286,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (tcpClient, connection);
             }
 
-            private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer)
+            private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer,bool drop = false)
             {
+                var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Heartbeats;
                 writer.WriteStartObject();
                 {
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
-                    writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                    writer.WriteString(operation.ToString());
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
                     writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
