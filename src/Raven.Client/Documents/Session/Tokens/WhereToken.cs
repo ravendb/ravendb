@@ -17,236 +17,83 @@ namespace Raven.Client.Documents.Session.Tokens
         {
         }
 
-        public string FieldName { get; private set; }
-        public WhereOperator WhereOperator { get; private set; }
-        public SearchOperator? SearchOperator { get; set; }
-        public string ParameterName { get; private set; }
-        public string FromParameterName { get; private set; }
-        public string ToParameterName { get; private set; }
-        public decimal? Boost { get; set; }
-        public decimal? Fuzzy { get; set; }
-        public int? Proximity { get; set; }
-        public bool Exact { get; private set; }
-
-        public ShapeToken WhereShape { get; private set; }
-        public double DistanceErrorPct { get; private set; }
-
-        public static WhereToken Equals(string fieldName, string parameterName, bool exact)
+        public enum MethodsType
         {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.Equals,
-                Exact = exact
-            };
+            CmpXchg
         }
 
-        public static WhereToken NotEquals(string fieldName, string parameterName, bool exact)
+        public class WhereMethodCall
         {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.NotEquals,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken StartsWith(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.StartsWith
-            };
-        }
-
-        public static WhereToken EndsWith(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.EndsWith
-            };
-        }
-
-        public static WhereToken GreaterThan(string fieldName, string parameterName, bool exact)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.GreaterThan,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken GreaterThanOrEqual(string fieldName, string parameterName, bool exact)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.GreaterThanOrEqual,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken LessThan(string fieldName, string parameterName, bool exact)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.LessThan,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken LessThanOrEqual(string fieldName, string parameterName, bool exact)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.LessThanOrEqual,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken In(string fieldName, string parameterName, bool exact)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.In,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken AllIn(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.AllIn
-            };
-        }
-
-        public static WhereToken Between(string fieldName, string fromParameterName, string toParameterName, bool exact)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                FromParameterName = fromParameterName,
-                ToParameterName = toParameterName,
-                WhereOperator = WhereOperator.Between,
-                Exact = exact
-            };
-        }
-
-        public static WhereToken Search(string fieldName, string parameterName, SearchOperator op)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.Search,
-                SearchOperator = op
-            };
-        }
-
-        public static WhereToken MethodCall(string fieldName, string parameterName, SearchOperator op)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.MethodCall,
-                SearchOperator = op
-            };
+            public MethodsType MethodType;
+            public string[] Parameters;
+            public string Property;
         }
         
-        public static WhereToken Lucene(string fieldName, string parameterName)
+        public class WhereOptions
+        {
+            public SearchOperator? SearchOperator{ get; private set; }
+            public string FromParameterName{ get; private set; }
+            public string ToParameterName{ get; private set; }
+            public decimal? Boost { get; set; }
+            public decimal? Fuzzy{ get; set; }
+            public int? Proximity{ get; set; }
+            public bool Exact{ get; private set; }
+            public WhereMethodCall Method { get; private set; }
+            public ShapeToken WhereShape{ get; private set; }
+            public double DistanceErrorPct{ get; private set; }
+
+            public WhereOptions(){}
+            
+            public WhereOptions(bool exact)
+            {
+                Exact = exact;
+            }
+
+            public WhereOptions(bool exact, string from, string to)
+            {
+                Exact = exact;
+                FromParameterName = from;
+                ToParameterName = to;
+            }
+
+            public WhereOptions(SearchOperator search)
+            {
+                SearchOperator = search;
+            }
+
+            public WhereOptions(ShapeToken shape, double distance)
+            {
+                WhereShape = shape;
+                DistanceErrorPct = distance;
+            }
+
+            public WhereOptions(MethodsType methodType, string[] parameters, string property, bool exact = false)
+            {
+                Method = new WhereMethodCall
+                {
+                    MethodType = methodType,
+                    Parameters = parameters,
+                    Property = property
+                };
+
+                Exact = exact;
+            }
+        }
+
+        public string FieldName { get; private set; }
+        public WhereOperator WhereOperator { get; private set; }
+        public string ParameterName { get; private set; }
+        public WhereOptions Options;
+        
+        
+        public static WhereToken Create(WhereOperator op, string fieldName, string parameterName, WhereOptions options = null)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.Lucene
-            };
-        }
-
-        public static QueryToken Exists(string fieldName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = null,
-                WhereOperator = WhereOperator.Exists
-            };
-        }
-
-        public static QueryToken Within(string fieldName, ShapeToken shape, double distanceErrorPct)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = null,
-                WhereOperator = WhereOperator.Spatial_Within,
-                WhereShape = shape,
-                DistanceErrorPct = distanceErrorPct
-            };
-        }
-
-        public static QueryToken Contains(string fieldName, ShapeToken shape, double distanceErrorPct)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = null,
-                WhereOperator = WhereOperator.Spatial_Contains,
-                WhereShape = shape,
-                DistanceErrorPct = distanceErrorPct
-            };
-        }
-
-        public static QueryToken Disjoint(string fieldName, ShapeToken shape, double distanceErrorPct)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = null,
-                WhereOperator = WhereOperator.Spatial_Disjoint,
-                WhereShape = shape,
-                DistanceErrorPct = distanceErrorPct
-            };
-        }
-
-        public static QueryToken Intersects(string fieldName, ShapeToken shape, double distanceErrorPct)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = null,
-                WhereOperator = WhereOperator.Spatial_Intersects,
-                WhereShape = shape,
-                DistanceErrorPct = distanceErrorPct
-            };
-        }
-
-        public static WhereToken Regex(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.Regex
+                WhereOperator = op,
+                Options = options ?? new WhereOptions()
             };
         }
 
@@ -258,18 +105,50 @@ namespace Raven.Client.Documents.Session.Tokens
             FieldName = alias + "." + FieldName;
         }
 
+        private bool WriteMethod(StringBuilder writer)
+        {
+            if (Options.Method != null)
+            {
+                switch (Options.Method.MethodType)
+                {
+                    case MethodsType.CmpXchg:
+                        writer.Append("cmpxchg(");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+                var first = true;
+                foreach (var parameter in Options.Method.Parameters)
+                {
+                    if(first == false)
+                        writer.Append(",");
+                    first = false;
+                    writer.Append("$");
+                    writer.Append(parameter);
+                }
+                writer.Append(")");
+                if (Options.Method.Property != null)
+                {
+                    writer.Append(".").Append(Options.Method.Property);
+                }
+                return true;
+            }
+            return false;
+        }
+        
+        
         public override void WriteTo(StringBuilder writer)
         {
-            if (Boost.HasValue)
+            if (Options.Boost.HasValue)
                 writer.Append("boost(");
 
-            if (Fuzzy.HasValue)
+            if (Options.Fuzzy.HasValue)
                 writer.Append("fuzzy(");
 
-            if (Proximity.HasValue)
+            if (Options.Proximity.HasValue)
                 writer.Append("proximity(");
 
-            if (Exact)
+            if (Options.Exact)
                 writer.Append("exact(");
 
             switch (WhereOperator)
@@ -306,8 +185,79 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
             }
 
+            WriteInnerWhere(writer);
+
+            if (Options.Exact)
+                writer.Append(")");
+
+            if (Options.Proximity.HasValue)
+            {
+                writer
+                    .Append(", ")
+                    .Append(Options.Proximity.Value.ToInvariantString())
+                    .Append(")");
+            }
+
+            if (Options.Fuzzy.HasValue)
+            {
+                writer
+                    .Append(", ")
+                    .Append(Options.Fuzzy.Value.ToInvariantString())
+                    .Append(")");
+            }
+
+            if (Options.Boost.HasValue)
+            {
+                writer
+                    .Append(", ")
+                    .Append(Options.Boost.Value.ToInvariantString())
+                    .Append(")");
+            }
+        }
+
+        private void WriteInnerWhere(StringBuilder writer)
+        {
             WriteField(writer, FieldName);
 
+            switch (WhereOperator)
+            {
+                case WhereOperator.Equals:
+                    writer
+                        .Append(" = ");
+                    break;
+                case WhereOperator.NotEquals:
+                    writer
+                        .Append(" != ");
+                    break;
+                case WhereOperator.GreaterThan:
+                    writer
+                        .Append(" > ");
+                    break;
+                case WhereOperator.GreaterThanOrEqual:
+                    writer
+                        .Append(" >= ");
+                    break;
+                case WhereOperator.LessThan:
+                    writer
+                        .Append(" < ");
+                    break;
+                case WhereOperator.LessThanOrEqual:
+                    writer
+                        .Append(" <= ");
+                    break;
+                default:
+                    SpecialOperator(writer);
+                    return;
+            }
+
+            if (WriteMethod(writer) == false)
+            {
+                writer.Append("$").Append(ParameterName);
+            }
+        }
+
+        private void SpecialOperator(StringBuilder writer)
+        {
             switch (WhereOperator)
             {
                 case WhereOperator.In:
@@ -325,55 +275,19 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Between:
                     writer
                         .Append(" BETWEEN $")
-                        .Append(FromParameterName)
+                        .Append(Options.FromParameterName)
                         .Append(" AND $")
-                        .Append(ToParameterName);
-                    break;
-                case WhereOperator.Equals:
-                    writer
-                        .Append(" = $")
-                        .Append(ParameterName);
-                    break;
-                case WhereOperator.NotEquals:
-                    writer
-                        .Append(" != $")
-                        .Append(ParameterName);
-                    break;
-                case WhereOperator.GreaterThan:
-                    writer
-                        .Append(" > $")
-                        .Append(ParameterName);
-                    break;
-                case WhereOperator.GreaterThanOrEqual:
-                    writer
-                        .Append(" >= $")
-                        .Append(ParameterName);
-                    break;
-                case WhereOperator.LessThan:
-                    writer
-                        .Append(" < $")
-                        .Append(ParameterName);
-                    break;
-                case WhereOperator.LessThanOrEqual:
-                    writer
-                        .Append(" <= $")
-                        .Append(ParameterName);
+                        .Append(Options.ToParameterName);
                     break;
                 case WhereOperator.Search:
                     writer
                         .Append(", $")
                         .Append(ParameterName);
 
-                    if (SearchOperator == Queries.SearchOperator.And)
+                    if (Options.SearchOperator == SearchOperator.And)
                         writer.Append(", AND");
 
                     writer.Append(")");
-                    break;
-                case WhereOperator.MethodCall:
-                    writer.Append(" = cmpxchg(\"");
-                   // writer.Append("$");
-                    writer.Append(ParameterName);
-                    writer.Append("\")");
                     break;
                 case WhereOperator.Lucene:
                 case WhereOperator.StartsWith:
@@ -395,46 +309,19 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer
                         .Append(", ");
 
-                    WhereShape.WriteTo(writer);
+                    Options.WhereShape.WriteTo(writer);
 
-                    if (Math.Abs(DistanceErrorPct - Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct) > double.Epsilon)
+                    if (Math.Abs(Options.DistanceErrorPct - Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct) > double.Epsilon)
                     {
                         writer.Append(", ");
-                        writer.Append(DistanceErrorPct);
+                        writer.Append(Options.DistanceErrorPct);
                     }
 
                     writer
                         .Append(")");
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            if (Exact)
-                writer.Append(")");
-
-            if (Proximity.HasValue)
-            {
-                writer
-                    .Append(", ")
-                    .Append(Proximity.Value.ToInvariantString())
-                    .Append(")");
-            }
-
-            if (Fuzzy.HasValue)
-            {
-                writer
-                    .Append(", ")
-                    .Append(Fuzzy.Value.ToInvariantString())
-                    .Append(")");
-            }
-
-            if (Boost.HasValue)
-            {
-                writer
-                    .Append(", ")
-                    .Append(Boost.Value.ToInvariantString())
-                    .Append(")");
+                    throw new ArgumentOutOfRangeException(nameof(WhereOperator), WhereOperator, "Unexpected operator");
             }
         }
     }

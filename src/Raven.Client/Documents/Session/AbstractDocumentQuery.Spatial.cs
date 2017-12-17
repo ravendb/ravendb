@@ -15,7 +15,11 @@ namespace Raven.Client.Documents.Session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
 
-            tokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
+            var whereToken = WhereToken.Create(WhereOperator.Spatial_Within, fieldName, null,
+                new WhereToken.WhereOptions(ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits),
+                    distErrorPercent));
+            
+            tokens.AddLast(whereToken);
         }
 
         protected void Spatial(string fieldName, string shapeWkt, SpatialRelation relation, double distErrorPercent)
@@ -27,26 +31,27 @@ namespace Raven.Client.Documents.Session
             NegateIfNeeded(tokens, fieldName);
 
             var wktToken = ShapeToken.Wkt(AddQueryParameter(shapeWkt));
-            QueryToken relationToken;
+            WhereOperator whereOperator;
+
             switch (relation)
             {
                 case SpatialRelation.Within:
-                    relationToken = WhereToken.Within(fieldName, wktToken, distErrorPercent);
+                    whereOperator = WhereOperator.Spatial_Within;
                     break;
                 case SpatialRelation.Contains:
-                    relationToken = WhereToken.Contains(fieldName, wktToken, distErrorPercent);
+                    whereOperator = WhereOperator.Spatial_Contains;
                     break;
                 case SpatialRelation.Disjoint:
-                    relationToken = WhereToken.Disjoint(fieldName, wktToken, distErrorPercent);
+                    whereOperator = WhereOperator.Spatial_Disjoint;
                     break;
                 case SpatialRelation.Intersects:
-                    relationToken = WhereToken.Intersects(fieldName, wktToken, distErrorPercent);
+                    whereOperator = WhereOperator.Spatial_Intersects;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(relation), relation, null);
             }
 
-            tokens.AddLast(relationToken);
+            tokens.AddLast(WhereToken.Create(whereOperator,fieldName, null, new WhereToken.WhereOptions(wktToken, distErrorPercent)));
         }
 
         /// <inheritdoc />

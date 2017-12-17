@@ -1836,23 +1836,15 @@ namespace Raven.Server.Documents.Indexes
 
                             if (query.Metadata.WhereMethods.TryGetValue(QueryMetadata.WhereMethod.RightSideMethod, out var method))
                             {
-                                try
+                                if (query.Metadata.Query.Where is BinaryExpression be && be.Right is MethodExpression me)
                                 {
-                                    if (query.Metadata.Query.Where is BinaryExpression be && be.Right is MethodExpression me)
+                                    var value = method.EvaluateSingleMethod((QueryResultRetrieverBase)retriever, null);
+                                    query.QueryParameters.Modifications = new DynamicJsonValue
                                     {
-                                        var value = method.EvaluateSingleMethod((QueryResultRetrieverBase)retriever, null);
-                                        query.Metadata.WhereMethods.Remove(QueryMetadata.WhereMethod.RightSideMethod);
-                                        query.QueryParameters.Modifications = new DynamicJsonValue
-                                        {
-                                            [me.Name] = value
-                                        };
-                                        query.QueryParameters = documentsContext.ReadObject(query.QueryParameters, "add-parameter");
-                                        be.Right = new ValueExpression(me.Name, ValueTokenType.Parameter);
-                                    }
-                                }
-                                catch
-                                {
-                                    //
+                                        [me.Name] = value
+                                    };
+                                    query.QueryParameters = documentsContext.ReadObject(query.QueryParameters, "add-parameter");
+                                    be.Right = new ValueExpression(me.Name, ValueTokenType.Parameter);
                                 }
                             }
                             

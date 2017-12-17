@@ -21,26 +21,26 @@ namespace Raven.Client.Documents.Queries.Spatial
         {
             var shapeToken = GetShapeToken(addQueryParameter);
 
-            QueryToken relationToken;
+            WhereOperator whereOperator;
             switch (_relation)
             {
                 case SpatialRelation.Within:
-                    relationToken = WhereToken.Within(fieldName, shapeToken, _distanceErrorPct);
+                    whereOperator = WhereOperator.Spatial_Within;
                     break;
                 case SpatialRelation.Contains:
-                    relationToken = WhereToken.Contains(fieldName, shapeToken, _distanceErrorPct);
+                    whereOperator = WhereOperator.Spatial_Contains;
                     break;
                 case SpatialRelation.Disjoint:
-                    relationToken = WhereToken.Disjoint(fieldName, shapeToken, _distanceErrorPct);
+                    whereOperator = WhereOperator.Spatial_Disjoint;
                     break;
                 case SpatialRelation.Intersects:
-                    relationToken = WhereToken.Intersects(fieldName, shapeToken, _distanceErrorPct);
+                    whereOperator = WhereOperator.Spatial_Intersects;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(_relation), _relation, null);
             }
-
-            return relationToken;
+            
+            return WhereToken.Create(whereOperator,fieldName, null, new WhereToken.WhereOptions(shapeToken, _distanceErrorPct));
         }
     }
 
