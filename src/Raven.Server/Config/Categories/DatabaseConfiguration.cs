@@ -6,23 +6,41 @@ namespace Raven.Server.Config.Categories
 {
     public class DatabaseConfiguration : ConfigurationCategory
     {
-        [Description("The time in seconds to wait before canceling query operation")]
+        /// <summary>
+        /// The time in seconds to wait before canceling query
+        /// </summary>
+        [Description("The time in seconds to wait before canceling query")]
+        [DefaultValue(300)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.QueryTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting QueryTimeout { get; set; }
+
+        /// <summary>
+        /// The time in seconds to wait before canceling query related operation (patch/delete query)
+        /// </summary>
+        [Description("The time in seconds to wait before canceling query related operation (patch/delete query)")]
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.QueryOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting QueryOperationTimeout { get; set; }
 
-        [Description("The time in seconds to wait before canceling terms indexing operation")]
+        /// <summary>
+        /// The time in seconds to wait before canceling specific operations (such as indexing terms)
+        /// </summary>
+        [Description("The time in seconds to wait before canceling specific operations (such as indexing terms)")]
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.IndexTermsOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting IndexTermsOperationTimeout { get; set; }
+        [ConfigurationEntry("Databases.OperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting OperationTimeout { get; set; }
 
-        [Description("The time in seconds to wait before canceling indexing terms operation")]
+        /// <summary>
+        /// The time in seconds to wait before canceling several collection operations (such as batch delete documents)
+        /// </summary>
+        [Description("The time in seconds to wait before canceling several collection operations (such as batch delete documents from studio)")]
         [DefaultValue(300)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Databases.DeleteDocsOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting DeleteDocsOperationTimeout { get; set; }
+        [ConfigurationEntry("Databases.CollectionOperationTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting CollectionOperationTimeout { get; set; }
 
         /// <summary>
         /// This much time has to wait for the database to become available when too much

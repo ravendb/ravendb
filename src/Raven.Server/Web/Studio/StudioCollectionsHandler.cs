@@ -316,7 +316,7 @@ namespace Raven.Server.Web.Studio
         {
             var collectionName = GetStringQueryString("name");
 
-            var token = CreateTimeLimitedDeleteDocsOperationToken();
+            var token = CreateTimeLimitedCollectionOperationToken();
 
             var collectionRunner = new StudioCollectionRunner(Database, context, excludeIds);
 
