@@ -185,13 +185,13 @@ namespace Raven.Server.Config.Categories
                 return;
 
             if (Uri.TryCreate(ServerUrls[0], UriKind.Absolute, out var serverUri) == false)
-                throw new ArgumentException($"ServerUrl could not be parsed: {ServerUrls}.");
+                throw new ArgumentException($"ServerUrl could not be parsed: {string.Join(", ", ServerUrls)}.");
 
             if (Uri.TryCreate(PublicServerUrl.Value.UriValue, UriKind.Absolute, out var publicServerUri) == false)
                 throw new ArgumentException($"PublicServerUrl could not be parsed: {PublicServerUrl}.");
 
             if (serverUri.Scheme != publicServerUri.Scheme)
-                throw new ArgumentException($"ServerUrl and PublicServerUrl schemes do not match: {ServerUrls} and {PublicServerUrl.Value.UriValue}.");
+                throw new ArgumentException($"ServerUrl and PublicServerUrl schemes do not match: {string.Join(", ", ServerUrls)} and {PublicServerUrl.Value.UriValue}.");
         }
 
         private void ValidatePublicUrl(string uriString, string optName)
