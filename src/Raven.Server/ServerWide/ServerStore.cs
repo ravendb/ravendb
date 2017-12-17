@@ -206,8 +206,12 @@ namespace Raven.Server.ServerWide
                             {
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
-                            
-                            LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
+
+                            if (newNodes.Count > 1)
+                            {
+                                // calculate only if we have more than one node
+                                await LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
+                            }
 
                             var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader);
 
@@ -663,7 +667,6 @@ namespace Raven.Server.ServerWide
                     LastClientConfigurationIndex = t.Index;
                     break;
                 case nameof(PutLicenseCommand):
-                case nameof(DeactivateLicenseCommand):
                     InvokeLicenseChanged();
                     break;
                 case nameof(PutLicenseLimitsCommand):
@@ -1472,21 +1475,6 @@ namespace Raven.Server.ServerWide
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits);
 
             var result = await SendToLeaderAsync(command);
-
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
-        }
-
-        public async Task DeactivateLicense(License license)
-        {
-            var command = new DeactivateLicenseCommand
-            {
-                Name = LicenseStorageKey
-            };
-
-            var result = await SendToLeaderAsync(command);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Deactivating license id: {license.Id}");
 
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }

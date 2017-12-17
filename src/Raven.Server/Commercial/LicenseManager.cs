@@ -142,8 +142,7 @@ namespace Raven.Server.Commercial
             {
                 // license is not active
                 _licenseStatus.Attributes = null;
-                _licenseStatus.Error = false;
-                _licenseStatus.Message = null;
+                _licenseStatus.ErrorMessage = null;
                 _licenseStatus.Id = null;
                 return;
             }
@@ -151,15 +150,13 @@ namespace Raven.Server.Commercial
             try
             {
                 _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
-                _licenseStatus.Error = false;
-                _licenseStatus.Message = null;
+                _licenseStatus.ErrorMessage = null;
                 _licenseStatus.Id = license.Id;
             }
             catch (Exception e)
             {
                 _licenseStatus.Attributes = null;
-                _licenseStatus.Error = true;
-                _licenseStatus.Message = e.Message;
+                _licenseStatus.ErrorMessage = e.Message;
                 _licenseStatus.Id = null;
 
                 if (Logger.IsInfoEnabled)
@@ -202,7 +199,7 @@ namespace Raven.Server.Commercial
                 Logger.Info("Failed to reload license limits", e);
             }
 
-            CalculateLicenseLimits();
+            AsyncHelpers.RunSync(() => CalculateLicenseLimits());
         }
 
         private int GetClusterSize()
@@ -312,7 +309,7 @@ namespace Raven.Server.Commercial
             return licenseLimits;
         }
 
-        public void CalculateLicenseLimits(
+        public async Task CalculateLicenseLimits(
             NodeDetails newNodeDetails = null,
             bool forceFetchingNodeInfo = false,
             bool waitToUpdate = false)
@@ -323,12 +320,12 @@ namespace Raven.Server.Commercial
             if (_disableCalculatingLicenseLimits)
                 return;
 
-            if (_licenseLimitsSemaphore.Wait(waitToUpdate ? 500 : 0) == false)
+            if (_licenseLimitsSemaphore.Wait(waitToUpdate ? 1000 : 0) == false)
                 return;
 
             try
             {
-                var licenseLimits = AsyncHelpers.RunSync(() => UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails));
+                var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails);
                 if (licenseLimits == null)
                     return;
 
@@ -337,25 +334,12 @@ namespace Raven.Server.Commercial
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to set license limits", e);
+                    Logger.Operations("Failed to calculate license limits", e);
             }
             finally
             {
                 _licenseLimitsSemaphore.Release();
             }
-        }
-
-        private void CheckLicenseStatus(Dictionary<string, DetailsPerNode> detailsPerNode)
-        {
-            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-            if (utilizedCores <= _licenseStatus.MaxCores)
-                return;
-
-            var message = $"The number of utilized cores is: {utilizedCores}, " +
-                          $"while the license limit is: {_licenseStatus.MaxCores} cores";
-            _licenseStatus.Error = true;
-            _licenseStatus.Message = message;
-            GenerateLicenseLimit(LimitType.Cores, message, addNotification: true);
         }
 
         private int GetUtilizedCores()
@@ -432,8 +416,7 @@ namespace Raven.Server.Commercial
                     await _serverStore.PutLicenseAsync(license);
 
                     _licenseStatus.Attributes = newLicenseStatus.Attributes;
-                    _licenseStatus.Error = false;
-                    _licenseStatus.Message = null;
+                    _licenseStatus.ErrorMessage = null;
                     _licenseStatus.Id = license.Id;
                 }
                 catch (Exception e)
@@ -450,7 +433,7 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+            await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
         }
 
         public LicenseStatus GetLicenseStatus(License license)
@@ -561,15 +544,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task DeactivateLicense()
-        {
-            var license = _serverStore.LoadLicense();
-            if (license == null)
-                return;
-
-            await _serverStore.DeactivateLicense(license);
-        }
-
         private async Task<License> GetUpdatedLicense(License license)
         {
             var leaseLicenseInfo = new LeaseLicenseInfo
@@ -617,6 +591,11 @@ namespace Raven.Server.Commercial
                     _serverStore.NotificationCenter.Add(alert);
                 }
 
+                if (string.IsNullOrWhiteSpace(leasedLicense.ErrorMessage) == false)
+                {
+                    _licenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
+                }
+
                 return licenseChanged ? leasedLicense.License : null;
             }
         }
@@ -627,7 +606,7 @@ namespace Raven.Server.Commercial
             {
                 await LeaseLicense();
 
-                await UpdateNodesInfo();
+                await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
 
                 ReloadLicenseLimits();
             }
@@ -776,54 +755,68 @@ namespace Raven.Server.Commercial
                     detailsPerNode.Remove(nodeToRemove);
                 }
 
-                if (missingNodesAssignment.Count > 0)
-                {
-                    var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-                    var availableCores = _licenseStatus.MaxCores - utilizedCores;
-                    var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
-
-                    foreach (var nodeTag in missingNodesAssignment)
-                    {
-                        if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails) == false)
-                            continue;
-
-                        coresPerNode = Math.Min(coresPerNode, nodeDetails.NumberOfCores);
-
-                        nodeDetails.UtilizedCores = coresPerNode;
-                    }
-                }
-
-                CheckLicenseStatus(detailsPerNode);
+                AssignMissingNodeCores(missingNodesAssignment, detailsPerNode);
+                VerifyCoresPerNode(detailsPerNode, ref hasChanges);
+                ValidateLicenseStatus(detailsPerNode);
             }
 
             return hasChanges ? licenseLimits : null;
         }
 
-        private async Task UpdateNodesInfo()
+        private void ValidateLicenseStatus(Dictionary<string, DetailsPerNode> detailsPerNode)
         {
-            if (_serverStore.IsLeader() == false)
+            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
+            string errorMessage = null;
+            if (utilizedCores > _licenseStatus.MaxCores)
+            {
+                errorMessage = $"The number of utilized cores is {utilizedCores}, " +
+                              $"while the license limit is {_licenseStatus.MaxCores} cores";
+            }
+            else if (detailsPerNode.Count > _licenseStatus.MaxClusterSize)
+            {
+                errorMessage = $"The cluster size is {detailsPerNode.Count}, " +
+                              $"while the license limit is {_licenseStatus.MaxClusterSize}";
+            }
+            
+            if (errorMessage != null)
+                _licenseStatus.ErrorMessage = errorMessage;
+        }
+
+        private void VerifyCoresPerNode(Dictionary<string, DetailsPerNode> detailsPerNode, ref bool hasChanges)
+        {
+            var maxCores = _licenseStatus.MaxCores;
+            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
+
+            if (maxCores >= utilizedCores)
                 return;
 
-            if (_licenseLimitsSemaphore.Wait(10 * 1000) == false)
+            hasChanges = true;
+            var coresPerNode = Math.Max(1, maxCores / detailsPerNode.Count);
+            foreach (var nodeDetails in detailsPerNode)
+            {
+                nodeDetails.Value.UtilizedCores = coresPerNode;
+            }
+        }
+
+        private void AssignMissingNodeCores(
+            List<string> missingNodesAssignment, 
+            Dictionary<string, DetailsPerNode> detailsPerNode)
+        {
+            if (missingNodesAssignment.Count == 0)
                 return;
 
-            try
-            {
-                var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo: true, newNodeDetails: null);
+            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
+            var availableCores = _licenseStatus.MaxCores - utilizedCores;
+            var coresPerNode = Math.Max(1, availableCores / missingNodesAssignment.Count);
 
-                if (licenseLimits == null)
-                    return;
+            foreach (var nodeTag in missingNodesAssignment)
+            {
+                if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails) == false)
+                    continue;
 
-                await _serverStore.PutLicenseLimitsAsync(licenseLimits);
-            }
-            catch (Exception e)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Error updating nodes info", e);
-            }
-            finally
-            {
-                _licenseLimitsSemaphore.Release();
+                coresPerNode = Math.Min(coresPerNode, nodeDetails.NumberOfCores);
+
+                nodeDetails.UtilizedCores = coresPerNode;
             }
         }
 
@@ -1035,14 +1028,6 @@ namespace Raven.Server.Commercial
 
         private void ThrowIfCannotActivateLicense(LicenseStatus newLicenseStatus)
         {
-            if (newLicenseStatus.Type < LicenseType.Trial &&
-                (int)newLicenseStatus.Type < (int)_licenseStatus.Type)
-            {
-                var message = $"Cannot downgrade license from {_licenseStatus.Type.ToString()} " +
-                              $"to {newLicenseStatus.Type.ToString()}!";
-                throw GenerateLicenseLimit(LimitType.Downgrade, message);
-            }
-
             var clusterSize = GetClusterSize();
             var maxClusterSize = newLicenseStatus.MaxClusterSize;
             if (clusterSize > maxClusterSize)
@@ -1062,6 +1047,7 @@ namespace Raven.Server.Commercial
 
             var encryptedDatabasesCount = 0;
             var externalReplicationCount = 0;
+            var delayedExternalReplicationCount = 0;
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
             var snapshotBackupsCount = 0;
@@ -1077,6 +1063,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.ExternalReplications != null &&
                         databaseRecord.ExternalReplications.Count > 0)
                         externalReplicationCount++;
+
+                    if (databaseRecord.ExternalReplications != null &&
+                        databaseRecord.ExternalReplications.Count(x => x.DelayReplicationFor != TimeSpan.Zero) > 0)
+                        delayedExternalReplicationCount++;
 
                     if (HasRavenEtl(databaseRecord.RavenEtls,
                         databaseRecord.RavenConnectionStrings))
@@ -1108,6 +1098,13 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.ExternalReplication, message);
             }
 
+            if (delayedExternalReplicationCount > 0 &&
+                newLicenseStatus.HasDelayedExternalReplication == false)
+            {
+                var message = GenerateDetails(externalReplicationCount, "delayed external replication");
+                throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message);
+            }
+
             if (ravenEtlCount > 0 &&
                 newLicenseStatus.HasRavenEtl == false)
             {
@@ -1125,7 +1122,7 @@ namespace Raven.Server.Commercial
             if (snapshotBackupsCount > 0 &&
                 newLicenseStatus.HasSnapshotBackups == false)
             {
-                var message = GenerateDetails(cloudBackupsCount, "snapshot backups");
+                var message = GenerateDetails(snapshotBackupsCount, "snapshot backups");
                 throw GenerateLicenseLimit(LimitType.SnapshotBackup, message);
             }
 
@@ -1139,9 +1136,9 @@ namespace Raven.Server.Commercial
 
         private static string GenerateDetails(int count, string feature)
         {
-            return $"Cannot activate license because there {Pluralize(count)} " +
-                   $"{count} database{(count == 1 ? string.Empty : "s")} that use {feature} " +
-                   $"while the current license doesn't include the usage of {feature}";
+            return $"Cannot activate license because there {(count == 1 ? "is" : "are")} " +
+                   $"{count} database{Pluralize(count)} that use{(count == 1 ? "s" : string.Empty)} {feature} " +
+                   $"while the new license doesn't include the usage of {feature}";
         }
 
         private static string Pluralize(int count)
@@ -1289,7 +1286,7 @@ namespace Raven.Server.Commercial
                 return;
 
             const string message = "Your current license doesn't include the delayed replication feature";
-            throw GenerateLicenseLimit(LimitType.DelayedReplication, message, addNotification: true);
+            throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message, addNotification: true);
         }
 
         public bool CanDynamicallyDistributeNodes(out LicenseLimitException licenseLimit)

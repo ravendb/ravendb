@@ -53,13 +53,18 @@
                     </div>
                     <button class="btn btn-primary" data-bind="click: register, visible: !registered()">Register</button>
                 </div>
-                <div>
-                    <button class="btn btn-danger"
-                            data-bind="click: deactivateLicense, visible: registered, disable: spinners.deactivatingLicense, css: { 'btn-spinner': spinners.deactivatingLicense }">
-                        <i class="icon-cancel"></i>
-                        <span>Deactivate</span>
-                    </button>
+                <div data-bind="visible: registered">
+                    <div>
+                        <button class="btn btn-primary" data-bind="click: register">Replace License</button>
+                    </div>
+                    <div class="force-license-update">
+                        <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, css: { 'btn-spinner': spinners.forceLicenseUpdate }">
+                            <i class="icon-force"></i>
+                            <span>Force Update</span>
+                        </button>
+                    </div>
                 </div>
+
             </div>
             <div class="flex-horizontal">
                 <div data-bind="attr: { class: 'roundborder ' + supportCssClass() }">

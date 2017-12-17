@@ -1,3 +1,4 @@
+using System.Globalization;
 using Lextm.SharpSnmpLib;
 using Raven.Server.ServerWide;
 
@@ -16,11 +17,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override OctetString GetData()
         {
             var status = _store.LicenseManager.GetLicenseStatus();
-            var expiration = status.FormattedExpiration;
-            if (string.IsNullOrWhiteSpace(expiration))
+            if (status.Expiration.HasValue == false)
                 return null;
 
-            return new OctetString(expiration);
+            return new OctetString(status.Expiration.Value.ToString("d", CultureInfo.CurrentCulture));
         }
     }
 }

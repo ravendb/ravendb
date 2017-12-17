@@ -468,7 +468,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
                             UsableMemoryInGb = nodeInfo.UsableMemoryInGb
                         };
-                        ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true, waitToUpdate: true);
+                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true, waitToUpdate: true);
                     }
 
                     NoContentStatus();
@@ -488,7 +488,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
+                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
                 NoContentStatus();
                 return;
             }

@@ -17,6 +17,6 @@
         Memory,
         Downgrade,
         Snmp,
-        DelayedReplication
+        DelayedExternalReplication
     }
 }

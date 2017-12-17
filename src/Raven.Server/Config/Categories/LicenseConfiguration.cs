@@ -11,19 +11,24 @@ namespace Raven.Server.Config.Categories
 
         [Description("The full license string for RavenDB. If License is specified, it overrides the License.Path configuration.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("License", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("License", ConfigurationEntryScope.ServerWideOnly)]
         public string License { get; set; }
 
         [Description("The path to the license file for RavenDB, default for license.json")]
         [ReadOnlyPath]
         [DefaultValue("license.json")]
-        [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting LicensePath { get; set; }
 
-        [Description("EXPERT ONLY. Indicates if license can be deactivated.")]
+        [Description("EXPERT ONLY. Indicates if license can be activated")]
         [DefaultValue(true)]
-        [ConfigurationEntry("License.CanDeactivate", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool CanDeactivate { get; set; }
+        [ConfigurationEntry("License.CanActivate", ConfigurationEntryScope.ServerWideOnly)]
+        public bool CanActivate { get; set; }
+
+        [Description("EXPERT ONLY. Indicates if license can be updated from api.ravendb.net")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("License.CanForceUpdate", ConfigurationEntryScope.ServerWideOnly)]
+        public bool CanForceUpdate { get; set; }
 
         [Description("EXPERT ONLY. Skip logging of lease license errors")]
         [DefaultValue(false)]

@@ -55,8 +55,9 @@ class licenseModel {
             return null;
         }
        
-        const maxMemory = status.MaxMemory === 0 ? "Unlimited" : `${status.MaxMemory} GB RAM` ;
-        return `${status.MaxCores} Cores, ${maxMemory}, Max cluster size: ${status.MaxClusterSize}`;
+        const maxMemory = status.MaxMemory === 0 ? "Unlimited" : `${status.MaxMemory} GB RAM`;
+        const maxClusterSize = status.MaxClusterSize === 0 ? "Unlimited" : status.MaxClusterSize;
+        return `${status.MaxCores} Cores, ${maxMemory}, Max cluster size: ${maxClusterSize}`;
     });
 
 
@@ -98,6 +99,10 @@ class licenseModel {
         }
         
         const supportInfo = licenseModel.supportCoverage();
+        if (!supportInfo) {
+            return 'Community';
+        }
+
         const supportType = supportInfo.Status || "NoSupport";
         switch (supportType) {
             case 'ProductionSupport':
@@ -109,7 +114,7 @@ class licenseModel {
             default:
                 return 'Community';
         }
-    })
+    });
 }
 
 export = licenseModel;
