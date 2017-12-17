@@ -1186,7 +1186,10 @@ namespace Raven.Server.Documents
 
                 var etag = CreateTombstone(context,
                     lowerId,
-                    -1, // delete etag is not relevant
+                    // delete etag is not relevant, but we need a unique one here
+                    // we use a negative value here to indicate a missing replicated
+                    // tombstone
+                    -GenerateNextEtag(), 
                     collectionName,
                     changeVector,
                     DateTime.UtcNow.Ticks,

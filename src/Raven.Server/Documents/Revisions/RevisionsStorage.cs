@@ -524,6 +524,13 @@ namespace Raven.Server.Documents.Revisions
                 revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
                 table.Delete(tvr.Id);
             }
+            else
+            {
+                // we need to generate a unqiue etag if we got a tombstone revisions
+                // from replication, but we don't want to mess up the order of events
+                // so the delete revision etag we use is negative
+                revisionEtag = -_documentsStorage.GenerateNextEtag();
+            }
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
         }
 
