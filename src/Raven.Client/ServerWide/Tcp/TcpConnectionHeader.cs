@@ -22,6 +22,8 @@ namespace Raven.Client.ServerWide.Tcp
 
         public int OperationVersion { get; set; }
 
+        public string Info { get; set; }
+
         public static readonly int NumberOfRetriesForSendingTcpHeader = 2;
         public static readonly int ClusterTcpVersion = 10;
         public static readonly int HeartbeatsTcpVersion = 20;

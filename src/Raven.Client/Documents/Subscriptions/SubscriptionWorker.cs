@@ -214,7 +214,8 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 Operation = TcpConnectionHeaderMessage.OperationTypes.Drop,
                                 DatabaseName = databaseName,
-                                OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion
+                                OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion,
+                                Info = $"Couldn't agree on subscription tcp version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
                             });
                             header = Encodings.Utf8.GetBytes(serializeObject);
                             await _stream.WriteAsync(header, 0, header.Length).ConfigureAwait(false);

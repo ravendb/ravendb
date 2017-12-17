@@ -275,7 +275,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMismatch:
                                 //Kindly request the server to drop the connection
-                                WriteOperationHeaderToRemote(writer, drop:true);
+                                WriteOperationHeaderToRemote(writer, headerResponse.Version, drop:true);
                                 throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with mismatching tcp version {headerResponse.Message}");
                         }                        
                     }
@@ -286,7 +286,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (tcpClient, connection);
             }
 
-            private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer,bool drop = false)
+            private void WriteOperationHeaderToRemote(BlittableJsonTextWriter writer,int remoteVersion = -1, bool drop = false)
             {
                 var operation = drop ? TcpConnectionHeaderMessage.OperationTypes.Drop : TcpConnectionHeaderMessage.OperationTypes.Heartbeats;
                 writer.WriteStartObject();
@@ -299,6 +299,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
+                    if (drop)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Info));
+                        writer.WriteString($"Couldn't agree on heartbeats tcp version ours:{TcpConnectionHeaderMessage.HeartbeatsTcpVersion} theirs:{remoteVersion}");
+                    }                    
                 }
                 writer.WriteEndObject();
                 writer.Flush();

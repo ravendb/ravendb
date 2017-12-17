@@ -1275,7 +1275,8 @@ namespace Raven.Server.ServerWide
                                 {
                                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
                                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Drop,
-                                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion
+                                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion,
+                                    [nameof(TcpConnectionHeaderMessage.Info)] = $"Couldn't agree on cluster tcp version ours:{TcpConnectionHeaderMessage.ClusterTcpVersion} theirs:{reply.Version}"
                                 };
                                 using (var writer = new BlittableJsonTextWriter(context, stream))
                                 using (var msgJson = context.ReadObject(msg, "message"))
