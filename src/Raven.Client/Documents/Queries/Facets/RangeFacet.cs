@@ -119,19 +119,6 @@ namespace Raven.Client.Documents.Queries.Facets
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
         }
 
-        private static Type GetExpressionType(Expression expr)
-        {
-            switch (expr.NodeType)
-            {
-                case ExpressionType.Lambda:
-                    return GetExpressionType(((LambdaExpression)expr).Body);
-                case ExpressionType.Convert:
-                    return GetExpressionType(((UnaryExpression)expr).Operand);
-                default:
-                    return expr.Type;
-            }
-        }
-
         private static string GetFieldName(MemberExpression left)
         {
             if (Nullable.GetUnderlyingType(left.Member.DeclaringType) != null)
@@ -237,9 +224,9 @@ namespace Raven.Client.Documents.Queries.Facets
             if (lValue != null && rValue != null)
             {
                 if (leftOp == ExpressionType.GreaterThanOrEqual && rightOp == ExpressionType.LessThanOrEqual)
-                    return $"{fieldName} BETWEEN {GetStringValue(lValue)} AND {GetStringValue(rValue)}";
+                    return $"{fieldName} between {GetStringValue(lValue)} and {GetStringValue(rValue)}";
 
-                return $"{GetStringRepresentation(fieldName, leftOp, lValue)} AND {GetStringRepresentation(fieldName, rightOp, rValue)}";
+                return $"{GetStringRepresentation(fieldName, leftOp, lValue)} and {GetStringRepresentation(fieldName, rightOp, rValue)}";
             }
 
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");

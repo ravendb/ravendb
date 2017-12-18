@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session.Tokens
         public override void WriteTo(StringBuilder writer)
         {
             writer
-                .Append("DECLARE ")
+                .Append("declare ")
                 .Append("function ")
                 .Append(Name)
                 .Append("(")

@@ -264,21 +264,21 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 case WhereOperator.In:
                     writer
-                        .Append(" IN ($")
+                        .Append(" in ($")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.AllIn:
                     writer
-                        .Append(" ALL IN ($")
+                        .Append(" all in ($")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.Between:
                     writer
-                        .Append(" BETWEEN $")
+                        .Append(" between $")
                         .Append(Options.FromParameterName)
-                        .Append(" AND $")
+                        .Append(" and $")
                         .Append(Options.ToParameterName);
                     break;
                 case WhereOperator.Search:
@@ -287,7 +287,7 @@ namespace Raven.Client.Documents.Session.Tokens
                         .Append(ParameterName);
 
                     if (Options.SearchOperator == SearchOperator.And)
-                        writer.Append(", AND");
+                        writer.Append(", and");
 
                     writer.Append(")");
                     break;

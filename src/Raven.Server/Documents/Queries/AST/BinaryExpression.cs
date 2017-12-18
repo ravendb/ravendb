@@ -45,16 +45,16 @@ namespace Raven.Server.Documents.Queries.AST
                     op = ">=";
                     break;
                 case OperatorType.And:
-                    op = "AND";
+                    op = "and";
                     break;
                 case OperatorType.AndNot:
-                    op = "AND NOT";
+                    op = "and not";
                     break;
                 case OperatorType.Or:
-                    op = "OR";
+                    op = "or";
                     break;
                 case OperatorType.OrNot:
-                    op = "OR NOT";
+                    op = "or not";
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

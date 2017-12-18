@@ -297,11 +297,11 @@ namespace SlowTests.Tests.Faceted
             CheckFacetCount(filteredData.Count(x => x.Cost <= 200.0m),
                             costFacets.FirstOrDefault(x => x.Range == "Cost <= 200"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 200.0m && x.Cost <= 400),
-                            costFacets.FirstOrDefault(x => x.Range == "Cost BETWEEN 200 AND 400"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost between 200 and 400"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 400.0m && x.Cost <= 600.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "Cost BETWEEN 400 AND 600"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost between 400 and 600"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 600.0m && x.Cost <= 800.0m),
-                            costFacets.FirstOrDefault(x => x.Range == "Cost BETWEEN 600 AND 800"));
+                            costFacets.FirstOrDefault(x => x.Range == "Cost between 600 and 800"));
             CheckFacetCount(filteredData.Count(x => x.Cost >= 800.0m),
                             costFacets.FirstOrDefault(x => x.Range == "Cost >= 800"));
 
@@ -310,9 +310,9 @@ namespace SlowTests.Tests.Faceted
             CheckFacetCount(filteredData.Where(x => x.Megapixels <= 3.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels <= 3"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 3.0m && x.Megapixels <= 7.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels BETWEEN 3 AND 7"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels between 3 and 7"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 7.0m && x.Megapixels <= 10.0m).Count(),
-                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels BETWEEN 7 AND 10"));
+                            megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels between 7 and 10"));
             CheckFacetCount(filteredData.Where(x => x.Megapixels >= 10.0m).Count(),
                             megapixelsFacets.FirstOrDefault(x => x.Range == "Megapixels >= 10"));
         }

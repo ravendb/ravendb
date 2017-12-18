@@ -43,16 +43,16 @@ namespace SlowTests.Issues
             Assert.Equal("Invalid range: 15..5", invalidRange1Ex.Message);
 
             var parsedRange1 = RangeFacet<Employee>.Parse(x => x.Salary >= 5 && x.Salary <= 15);
-            Assert.Equal("Salary BETWEEN 5 AND 15", parsedRange1);
+            Assert.Equal("Salary between 5 and 15", parsedRange1);
 
             var invalidRange2Ex = Assert.Throws<InvalidOperationException>(() => RangeFacet<Employee>.Parse(x => x.Salary >= 15 && x.Salary <= 5));
             Assert.Equal("Invalid range: 15..5", invalidRange2Ex.Message);
 
             var parsedRange2 = RangeFacet<Employee>.Parse(x => x.Salary <= 15 && x.Salary >= 5);
-            Assert.Equal("Salary BETWEEN 5 AND 15", parsedRange2);
+            Assert.Equal("Salary between 5 and 15", parsedRange2);
 
             var parsedRange3 = RangeFacet<Employee>.Parse(x => x.Salary >= 5.1m && x.Salary <= 5.1m);
-            Assert.Equal("Salary BETWEEN 5.1 AND 5.1", parsedRange3);
+            Assert.Equal("Salary between 5.1 and 5.1", parsedRange3);
         }
     }
 }

@@ -53,7 +53,7 @@ namespace FastTests.Client.Queries
 
                     var iq = query.GetIndexQuery();
 
-                    Assert.Equal("FROM RegexMes WHERE regex(Text, $p0)", iq.Query);
+                    Assert.Equal("from RegexMes where regex(Text, $p0)", iq.Query);
                     Assert.Equal("^[a-z ]{2,4}love", iq.QueryParameters["p0"]);
 
                     var result = query.ToList();
@@ -67,7 +67,7 @@ namespace FastTests.Client.Queries
 
                     var iq = query.GetIndexQuery();
 
-                    Assert.Equal("FROM RegexMes WHERE regex(Text, $p0)", iq.Query);
+                    Assert.Equal("from RegexMes where regex(Text, $p0)", iq.Query);
                     Assert.Equal("^[a-z ]{2,4}love", iq.QueryParameters["p0"]);
 
                     var result = await query.ToListAsync();
@@ -93,7 +93,7 @@ namespace FastTests.Client.Queries
 
                     var query = session.Query<RegexMe>().Where(x => Regex.IsMatch(x.Text, "^[a-z ]{2,4}love"));
 
-                    Assert.Equal("FROM RegexMes WHERE regex(Text, $p0)", query.ToString());
+                    Assert.Equal("from RegexMes where regex(Text, $p0)", query.ToString());
 
                     var result = query.ToList();
                     Assert.Equal(4, result.Count);

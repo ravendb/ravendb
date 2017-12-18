@@ -19,12 +19,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string ToString()
         {
-            return Source + " IN ( " + string.Join(", ", Values.Select(x => x.ToString())) + ")";
+            return Source + " in ( " + string.Join(", ", Values.Select(x => x.ToString())) + ")";
         }
 
         public override string GetText()
         {
-            return $"{Source} IN ({string.Join(", ", Values.Select(x => x.GetText()))})";
+            return $"{Source} in ({string.Join(", ", Values.Select(x => x.GetText()))})";
         }
     }
 }

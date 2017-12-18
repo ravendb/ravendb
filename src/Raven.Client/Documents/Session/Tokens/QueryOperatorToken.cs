@@ -20,11 +20,11 @@ namespace Raven.Client.Documents.Session.Tokens
         {
             if (_queryOperator == QueryOperator.And)
             {
-                writer.Append("AND");
+                writer.Append("and");
                 return;
             }
 
-            writer.Append("OR");
+            writer.Append("or");
         }
     }
 }

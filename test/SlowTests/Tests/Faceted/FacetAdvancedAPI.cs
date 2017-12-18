@@ -30,9 +30,9 @@ namespace SlowTests.Tests.Faceted
                     Ranges =
                     {
                         "Cost < 200",
-                        "Cost > 200 AND Cost < 400",
-                        "Cost > 400 AND Cost < 600",
-                        "Cost > 600 AND Cost < 800",
+                        "Cost > 200 and Cost < 400",
+                        "Cost > 400 and Cost < 600",
+                        "Cost > 600 and Cost < 800",
                         "Cost > 800",
                     }
                 },
@@ -41,8 +41,8 @@ namespace SlowTests.Tests.Faceted
                     Ranges =
                     {
                         "Price < 9.99",
-                        "Price > 9.99 AND Price < 49.99",
-                        "Price > 49.99 AND Price < 99.99",
+                        "Price > 9.99 and Price < 49.99",
+                        "Price > 49.99 and Price < 99.99",
                         "Price > 99.99",
                     }
                 }
@@ -121,7 +121,7 @@ namespace SlowTests.Tests.Faceted
             var facet = TriggerConversion(edgeCaseFacet);
             Assert.Equal(2, facet.Ranges.Count);
             Assert.False(string.IsNullOrWhiteSpace(facet.Ranges[0]));
-            Assert.Equal(@"Date > '2001-12-05T00:00:00.0000000' AND Date < '2010-12-05T00:00:00.0000000'", facet.Ranges[1]);
+            Assert.Equal(@"Date > '2001-12-05T00:00:00.0000000' and Date < '2010-12-05T00:00:00.0000000'", facet.Ranges[1]);
         }
 
         private bool AreFacetsEqual(FacetBase left, FacetBase right)
