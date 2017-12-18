@@ -13,6 +13,7 @@ using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Linq
@@ -212,8 +213,8 @@ namespace Raven.Client.Documents.Linq
             var lambdaExpression = expression as LambdaExpression;
             if (lambdaExpression != null)
                 return GetMemberExpression(lambdaExpression.Body);
-			
-			var memberExpression = expression as MemberExpression;
+
+            var memberExpression = expression as MemberExpression;
 
             if (memberExpression == null)
             {
@@ -223,7 +224,7 @@ namespace Raven.Client.Documents.Linq
                                                     "RavenDB doesn't allow computation during the query, computation is only allowed during index. Consider moving the operation to an index.");
             }
 
-            return memberExpression;			
+            return memberExpression;
         }
 
 
@@ -284,8 +285,10 @@ namespace Raven.Client.Documents.Linq
                     value = null;
                     expressions = ((NewArrayExpression)expression).Expressions;
                     var constantExpression = (ConstantExpression)expressions.FirstOrDefault();
-                    if (constantExpression == null) return false;
-                    if (constantExpression.Value.GetType() != typeof(int)) return false;
+                    if (constantExpression == null)
+                        return false;
+                    if (constantExpression.Value.GetType() != typeof(int))
+                        return false;
                     var length = (int)constantExpression.Value;
                     value = new object[length];
                     return true;
@@ -391,26 +394,4 @@ namespace Raven.Client.Documents.Linq
             }
         }
     }
-
-    public abstract class MethodCall
-    {
-        public object[] Args;
-        public string AccessPath;
-    }
-
-    public class CmpXchg<T> : MethodCall
-    {
-        private CmpXchg() { }
-
-        public static CmpXchg<T> Value(string key)
-        {
-            return new CmpXchg<T>
-            {
-                Args = new object[] {key},
-            };
-        }
-    }
-
-
-
 }

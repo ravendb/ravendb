@@ -50,16 +50,10 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         ///     Register the query as a lazy query in the session and return a lazy
-        ///     instance that will evaluate the query only when needed
-        /// </summary>
-        Lazy<IEnumerable<T>> Lazily();
-
-        /// <summary>
-        ///     Register the query as a lazy query in the session and return a lazy
         ///     instance that will evaluate the query only when needed.
         ///     Also provide a function to execute when the value is evaluated
         /// </summary>
-        Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval);
+        Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval = null);
     }
 
     public interface IRawDocumentQuery<T> :

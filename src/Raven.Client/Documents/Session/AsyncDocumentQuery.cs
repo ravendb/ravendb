@@ -96,6 +96,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, MethodCall value, bool exact)
         {
             WhereEquals(fieldName, value, exact);
@@ -104,6 +105,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
+        {
+            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -123,6 +131,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereNotEquals(string fieldName, MethodCall value, bool exact)
         {
             WhereNotEquals(fieldName, value, exact);
@@ -131,6 +140,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
+        {
+            WhereNotEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
             WhereNotEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -151,7 +167,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact)
         {
             WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>(), exact);
             return this;
@@ -165,7 +181,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
             WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
             return this;
@@ -179,7 +195,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
             WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
             return this;
@@ -193,7 +209,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact)
         {
             WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end, exact);
             return this;
@@ -207,7 +223,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -221,7 +237,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -235,7 +251,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereLessThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -249,14 +265,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector)
         {
             WhereExists(GetMemberQueryPath(propertySelector.Body));
             return this;
@@ -342,7 +358,7 @@ namespace Raven.Client.Documents.Session
 #endif
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<TResult> OfType<TResult>()
+        IAsyncDocumentQuery<TResult> IAsyncDocumentQuery<T>.OfType<TResult>()
         {
             return CreateDocumentQueryInternal<TResult>();
         }
@@ -490,7 +506,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken))
+        Lazy<Task<int>> IAsyncDocumentQueryBase<T>.CountLazilyAsync(CancellationToken token)
         {
             if (QueryOperation == null)
             {
@@ -529,7 +545,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
             var fieldName = GetMemberQueryPath(propertySelector.Body);
             if (descending)
@@ -576,7 +592,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator)
         {
             Search(GetMemberQueryPath(propertySelector.Body), searchTerms, @operator);
             return this;
@@ -604,7 +620,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
         {
             ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
             return this;
@@ -618,7 +634,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IAsyncDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
         {
             ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
             return this;
@@ -713,7 +729,7 @@ namespace Raven.Client.Documents.Session
 #endif
 
         /// <inheritdoc />
-        public async Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken))
+        async Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
         {
             await InitAsync(token).ConfigureAwait(false);
             var tuple = await ProcessEnumerator(QueryOperation).WithCancellation(token).ConfigureAwait(false);
@@ -721,28 +737,28 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public async Task<T> FirstAsync(CancellationToken token = default(CancellationToken))
+        async Task<T> IAsyncDocumentQueryBase<T>.FirstAsync(CancellationToken token)
         {
             var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
             return operation.First();
         }
 
         /// <inheritdoc />
-        public async Task<T> FirstOrDefaultAsync(CancellationToken token = default(CancellationToken))
+        async Task<T> IAsyncDocumentQueryBase<T>.FirstOrDefaultAsync(CancellationToken token)
         {
             var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
             return operation.FirstOrDefault();
         }
 
         /// <inheritdoc />
-        public async Task<T> SingleAsync(CancellationToken token = default(CancellationToken))
+        async Task<T> IAsyncDocumentQueryBase<T>.SingleAsync(CancellationToken token)
         {
             var operation = await ExecuteQueryOperation(2, token).ConfigureAwait(false);
             return operation.Single();
         }
 
         /// <inheritdoc />
-        public async Task<T> SingleOrDefaultAsync(CancellationToken token = default(CancellationToken))
+        async Task<T> IAsyncDocumentQueryBase<T>.SingleOrDefaultAsync(CancellationToken token)
         {
             var operation = await ExecuteQueryOperation(2, token).ConfigureAwait(false);
             return operation.SingleOrDefault();
@@ -759,7 +775,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public Lazy<Task<IEnumerable<T>>> LazilyAsync(Action<IEnumerable<T>> onEval = null)
+        Lazy<Task<IEnumerable<T>>> IAsyncDocumentQueryBase<T>.LazilyAsync(Action<IEnumerable<T>> onEval)
         {
             if (QueryOperation == null)
             {
@@ -771,7 +787,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public async Task<int> CountAsync(CancellationToken token = default(CancellationToken))
+        async Task<int> IAsyncDocumentQueryBase<T>.CountAsync(CancellationToken token)
         {
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
