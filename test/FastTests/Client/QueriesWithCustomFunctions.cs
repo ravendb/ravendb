@@ -2386,7 +2386,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                     var query = from u in session.Query<User>()
                         where u.Name == RavenQuery.CmpXchg<string>("Hera")
                         select u;
-                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg<string>.Value("Hera"));
+                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg.Value("Hera"));
 
                     Assert.Equal("from Users where Name = cmpxchg($p0)", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());
@@ -2459,7 +2459,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                     var query = from u in session.Query<User>()
                         where u.Name == RavenQuery.CmpXchg<Linked>("ActiveUser").Next.Next.Name
                         select u;
-                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg<Linked>.Value("ActiveUser"));
+                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg.Value("ActiveUser"));
 
                     Assert.Equal("from Users where Name = cmpxchg($p0).Next.Next.Name", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());

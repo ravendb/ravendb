@@ -251,7 +251,7 @@ namespace Raven.Client.Documents.Linq
                 case ExpressionType.Call:
                     if (expression is MethodCallExpression mce)
                     {
-                        var args = new Object[mce.Arguments.Count];
+                        var args = new object[mce.Arguments.Count];
                         for (var index = 0; index < mce.Arguments.Count; index++)
                         {
                             if (GetValueFromExpressionWithoutConversion(mce.Arguments[index], out value) == false)
@@ -261,7 +261,7 @@ namespace Raven.Client.Documents.Linq
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.CmpXchg))
                         {
-                            value = CmpXchg<object>.Value((string)args[0]);
+                            value = CmpXchg.Value((string)args[0]);
                             return true;
                         }
                     }
