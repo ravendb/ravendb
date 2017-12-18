@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    status.LocalBackup.Exception = e;
+                    status.LocalBackup.Exception = e.ToString();
                     throw;
                 }
             }
@@ -601,11 +601,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     catch (OperationCanceledException e)
                     {
                         // shutting down
-                        localUploadStatus.Exception = e;
+                        localUploadStatus.Exception = e.ToString();
                     }
                     catch (Exception e)
                     {
-                        localUploadStatus.Exception = e;
+                        localUploadStatus.Exception = e.ToString();
                         throw new InvalidOperationException($"Failed to backup to {backupDestination}", e);
                     }
                     finally
