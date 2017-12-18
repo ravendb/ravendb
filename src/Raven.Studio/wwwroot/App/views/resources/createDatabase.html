@@ -18,7 +18,6 @@
                             <h3>NAME</h3>
                             <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
                         </div>
-                        
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
                             <div class="checkbox settings-item nocheck" data-bind="css: { 'active': $root.currentAdvancedSection() === id }, visible: alwaysEnabled">
                                 <label data-bind="text: name, click: _.partial($root.showAdvancedConfigurationFor, id)">
@@ -40,7 +39,6 @@
                         </div>
                         <div class="flex-separator"></div>
                         <button type="submit" class="btn btn-success btn-block" data-bind="css: { 'btn-spinner': spinners.create }, disable: spinners.create"><i class="icon-plus"></i><span>Create</span></button>
-
                     </div>
                     <div class="modal-settings-panel-slideout">
                         <div>
@@ -50,9 +48,13 @@
                         <div>
                             <div class="restore" data-bind="template: { name: 'create-db-restore' }, visible: advancedVisibility.restore()">
                             </div>
+                        </div>                      
+                        <div>                        
+                           <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption() && usingHttps">
+                           </div>
                         </div>
                         <div>
-                            <div class="encryption" data-bind="template: { name: 'create-db-encryption' }, visible: advancedVisibility.encryption()">
+                            <div class="encryption" data-bind="template: { name: 'authentication-is-off' }, visible: advancedVisibility.encryption() && !usingHttps">
                             </div>
                         </div>
                         <div>
@@ -274,7 +276,6 @@
     </div>
 </script>
 
-
 <script type="text/html" id="create-db-replication">
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
@@ -333,7 +334,17 @@
 
 <script type="text/html" id="create-db-encryption">
     <h3>Encryption configuration</h3>
+        <div data-bind="with: encryptionSection">
+            <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+        </div>
+</script>
+
+<script type="text/html" id="authentication-is-off">
+    <h2 class="text-warning"><i class="icon-unsecure"></i> Authentication is off</h2><br/>
     <div data-bind="with: encryptionSection">
-        <div data-bind="compose: 'resources/setupEncryptionKey.html'"></div>
+        <div class="text-info bg-info padding padding-sm">Database encryption is only possible when authentication is enabled and a server certificate has been defined.</div>          
+        <div class="padding padding-sm">For more information go to the 
+            <button class="btn-link" type="button" data-bind="click: $root.redirectToCertificates" data-dismiss="modal">certificates page</button>
+        </div>      
     </div>
 </script>

@@ -1,14 +1,11 @@
 <div class="certificates flex-vertical absolute-fill content-margin">
     <div class="absolute-center unsecure" data-bind="visible: !usingHttps">
         <div class="panel padding padding-lg">
-
             <h2 class="text-warning"><i class="icon-unsecure"></i> Authentication is off</h2>
-
             <p class="margin-top margin-lg">
-                RavenDB uses certificates to authenticate clients and server certificate information has not been set up.<br />
+                RavenDB uses certificates to authenticate clients but the server certificate information has not been set up.<br />
                 Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and fill in your certificate information under either:
             </p>
-
             <div class="flex-horizontal margin-top margin-lg">
                 <div class="flex-grow flex-basis-0">
                     <div class="panel padding padding-sm text-center">
@@ -23,13 +20,11 @@
                         <div class="small">A command or executable providing a .pfx certificate file</div>
                     </div>
                 </div>
-                
             </div>
-            <div class="text-info bg-info padding padding-sm">
-                <div class="small">If either of them is specified, RavenDB will use <em>HTTPS/SSL</em> for all network activities. <br />Certificate setting priority order: 
-                    
-                </div>
-                <div class="small">
+            <div class="text-info bg-info padding padding-sm small">
+                <div class="padding padding-sm">
+                    If either option is specified, RavenDB will use <em>HTTPS/SSL</em> for all network activities.<br/>
+                    The certificate setting priority order is:
                     <ol>
                         <li>Path</li>
                         <li>Executable</li>
@@ -40,7 +35,6 @@
                 For more information please head on to the <a href="https://ravendb.net/docs" target="_blank">RavenDB 4.0 Documentation</a>.
             </div>
         </div>
-
     </div>
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">

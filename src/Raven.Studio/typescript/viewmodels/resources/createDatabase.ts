@@ -14,6 +14,8 @@ import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import popoverUtils = require("common/popoverUtils");
 import notificationCenter = require("common/notifications/notificationCenter");
 import license = require("models/auth/licenseModel");
+import appUrl = require("common/appUrl");
+import router = require("plugins/router");
 
 class createDatabase extends dialogViewModelBase {
     
@@ -30,7 +32,8 @@ class createDatabase extends dialogViewModelBase {
     clusterNodes = [] as clusterNode[];
     
     encryptionSection: setupEncryptionKey;
-
+    usingHttps = location.protocol === "https:";  
+    
     protected currentAdvancedSection = ko.observable<availableConfigurationSectionId>();
 
     showDynamicNodeDistributionWarning: KnockoutComputed<boolean>;
@@ -287,7 +290,10 @@ class createDatabase extends dialogViewModelBase {
         if (encryptionSection.enabled()) {
             const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
             this.encryptionSection.configureEncryption(this.databaseModel.encryption.key(), nodeTags)
-                .done(() => encryptionTask.resolve());
+                .done(() => encryptionTask.resolve())
+                .fail(() => {
+                    return this.spinners.create(false);
+                });
         } else {
             encryptionTask.resolve();
         }
@@ -300,8 +306,7 @@ class createDatabase extends dialogViewModelBase {
                         dialog.close(this);
                         this.spinners.create(false);
                     });
-            })
-            .fail(() => this.spinners.create(false));
+            });           
     }
 
     private createDatabaseFromLegacyDatafiles(): JQueryPromise<operationIdDto> {  
@@ -347,6 +352,10 @@ class createDatabase extends dialogViewModelBase {
         }
     }
 
+    redirectToCertificates(){
+        dialog.close(this);
+        router.navigate(appUrl.forCertificates());       
+    }
 }
 
 export = createDatabase;
