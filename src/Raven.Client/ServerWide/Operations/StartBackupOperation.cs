@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class StartBackupOperation : IMaintenanceOperation<CommandResult>
+    public class StartBackupOperation : IMaintenanceOperation
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;
@@ -17,7 +17,7 @@ namespace Raven.Client.ServerWide.Operations
             _taskId = taskId;
         }
 
-        public RavenCommand<CommandResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartBackupCommand(_isFullBackup, _taskId);
         }

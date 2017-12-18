@@ -1,11 +1,10 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    public class StartBackupCommand : RavenCommand<CommandResult>
+    public class StartBackupCommand : RavenCommand
     {
         public override bool IsReadRequest => true;
 
@@ -27,14 +26,6 @@ namespace Raven.Client.Documents.Commands
             };
 
             return request;
-        }
-
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
-
-            Result = JsonDeserializationClient.CommandResult(response);
         }
     }
 }
