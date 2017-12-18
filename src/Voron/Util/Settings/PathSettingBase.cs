@@ -49,10 +49,12 @@ namespace Voron.Util.Settings
                 ? path
                 : Path.Combine(_baseDataDir?.FullPath ?? AppContext.BaseDirectory, path);
 
-            if (result.Length >= 260 && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (result.Length >= 260 && 
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                result.StartsWith(@"\\?\") == false)
                 result = @"\\?\" + result;
 
-            if (result.EndsWith(@"\") || result.EndsWith(@"/"))
+            if (result.EndsWith(@"\") || result.EndsWith("/"))
                 result = result.TrimEnd('\\', '/');
 
             if (PlatformDetails.RunningOnPosix)
