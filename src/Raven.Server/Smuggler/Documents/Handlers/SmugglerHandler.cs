@@ -152,6 +152,36 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 return smuggler.Execute();
             }
         }
+        
+        
+
+        [RavenAction("/databases/*/admin/smuggler/import", "GET", AuthorizationStatus.Operator)]
+        public async Task GetImport()
+        {
+            if (HttpContext.Request.Query.ContainsKey("file") == false &&
+                HttpContext.Request.Query.ContainsKey("url") == false)
+            {
+                throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
+            }
+       
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
+
+                using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
+                using (var token = CreateOperationToken())
+                using (var source = new StreamSource(stream, context, Database))
+                {
+                    var destination = new DatabaseDestination(Database);
+
+                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
+
+                    var result = smuggler.Execute();
+
+                    WriteImportResult(context, result, ResponseBodyStream());
+                }
+            }
+        }
 
         [RavenAction("/databases/*/admin/smuggler/import-s3-dir", "GET", AuthorizationStatus.Operator)]
         public async Task PostImportFromS3Directory()
@@ -274,39 +304,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetImport()
-        {
-            if (HttpContext.Request.Query.ContainsKey("file") == false &&
-                HttpContext.Request.Query.ContainsKey("url") == false)
-            {
-                throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
-            }
-            return PostImport();
-        }
-
-        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
-        public async Task PostImport()
-        {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
-
-                using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
-                using (var token = CreateOperationToken())
-                using (var source = new StreamSource(stream, context, Database))
-                {
-                    var destination = new DatabaseDestination(Database);
-
-                    var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, token: token.Token);
-
-                    var result = smuggler.Execute();
-
-                    WriteImportResult(context, result, ResponseBodyStream());
-                }
-            }
-        }
-
         [RavenAction("/databases/*/admin/smuggler/migrate", "POST", AuthorizationStatus.Operator)]
         public async Task Migrate()
         {
@@ -332,7 +329,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import/async", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostImportAsync()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

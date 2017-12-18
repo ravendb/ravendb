@@ -228,7 +228,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/smuggler/import/async?operationId={_operationId}";
+                url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
 
                 var form = new MultipartFormDataContent
                 {
