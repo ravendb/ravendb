@@ -25,6 +25,8 @@
         public string TransformScript { get; set; }
 
         public int MaxStepsForTransformScript { get; set; }
+
+        public bool ReadLegacyEtag { get; set; }
     }
 
     internal interface IDatabaseSmugglerOptions
@@ -34,5 +36,6 @@
         bool RemoveAnalyzers { get; set; }
         string TransformScript { get; set; }
         int MaxStepsForTransformScript { get; set; }
+        bool ReadLegacyEtag { get; set; }
     }
 }

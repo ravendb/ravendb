@@ -460,6 +460,15 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
 
+                    result.Documents.ReadCount++;
+                    result.Documents.Attachments.ReadCount++;
+                    if (result.Documents.Attachments.ReadCount % 1000 > 0)
+                    {
+                        var message = $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
                     if (item.Document.Id == null)
                         ThrowInvalidData();
 

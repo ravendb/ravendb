@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
@@ -40,6 +39,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerResult _result;
 
         private BuildVersionType _buildVersionType;
+        private bool _readLegacyEtag;
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
@@ -65,6 +65,7 @@ namespace Raven.Server.Smuggler.Documents
 
             buildVersion = ReadBuildVersion();
             _buildVersionType = BuildVersion.Type(buildVersion);
+            _readLegacyEtag = options.ReadLegacyEtag;
 
             return new DisposableAction(() =>
             {
@@ -394,21 +395,25 @@ namespace Raven.Server.Smuggler.Documents
                     };
 
                     var attachmentInfo = ProcessLegacyAttachment(context, data, ref attachment);
-                    if(ShouldSkip(attachmentInfo))
+                    if (ShouldSkip(attachmentInfo))
                         continue;
-                    var dummyDoc = new DocumentItem()
+
+                    var dummyDoc = new DocumentItem
                     {
-                        Document = new Document()
+                        Document = new Document
                         {
                             Data = WriteDummyDocumentForAttachment(context, attachmentInfo),
                             Id = attachmentInfo.Id,
                             ChangeVector = string.Empty,
                             Flags = DocumentFlags.HasAttachments,
                             NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                        },
+                        Attachments = new List<DocumentItem.AttachmentStream>
+                        {
+                            attachment
                         }
                     };
-                    dummyDoc.Attachments = new List<DocumentItem.AttachmentStream>();
-                    dummyDoc.Attachments.Add(attachment);
+
                     yield return dummyDoc;
                 }
             }
@@ -419,14 +424,15 @@ namespace Raven.Server.Smuggler.Documents
 
         }
 
-        private bool ShouldSkip(LegacyAttachmentDetails attachmentInfo)
+        private static bool ShouldSkip(LegacyAttachmentDetails attachmentInfo)
         {
             if (attachmentInfo.Metadata.TryGet("Raven-Delete-Marker", out bool deleted) && deleted)
                 return true;
+
             return attachmentInfo.Key.EndsWith(".deleting") || attachmentInfo.Key.EndsWith(".downloading");
         }
 
-        private BlittableJsonReaderObject WriteDummyDocumentForAttachment(DocumentsOperationContext context, LegacyAttachmentDetails details)
+        public static BlittableJsonReaderObject WriteDummyDocumentForAttachment(DocumentsOperationContext context, LegacyAttachmentDetails details)
         {
             var attachment = new DynamicJsonValue
             {
@@ -448,8 +454,8 @@ namespace Raven.Server.Smuggler.Documents
                 [Constants.Documents.Metadata.Key] = metadata,
 
             };
+
             return context.ReadObject(djv, details.Id);
-            ;
         }
 
         private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
@@ -465,6 +471,7 @@ namespace Raven.Server.Smuggler.Documents
             var modifier = new BlittableMetadataModifier(context)
             {
                 ReadFirstEtagOfLegacyRevision = legacyImport,
+                ReadLegacyEtag = _readLegacyEtag
             };
             var builder = CreateBuilder(context, modifier);
             try
@@ -527,6 +534,8 @@ namespace Raven.Server.Smuggler.Documents
                             data = context.ReadObject(data, modifier.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                         }
                     }
+
+                    _result.LegacyLastDocumentEtag = modifier.LegacyEtag;
 
                     yield return new DocumentItem
                     {
@@ -683,20 +692,29 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        internal unsafe LegacyAttachmentDetails ProcessLegacyAttachment(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
+        internal unsafe LegacyAttachmentDetails ProcessLegacyAttachment(
+            DocumentsOperationContext context, 
+            BlittableJsonReaderObject data, 
+            ref DocumentItem.AttachmentStream attachment)
         {
-            BlittableJsonReaderObject bjr;
-            string base64data;
-            string key = null;
-            if (data.TryGet("Metadata", out bjr) == false ||
-                data.TryGet("Data", out base64data) == false ||
-                data.TryGet("Key", out key) == false)
+            if (data.TryGet("Key", out string key) == false)
             {
-                if (key != null)
-                {
-                    throw new ArgumentException($"Data of legacy attachment with key={key} is not valid");
-                }
-                throw new ArgumentException($"Data of legacy attachment was not valid and it is missing its key property.");
+                throw new ArgumentException("The key of legacy attachment is missing its key property.");
+            }
+
+            if (data.TryGet("Metadata", out BlittableJsonReaderObject metadata) == false)
+            {
+                throw new ArgumentException($"Metadata of legacy attachment with key={key} is missing");
+            }
+
+            if (data.TryGet("Data", out string base64data) == false)
+            {
+                throw new ArgumentException($"Data of legacy attachment with key={key} is missing");
+            }
+
+            if (_readLegacyEtag && data.TryGet("Etag", out string etag))
+            {
+                _result.LegacyLastAttachmentEtag = etag;
             }
 
             var memoryStream = new MemoryStream();
@@ -709,17 +727,28 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             memoryStream.Position = 0;
+
+            return GenerateLegacyAttachmentDetails(context, memoryStream, key, metadata, ref attachment);
+        }
+
+        public static LegacyAttachmentDetails GenerateLegacyAttachmentDetails(
+            DocumentsOperationContext context, 
+            Stream decodedStream, 
+            string key, 
+            BlittableJsonReaderObject metadata,
+            ref DocumentItem.AttachmentStream attachment)
+        {
             var stream = attachment.Stream;
-            var hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, memoryStream, stream, CancellationToken.None));
+            var hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, decodedStream, stream, CancellationToken.None));
             var lazyHash = context.GetLazyString(hash);
             attachment.Base64HashDispose = Slice.External(context.Allocator, lazyHash, out attachment.Base64Hash);
-            var tag = $"{_dummyDocument}{key}{_recordSeperator}d{_recordSeperator}{key}{_recordSeperator}{hash}{_recordSeperator}";
+            var tag = $"{DummyDocumentPrefix}{key}{RecordSeperator}d{RecordSeperator}{key}{RecordSeperator}{hash}{RecordSeperator}";
             var lazyTag = context.GetLazyString(tag);
             attachment.TagDispose = Slice.External(context.Allocator, lazyTag, out attachment.Tag);
-            var id = $"{_dummyDocument}{key}";
+            var id = $"{DummyDocumentPrefix}{key}";
             var lazyId = context.GetLazyString(id);
 
-            attachment.Data = context.ReadObject(bjr, id); 
+            attachment.Data = context.ReadObject(metadata, id);
             return new LegacyAttachmentDetails
             {
                 Id = lazyId,
@@ -731,20 +760,7 @@ namespace Raven.Server.Smuggler.Documents
             };
         }
 
-        internal struct LegacyAttachmentDetails
-        {
-            public LazyStringValue Id;
-            public string Hash;
-            public string Key;
-            public long Size;
-            public string Tag;
-            public BlittableJsonReaderObject Metadata;
-        }
-
-        private readonly char _recordSeperator = (char)SpecialChars.RecordSeparator;
-        private readonly string _dummyDocument = "files/";
-
-        public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
+        public struct LegacyAttachmentDetails        {            public LazyStringValue Id;            public string Hash;            public string Key;            public long Size;            public string Tag;            public BlittableJsonReaderObject Metadata;        }        private const char RecordSeperator = (char)SpecialChars.RecordSeparator;        private const string DummyDocumentPrefix = "files/";        public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                 data.TryGet(nameof(AttachmentName.Size), out long size) == false ||

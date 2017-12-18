@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,15 +13,17 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Sparrow.Json;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public class Migrator_V2: AbstractMigrator
+    public class Migrator_V2 : AbstractLegacyMigrator
     {
-        private readonly HttpClient _client;
+        private const int AttachmentsPageSize = 1024;
 
         public Migrator_V2(
+            string migrationStateKey,
             string serverUrl,
             string databaseName,
             SmugglerResult result,
@@ -26,24 +31,27 @@ namespace Raven.Server.Smuggler.Migration
             DocumentDatabase database,
             HttpClient client,
             OperationCancelToken cancelToken)
-            : base(serverUrl, databaseName, result, onProgress, database, cancelToken)
+            : base(migrationStateKey, serverUrl, databaseName, result, onProgress, database, client, cancelToken)
         {
-            _client = client;
         }
 
         public override async Task Execute()
         {
-            await MigrateDocuments();
+            var state = GetLastMigrationState();
+
+            await MigrateDocuments(state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty);
+            await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty);
+            await SaveLastState();
 
             await MigrateIndexes();
         }
 
-        private async Task MigrateDocuments()
+        private async Task MigrateDocuments(string lastEtag)
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs";
+            var url = $"{ServerUrl}/databases/{DatabaseName}/streams/docs?etag={lastEtag}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-            var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -57,19 +65,135 @@ namespace Raven.Server.Smuggler.Migration
             using (var source = new StreamSource(responseStream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
-                var options = new DatabaseSmugglerOptionsServerSide();
+                var options = new DatabaseSmugglerOptionsServerSide
+                {
+                    ReadLegacyEtag = true
+                };
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
-                smuggler.Execute(ensureStepsProcessed: false); // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
+                // since we will be migrating indexes as separate task don't ensureStepsProcessed at this point
+                smuggler.Execute(ensureStepsProcessed: false);
             }
         }
-        
+
+        private async Task MigrateAttachments(string lastEtag)
+        {
+            var destination = new DatabaseDestination(Database);
+
+            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var documentActions = destination.Documents())
+            {
+                while (true)
+                {
+                    var attatchmentsArray = await GetAttachmentsList(lastEtag, transactionOperationContext);
+                    if (attatchmentsArray.Length == 0)
+                        break;
+
+                    foreach (var attachmentObject in attatchmentsArray)
+                    {
+                        var blittable = attachmentObject as BlittableJsonReaderObject;
+                        if (blittable == null)
+                            throw new InvalidDataException("attchmentObject isn't an array");
+
+                        if (blittable.TryGet("Key", out string key) == false)
+                            throw new InvalidDataException("Key doesn't exist");
+
+                        if (blittable.TryGet("Metadata", out BlittableJsonReaderObject metadata) == false)
+                            throw new InvalidDataException("Metadata doesn't exist");
+
+                        Result.Documents.ReadCount++;
+                        Result.Documents.Attachments.ReadCount++;
+
+                        if (Result.Documents.Attachments.ReadCount % 1000 == 0)
+                        {
+                            var message = $"Read {Result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
+                            Result.AddInfo(message);
+                            OnProgress.Invoke(Result.Progress);
+                        }
+
+                        var attachment = new DocumentItem.AttachmentStream
+                        {
+                            Stream = documentActions.GetTempStream()
+                        };
+
+                        var dataStream = await GetAttachmentStream(key);
+                        var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(context, dataStream, key, metadata, ref attachment);
+
+                        var dummyDoc = new DocumentItem
+                        {
+                            Document = new Document
+                            {
+                                Data = StreamSource.WriteDummyDocumentForAttachment(context, attachmentDetails),
+                                Id = attachmentDetails.Id,
+                                ChangeVector = string.Empty,
+                                Flags = DocumentFlags.HasAttachments,
+                                NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                            },
+                            Attachments = new List<DocumentItem.AttachmentStream>
+                            {
+                                attachment
+                            }
+                        };
+
+                        documentActions.WriteDocument(dummyDoc, Result.Documents);
+                    }
+
+                    var lastAttachment = attatchmentsArray.Last() as BlittableJsonReaderObject;
+                    Debug.Assert(lastAttachment != null, "lastAttachment != null");
+                    if (lastAttachment.TryGet("Etag", out string etag))
+                        lastEtag = Result.LegacyLastAttachmentEtag = etag;
+                }
+            }
+        }
+
+        private async Task<BlittableJsonReaderArray> GetAttachmentsList(string lastEtag, TransactionOperationContext context)
+        {
+            var url = $"{ServerUrl}/databases/{DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            var responseString = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode == false)
+            {
+                
+                throw new InvalidOperationException($"Failed to get attachments list from server: {ServerUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            using (var attachmentsListStream = new ArrayStream(responseStream, "Attachments"))
+            {
+                var attachmentsList = await context.ReadForMemoryAsync(attachmentsListStream, "attachments-list");
+                if (attachmentsList.TryGet("Attachments", out BlittableJsonReaderArray attachments) == false)
+                    throw new InvalidDataException("Response is invalid");
+
+                return attachments;
+            }
+        }
+
+        private async Task<Stream> GetAttachmentStream(string attachmentKey)
+        {
+            var url = $"{ServerUrl}/databases/{DatabaseName}/static/{attachmentKey}";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to attachment, key: {attachmentKey}, from server: {ServerUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            return await response.Content.ReadAsStreamAsync();
+        }
+
         private async Task MigrateIndexes()
         {
             var url = $"{ServerUrl}/databases/{DatabaseName}/indexes";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
 
-            var response = await _client.SendAsync(request, CancelToken.Token);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
@@ -79,8 +203,7 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())
-            // indexes endpoint returns an array
-            using (var indexesStream = new IndexesStream(responseStream))
+            using (var indexesStream = new ArrayStream(responseStream, "Indexes")) // indexes endpoint returns an array
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var source = new StreamSource(indexesStream, context, Database))
             {
@@ -92,23 +215,32 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public override void Dispose()
+        private async Task SaveLastState()
         {
-            _client.Dispose();
+            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var operationStateBlittable = GenerateOperationState(context);
+                await SaveLastOperationState(operationStateBlittable);
+            }
         }
 
-        private class IndexesStream : Stream
+        public override void Dispose()
+        {
+            HttpClient.Dispose();
+        }
+
+        private class ArrayStream : Stream
         {
             private Stream _baseStream;
             private readonly long _length;
             private long _position;
 
-            private readonly MemoryStream _beginningStream =
-                new MemoryStream(Encoding.UTF8.GetBytes("{ \"Indexes\" : "));
+            private readonly MemoryStream _beginningStream;
+
             private readonly MemoryStream _endingStream =
                 new MemoryStream(Encoding.UTF8.GetBytes("}"));
 
-            public IndexesStream(Stream baseStream)
+            public ArrayStream(Stream baseStream, string propertyName)
             {
                 if (baseStream == null)
                     throw new ArgumentNullException(nameof(baseStream));
@@ -117,6 +249,7 @@ namespace Raven.Server.Smuggler.Migration
                 if (baseStream.CanSeek == false)
                     throw new ArgumentException("can't seek in base stream");
 
+                _beginningStream = new MemoryStream(Encoding.UTF8.GetBytes($"{{ \"{propertyName}\" : "));
                 _baseStream = baseStream;
                 _length = _beginningStream.Length + baseStream.Length + _endingStream.Length;
             }

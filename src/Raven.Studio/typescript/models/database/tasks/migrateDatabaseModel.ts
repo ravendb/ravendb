@@ -9,26 +9,34 @@ class migrateDatabaseModel {
     authenticationMethod = ko.observable<authenticationMethod>("none");
     
     serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>("Unknown");
+    buildVersion = ko.observable<number>();
     serverMajorVersionNumber = ko.pureComputed<string>(() => {
 
-        if (!this.serverMajorVersion())
+        if (!this.serverMajorVersion()) {
             return null;
+        }
 
+        let majorVersion: string;
         switch (this.serverMajorVersion()) {
-
             case "Unknown":
                 return "Unknown";
             case "V2":
-                return "2.0";
+                majorVersion = "2.x";
+                break;
             case "V30":
-                return "3.0";
+                majorVersion = "3.0";
+                break;
             case "V35":
-                return "3.5";
+                majorVersion = "3.5";
+                break;
             case "V4":
-                return "4.0";
+                majorVersion = "4.0";
+                break;
+            default:
+                return null;
         }
 
-        return null;
+        return `${majorVersion} (build: ${this.buildVersion()})`;
     });
     
     userName = ko.observable<string>();
@@ -53,7 +61,8 @@ class migrateDatabaseModel {
             UserName: this.showWindowsCredentialInputs() ? this.userName() : null,
             Password: this.showWindowsCredentialInputs() ? this.password() : null, 
             Domain: this.showWindowsCredentialInputs() ? this.domain() : null, 
-            BuildMajorVersion: this.serverMajorVersion()
+            BuildMajorVersion: this.serverMajorVersion(),
+            BuildVersion: this.buildVersion()
         };
     }
 
@@ -62,11 +71,11 @@ class migrateDatabaseModel {
            const version = this.serverMajorVersion();
            return version === "V2" || version === "V30" || version === "V35";
         });
-        
+
         this.showWindowsCredentialInputs = ko.pureComputed(() => {
             const authMethod = this.authenticationMethod();
             return authMethod === "windows";
-        })
+        });
     }
     
     private initValidation() {
