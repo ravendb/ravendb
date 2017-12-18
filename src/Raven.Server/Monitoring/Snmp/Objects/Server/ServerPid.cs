@@ -10,7 +10,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         public ServerPid()
             : base(SnmpOids.Server.Pid)
         {
-            _pid = new Integer32(Process.GetCurrentProcess().Id);
+            using (var currentProcess = Process.GetCurrentProcess())
+                _pid = new Integer32(currentProcess.Id);
         }
 
         protected override Integer32 GetData()

@@ -32,25 +32,28 @@ namespace Raven.TestDriver
                 throw new FileNotFoundException("Server file was not found", locator.ServerPath);
             }
 
-            var commandArguments = new List<string>
+            using (var currentProcess = Process.GetCurrentProcess())
             {
-                locator.CommandArguments,
-                "--ServerUrl=http://127.0.0.1:0",
-                "--RunInMemory=true",
-                "--Testing.ParentProcessId=" + Process.GetCurrentProcess().Id,
-                "--Setup.Mode=None"
-            };
+                var commandArguments = new List<string>
+                {
+                    locator.CommandArguments,
+                    "--ServerUrl=http://127.0.0.1:0",
+                    "--RunInMemory=true",
+                    "--Testing.ParentProcessId=" + currentProcess.Id,
+                    "--Setup.Mode=None"
+                };
 
-            var argumentsString = string.Join(" ", commandArguments); 
-            return new ProcessStartInfo
-            {
-                FileName = locator.Command,
-                Arguments = argumentsString,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-            };
+                var argumentsString = string.Join(" ", commandArguments);
+                return new ProcessStartInfo
+                {
+                    FileName = locator.Command,
+                    Arguments = argumentsString,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                };
+            }
         }
     }
 }

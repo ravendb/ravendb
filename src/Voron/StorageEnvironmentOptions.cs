@@ -724,15 +724,18 @@ namespace Voron
                 _name = name;
                 _instanceId = Interlocked.Increment(ref _counter);
                 var guid = Guid.NewGuid();
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
+                using (var currentProcess = Process.GetCurrentProcess())
+                {
+                    var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-data.pager-{guid}";
 
-                WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
+                    WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
 
-                if (Directory.Exists(tempPath.FullPath) == false)
-                    Directory.CreateDirectory(tempPath.FullPath);
+                    if (Directory.Exists(tempPath.FullPath) == false)
+                        Directory.CreateDirectory(tempPath.FullPath);
 
-                _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
-                    Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
+                    _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
+                }
             }
 
             public override string ToString()
@@ -772,9 +775,12 @@ namespace Voron
             public override VoronPathSetting GetJournalPath(long journalNumber)
             {
                 var name = JournalName(journalNumber);
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{Guid.NewGuid()}";
+                using (var currentProcess = Process.GetCurrentProcess())
+                {
+                    var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-{name}-{Guid.NewGuid()}";
 
-                return TempPath.Combine(filename);
+                    return TempPath.Combine(filename);
+                }
             }
 
             protected override void Disposing()
@@ -865,17 +871,25 @@ namespace Voron
             public override AbstractPager CreateScratchPager(string name, long initialSize)
             {
                 var guid = Guid.NewGuid();
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
+                using (var currentProcess = Process.GetCurrentProcess())
+                {
+                    var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-{name}-{guid}";
 
-                return GetTempMemoryMapPager(this, TempPath.Combine(filename), initialSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                    return GetTempMemoryMapPager(this, TempPath.Combine(filename), initialSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                }
             }
 
             public override AbstractPager CreateTemporaryBufferPager(string name, long initialSize)
             {
                 var guid = Guid.NewGuid();
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}-{guid}";
+                using (var currentProcess = Process.GetCurrentProcess())
+                {
+                    var filename = $"ravendb-{currentProcess.Id}-{_instanceId}-{name}-{guid}";
 
-                return GetTempMemoryMapPagerInternal(this, TempPath.Combine(filename), initialSize, Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                    return GetTempMemoryMapPagerInternal(this, TempPath.Combine(filename), initialSize,
+                        Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
+                }
             }
 
             public override AbstractPager OpenPager(VoronPathSetting filename)

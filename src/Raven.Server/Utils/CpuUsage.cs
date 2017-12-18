@@ -144,6 +144,7 @@ namespace Raven.Server.Utils
             }
 
             _previousLinuxInfo = linuxInfo;
+            
             return (machineCpuUsage, processCpuUsage);
         }
 
@@ -189,16 +190,18 @@ namespace Raven.Server.Utils
                 return null;
             }
 
-            var process = Process.GetCurrentProcess();
-            var processTime = process.TotalProcessorTime;
-
-            return new WindowsInfo
+            using (var process = Process.GetCurrentProcess())
             {
-                SystemIdleTime = GetTime(systemIdleTime),
-                SystemKernelTime = GetTime(systemKernelTime),
-                SystemUserTime = GetTime(systemUserTime),
-                ProcessProcessorTime = processTime
-            };
+                var processTime = process.TotalProcessorTime;
+
+                return new WindowsInfo
+                {
+                    SystemIdleTime = GetTime(systemIdleTime),
+                    SystemKernelTime = GetTime(systemKernelTime),
+                    SystemUserTime = GetTime(systemUserTime),
+                    ProcessProcessorTime = processTime
+                };
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -284,7 +287,11 @@ namespace Raven.Server.Utils
 
             var size = ProcTaskAllInfoSize;
             var info = new proc_taskallinfo();
-            var processId = Process.GetCurrentProcess().Id;
+            
+            var processId = 0;
+            using (var currentProcess = Process.GetCurrentProcess())
+                processId = currentProcess.Id;
+            
             var result = Syscall.proc_pidinfo(processId, (int)ProcessInfo.PROC_PIDTASKALLINFO, 0, &info, size);
             ulong dateTimeNanoTicks = 0;
             ulong userTime = 0;

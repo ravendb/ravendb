@@ -27,7 +27,10 @@ namespace Raven.Server.Utils
         /// <returns>An instance of the Process class.</returns>
         public static Process GetParentProcess()
         {
-            return GetParentProcess(Process.GetCurrentProcess().Id);
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                return GetParentProcess(currentProcess.Id);
+            }
         }
 
         /// <summary>

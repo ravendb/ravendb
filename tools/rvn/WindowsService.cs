@@ -225,34 +225,36 @@ namespace rvn
 
             private string GetServiceCommand(string serverDir, List<string> argsForService)
             {
-                var process = Process.GetCurrentProcess();
-                var processExeFileName = process.MainModule.FileName;
-
-                serverDir = string.IsNullOrEmpty(serverDir)
-                    ? new FileInfo(processExeFileName).Directory.FullName
-                    : serverDir;
-
-                var serverDirInfo = new DirectoryInfo(serverDir);
-                if (serverDirInfo.Exists == false)
-                    throw new ArgumentException($"Directory does not exist: {serverDir}.");
-                else
-                    serverDir = serverDirInfo.FullName;
-
-                var serviceCommandResult = Path.Combine(serverDirInfo.FullName, "Raven.Server.exe");
-                if (File.Exists(serviceCommandResult) == false)
+                using (var process = Process.GetCurrentProcess())
                 {
-                    throw new ArgumentException($"Could not find RavenDB Server executable under {serverDirInfo.FullName}.");
+                    var processExeFileName = process.MainModule.FileName;
+
+                    serverDir = string.IsNullOrEmpty(serverDir)
+                        ? new FileInfo(processExeFileName).Directory.FullName
+                        : serverDir;
+
+                    var serverDirInfo = new DirectoryInfo(serverDir);
+                    if (serverDirInfo.Exists == false)
+                        throw new ArgumentException($"Directory does not exist: {serverDir}.");
+                    else
+                        serverDir = serverDirInfo.FullName;
+
+                    var serviceCommandResult = Path.Combine(serverDirInfo.FullName, "Raven.Server.exe");
+                    if (File.Exists(serviceCommandResult) == false)
+                    {
+                        throw new ArgumentException($"Could not find RavenDB Server executable under {serverDirInfo.FullName}.");
+                    }
+
+                    if (argsForService.Any(x => x.StartsWith("--service-name")) == false)
+                    {
+                        argsForService.Add("--service-name");
+                        argsForService.Add(_serviceName);
+                    }
+
+                    serviceCommandResult = $"{serviceCommandResult} {string.Join(" ", argsForService)}";
+
+                    return serviceCommandResult;
                 }
-
-                if (argsForService.Any(x => x.StartsWith("--service-name")) == false)
-                {
-                    argsForService.Add("--service-name");
-                    argsForService.Add(_serviceName);
-                }
-
-                serviceCommandResult = $"{serviceCommandResult} { string.Join(" ", argsForService) }";
-
-                return serviceCommandResult;
             }
 
             private ServiceController GetServiceController()

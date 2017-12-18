@@ -33,7 +33,8 @@ namespace Tests.Infrastructure
     {
         static ClusterTestBase()
         {
-            Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}.");
+            using (var currentProcess = Process.GetCurrentProcess())
+                Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {currentProcess.Id}.");
         }
 
         private const int PortRangeStart = 9000;

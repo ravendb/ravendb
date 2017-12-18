@@ -445,14 +445,16 @@ namespace Raven.Server.Utils.Cli
         public static string GetInfoText()
         {
             var memoryInfo = MemoryInformation.GetMemoryInfo();
-
-            return $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
-                  Environment.NewLine +
-                  $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
-                  Environment.NewLine +
-                  $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory" +
-                  Environment.NewLine +
-                  $" {RuntimeSettings.Describe()}";
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                return $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +
+                       Environment.NewLine +
+                       $" PID {currentProcess.Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
+                       Environment.NewLine +
+                       $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory" +
+                       Environment.NewLine +
+                       $" {RuntimeSettings.Describe()}";
+            }
         }
 
         private static bool CommandLogo(List<string> args, RavenCli cli)

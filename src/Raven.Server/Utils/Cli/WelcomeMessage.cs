@@ -26,9 +26,13 @@ namespace Raven.Server.Utils.Cli
             const string lineBorder = "+---------------------------------------------------------------+";
 
             var meminfo = MemoryInformation.GetMemoryInfo();
-            ConsoleWriteLineWithColor(ConsoleColor.Yellow, " Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, Phys Mem {7}, Arch: {8}",
-                ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, Process.GetCurrentProcess().Id,
-                IntPtr.Size * 8, ProcessorInfo.ProcessorCount, meminfo.TotalPhysicalMemory, RuntimeInformation.OSArchitecture);
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                ConsoleWriteLineWithColor(ConsoleColor.Yellow,
+                    " Build {0}, Version {1}, SemVer {2}, Commit {3}\r\n PID {4}, {5} bits, {6} Cores, Phys Mem {7}, Arch: {8}",
+                    ServerVersion.Build, ServerVersion.Version, ServerVersion.FullVersion, ServerVersion.CommitHash, currentProcess.Id,
+                    IntPtr.Size * 8, ProcessorInfo.ProcessorCount, meminfo.TotalPhysicalMemory, RuntimeInformation.OSArchitecture);
+            }
             ConsoleWriteLineWithColor(ConsoleColor.DarkCyan, " Source Code (git repo): https://github.com/ravendb/ravendb");
             ConsoleWriteWithColor(new ConsoleText { Message = " Built with ", ForegroundColor = ConsoleColor.Gray },
                 new ConsoleText { Message = "love ", ForegroundColor = ConsoleColor.Red },
