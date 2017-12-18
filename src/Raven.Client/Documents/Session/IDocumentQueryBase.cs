@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
@@ -229,6 +230,11 @@ namespace Raven.Client.Documents.Session
         TSelf WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
+        ///     Matches the evaluated expression
+        /// </summary>
+        TSelf WhereEquals(string fieldName, MethodCall value, bool exact = false);
+
+        /// <summary>
         ///     Matches value
         /// </summary>
         TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
@@ -242,6 +248,11 @@ namespace Raven.Client.Documents.Session
         ///     Not matches value
         /// </summary>
         TSelf WhereNotEquals(string fieldName, object value, bool exact = false);
+
+        /// <summary>
+        ///     Not matches the evaluated expression
+        /// </summary>
+        TSelf WhereNotEquals(string fieldName, MethodCall value, bool exact = false);
 
         /// <summary>
         ///     Not matches value

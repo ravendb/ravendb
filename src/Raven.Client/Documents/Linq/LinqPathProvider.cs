@@ -260,7 +260,7 @@ namespace Raven.Client.Documents.Linq
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.CmpXchg))
                         {
-                            value = new MethodCall("cmpxchg", args);
+                            value = CmpXchg<object>.Value((string)args[0]);
                             return true;
                         }
                     }
@@ -392,17 +392,25 @@ namespace Raven.Client.Documents.Linq
         }
     }
 
-    public class MethodCall
+    public abstract class MethodCall
     {
-        public string Name { get; }
-        public object[] Args { get; }
+        public object[] Args;
         public string AccessPath;
+    }
 
-        public MethodCall(string name, object[] value, string accessPath = null)
+    public class CmpXchg<T> : MethodCall
+    {
+        private CmpXchg() { }
+
+        public static CmpXchg<T> Value(string key)
         {
-            Name = name;
-            Args = value;
-            AccessPath = accessPath;
+            return new CmpXchg<T>
+            {
+                Args = new object[] {key},
+            };
         }
     }
+
+
+
 }
