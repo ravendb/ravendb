@@ -448,7 +448,7 @@ namespace Raven.Client.Util
             {
                 var methodCallExpression = context.Node as MethodCallExpression;
 
-                if (methodCallExpression?.Method.Name != "CmpXchg")
+                if (methodCallExpression?.Method.Name != nameof(RavenQuery.CmpXchg))
                     return;
 
                 if (methodCallExpression.Method.DeclaringType != typeof(RavenQuery) 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
@@ -357,6 +358,12 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, MethodCall value, bool exact)
+        {
+            WhereEquals(fieldName, value, exact);
+            return this;
+        }
+
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
@@ -373,6 +380,12 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals(string fieldName, object value, bool exact)
+        {
+            WhereNotEquals(fieldName, value, exact);
+            return this;
+        }
+
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals(string fieldName, MethodCall value, bool exact)
         {
             WhereNotEquals(fieldName, value, exact);
             return this;

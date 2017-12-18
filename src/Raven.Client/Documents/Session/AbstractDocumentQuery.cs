@@ -575,6 +575,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             });
         }
 
+        public void WhereEquals(string fieldName, MethodCall method, bool exact = false)
+        {
+            WhereEquals(fieldName, (object)method, exact);
+        }
+
         /// <summary>
         ///   Matches value
         /// </summary>
@@ -611,8 +616,19 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 {
                     args[index] = AddQueryParameter(mc.Args[index]);
                 }
-                var token = WhereToken.Create(op, whereParams.FieldName, null,
-                    new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
+
+                WhereToken token;
+                var type = mc.GetType().GetGenericTypeDefinition();
+                if (type == typeof(CmpXchg<>))
+                {
+                    token = WhereToken.Create(op, whereParams.FieldName, null,
+                        new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
+                }
+                else
+                {
+                    throw new ArgumentException($"Unknown method {type}");
+                }
+                
                 tokens.AddLast(token);
                 return true;
             }
@@ -630,6 +646,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 Value = value,
                 Exact = exact
             });
+        }
+
+        public void WhereNotEquals(string fieldName, MethodCall method, bool exact = false)
+        {
+            WhereNotEquals(fieldName, (object)method, exact);
         }
 
         /// <summary>

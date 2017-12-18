@@ -2385,7 +2385,11 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     var query = from u in session.Query<User>()
                         where u.Name == RavenQuery.CmpXchg<string>("Hera")
                         select u;
+                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg<string>.Value("Hera"));
+
                     Assert.Equal("FROM Users WHERE Name = cmpxchg($p0)", query.ToString());
+                    Assert.Equal(q.ToString(), query.ToString());
+
                     var queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
@@ -2398,7 +2402,12 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry", queryResult[0].Name);
 
-                    var rql = "FROM Users WHERE id() = cmpxchg(\"Zeus@gmail.com\")";
+                    var rql = "FROM Users WHERE Name = cmpxchg(\"Hera\")";
+                    queryResult = session.Advanced.RawQuery<User>(rql).ToList();
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Zeus", queryResult[0].Name);
+
+                    rql = "FROM Users WHERE id() = cmpxchg(\"Zeus@gmail.com\")";
                     queryResult = session.Advanced.RawQuery<User>(rql).ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
@@ -2449,7 +2458,11 @@ FROM Users as u LOAD u.FriendId as _doc_0, u.DetailIds as _docs_1[] SELECT outpu
                     var query = from u in session.Query<User>()
                         where u.Name == RavenQuery.CmpXchg<Linked>("ActiveUser").Next.Next.Name
                         select u;
+                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg<Linked>.Value("ActiveUser"));
+
                     Assert.Equal("FROM Users WHERE Name = cmpxchg($p0).Next.Next.Name", query.ToString());
+                    Assert.Equal(q.ToString(), query.ToString());
+
                     var queryResult = query.ToList();
 //                    Assert.Equal(1, queryResult.Count);
 //                    Assert.Equal("Zeus", queryResult[0].Name);
