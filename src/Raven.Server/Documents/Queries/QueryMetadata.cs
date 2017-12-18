@@ -63,13 +63,15 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsGroupBy;
 
-        public bool IsFacet { get; private set; }
+        public bool HasFacet { get; private set; }
 
-        public bool IsSuggest { get; private set; }
+        public bool HasSuggest { get; private set; }
 
-        public bool IsMoreLikeThis { get; private set; }
+        public bool HasMoreLikeThis { get; private set; }
 
-        public bool IsIntersect { get; private set; }
+        public bool HasIntersect { get; private set; }
+
+        public bool HasCmpXchg { get; private set; }
 
         public bool IsCollectionQuery { get; private set; } = true;
 
@@ -373,7 +375,7 @@ namespace Raven.Server.Documents.Queries
             var indexOf = path.IndexOf('.');
             if (indexOf == -1 || Query.From.Alias == null)
                 return (path, null);
-            
+
             Debug.Assert(Query.From.Alias != null);
 
             var compare = string.Compare(
@@ -628,12 +630,12 @@ namespace Raven.Server.Documents.Queries
 
         private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
         {
-            if (IsSuggest)
+            if (HasSuggest)
                 ThrowSuggestionQueryMustContainsOnlyOneSuggestInSelect(parameters);
 
             if (expression is ValueExpression ve)
             {
-                if (IsFacet)
+                if (HasFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(ve, parameters);
 
                 return SelectField.CreateValue(ve.Token, alias, ve.Value);
@@ -641,7 +643,7 @@ namespace Raven.Server.Documents.Queries
 
             if (expression is FieldExpression fe)
             {
-                if (IsFacet)
+                if (HasFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(fe, parameters);
 
                 if (fe.IsQuoted && fe.Compound.Count == 1)
@@ -656,7 +658,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out _))
                     {
-                        if (IsFacet)
+                        if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
                         var args = new SelectField[me.Arguments.Count];
@@ -675,7 +677,7 @@ namespace Raven.Server.Documents.Queries
 
                     if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (IsFacet)
+                        if (HasFacet)
                             ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
 
                         if (IsGroupBy)
@@ -695,7 +697,7 @@ namespace Raven.Server.Documents.Queries
                         if (IsDistinct)
                             ThrowFacetQueryCannotBeDistinct(parameters);
 
-                        IsFacet = true;
+                        HasFacet = true;
 
                         return CreateFacet(me, alias, parameters);
                     }
@@ -708,10 +710,10 @@ namespace Raven.Server.Documents.Queries
                         if (IsDistinct)
                             ThrowSuggestionQueryCannotBeDistinct(parameters);
 
-                        if (IsFacet)
+                        if (HasFacet)
                             ThrowSuggestionQueryCannotBeFacet(parameters);
 
-                        IsSuggest = true;
+                        HasSuggest = true;
 
                         return CreateSuggest(me, alias, parameters);
                     }
@@ -729,7 +731,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
 
-                if (IsFacet)
+                if (HasFacet)
                     ThrowFacetQueryMustContainsOnlyFacetInSelect(expression, parameters);
 
                 QueryFieldName fieldName = null;
@@ -1201,9 +1203,9 @@ namespace Raven.Server.Documents.Queries
                 {
                     _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0, operatorType: operatorType);
                 }
-                if (leftSide is MethodExpression me)
+                if (leftSide is MethodExpression lme)
                 {
-                    var methodType = QueryMethod.GetMethodType(me.Name);
+                    var methodType = QueryMethod.GetMethodType(lme.Name);
                     switch (methodType)
                     {
                         case MethodType.Id:// WHERE id() = [<Func> | <Value>]
@@ -1224,6 +1226,17 @@ namespace Raven.Server.Documents.Queries
                             break;
                         default:
                             throw new ArgumentException($"The method {methodType} on the left side inside the WHERE clausel is not supported.");
+                    }
+                }
+
+                if (rightSide is MethodExpression rme)
+                {
+                    var methodType = QueryMethod.GetMethodType(rme.Name);
+                    switch (methodType)
+                    {
+                        case MethodType.CmpXchg:
+                            _metadata.HasCmpXchg = true;
+                            break;
                     }
                 }
             }
@@ -1336,10 +1349,10 @@ namespace Raven.Server.Documents.Queries
                                 _metadata.AddWhereField(QueryFieldName.DocumentId, parameters);
                                 break;
                             }
-                            
+
                             throw new InvalidQueryException($"Method {methodName}() was called, but as the query is using an alias ({_fromAlias}), must also be provided to this method.", QueryText, parameters);
                         }
-                        
+
                         if (arguments.Count > 2)
                             throw new InvalidQueryException($"Method {methodName}() expects not more than two arguments to be provided", QueryText, parameters);
 
@@ -1396,7 +1409,7 @@ namespace Raven.Server.Documents.Queries
                         Visit(firstArg, parameters);
                         break;
                     case MethodType.Intersect:
-                        _metadata.IsIntersect = true;
+                        _metadata.HasIntersect = true;
 
                         for (var i = 0; i < arguments.Count; i++)
                         {
@@ -1440,7 +1453,7 @@ namespace Raven.Server.Documents.Queries
                 if (arguments.Count == 0 || arguments.Count > 2)
                     throw new InvalidQueryException($"Method {methodName}() expects to have one or two arguments", QueryText, parameters);
 
-                _metadata.IsMoreLikeThis = true;
+                _metadata.HasMoreLikeThis = true;
 
                 var firstArgument = arguments[0];
                 if (firstArgument is BinaryExpression == false && firstArgument is FieldExpression == false && firstArgument is ValueExpression == false)

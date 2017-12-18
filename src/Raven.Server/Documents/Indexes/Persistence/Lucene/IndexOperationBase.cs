@@ -138,7 +138,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    }
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
-                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, factories);
+
+                    IDisposable releaseServerContext = null;
+                    IDisposable closeServerTransaction = null;
+                    TransactionOperationContext serverContext = null;
+
+                    try
+                    {
+                        if (metadata.HasCmpXchg)
+                        {
+                            releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
+                            closeServerTransaction = serverContext.OpenReadTransaction();
+                        }
+
+                        using (closeServerTransaction)
+                            documentQuery = QueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, parameters, analyzer, factories);
+                    }
+                    finally
+                    {
+                        releaseServerContext?.Dispose();
+                    }
                 }
                 finally
                 {

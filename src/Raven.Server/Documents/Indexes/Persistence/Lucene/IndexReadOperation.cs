@@ -426,7 +426,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             DocumentsOperationContext context,
             CancellationToken token)
         {
-            var moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            IDisposable releaseServerContext = null;
+            IDisposable closeServerTransaction = null;
+            TransactionOperationContext serverContext = null;
+            MoreLikeThisQuery moreLikeThisQuery;
+
+            try
+            {
+                if (query.Metadata.HasCmpXchg)
+                {
+                    releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
+                    closeServerTransaction = serverContext.OpenReadTransaction();
+                }
+                
+                using (closeServerTransaction)
+                    moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(serverContext, context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            }
+            finally
+            {
+                releaseServerContext?.Dispose();
+            }
+
             var options = moreLikeThisQuery.Options != null ? JsonDeserializationServer.MoreLikeThisOptions(moreLikeThisQuery.Options) : MoreLikeThisOptions.Default;
 
             HashSet<string> stopWords = null;

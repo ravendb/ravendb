@@ -92,9 +92,9 @@ namespace Raven.Server.Documents.Queries
                     _alreadySeenProjections = new HashSet<ulong>();
 
                 _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch, includeDocumentsCommand);
-                
+
                 (_ids, _startsWith) = ExtractIdsFromQuery(query, context);
-                
+
                 _sort = ExtractSortFromQuery(query);
 
             }
@@ -129,11 +129,31 @@ namespace Raven.Server.Documents.Queries
                 if (query.Metadata.IndexFieldNames.Contains(QueryFieldName.DocumentId) == false)
                     return (null, null);
 
-                var idsRetriever = new RetrieveDocumentIdsVisitor(context, query.Metadata, _context.Allocator);
+                IDisposable releaseServerContext = null;
+                IDisposable closeServerTransaction = null;
+                TransactionOperationContext serverContext = null;
 
-                idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
-                
-                return (idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList() , idsRetriever.StartsWith);
+                try
+                {
+                    if (query.Metadata.HasCmpXchg)
+                    {
+                        releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
+                        closeServerTransaction = serverContext.OpenReadTransaction();
+                    }
+
+                    using (closeServerTransaction)
+                    {
+                        var idsRetriever = new RetrieveDocumentIdsVisitor(serverContext, context, query.Metadata, _context.Allocator);
+
+                        idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
+
+                        return (idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList(), idsRetriever.StartsWith);
+                    }
+                }
+                finally
+                {
+                    releaseServerContext?.Dispose();
+                }
             }
 
             public bool MoveNext()
@@ -320,6 +340,7 @@ namespace Raven.Server.Documents.Queries
             private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
             {
                 private readonly Query _query;
+                private readonly TransactionOperationContext _serverContext;
                 private readonly DocumentsOperationContext _context;
                 private readonly QueryMetadata _metadata;
                 private readonly ByteStringContext _allocator;
@@ -327,9 +348,10 @@ namespace Raven.Server.Documents.Queries
 
                 public readonly List<Slice> Ids = new List<Slice>();
 
-                public RetrieveDocumentIdsVisitor(DocumentsOperationContext context, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
+                public RetrieveDocumentIdsVisitor(TransactionOperationContext serverContext, DocumentsOperationContext context, QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
                 {
                     _query = metadata.Query;
+                    _serverContext = serverContext;
                     _context = context;
                     _metadata = metadata;
                     _allocator = allocator;
@@ -358,11 +380,9 @@ namespace Raven.Server.Documents.Queries
                                 }
                                 if (value is MethodExpression right)
                                 {
-                                    var id = QueryBuilder.EvaluteMethod(_context, right, ref parameters);
+                                    var id = QueryBuilder.EvaluteMethod(_serverContext, _context, right, ref parameters);
                                     if (id is ValueExpression v)
-                                    {
                                         AddId(v.Token);
-                                    }
                                 }
                                 break;
                         }
@@ -394,7 +414,7 @@ namespace Raven.Server.Documents.Queries
                         }
                     }
                     else
-                    {  
+                    {
                         throw new InvalidQueryException("Collection query does not support filtering by id() using Between operator. Supported operators are: =, IN",
                             QueryText, parameters);
                     }
@@ -405,13 +425,13 @@ namespace Raven.Server.Documents.Queries
                     var expression = arguments[arguments.Count - 1];
                     if (expression is BinaryExpression be && be.Operator == OperatorType.Equal)
                     {
-                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters, be.Operator);                        
+                        VisitFieldToken(new MethodExpression("id", new List<QueryExpression>()), be.Right, parameters, be.Operator);
                     }
                     else if (expression is InExpression ie)
                     {
                         VisitIn(new MethodExpression("id", new List<QueryExpression>()), ie.Values, parameters);
                     }
-                    else if (string.Equals(name,"startsWith", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(name, "startsWith", StringComparison.OrdinalIgnoreCase))
                     {
                         if (expression is ValueExpression iv)
                         {
