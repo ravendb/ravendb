@@ -71,7 +71,7 @@ namespace SlowTests.Issues
                 }
                 //delete the replication master->slave
                 var removeTaskId = res.First().TaskId;
-                await master.Maintenance.Server.SendAsync(new DeleteOngoingTaskOperation(master.Database, removeTaskId, OngoingTaskType.Replication));
+                await master.Maintenance.Server.SendAsync(new DeleteOngoingTaskOperation(removeTaskId, OngoingTaskType.Replication));
 
                 using (var session = master.OpenAsyncSession())
                 {

@@ -13,38 +13,34 @@ namespace Raven.Client.ServerWide.Operations.ETL
     {
         private readonly long _taskId;
         private readonly EtlConfiguration<T> _configuration;
-        private readonly string _databaseName;
 
-        public UpdateEtlOperation(long taskId, EtlConfiguration<T> configuration, string databaseName)
+        public UpdateEtlOperation(long taskId, EtlConfiguration<T> configuration)
         {
             _taskId = taskId;
             _configuration = configuration;
-            _databaseName = databaseName;
         }
 
         public RavenCommand<UpdateEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateEtlCommand(_taskId, _configuration, _databaseName);
+            return new UpdateEtlCommand(_taskId, _configuration);
         }
 
         public class UpdateEtlCommand : RavenCommand<UpdateEtlOperationResult>
         {
             private readonly long _taskId;
             private readonly EtlConfiguration<T> _configuration;
-            private readonly string _databaseName;
 
-            public UpdateEtlCommand(long taskId, EtlConfiguration<T> configuration, string databaseName)
+            public UpdateEtlCommand(long taskId, EtlConfiguration<T> configuration)
             {
                 _taskId = taskId;
                 _configuration = configuration;
-                _databaseName = databaseName;
             }
 
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/etl?id={_taskId}";
+                url = $"{node.Url}/databases/{node.Database}/admin/etl?id={_taskId}";
 
                 var request = new HttpRequestMessage
                 {

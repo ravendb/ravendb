@@ -37,7 +37,7 @@ namespace SlowTests.Server.Documents
                 ConnectionString = SqlEtlTests.MasterDatabaseConnection.Value + $";Initial Catalog={SqlDatabaseName}"
             };
 
-            var putConnectionStringOperation = new PutConnectionStringOperation<SqlConnectionString>(connectionString, store.Database);
+            var putConnectionStringOperation = new PutConnectionStringOperation<SqlConnectionString>(connectionString);
             store.Maintenance.Server.Send(putConnectionStringOperation);
 
             DatabaseRecord record;

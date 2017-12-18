@@ -176,9 +176,9 @@ namespace FastTests.Server.Replication
                 Name = watcher.ConnectionStringName,
                 Database = watcher.Database,
                 TopologyDiscoveryUrls = urls ?? store.Urls
-            }, store.Database));
+            }));
 
-            var op = new UpdateExternalReplicationOperation(store.Database, watcher);
+            var op = new UpdateExternalReplicationOperation(watcher);
             return await store.Maintenance.Server.SendAsync(op);
         }
 
@@ -187,7 +187,7 @@ namespace FastTests.Server.Replication
             long taskId,
             OngoingTaskType taskType)
         {
-            var op = new DeleteOngoingTaskOperation(store.Database, taskId, taskType);
+            var op = new DeleteOngoingTaskOperation(taskId, taskType);
             return await store.Maintenance.Server.SendAsync(op);
         }
 
@@ -195,7 +195,7 @@ namespace FastTests.Server.Replication
             DocumentStore store,
             long taskId, OngoingTaskType type)
         {
-            var op = new GetOngoingTaskInfoOperation(store.Database, taskId, type);
+            var op = new GetOngoingTaskInfoOperation(taskId, type);
             return await store.Maintenance.Server.SendAsync(op);
         }
 

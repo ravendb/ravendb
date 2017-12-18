@@ -617,7 +617,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),
-                }, store.Database));
+                }));
 
                 var database = GetDatabase(store.Database).Result;
 

@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                src.Maintenance.Server.Send(new DeleteOngoingTaskOperation(src.Database, result.TaskId, OngoingTaskType.RavenEtl));
+                src.Maintenance.Server.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.RavenEtl));
 
                 etlDone.Reset();
                 

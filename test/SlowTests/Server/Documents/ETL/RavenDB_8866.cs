@@ -41,7 +41,7 @@ namespace SlowTests.Server.Documents.ETL
                     }
                 };
 
-                AddEtl(src, configuration, new RavenConnectionString()
+                AddEtl(src, configuration, new RavenConnectionString
                 {
                     Name = "test",
                     TopologyDiscoveryUrls = dest.Urls,
@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                src.Maintenance.Server.Send(new ResetEtlOperation("myConfiguration", "allUsers", src.Database));
+                src.Maintenance.Server.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
 
                 Assert.True(resetDone.Wait(TimeSpan.FromMinutes(1)));
             }

@@ -82,14 +82,14 @@ loadToOrders(orderData);
                     Disabled = true
                 };
 
-                updateBackupResult = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
+                updateBackupResult = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
 
                 store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
                     TopologyDiscoveryUrls = new []{"http://127.0.0.1:8080" },
                     Database = "Northwind",
-                }, store.Database));
+                }));
 
                 etlConfiguration = new RavenEtlConfiguration()
                 {
@@ -106,14 +106,14 @@ loadToOrders(orderData);
                     }
                 };
 
-                addRavenEtlResult = store.Maintenance.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
+                addRavenEtlResult = store.Maintenance.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration));
 
                 sqlConnectionString = new SqlConnectionString
                 {
                     Name = "abc",
                     ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};"
                 };
-                store.Maintenance.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
+                store.Maintenance.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
 
 
                 sqlConfiguration = new SqlEtlConfiguration()
@@ -136,7 +136,7 @@ loadToOrders(orderData);
                         }
                     }
                 };
-                addSqlEtlResult = store.Maintenance.Server.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration, store.Database));
+                addSqlEtlResult = store.Maintenance.Server.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration));
             }
 
             using (var store = new DocumentStore
@@ -229,7 +229,7 @@ loadToOrders(orderData);
                     Disabled = true
                 };
 
-                updateBackupResult = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
+                updateBackupResult = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig));
             }
 
             using (var store = new DocumentStore
@@ -243,14 +243,14 @@ loadToOrders(orderData);
             }.Initialize())
             {
                 var taskId = addWatcherRes.TaskId;
-                var op = new ToggleTaskStateOperation(store.Database, taskId, OngoingTaskType.Replication, true);
+                var op = new ToggleTaskStateOperation(taskId, OngoingTaskType.Replication, true);
                 await store.Maintenance.Server.SendAsync(op);
 
                 var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 taskId = updateBackupResult.TaskId;
-                op = new ToggleTaskStateOperation(store.Database, taskId, OngoingTaskType.Backup, false);
+                op = new ToggleTaskStateOperation(taskId, OngoingTaskType.Backup, false);
                 await store.Maintenance.Server.SendAsync(op);
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);

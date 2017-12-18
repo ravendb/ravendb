@@ -9,35 +9,31 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
     public class RemoveConnectionStringOperation<T> : IServerOperation<RemoveConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
-        private readonly string _databaseName;
 
-        public RemoveConnectionStringOperation(T connectionString, string databaseName)
+        public RemoveConnectionStringOperation(T connectionString)
         {
             _connectionString = connectionString;
-            _databaseName = databaseName;
         }
 
         public RavenCommand<RemoveConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new RemoveConnectionStringCommand(_connectionString, _databaseName);
+            return new RemoveConnectionStringCommand(_connectionString);
         }
 
         public class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>
         {
             private readonly T _connectionString;
-            private readonly string _databaseName;
 
-            public RemoveConnectionStringCommand(T connectionString, string databaseName)
+            public RemoveConnectionStringCommand(T connectionString)
             {
                 _connectionString = connectionString;
-                _databaseName = databaseName;
             }
 
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/connection-strings?connectionString={_connectionString.Name}&type={_connectionString.Type}";
+                url = $"{node.Url}/databases/{node.Database}/admin/connection-strings?connectionString={_connectionString.Name}&type={_connectionString.Type}";
 
                 var request = new HttpRequestMessage
                     {

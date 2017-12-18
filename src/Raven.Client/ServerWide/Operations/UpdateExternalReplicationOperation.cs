@@ -12,34 +12,29 @@ namespace Raven.Client.ServerWide.Operations
     public class UpdateExternalReplicationOperation : IServerOperation<ModifyOngoingTaskResult>
     {
         private readonly ExternalReplication _newWatcher;
-        private readonly string _database;
 
-        public UpdateExternalReplicationOperation(string database, ExternalReplication newWatcher)
+        public UpdateExternalReplicationOperation(ExternalReplication newWatcher)
         {
-            Helpers.AssertValidDatabaseName(database);
-            _database = database;
             _newWatcher = newWatcher;
         }
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateExternalReplication(_database, _newWatcher);
+            return new UpdateExternalReplication(_newWatcher);
         }
 
         private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>
         {
-            private readonly string _databaseName;
             private readonly ExternalReplication _newWatcher;
 
-            public UpdateExternalReplication(string database, ExternalReplication newWatcher)
+            public UpdateExternalReplication(ExternalReplication newWatcher)
             {
-                _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _newWatcher = newWatcher;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/tasks/external-replication";
+                url = $"{node.Url}/databases/{node.Database}/admin/tasks/external-replication";
 
                 var request = new HttpRequestMessage
                 {

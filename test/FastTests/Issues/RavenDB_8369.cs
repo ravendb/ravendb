@@ -236,7 +236,7 @@ namespace FastTests.Issues
                 BackupType = backupType
             };
 
-            var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+            var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
             return result;
         }
 

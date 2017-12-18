@@ -30,7 +30,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* */2 * * *"
                 };
 
-                await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
 
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                 var backups = periodicBackupRunner.PeriodicBackups;

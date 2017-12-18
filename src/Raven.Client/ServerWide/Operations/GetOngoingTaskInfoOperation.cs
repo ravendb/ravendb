@@ -9,43 +9,34 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class GetOngoingTaskInfoOperation : IServerOperation<OngoingTask>
     {
-        private readonly string _database;
         private readonly long _taskId;
         private readonly OngoingTaskType _type;
 
-        public GetOngoingTaskInfoOperation(string database, long taskId, OngoingTaskType type)
+        public GetOngoingTaskInfoOperation(long taskId, OngoingTaskType type)
         {
-            Helpers.AssertValidDatabaseName(database);
-            _database = database;
             _taskId = taskId;
             _type = type;
         }
 
         public RavenCommand<OngoingTask> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new GetOngoingTaskInfoCommand(_database, _taskId, _type);
+            return new GetOngoingTaskInfoCommand(_taskId, _type);
         }
 
         private class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
         {
-            private readonly string _databaseName;
             private readonly long _taskId;
             private readonly OngoingTaskType _type;
 
-            public GetOngoingTaskInfoCommand(
-                string database,
-                long taskId,
-                OngoingTaskType type
-            )
+            public GetOngoingTaskInfoCommand(long taskId, OngoingTaskType type)
             {
-                _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _taskId = taskId;
                 _type = type;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/task?key={_taskId}&type={_type}";
+                url = $"{node.Url}/databases/{node.Database}/task?key={_taskId}&type={_type}";
 
                 var request = new HttpRequestMessage
                 {
@@ -85,5 +76,4 @@ namespace Raven.Client.ServerWide.Operations
             public override bool IsReadRequest => false;
         }
     }
-
 }

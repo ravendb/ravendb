@@ -11,36 +11,30 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 {
     public class GetConnectionStringsOperation: IServerOperation<GetConnectionStringsResult> 
     {
-        private readonly string _databaseName;
-
         private readonly string _connectionStringName;
 
         private readonly ConnectionStringType _type;
 
-        public GetConnectionStringsOperation(string databaseName, string connectionStringName=null, ConnectionStringType type = ConnectionStringType.None)
+        public GetConnectionStringsOperation(string connectionStringName = null, ConnectionStringType type = ConnectionStringType.None)
         {
-            _databaseName = databaseName;
             _connectionStringName = connectionStringName;
             _type = type;
         }
 
         public RavenCommand<GetConnectionStringsResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new GetConnectionStringCommand(_databaseName, _connectionStringName, _type);
+            return new GetConnectionStringCommand(_connectionStringName, _type);
         }
 
         public class GetConnectionStringCommand : RavenCommand<GetConnectionStringsResult>
         {
-            private readonly string _databaseName;
-
             private readonly string _connectionStringName;
 
             private readonly ConnectionStringType _type;
 
 
-            public GetConnectionStringCommand(string databaseName, string connectionStringName = null, ConnectionStringType type = ConnectionStringType.None)
+            public GetConnectionStringCommand(string connectionStringName = null, ConnectionStringType type = ConnectionStringType.None)
             {
-                _databaseName = databaseName;
                 _connectionStringName = connectionStringName;
                 _type = type;
             }
@@ -49,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/connection-strings?";
+                url = $"{node.Url}/databases/{node.Database}/admin/connection-strings?";
                 if (_connectionStringName != null)
                 {
                     url += $"&connectionStringName={_connectionStringName}&type={_type}";
