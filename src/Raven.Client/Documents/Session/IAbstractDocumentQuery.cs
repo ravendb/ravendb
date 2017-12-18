@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -93,6 +94,11 @@ namespace Raven.Client.Documents.Session
         void WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
+        ///   Matches evaluated method
+        /// </summary>
+        void WhereEquals(string fieldName, MethodCall method, bool exact = false);
+
+        /// <summary>
         ///   Matches value
         /// </summary>
         void WhereEquals(WhereParams whereParams);
@@ -101,6 +107,11 @@ namespace Raven.Client.Documents.Session
         ///   Not matches value
         /// </summary>
         void WhereNotEquals(string fieldName, object value, bool exact = false);
+
+        /// <summary>
+        ///   Not matches evaluated method
+        /// </summary>
+        void WhereNotEquals(string fieldName, MethodCall method, bool exact = false);
 
         /// <summary>
         ///   Not matches value
