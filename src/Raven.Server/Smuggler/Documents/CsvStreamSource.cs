@@ -192,6 +192,11 @@ namespace Raven.Server.Smuggler.Documents
                                 nestedData[segments[j]] = tmpRef;
                                 nestedData = tmpRef;
                             }
+                            //We need to advance into the nested object, since it is not the last segment it must be of type 'DynamicJsonValue'
+                            else
+                            {
+                                nestedData = (DynamicJsonValue)nestedData[segments[j]];
+                            }
                         }
                         continue;
                     }
