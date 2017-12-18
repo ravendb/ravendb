@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
             _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
-            _session.RequestExecutor.Execute(command, _session.Context);
+            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo:_session.SessionInfo);
 
             return ProcessResults(command.Result, _session.Conventions);
         }

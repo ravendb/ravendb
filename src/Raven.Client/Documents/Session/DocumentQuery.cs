@@ -815,7 +815,7 @@ namespace Raven.Client.Documents.Session
             using (QueryOperation.EnterQueryContext())
             {
                 var command = QueryOperation.CreateRequest();
-                TheSession.RequestExecutor.Execute(command, TheSession.Context);
+                TheSession.RequestExecutor.Execute(command, TheSession.Context, sessionInfo:TheSession.SessionInfo);
                 QueryOperation.SetResult(command.Result);
             }
 
