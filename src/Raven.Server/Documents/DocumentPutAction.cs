@@ -219,7 +219,7 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
             DocumentsOperationContext context, string id, Slice lowerId, long newEtag,
-            BlittableJsonReaderObject document, string changeVector, string excpectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
+            BlittableJsonReaderObject document, string changeVector, string expectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents
                 // Since this document resolve the conflict we don't need to alter the change vector.
                 // This way we avoid another replication back to the source
 
-                _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, excpectedChangeVector);
+                _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, expectedChangeVector);
 
                 if (fromReplication)
                 {
@@ -406,12 +406,12 @@ namespace Raven.Server.Documents
             throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
         }
 
-        private static void ThrowConcurrentExceptionOnMissingDoc(string id, string excpectedChangeVector)
+        private static void ThrowConcurrentExceptionOnMissingDoc(string id, string expectedChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} does not exist, but Put was called with change vector: {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} does not exist, but Put was called with change vector: {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
-                ExpectedChangeVector = excpectedChangeVector
+                ExpectedChangeVector = expectedChangeVector
             };
         }
 

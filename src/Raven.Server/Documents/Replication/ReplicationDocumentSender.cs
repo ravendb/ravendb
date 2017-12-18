@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Replication
             _parent.HandleServerResponse();
         }
 
-        private void WriteItemToServer(DocumentsOperationContext context,ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        private void WriteItemToServer(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
