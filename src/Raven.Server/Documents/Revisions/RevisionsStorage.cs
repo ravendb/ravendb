@@ -526,9 +526,18 @@ namespace Raven.Server.Documents.Revisions
             }
             else
             {
-                // we need to generate a unique etag if we got a tombstone revisions from replication, 
-                // but we don't want to mess up the order of events so the delete revision etag we use is negative
-                revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+                if (tombstoneTable.ReadByKey(key, out var existingTombstone))
+                {
+                    revisionEtag = TableValueToEtag((int)TombstoneTable.Etag, ref existingTombstone);
+                    tombstoneTable.Delete(existingTombstone.Id);
+                }
+                else
+                {
+                    // we need to generate a unique etag if we got a tombstone revisions from replication, 
+                    // but we don't want to mess up the order of events so the delete revision etag we use is negative
+                    revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
+                }
             }
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
         }
