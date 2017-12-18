@@ -169,20 +169,14 @@ class serverSetup {
 
     createIpAutocompleter(usedIps: KnockoutObservableArray<ipEntry>, ip: KnockoutObservable<string>) {
         return ko.pureComputed(()=> {
-            let result; 
             const key = ip();
             
             const options = this.localIps();            
             const usedOptions = usedIps().filter(k => k.ip() !== key).map(x => x.ip());
-            const filteredOptions = _.difference(options, usedOptions);
-
-            if (key) {
-                result = filteredOptions.filter(x => x.includes(key));
-            } else {
-                result = filteredOptions;
-            }
-
-            return result;
+            
+            // here we don't take ip variable into account, so user can easily change 
+            // from 127.0.0.1 to 192.168.0.1 etc.            
+            return _.difference(options, usedOptions);
         });
     }
 }
