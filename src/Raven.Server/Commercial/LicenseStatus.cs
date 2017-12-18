@@ -80,18 +80,18 @@ namespace Raven.Server.Commercial
         {
             get
             {
-                var maxClusterSize = GetValue<int?>("maxClusterSize");
+                var maxClusterSize = MaxClusterSizeInternal;
                 switch (maxClusterSize)
                 {
-                    case null:
-                        return 1;
                     case 0:
                         return int.MaxValue;
                     default:
-                        return maxClusterSize.Value;
+                        return maxClusterSize;
                 }
             }
         }
+
+        private int MaxClusterSizeInternal => GetValue<int?>("maxClusterSize") ?? 1;
 
         public bool DistributedCluster => GetValue<bool>("distributedCluster");
 
@@ -121,7 +121,7 @@ namespace Raven.Server.Commercial
                 [nameof(ErrorMessage)] = ErrorMessage,
                 [nameof(MaxCores)] = MaxCores,
                 [nameof(MaxMemory)] = MaxMemory,
-                [nameof(MaxClusterSize)] = GetValue<int?>("maxClusterSize") ?? 1,
+                [nameof(MaxClusterSize)] = MaxClusterSizeInternal,
                 [nameof(Ratio)] = Ratio.ToString(),
                 [nameof(Expiration)] = Expiration,
                 [nameof(Expired)] = Expired,

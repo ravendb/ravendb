@@ -6,6 +6,7 @@
         Indexing,
         Replication,
         Paging,
-        RequestLatency
+        RequestLatency,
+        UnusedCapacity
     }
 }
