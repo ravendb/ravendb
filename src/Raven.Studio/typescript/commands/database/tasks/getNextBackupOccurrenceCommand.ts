@@ -7,7 +7,7 @@ class getNextBackupOccurrenceCommand extends commandBase {
     }
  
     execute(): JQueryPromise<Raven.Server.Web.System.NextBackupOccurrence> {
-        const url = endpoints.global.databases.periodicBackupNextBackupOccurrence +
+        const url = endpoints.global.backupDatabase.periodicBackupNextBackupOccurrence +
             this.urlEncodeArgs({ backupFrequency: this.backupFrequency });
 
         return this.query(url, null);
