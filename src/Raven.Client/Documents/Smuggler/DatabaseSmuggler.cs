@@ -210,6 +210,8 @@ namespace Raven.Client.Documents.Smuggler
             private readonly BlittableJsonReaderObject _options;
             private readonly Stream _stream;
             private readonly long _operationId;
+            private bool _fromCsv;
+            private string _collection;
 
             public override bool IsReadRequest => false;
 
@@ -224,11 +226,17 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(context));
                 _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, context);
                 _operationId = operationId;
+                _fromCsv = options.FromCsv;
+                _collection = options.CsvCollection;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
+                var csv = _fromCsv ? "csv" : "import";
+                string collection = string.Empty;
+                if (_fromCsv && string.IsNullOrEmpty(_collection) == false)
+                    collection = $"&collection={_collection}";
+                url = $"{node.Url}/databases/{node.Database}/smuggler/import/{csv}?operationId={_operationId}{collection}";
 
                 var form = new MultipartFormDataContent
                 {
