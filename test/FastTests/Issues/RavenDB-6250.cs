@@ -37,7 +37,7 @@ namespace FastTests.Issues
                 Operations.OperationType.DatabaseCompact,
                 Operations.OperationType.CertificateGeneration,
                 Operations.OperationType.MigrationFromLegacyData,
-                Operations.OperationType.CollectionImportFromCsv,
+                Operations.OperationType.CollectionImportFromCsv
             };
 
             var operationWithoutDetails = new HashSet<Operations.OperationType>
@@ -65,7 +65,8 @@ namespace FastTests.Issues
             {
                PerformanceHintType.Paging,
                PerformanceHintType.Indexing,
-               PerformanceHintType.RequestLatency
+               PerformanceHintType.RequestLatency,
+               PerformanceHintType.UnusedCapacity
             };
 
             var operationWithoutDetails = new HashSet<PerformanceHintType>
