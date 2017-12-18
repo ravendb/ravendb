@@ -35,13 +35,11 @@ namespace Raven.Client.ServerWide.Operations
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/periodic-backup/status?taskId={_taskId}";
-            var request = new HttpRequestMessage
+            url = $"{node.Url}/periodic-backup/status?name={node.Database}&taskId={_taskId}";
+            return new HttpRequestMessage
             {
                 Method = HttpMethod.Get
             };
-
-            return request;
         }
 
         public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)

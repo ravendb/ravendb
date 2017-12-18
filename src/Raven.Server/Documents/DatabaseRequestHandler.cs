@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Web.System;
 using Sparrow.Json;

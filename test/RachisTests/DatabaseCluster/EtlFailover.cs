@@ -194,7 +194,7 @@ namespace RachisTests.DatabaseCluster
 
                 using (var session = src.OpenSession())
                 {
-                    session.Store(new User()
+                    session.Store(new User
                     {
                         Name = "Joe Doe2"
                     }, "users/2");
