@@ -304,6 +304,27 @@ namespace Sparrow
             return encoding.GetString(_pointer->Ptr, _pointer->Length);
         }
 
+        public int IndexOf(byte c)
+        {
+            for (int i = 0; i < Length; i++)
+            {
+                if (this[i] == c)
+                    return i;
+            }
+            return -1;
+        }
+
+        public string Substring(int length)
+        {
+            if (!HasValue)
+                return string.Empty;
+
+            EnsureIsNotBadPointer();
+
+            var encoding = Encodings.Utf8;
+            return encoding.GetString(_pointer->Ptr, length);
+        }
+
         public string ToString(Encoding encoding)
         {
             if (!HasValue)
