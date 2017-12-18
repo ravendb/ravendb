@@ -51,10 +51,6 @@ namespace FastTests.Issues
                     }
                 }
             }
-            catch (Exception e)
-            {
-                
-            }
             finally
             {
                 if (tmpFile != null)

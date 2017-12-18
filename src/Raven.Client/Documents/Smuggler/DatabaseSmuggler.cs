@@ -232,11 +232,11 @@ namespace Raven.Client.Documents.Smuggler
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                var csv = _fromCsv ? "csv" : "import";
+                var csv = _fromCsv ? "/csv" : string.Empty;
                 string collection = string.Empty;
                 if (_fromCsv && string.IsNullOrEmpty(_collection) == false)
                     collection = $"&collection={_collection}";
-                url = $"{node.Url}/databases/{node.Database}/smuggler/import/{csv}?operationId={_operationId}{collection}";
+                url = $"{node.Url}/databases/{node.Database}/smuggler/import{csv}?operationId={_operationId}{collection}";
 
                 var form = new MultipartFormDataContent
                 {
