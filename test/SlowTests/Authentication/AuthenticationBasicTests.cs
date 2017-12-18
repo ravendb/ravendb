@@ -153,7 +153,7 @@ namespace SlowTests.Authentication
                 };
 
                 store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr)); // DatabaseAdmin operation
-                var result = store.Maintenance.Send(new GetConnectionStringsOperation(store.Database));
+                var result = store.Maintenance.Send(new GetConnectionStringsOperation(store.Database, ConnectionStringType.Raven));
                 Assert.NotNull(result.RavenConnectionStrings);
             }
         }

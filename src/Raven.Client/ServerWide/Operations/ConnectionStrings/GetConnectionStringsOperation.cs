@@ -16,10 +16,15 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 
         private readonly ConnectionStringType _type;
 
-        public GetConnectionStringsOperation(string connectionStringName = null, ConnectionStringType type = ConnectionStringType.None)
+        public GetConnectionStringsOperation(string connectionStringName, ConnectionStringType type)
         {
             _connectionStringName = connectionStringName;
             _type = type;
+        }
+
+        public GetConnectionStringsOperation()
+        {
+            // get them all
         }
 
         public RavenCommand<GetConnectionStringsResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)

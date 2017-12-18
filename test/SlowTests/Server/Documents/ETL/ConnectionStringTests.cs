@@ -48,8 +48,8 @@ namespace SlowTests.Server.Documents.ETL
                 Assert.Equal(sqlConnectionString.Name, record.SqlConnectionStrings["SqlConnectionString"].Name);
                 Assert.Equal(sqlConnectionString.ConnectionString, record.SqlConnectionStrings["SqlConnectionString"].ConnectionString);
 
-                store.Maintenance.Server.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
-                store.Maintenance.Server.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                store.Maintenance.Send(new RemoveConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
+                store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
@@ -89,7 +89,7 @@ namespace SlowTests.Server.Documents.ETL
                 store.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString));
                 
                 //update name : need to remove the old entry
-                store.Maintenance.Server.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
+                store.Maintenance.Send(new RemoveConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
                 sqlConnectionString.Name = "New-Name";
                 store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString));
 

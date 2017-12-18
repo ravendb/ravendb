@@ -1,12 +1,13 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 {
-    public class RemoveConnectionStringOperation<T> : IServerOperation<RemoveConnectionStringResult> where T : ConnectionString
+    public class RemoveConnectionStringOperation<T> : IMaintenanceOperation<RemoveConnectionStringResult> where T : ConnectionString
     {
         private readonly T _connectionString;
 
