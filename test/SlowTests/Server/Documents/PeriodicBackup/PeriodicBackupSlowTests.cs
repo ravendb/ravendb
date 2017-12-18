@@ -623,13 +623,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("New data directory must be empty of any files or folders", e.InnerException.Message);
 
-                restoreConfiguration.BackupLocation = backupPath;
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore");
-                restoreConfiguration.DataDirectory = emptyFolder;
-                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Journals directory must be empty of any files or folders", e.InnerException.Message);
-
                 restoreConfiguration.BackupLocation = backupPath;
                 restoreConfiguration.DataDirectory = emptyFolder;
                 ;
