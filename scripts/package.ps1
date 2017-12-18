@@ -31,6 +31,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec, $buil
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyStartScript $spec $packageDir
+    CopyStartAsServiceScript $spec $packageDir
     CopyTools $outDirs
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
 }

@@ -1,6 +1,8 @@
 using System;
 using DasMulli.Win32.ServiceUtils;
 using Raven.Server.Config;
+using Raven.Server.ServerWide;
+using Raven.Server.Utils.Cli;
 using Sparrow.Logging;
 using Sparrow.Platform;
 
@@ -8,9 +10,10 @@ namespace Raven.Server.Utils
 {
     public static class WindowsServiceRunner
     {
-        public static void Run(string serviceName, RavenConfiguration configuration)
+        public static void Run(string serviceName, RavenConfiguration configuration, string[] args)
         {
-            var service = new RavenWin32Service(serviceName, configuration);
+            var service = new RavenWin32Service(serviceName, configuration, args);
+            Program.RestartServer = service.Restart;
             var serviceHost = new Win32ServiceHost(service);
             serviceHost.Run();
         }
@@ -32,15 +35,18 @@ namespace Raven.Server.Utils
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Program>("Raven/WindowsService");
 
-        private readonly RavenServer _ravenServer;
+        private RavenServer _ravenServer;
 
         private readonly string _serviceName;
+        private readonly string[] _args;
 
         public string ServiceName => _serviceName;
+        private ServiceStoppedCallback _serviceStoppedCallback;
 
-        public RavenWin32Service(string serviceName, RavenConfiguration configuration)
+        public RavenWin32Service(string serviceName, RavenConfiguration configuration, string[] args)
         {
             _serviceName = serviceName;
+            _args = args;
             _ravenServer = new RavenServer(configuration);
         }
 
@@ -49,7 +55,7 @@ namespace Raven.Server.Utils
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Starting RavenDB Windows Service: {ServiceName}.");
 
-            _ravenServer.AfterDisposal += () => serviceStoppedCallback();
+            _serviceStoppedCallback = serviceStoppedCallback;
 
             try
             {
@@ -76,12 +82,31 @@ namespace Raven.Server.Utils
             }
         }
 
+        public void Restart()
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Restarting RavenDB Windows Service: {ServiceName}.");
+
+            _ravenServer.Dispose();
+            var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
+
+            if (_args != null)
+                configuration.AddCommandLine(_args);
+
+            configuration.Initialize();
+            _ravenServer = new RavenServer(configuration);
+            Start(_args, _serviceStoppedCallback);
+            
+            configuration.Initialize();
+        }
+
         public void Stop()
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Stopping RavenDB Windows Service: {ServiceName}.");
 
             _ravenServer.Dispose();
+            _serviceStoppedCallback();
         }
     }
 }
