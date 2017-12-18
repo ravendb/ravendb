@@ -74,8 +74,8 @@ namespace Raven.Server.Documents
                 BlittableJsonReaderObject oldDoc = null;
                 if (oldValue.Pointer == null)
                 {
-                    // expectedChangeVector being null means we don't care, and empty
-                    // means that it must be new
+                    // expectedChangeVector being null means we don't care, 
+                    // and empty means that it must be new
                     if (string.IsNullOrEmpty(expectedChangeVector) == false)
                         ThrowConcurrentExceptionOnMissingDoc(id, expectedChangeVector);
                 }
