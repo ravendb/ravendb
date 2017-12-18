@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
-            if(_databaseName != null)
+            if (_databaseName != null)
                 _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
-            if(_requestExecutor == null)
+            if (_requestExecutor == null)
                 throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
             using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
