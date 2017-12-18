@@ -15,7 +15,7 @@ namespace Raven.Server.Utils
     public static class CpuUsage
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Raven/Server");
-
+        private static readonly object Locker = new object();
         private static WindowsInfo _previousWindowsInfo;
         private static LinuxInfo _previousLinuxInfo;
         private static MacInfo _previousMacInfo;
@@ -41,23 +41,29 @@ namespace Raven.Server.Utils
 
         public static (double MachineCpuUsage, double ProcessCpuUsage) Calculate()
         {
-            if (PlatformDetails.RunningOnPosix == false)
+            // this is a pretty quick method (sys call only), and shouldn't be
+            // called heavily, so it is easier to make sure that this is thread
+            // safe by just holding a lock.
+            lock (Locker)
             {
-                var windowsCpuInfo = CalculateWindowsCpuUsage();
-                _lastCpuInfo = windowsCpuInfo;
-                return windowsCpuInfo;
-            }
+                if (PlatformDetails.RunningOnPosix == false)
+                {
+                    var windowsCpuInfo = CalculateWindowsCpuUsage();
+                    _lastCpuInfo = windowsCpuInfo;
+                    return windowsCpuInfo;
+                }
 
-            if (PlatformDetails.RunningOnMacOsx)
-            {
-                var macCpuInfo = CalculateMacOsCpuUsage();
-                _lastCpuInfo = macCpuInfo;
-                return macCpuInfo;
-            }
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    var macCpuInfo = CalculateMacOsCpuUsage();
+                    _lastCpuInfo = macCpuInfo;
+                    return macCpuInfo;
+                }
 
-            var linuxCpuInfo = CalculateLinuxCpuUsage();
-            _lastCpuInfo = linuxCpuInfo;
-            return linuxCpuInfo;
+                var linuxCpuInfo = CalculateLinuxCpuUsage();
+                _lastCpuInfo = linuxCpuInfo;
+                return linuxCpuInfo;
+            }
         }
 
         private static (double MachineCpuUsage, double ProcessCpuUsage) CalculateWindowsCpuUsage()
