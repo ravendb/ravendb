@@ -51,7 +51,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static IEnumerable<ProcessThread> GetCurrentProcessThreads()
         {
-            return Process.GetCurrentProcess().Threads.Cast<ProcessThread>();
+            using (var currentProcess = Process.GetCurrentProcess())
+                return currentProcess.Threads.Cast<ProcessThread>();
         }
 
         private class ThreadInfo

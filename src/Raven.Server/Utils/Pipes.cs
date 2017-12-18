@@ -38,7 +38,10 @@ namespace Raven.Server.Utils
 
         private static string GetPipeName(string namePrefix)
         {
-            return GetPipeName(namePrefix, Process.GetCurrentProcess().Id);
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                return GetPipeName(namePrefix, currentProcess.Id);
+            }
         }
 
         public static string GetPipeName(string namePrefix, int pid)

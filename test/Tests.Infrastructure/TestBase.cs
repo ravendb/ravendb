@@ -182,7 +182,11 @@ namespace FastTests
                     if (_globalServer == null || _globalServer.Disposed)
                     {
                         var globalServer = GetNewServer();
-                        Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrl}");
+                        using (var currentProcess = Process.GetCurrentProcess())
+                        {
+                            Console.WriteLine(
+                                $"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {currentProcess.Id}. Url {globalServer.WebUrl}");
+                        }
 
                         AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
