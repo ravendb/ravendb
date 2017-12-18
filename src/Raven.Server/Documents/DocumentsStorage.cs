@@ -1026,10 +1026,10 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string excpectedChangeVector)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string expectedChangeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
-            using (var cv = context.GetLazyString(excpectedChangeVector))
+            using (var cv = context.GetLazyString(expectedChangeVector))
             {
                 return Delete(context, lowerId, id, cv);
             }
@@ -1338,10 +1338,10 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public PutOperationResults Put(DocumentsOperationContext context, string id,
-            string excpectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
+            string expectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
             DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
-            return DocumentPut.PutDocument(context, id, excpectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
+            return DocumentPut.PutDocument(context, id, expectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
         }
 
         public long GetNumberOfDocumentsToProcess(DocumentsOperationContext context, string collection, long afterEtag, out long totalCount)
