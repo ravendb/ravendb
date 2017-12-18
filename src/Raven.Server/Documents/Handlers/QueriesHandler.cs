@@ -92,13 +92,13 @@ namespace Raven.Server.Documents.Handlers
 
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            if (indexQuery.Metadata.IsFacet)
+            if (indexQuery.Metadata.HasFacet)
             {
                 await FacetedQuery(indexQuery, context, token);
                 return;
             }
 
-            if (indexQuery.Metadata.IsSuggest)
+            if (indexQuery.Metadata.HasSuggest)
             {
                 await SuggestQuery(indexQuery, context, token);
                 return;

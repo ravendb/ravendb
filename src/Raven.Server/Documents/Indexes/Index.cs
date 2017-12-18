@@ -1833,7 +1833,7 @@ namespace Raven.Server.Documents.Indexes
 
                             var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
 
-                            if (query.Metadata.IsMoreLikeThis)
+                            if (query.Metadata.HasMoreLikeThis)
                             {
                                 documents = reader.MoreLikeThis(
                                     query,
@@ -1841,7 +1841,7 @@ namespace Raven.Server.Documents.Indexes
                                     documentsContext,
                                     token.Token);
                             }
-                            else if (query.Metadata.IsIntersect)
+                            else if (query.Metadata.HasIntersect)
                             {
                                 documents = reader.IntersectQuery(
                                     query,
@@ -1864,7 +1864,6 @@ namespace Raven.Server.Documents.Indexes
                                     documentsContext,
                                     GetOrAddSpatialField,
                                     token.Token);
-
                             }
 
                             try
