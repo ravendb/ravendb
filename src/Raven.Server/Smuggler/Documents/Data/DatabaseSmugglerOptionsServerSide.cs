@@ -26,15 +26,15 @@ namespace Raven.Server.Smuggler.Documents.Data
                 try
                 {
                     var key = item.Key;
-                    if (string.Equals(key, "operateOnTypes", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(key, nameof(OperateOnTypes), StringComparison.OrdinalIgnoreCase))
                         result.OperateOnTypes = (DatabaseItemType)Enum.Parse(typeof(DatabaseItemType), item.Value[0]);
-                    else if (string.Equals(key, "includeExpired", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(key, nameof(IncludeExpired), StringComparison.OrdinalIgnoreCase))
                         result.IncludeExpired = bool.Parse(item.Value[0]);
-                    else if (string.Equals(key, "removeAnalyzers", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(key, nameof(RemoveAnalyzers), StringComparison.OrdinalIgnoreCase))
                         result.RemoveAnalyzers = bool.Parse(item.Value[0]);
-                    else if (string.Equals(key, "transformScript", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(key, nameof(TransformScript), StringComparison.OrdinalIgnoreCase))
                         result.TransformScript = Uri.UnescapeDataString(item.Value[0]);
-                    else if (string.Equals(key, "maxStepsForTransformScript", StringComparison.OrdinalIgnoreCase))
+                    else if (string.Equals(key, nameof(MaxStepsForTransformScript), StringComparison.OrdinalIgnoreCase))
                         result.MaxStepsForTransformScript = int.Parse(item.Value[0]);
                     else if (string.Equals(key, "collection", StringComparison.OrdinalIgnoreCase))
                         result.Collections.AddRange(item.Value);
