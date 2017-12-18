@@ -847,8 +847,19 @@ namespace Raven.Server.Documents
                                                    "Optimistic concurrency violation, transaction will be aborted.");
 
                 // This basically means that we tried to delete attachment that doesn't exist.
-                // We'll create a tombstones just to make sure that it would replicate the delete.
-                var attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
+                long attachmentEtag;
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
+                if (tombstoneTable.ReadByKey(key, out var existingTombstone))
+                {
+                    attachmentEtag = TableValueToEtag((int)TombstoneTable.Etag, ref existingTombstone);
+                    tombstoneTable.Delete(existingTombstone.Id);
+                }
+                else
+                {
+                    // We'll create a tombstones just to make sure that it would replicate the delete.
+                    attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
+                }
+               
                 CreateTombstone(context, key, attachmentEtag, changeVector);
                 return;
             }
