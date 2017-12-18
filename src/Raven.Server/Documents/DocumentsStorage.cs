@@ -1184,12 +1184,15 @@ namespace Raven.Server.Documents
                 // ensures that the collection trees will be created
                 collectionName = ExtractCollectionName(context, collectionName.Name);
 
+                // delete etag is not relevant, but we need a unique one here
+                // we use a negative value here to indicate a missing replicated
+                // tombstone
+                var newEtag = GenerateNextEtag();
+                EnsureLastEtagIsPersisted(context, newEtag);
+                var dummyDocumentEtag = -newEtag;
                 var etag = CreateTombstone(context,
                     lowerId,
-                    // delete etag is not relevant, but we need a unique one here
-                    // we use a negative value here to indicate a missing replicated
-                    // tombstone
-                    -GenerateNextEtag(), 
+                    dummyDocumentEtag, 
                     collectionName,
                     changeVector,
                     DateTime.UtcNow.Ticks,

@@ -529,7 +529,10 @@ namespace Raven.Server.Documents.Revisions
                 // we need to generate a unqiue etag if we got a tombstone revisions
                 // from replication, but we don't want to mess up the order of events
                 // so the delete revision etag we use is negative
-                revisionEtag = -_documentsStorage.GenerateNextEtag();
+                var newEtag = _documentsStorage.GenerateNextEtag();
+                _documentsStorage.EnsureLastEtagIsPersisted(context, newEtag);
+
+                revisionEtag = -newEtag;
             }
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
         }
