@@ -137,11 +137,17 @@
             <div class="time" data-bind="text: displayDate().format('LLL')"></div>
             <p data-bind="text: message"></p>
 
-            <div class="checkbox">
-                <input data-bind="attr: { id: 'dont-show-' + id }, checked: dontShowAgain" class="styled" type="checkbox">
-                <label data-bind="attr: { for: 'dont-show-' + id }">
-                    Don't show again
-                </label>
+            <div class="dropdown" data-bind="visible: canBePostponed">
+                <button class="btn btn-sm btn-info dropdown-toggle" data-toggle="dropdown" data-bind="enable: !_.includes($parent.spinners.postpone(), id), css: { 'btn-spinner': _.includes($parent.spinners.postpone(), id) }">
+                    <i class="icon-clock"></i><span>Postpone</span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <!-- ko foreach: $parent.constructor.postponeOptions -->
+                    <li><a href="#" data-bind="text: label, click: _.partial($parents[1].postpone, $parent, value)"></a></li>
+                    <!-- /ko -->
+                    <li><a href="#" data-bind="text: 'Don\'t show again', click: _.partial($parent.postpone, $data, 0)"></a></li>
+                </ul>
             </div>
 
             <div class="flex-horizontal">

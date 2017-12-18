@@ -78,7 +78,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                 return HttpContext.Response
                     .WriteAsync("{'Error':'Invalid attempt to postpone notification that you do not have access for'}");
             }
-            ServerStore.NotificationCenter.Postpone(id, SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec)));
+
+            var until = timeInSec == 0 ? DateTime.MaxValue : SystemTime.UtcNow.Add(TimeSpan.FromSeconds(timeInSec));
+            ServerStore.NotificationCenter.Postpone(id, until);
             
             return NoContent();
         }
