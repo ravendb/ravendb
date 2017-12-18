@@ -1,14 +1,10 @@
 namespace Raven.Client.Documents.Session
 {
-    public class CmpXchg<T> : MethodCall
+    public class CmpXchg : MethodCall
     {
-        private CmpXchg()
+        public static CmpXchg Value(string key)
         {
-        }
-
-        public static CmpXchg<T> Value(string key)
-        {
-            return new CmpXchg<T>
+            return new CmpXchg
             {
                 Args = new object[] { key },
             };

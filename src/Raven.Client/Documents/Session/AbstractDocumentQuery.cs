@@ -618,8 +618,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 }
 
                 WhereToken token;
-                var type = mc.GetType().GetGenericTypeDefinition();
-                if (type == typeof(CmpXchg<>))
+                var type = mc.GetType();
+                if (type == typeof(CmpXchg))
                 {
                     token = WhereToken.Create(op, whereParams.FieldName, null,
                         new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
