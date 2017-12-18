@@ -13,6 +13,7 @@ using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.Extensions.Primitives;
+using Raven.Client.Exceptions.Routing;
 using Raven.Client.Util;
 using Raven.Server.Utils;
 using Raven.Server.Web;
@@ -46,21 +47,7 @@ namespace Raven.Server.Routing
         {
             var tryMatch = _trie.TryMatch(method, path);
             if (tryMatch.Value == null)
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
-                {
-                    ctx.Write(writer,
-                        new DynamicJsonValue
-                        {
-                            ["Type"] = "Error",
-                            ["Error"] = $"There is no handler for path: {method} {path}{context.Request.QueryString}"
-                        });
-                }
-                return null;
-            }
+                throw new RouteNotFoundException($"There is no handler for path: {method} {path}{context.Request.QueryString}");
 
             var reqCtx = new RequestHandlerContext
             {

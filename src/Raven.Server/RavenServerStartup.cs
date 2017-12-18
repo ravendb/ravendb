@@ -17,6 +17,7 @@ using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Config;
 using Raven.Server.Routing;
@@ -266,19 +267,9 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is DocumentConflictException)
-            {
-                response.StatusCode = (int)HttpStatusCode.Conflict;
-                return;
-            }
-
-            if (exception is ConflictException)
-            {
-                response.StatusCode = (int)HttpStatusCode.Conflict;
-                return;
-            }
-
-            if (exception is ConcurrencyException)
+            if (exception is DocumentConflictException || 
+                exception is ConflictException ||
+                exception is ConcurrencyException)
             {
                 response.StatusCode = (int)HttpStatusCode.Conflict;
                 return;
@@ -290,7 +281,8 @@ namespace Raven.Server
                 return;
             }
 
-            if (exception is BadRequestException)
+            if (exception is BadRequestException ||
+                exception is RouteNotFoundException)
             {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
                 return;
