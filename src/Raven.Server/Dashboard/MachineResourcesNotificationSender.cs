@@ -61,29 +61,32 @@ namespace Raven.Server.Dashboard
 
         public static MachineResources GetMachineResources()
         {
-            var currentProcess = Process.GetCurrentProcess();
-            var workingSet =
-                PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
-                    ? currentProcess.WorkingSet64
-                    : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
-            var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-            var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
-            var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);
-            var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
-            var shared = mappedSharedMem.GetValue(SizeUnit.Bytes);
-
-            var cpuInfo = CpuUsage.Calculate();
-            var machineResources = new MachineResources
+            using (var currentProcess = Process.GetCurrentProcess())
             {
-                TotalMemory = installedMemory,
-                MachineMemoryUsage = installedMemory - availableMemory,
-                ProcessMemoryUsage = workingSet,
-                ProcessMemoryExcludingSharedUsage = Math.Max(workingSet - shared, 0),
-                MachineCpuUsage = cpuInfo.MachineCpuUsage,
-                ProcessCpuUsage = cpuInfo.ProcessCpuUsage
-            };
+                var workingSet =
+                    PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
+                        ? currentProcess.WorkingSet64
+                        : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
+                var memoryInfoResult = MemoryInformation.GetMemoryInfo();
+                var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
+                var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);
+                var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
+                var shared = mappedSharedMem.GetValue(SizeUnit.Bytes);
 
-            return machineResources;
+                var cpuInfo = CpuUsage.Calculate();
+
+                var machineResources = new MachineResources
+                {
+                    TotalMemory = installedMemory,
+                    MachineMemoryUsage = installedMemory - availableMemory,
+                    ProcessMemoryUsage = workingSet,
+                    ProcessMemoryExcludingSharedUsage = Math.Max(workingSet - shared, 0),
+                    MachineCpuUsage = cpuInfo.MachineCpuUsage,
+                    ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
+                };
+
+                return machineResources;
+            }
         }
     }
 }
