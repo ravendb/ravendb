@@ -85,6 +85,8 @@ namespace Raven.Server.Commercial
                 {
                     case null:
                         return 1;
+                    case 0:
+                        return int.MaxValue;
                     default:
                         return maxClusterSize.Value;
                 }
@@ -119,7 +121,7 @@ namespace Raven.Server.Commercial
                 [nameof(ErrorMessage)] = ErrorMessage,
                 [nameof(MaxCores)] = MaxCores,
                 [nameof(MaxMemory)] = MaxMemory,
-                [nameof(MaxClusterSize)] = MaxClusterSize,
+                [nameof(MaxClusterSize)] = GetValue<int?>("maxClusterSize") ?? 1,
                 [nameof(Ratio)] = Ratio.ToString(),
                 [nameof(Expiration)] = Expiration,
                 [nameof(Expired)] = Expired,
