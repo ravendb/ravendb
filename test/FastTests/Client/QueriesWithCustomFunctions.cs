@@ -2377,18 +2377,21 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry"}, "users/2");
-                    session.Store(new User { Name = "Zeus"}, "users/1");
+                    session.Store(new User { Name = "Zeus", LastName = "Jerry"}, "users/1");
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        where u.Name == RavenQuery.CmpXchg<string>("Hera")
+                        where u.Name == RavenQuery.CmpXchg<string>("Hera") && u.LastName == RavenQuery.CmpXchg<string>("Tom")
                         select u;
-                    var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg.Value("Hera"));
+                    var q = session.Advanced
+                        .DocumentQuery<User>()
+                        .WhereEquals("Name", CmpXchg.Value("Hera"))
+                        .WhereEquals("LastName", CmpXchg.Value("Tom"));
 
-                    Assert.Equal("from Users where Name = cmpxchg($p0)", query.ToString());
+                    Assert.Equal("from Users where Name = cmpxchg($p0) and LastName = cmpxchg($p1)", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());
 
                     var queryResult = query.ToList();
