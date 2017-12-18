@@ -105,7 +105,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.Operator)]
         public async Task AddDatabaseNode()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
             var node = GetStringQueryString("node", false);
             var mentor = GetStringQueryString("mentor", false);
 
@@ -118,6 +118,7 @@ namespace Raven.Server.Web.System
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
+
                 var clusterTopology = ServerStore.GetClusterTopology(context);
 
                 if (databaseRecord.Encrypted)
@@ -202,7 +203,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name").Trim();
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
@@ -215,6 +216,8 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 0;
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
+                databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
+
                 if ((databaseRecord.Topology?.DynamicNodesDistribution ?? false) &&
                     Server.ServerStore.LicenseManager.CanDynamicallyDistributeNodes(out var licenseLimit) == false)
                 {

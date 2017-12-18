@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide
 
         public DatabaseRecord(string databaseName)
         {
-            DatabaseName = databaseName;
+            DatabaseName = databaseName.Trim();
         }
 
         public string DatabaseName;
