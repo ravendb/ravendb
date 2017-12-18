@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -19,7 +18,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTestsSlow : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-9017"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -65,7 +64,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups_with_long_interval()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -98,15 +97,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -115,11 +113,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
             }
 
             using (var store = GetDocumentStore(new Options
@@ -138,7 +137,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task periodic_backup_should_work_with_long_intervals()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -171,13 +170,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var operation = new UpdatePeriodicBackupOperation(config);
-                var result = await store.Maintenance.SendAsync(operation);
-                var periodicBackupTaskId = result.TaskId;
-
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                     var status = store.Maintenance.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null;
                 }, 2000);
@@ -188,13 +185,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupStatus =
-                        new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                        new GetPeriodicBackupStatusOperation(backupTaskId);
                     var status = store.Maintenance.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null && status.LastIncrementalBackup != null;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
             }
 
             using (var store = GetDocumentStore(new Options
@@ -215,7 +213,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -236,15 +234,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -253,11 +250,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
             }
 
             using (var store = GetDocumentStore(new Options
@@ -276,7 +274,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task CanImportTombstonesFromIncrementalBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -297,15 +295,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -314,11 +311,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
             }
 
             using (var store = GetDocumentStore(new Options
@@ -336,7 +334,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_restore_smuggler_correctly()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -357,15 +355,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -374,11 +371,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
             }
 
             using (var store1 = GetDocumentStore(new Options
@@ -420,7 +418,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -442,15 +440,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -459,11 +456,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
                 const string databaseName = "restored_database";
@@ -480,7 +478,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var state = store.Maintenance.Server.Send(stateRequest);
                     return state.Status == OperationStatus.Completed;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenAsyncSession(databaseName))
                 {
@@ -491,7 +489,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -513,15 +511,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -531,11 +528,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 SpinWait.SpinUntil(() =>
                 {
                     var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
                 const string restoredDatabaseName = "restored_database_snapshot";
@@ -553,7 +551,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var state = store.Maintenance.Server.Send(stateRequest);
                     return state.Status == OperationStatus.Completed;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenAsyncSession(restoredDatabaseName))
                 {
@@ -564,7 +562,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -610,15 +608,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                var periodicBackupTaskId = result.TaskId;
-
-                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromMinutes(2));
+                }, TimeSpan.FromSeconds(15));
 
                 restoreConfiguration.BackupLocation = backupPath;
                 restoreConfiguration.DataDirectory = backupPath;
