@@ -467,7 +467,7 @@ namespace Raven.Server.Rachis
                     $"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
             _currentLeader = null;
-            _lastStateChangeReason = stateChangedReason;
+            LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
 
             _disposables.Clear();
