@@ -16,6 +16,12 @@ function CopyStartScript ( $spec, $targetDir ) {
     }
 }
 
+function CopyStartAsServiceScript ( $spec, $targetDir ) {
+    if ($spec.IsUnix -eq $False) {
+        CopyStartAsServiceCmd $targetDir
+    }
+}
+
 function CopyStartCmd ( $targetDir ) {
     $startPs1Path = [io.path]::combine("scripts", "assets", "start.ps1")
     $startPs1TargetPath = [io.path]::combine($targetDir, "start.ps1");
@@ -24,6 +30,16 @@ function CopyStartCmd ( $targetDir ) {
     $startCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\start.ps1'"" `r`n"
     $startCmdTargetPath = [io.path]::combine($targetDir, "start.cmd");
     Set-Content -Path $startCmdTargetPath $startCmdContent
+}
+
+function CopyStartAsServiceCmd ( $targetDir ) {
+    $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "start-as-service.ps1")
+    $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "start-as-service.ps1");
+    Copy-Item $startAsServicePs1Path $startAsServicePs1TargetPath
+    
+    $startAsServiceCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\start-as-service.ps1'"" `r`n"
+    $startAsServiceCmdTargetPath = [io.path]::combine($targetDir, "start-as-service.cmd");
+    Set-Content -Path $startAsServiceCmdTargetPath $startAsServiceCmdContent
 }
 
 function CopyStartSh ( $targetDir ) {

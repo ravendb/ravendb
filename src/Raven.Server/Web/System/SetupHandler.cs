@@ -412,8 +412,7 @@ namespace Raven.Server.Web.System
                 // get a valid response from the server before we reset
                 await Task.Delay(250);
 
-                Program.ResetServerMre.Set();
-                Program.ShutdownServerMre.Set();
+                Program.RestartServer();
             });
 
             return NoContent();

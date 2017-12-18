@@ -54,7 +54,7 @@ namespace Raven.Server
 
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Logging to { configuration.Logs.Path } set to {configuration.Logs.Mode} level.");
+                Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
 
             if(Logger.IsOperationsEnabled)
                 Logger.Operations(RavenCli.GetInfoText());
@@ -63,7 +63,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    WindowsServiceRunner.Run(CommandLineSwitches.ServiceName, configuration);
+                    WindowsServiceRunner.Run(CommandLineSwitches.ServiceName, configuration, configurationArgs);
                 }
                 catch (Exception e)
                 {
@@ -75,6 +75,12 @@ namespace Raven.Server
 
                 return 0;
             }
+
+            RestartServer = () =>
+            {
+                ResetServerMre.Set();
+                ShutdownServerMre.Set();
+            };
 
             var rerun = false;
             RavenConfiguration configBeforeRestart = configuration;
@@ -148,8 +154,10 @@ namespace Raven.Server
                             Console.ForegroundColor = prevColor;
 
                             IsRunningNonInteractive = false;
-                            rerun = CommandLineSwitches.NonInteractive || 
-                                configuration.Core.SetupMode == SetupMode.Initial ? RunAsNonInteractive() : RunInteractive(server);
+                            rerun = CommandLineSwitches.NonInteractive ||
+                                    configuration.Core.SetupMode == SetupMode.Initial
+                                ? RunAsNonInteractive()
+                                : RunInteractive(server);
 
                             Console.WriteLine("Starting shut down...");
                             if (Logger.IsInfoEnabled)
@@ -189,6 +197,7 @@ namespace Raven.Server
 
         public static ManualResetEvent ShutdownServerMre = new ManualResetEvent(false);
         public static ManualResetEvent ResetServerMre = new ManualResetEvent(false);
+        public static Action RestartServer;
 
         public static bool IsRunningNonInteractive;
 
