@@ -1252,7 +1252,7 @@ namespace Voron.Data.BTrees
 
                 var availableOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(readOnlyOverflowPage.OverflowSize);
 
-                if (len <= availableOverflows)
+                if (len <= (availableOverflows * Constants.Storage.PageSize - Constants.Tree.PageHeaderSize))
                 {
                     var requestedOverflows = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(len);
 
