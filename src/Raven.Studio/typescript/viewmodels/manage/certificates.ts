@@ -240,13 +240,13 @@ class certificates extends viewModelBase {
                     primaryCert.Thumbprints.push(cert.Thumbprint);
                 });
                 
-                this.certificates(mergedCertificates);
-                this.updateCache();
+                this.updateCache(mergedCertificates);
+                this.certificates(mergedCertificates); 
             });
     }
     
-    private updateCache() {
-        this.certificates().forEach((cert: unifiedCertificateDefinitionWithCache) => {
+    private updateCache(certificates: Array<unifiedCertificateDefinition>) {
+        certificates.forEach((cert: unifiedCertificateDefinitionWithCache) => {
             const date = moment.utc(cert.NotAfter);
             const dateFormatted = date.format("YYYY-MM-DD");
             
