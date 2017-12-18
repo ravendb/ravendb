@@ -1,12 +1,13 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.ETL
 {
-    public class ResetEtlOperation : IServerOperation
+    public class ResetEtlOperation : IMaintenanceOperation
     {
         private readonly string _configurationName;
         private readonly string _transformationName;

@@ -171,7 +171,7 @@ namespace FastTests.Server.Replication
             ExternalReplication watcher,
             string[] urls = null)
         {
-            await store.Maintenance.Server.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Name = watcher.ConnectionStringName,
                 Database = watcher.Database,
@@ -179,7 +179,7 @@ namespace FastTests.Server.Replication
             }));
 
             var op = new UpdateExternalReplicationOperation(watcher);
-            return await store.Maintenance.Server.SendAsync(op);
+            return await store.Maintenance.SendAsync(op);
         }
 
         protected static async Task<ModifyOngoingTaskResult> DeleteOngoingTask(
@@ -188,7 +188,7 @@ namespace FastTests.Server.Replication
             OngoingTaskType taskType)
         {
             var op = new DeleteOngoingTaskOperation(taskId, taskType);
-            return await store.Maintenance.Server.SendAsync(op);
+            return await store.Maintenance.SendAsync(op);
         }
 
         protected static async Task<OngoingTask> GetTaskInfo(
@@ -196,7 +196,7 @@ namespace FastTests.Server.Replication
             long taskId, OngoingTaskType type)
         {
             var op = new GetOngoingTaskInfoOperation(taskId, type);
-            return await store.Maintenance.Server.SendAsync(op);
+            return await store.Maintenance.SendAsync(op);
         }
 
         protected static async Task<ModifySolverResult> UpdateConflictResolver(IDocumentStore store, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)

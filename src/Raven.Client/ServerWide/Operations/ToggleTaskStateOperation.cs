@@ -1,12 +1,13 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ToggleTaskStateOperation : IServerOperation
+    public class ToggleTaskStateOperation : IMaintenanceOperation
     {
         private readonly long _taskId;
         private readonly OngoingTaskType _type;

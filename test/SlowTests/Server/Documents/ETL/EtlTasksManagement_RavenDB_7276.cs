@@ -35,9 +35,9 @@ namespace SlowTests.Server.Documents.ETL
                     Database = "Northwind",
                 });
 
-                store.Maintenance.Server.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.RavenEtl));
+                store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.RavenEtl));
 
-                var ongoingTask = store.Maintenance.Server.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
 
                 Assert.Null(ongoingTask);
             }
@@ -76,9 +76,9 @@ namespace SlowTests.Server.Documents.ETL
 
                 configuration.Transforms[0].Disabled = true;
 
-                var update = store.Maintenance.Server.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration));
+                var update = store.Maintenance.Send(new UpdateEtlOperation<RavenConnectionString>(result.TaskId, configuration));
 
-                var ongoingTask = store.Maintenance.Server.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(update.TaskId, OngoingTaskType.RavenEtl));
 
                 Assert.Equal(OngoingTaskState.PartiallyEnabled, ongoingTask.TaskState);
             }
@@ -112,9 +112,9 @@ namespace SlowTests.Server.Documents.ETL
                 });
 
 
-                store.Maintenance.Server.Send(new ToggleTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
+                store.Maintenance.Send(new ToggleTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
 
-                var ongoingTask = store.Maintenance.Server.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
+                var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
 
                 Assert.Equal(OngoingTaskState.Disabled, ongoingTask.TaskState);
             }

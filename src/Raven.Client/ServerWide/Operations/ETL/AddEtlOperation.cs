@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -9,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.ETL
 {
-    public class AddEtlOperation<T> : IServerOperation<AddEtlOperationResult> where T : ConnectionString
+    public class AddEtlOperation<T> : IMaintenanceOperation<AddEtlOperationResult> where T : ConnectionString
     {
         private readonly EtlConfiguration<T> _configuration;
 

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.ETL;
@@ -9,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 {
-    public class GetConnectionStringsOperation: IServerOperation<GetConnectionStringsResult> 
+    public class GetConnectionStringsOperation: IMaintenanceOperation<GetConnectionStringsResult> 
     {
         private readonly string _connectionStringName;
 

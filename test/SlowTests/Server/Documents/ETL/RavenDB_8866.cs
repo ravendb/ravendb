@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.ETL
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
-                src.Maintenance.Server.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
+                src.Maintenance.Send(new ResetEtlOperation("myConfiguration", "allUsers"));
 
                 Assert.True(resetDone.Wait(TimeSpan.FromMinutes(1)));
             }

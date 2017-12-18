@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
@@ -9,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class UpdateExternalReplicationOperation : IServerOperation<ModifyOngoingTaskResult>
+    public class UpdateExternalReplicationOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
         private readonly ExternalReplication _newWatcher;
 

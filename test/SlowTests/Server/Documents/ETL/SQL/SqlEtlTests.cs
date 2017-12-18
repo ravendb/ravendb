@@ -613,7 +613,7 @@ var nameArr = this.StepName.split('.'); loadToOrders({});");
                     await session.SaveChangesAsync();
                 }
 
-                store.Maintenance.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
+                store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString()
                 {
                     Name = "simulate",
                     ConnectionString = GetConnectionString(store),

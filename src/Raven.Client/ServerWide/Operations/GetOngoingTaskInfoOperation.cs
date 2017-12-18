@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetOngoingTaskInfoOperation : IServerOperation<OngoingTask>
+    public class GetOngoingTaskInfoOperation : IMaintenanceOperation<OngoingTask>
     {
         private readonly long _taskId;
         private readonly OngoingTaskType _type;

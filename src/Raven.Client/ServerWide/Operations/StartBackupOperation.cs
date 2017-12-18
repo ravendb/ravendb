@@ -1,11 +1,12 @@
 ﻿using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class StartBackupOperation : IServerOperation<CommandResult>
+    public class StartBackupOperation : IMaintenanceOperation<CommandResult>
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;

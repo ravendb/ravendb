@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Expiration
                 Disabled = false,
                 DeleteFrequencyInSec = 100,
             };
-            await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config));
+            await store.Maintenance.SendAsync(new ConfigureExpirationOperation(config));
         }
 
         [Fact]

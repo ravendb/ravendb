@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.PeriodicBackup;
@@ -7,39 +8,34 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetPeriodicBackupStatusOperation : IServerOperation<GetPeriodicBackupStatusOperationResult>
+    public class GetPeriodicBackupStatusOperation : IMaintenanceOperation<GetPeriodicBackupStatusOperationResult>
     {
-        private readonly string _databaseName;
-
         private readonly long _taskId;
         
-        public GetPeriodicBackupStatusOperation(string databaseName, long taskId)
+        public GetPeriodicBackupStatusOperation(long taskId)
         {
-            _databaseName = databaseName;
             _taskId = taskId;
         }
 
         public RavenCommand<GetPeriodicBackupStatusOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new GetPeriodicBackupStatusCommand(_databaseName, _taskId);
+            return new GetPeriodicBackupStatusCommand(_taskId);
         }
     }
 
     public class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
     {
         public override bool IsReadRequest => true;
-        private readonly string _databaseName;
         private readonly long _taskId;
 
-        public GetPeriodicBackupStatusCommand(string databaseName, long taskId)
+        public GetPeriodicBackupStatusCommand(long taskId)
         {
-            _databaseName = databaseName;
             _taskId = taskId;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/periodic-backup/status?name={_databaseName}&taskId={_taskId}";
+            url = $"{node.Url}/databases/{node.Database}/periodic-backup/status?taskId={_taskId}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get

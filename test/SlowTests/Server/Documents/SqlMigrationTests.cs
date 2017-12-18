@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents
             };
 
             var putConnectionStringOperation = new PutConnectionStringOperation<SqlConnectionString>(connectionString);
-            store.Maintenance.Server.Send(putConnectionStringOperation);
+            store.Maintenance.Send(putConnectionStringOperation);
 
             DatabaseRecord record;
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

@@ -40,11 +40,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
                 var operation = new UpdatePeriodicBackupOperation(config);
-                var result = await store.Maintenance.Server.SendAsync(operation);
+                var result = await store.Maintenance.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
-                var done = SpinWait.SpinUntil(() => store.Maintenance.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                var done = SpinWait.SpinUntil(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
                 Assert.True(done, "Failed to complete the backup in time");
             }
 
@@ -98,17 +98,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -117,7 +117,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -172,13 +172,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var operation = new UpdatePeriodicBackupOperation(config);
-                var result = await store.Maintenance.Server.SendAsync(operation);
+                var result = await store.Maintenance.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
-                    var status = store.Maintenance.Server.Send(getPeriodicBackupStatus).Status;
+                    var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                    var status = store.Maintenance.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null;
                 }, 2000);
 
@@ -191,8 +191,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 SpinWait.SpinUntil(() =>
                 {
                     var getPeriodicBackupStatus =
-                        new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
-                    var status = store.Maintenance.Server.Send(getPeriodicBackupStatus).Status;
+                        new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
+                    var status = store.Maintenance.Send(getPeriodicBackupStatus).Status;
                     return status?.LastFullBackup != null && status.LastIncrementalBackup != null;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -236,17 +236,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -255,7 +255,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -297,17 +297,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Delete("users/1");
@@ -316,7 +316,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -357,17 +357,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -376,7 +376,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
             }
@@ -442,17 +442,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -461,7 +461,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
 
@@ -513,17 +513,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                var etagForBackups = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "ayende" }, "users/2");
@@ -533,7 +533,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 SpinWait.SpinUntil(() =>
                 {
-                    var newLastEtag = store.Maintenance.Server.Send(operation).Status.LastEtag;
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
                     return newLastEtag != etagForBackups;
                 }, TimeSpan.FromMinutes(2));
 
@@ -610,13 +610,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
-                var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                var operation = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 SpinWait.SpinUntil(() =>
                 {
-                    var getPeriodicBackupResult = store.Maintenance.Server.Send(operation);
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 

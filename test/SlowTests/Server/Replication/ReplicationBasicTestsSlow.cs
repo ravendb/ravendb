@@ -120,7 +120,7 @@ namespace SlowTests.Server.Replication
                     TaskId = externalList.First().TaskId,
                     Disabled = true
                 };
-                var res = await store1.Maintenance.Server.SendAsync(new UpdateExternalReplicationOperation(external));
+                var res = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external));
 
                 Assert.Equal(externalList.First().TaskId, res.TaskId);
                 

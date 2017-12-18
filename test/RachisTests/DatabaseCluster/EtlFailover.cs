@@ -65,8 +65,8 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                src.Maintenance.Server.Send(new AddEtlOperation<RavenConnectionString>(config));
+                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(config));
                 var originalTaskNode = srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "B");
                 
                 using (var session = src.OpenSession())
@@ -162,8 +162,8 @@ namespace RachisTests.DatabaseCluster
                     TopologyDiscoveryUrls = urls,
                 };
 
-                src.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
-                var etlResult = src.Maintenance.Server.Send(new AddEtlOperation<RavenConnectionString>(conflig));
+                src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
+                var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(conflig));
                 var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "A")
                     .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
 
@@ -186,7 +186,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
-                var taskInfo = (OngoingTaskRavenEtlDetails)src.Maintenance.Server.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
+                var taskInfo = (OngoingTaskRavenEtlDetails)src.Maintenance.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
 
                 Assert.NotNull(taskInfo.DestinationUrl);
                 etlDone.Reset();
