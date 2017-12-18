@@ -45,7 +45,6 @@ using Raven.Server.Utils.Metrics;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.Indexes
         private StorageEnvironment _environment;
 
         internal TransactionContextPool _contextPool;
-        
+
         protected readonly ManualResetEventSlim _mre = new ManualResetEventSlim();
 
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
@@ -426,8 +425,8 @@ namespace Raven.Server.Documents.Indexes
         }
 
         protected void Initialize(
-            StorageEnvironment environment, 
-            DocumentDatabase documentDatabase, 
+            StorageEnvironment environment,
+            DocumentDatabase documentDatabase,
             IndexingConfiguration configuration,
             PerformanceHintsConfiguration performanceHints)
         {
@@ -630,7 +629,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private DisposeOnce<SingleAttempt> _disposeOne; 
+        private DisposeOnce<SingleAttempt> _disposeOne;
 
         public void Dispose()
         {
@@ -1833,7 +1832,7 @@ namespace Raven.Server.Documents.Indexes
                                 query.Metadata.Includes);
 
                             var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
-                            
+
                             if (query.Metadata.IsMoreLikeThis)
                             {
                                 documents = reader.MoreLikeThis(
@@ -1844,13 +1843,27 @@ namespace Raven.Server.Documents.Indexes
                             }
                             else if (query.Metadata.IsIntersect)
                             {
-                                documents = reader.IntersectQuery(documentsContext, query, fieldsToFetch, totalResults, skippedResults,
-                                    retriever, documentsContext, GetOrAddSpatialField, token.Token);
+                                documents = reader.IntersectQuery(
+                                    query,
+                                    fieldsToFetch,
+                                    totalResults,
+                                    skippedResults,
+                                    retriever,
+                                    documentsContext,
+                                    GetOrAddSpatialField,
+                                    token.Token);
                             }
                             else
                             {
-                                documents = reader.Query(documentsContext, query, fieldsToFetch, totalResults, skippedResults,
-                                    retriever, documentsContext, GetOrAddSpatialField, token.Token);
+                                documents = reader.Query(
+                                    query,
+                                    fieldsToFetch,
+                                    totalResults,
+                                    skippedResults,
+                                    retriever,
+                                    documentsContext,
+                                    GetOrAddSpatialField,
+                                    token.Token);
 
                             }
 
@@ -1920,7 +1933,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             documentsContext.OpenReadTransaction();
                             // we have to open read tx for mapResults _after_ we open index tx
-                            
+
                             if (query.WaitForNonStaleResults && cutoffEtag == null)
                                 cutoffEtag = GetCutoffEtag(documentsContext);
 
@@ -2099,7 +2112,7 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 ThrowCompactionInProgress();
 
-            if (_initialized == false )
+            if (_initialized == false)
                 ThrowNotIntialized();
 
             if (_disposeOne.Disposed)
@@ -2251,14 +2264,14 @@ namespace Raven.Server.Documents.Indexes
             available = queryDoneRunning.TryHoldLock();
             return queryDoneRunning;
         }
-        
+
         protected QueryDoneRunning CurrentlyInUse()
         {
             var queryDoneRunning = new QueryDoneRunning(this, null);
             queryDoneRunning.HoldLock();
             return queryDoneRunning;
         }
-        
+
         private static readonly TimeSpan DefaultWaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // this matches default timeout from client
 
         private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
@@ -2338,7 +2351,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 if (valid == false)
                     return DateTime.UtcNow.Ticks; // must be always different
-                
+
                 using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 {
@@ -2591,7 +2604,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var storageEnvironmentOptions = _environment.Options;
-                  
+
                     ShutdownEnvironment();
 
                     var environmentOptions =
@@ -2644,7 +2657,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if(_logger.IsOperationsEnabled)
+                    if (_logger.IsOperationsEnabled)
                         _logger.Operations("Unable to complete compaction, index is not usable and my require db restart or reset of the index to recover", e);
                     Dispose();
                     throw;
@@ -2663,12 +2676,12 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
-            
+
             var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
             try
             {
                 _environment = new StorageEnvironment(options);
-                InitializeInternal(_environment, DocumentDatabase,Configuration,PerformanceHints);
+                InitializeInternal(_environment, DocumentDatabase, Configuration, PerformanceHints);
             }
             catch
             {
@@ -2683,7 +2696,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
-            
+
             // here we ensure that we aren't currently running any indexing,
             // because we'll shut down the environment for this index, reads
             // are handled using the DrainRunningQueries porition
@@ -2803,13 +2816,13 @@ namespace Raven.Server.Documents.Indexes
 
             public void HoldLock()
             {
-                var timeout =  TimeSpan.FromSeconds(3);
+                var timeout = TimeSpan.FromSeconds(3);
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
                     ThrowLockTimeoutException();
 
                 _hasLock = true;
             }
-            
+
             public bool TryHoldLock()
             {
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(0) == false)
@@ -2858,7 +2871,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void AssertNotDisposed()
         {
-            if(_disposeOne.Disposed)
+            if (_disposeOne.Disposed)
                 ThrowObjectDisposed();
         }
     }

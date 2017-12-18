@@ -242,6 +242,11 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Matches value
         /// </summary>
+        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact = false);
+
+        /// <summary>
+        ///     Matches value
+        /// </summary>
         TSelf WhereEquals(WhereParams whereParams);
 
         /// <summary>
@@ -258,6 +263,11 @@ namespace Raven.Client.Documents.Session
         ///     Not matches value
         /// </summary>
         TSelf WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
+
+        /// <summary>
+        ///     Matches value
+        /// </summary>
+        TSelf WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact = false);
 
         /// <summary>
         ///     Not matches value

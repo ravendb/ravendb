@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 var retriever = new MapReduceQueryResultRetriever(null, null, null, context, fieldsToFetch, null);
                 var result = reader
-                     .Query(ctx, query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, null, CancellationToken.None)
+                     .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, ctx, null, CancellationToken.None)
                     .ToList();
 
                 if (result.Count != 1)

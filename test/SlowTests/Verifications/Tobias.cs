@@ -33,7 +33,7 @@ namespace SlowTests.Verifications
                     var tst = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
                         .WaitForNonStaleResults()
                         .Statistics(out stats)
-                        .WhereEquals(x => x.Optional, null)
+                        .WhereEquals(x => x.Optional, (object)null)
                         .SelectFields<dynamic>()
                         .ToList();
 
@@ -50,7 +50,7 @@ namespace SlowTests.Verifications
 
                     var tst2 = session.Advanced.DocumentQuery<Data_Search.ReduceResult, Data_Search>()
                         .Statistics(out stats)
-                        .WhereEquals(x => x.Optional, null)
+                        .WhereEquals(x => x.Optional, (object)null)
                         .SelectFields<Data_Search.ProjectionResult>(new string[0])
                         .ToList();
 

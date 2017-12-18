@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
             var fieldName = GetMemberQueryPath(propertySelector.Body);
             if (descending)
@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator)
         {
             Search(GetMemberQueryPath(propertySelector.Body), searchTerms, @operator);
             return this;
@@ -192,7 +192,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAny<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
         {
             ContainsAny(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
             return this;
@@ -206,7 +206,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.ContainsAll<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
         {
             ContainsAll(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
             return this;
@@ -358,6 +358,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, MethodCall value, bool exact)
         {
             WhereEquals(fieldName, value, exact);
@@ -366,6 +367,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
+        {
+            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -385,6 +393,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals(string fieldName, MethodCall value, bool exact)
         {
             WhereNotEquals(fieldName, value, exact);
@@ -393,6 +402,13 @@ namespace Raven.Client.Documents.Session
 
         /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
+        {
+            WhereNotEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, MethodCall value, bool exact)
         {
             WhereNotEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -413,7 +429,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact)
         {
             WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>(), exact);
             return this;
@@ -427,7 +443,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
             WhereStartsWith(GetMemberQueryPath(propertySelector.Body), value);
             return this;
@@ -441,7 +457,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
             WhereEndsWith(GetMemberQueryPath(propertySelector.Body), value);
             return this;
@@ -455,7 +471,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact)
         {
             WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end, exact);
             return this;
@@ -469,7 +485,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -483,7 +499,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -497,7 +513,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereLessThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -511,14 +527,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<T> WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector)
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector)
         {
             WhereExists(GetMemberQueryPath(propertySelector.Body));
             return this;
@@ -618,7 +634,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public IDocumentQuery<TResult> OfType<TResult>()
+        IDocumentQuery<TResult> IDocumentQuery<T>.OfType<TResult>()
         {
             return CreateDocumentQueryInternal<TResult>();
         }
@@ -714,25 +730,25 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public T First()
+        T IDocumentQueryBase<T>.First()
         {
             return ExecuteQueryOperation(1).First();
         }
 
         /// <inheritdoc />
-        public T FirstOrDefault()
+        T IDocumentQueryBase<T>.FirstOrDefault()
         {
             return ExecuteQueryOperation(1).FirstOrDefault();
         }
 
         /// <inheritdoc />
-        public T Single()
+        T IDocumentQueryBase<T>.Single()
         {
             return ExecuteQueryOperation(2).Single();
         }
 
         /// <inheritdoc />
-        public T SingleOrDefault()
+        T IDocumentQueryBase<T>.SingleOrDefault()
         {
             return ExecuteQueryOperation(2).SingleOrDefault();
         }
@@ -748,7 +764,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public int Count()
+        int IDocumentQueryBase<T>.Count()
         {
             Take(0);
             var queryResult = GetQueryResult();
@@ -756,13 +772,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public Lazy<IEnumerable<T>> Lazily()
-        {
-            return Lazily(null);
-        }
-
-        /// <inheritdoc />
-        public Lazy<int> CountLazily()
+        Lazy<int> IDocumentQueryBase<T>.CountLazily()
         {
             if (QueryOperation == null)
             {
@@ -777,7 +787,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public Lazy<IEnumerable<T>> Lazily(Action<IEnumerable<T>> onEval)
+        Lazy<IEnumerable<T>> IDocumentQueryBase<T>.Lazily(Action<IEnumerable<T>> onEval)
         {
             if (QueryOperation == null)
             {
