@@ -189,8 +189,8 @@ namespace Raven.Server.Documents.Revisions
             }
             catch (Exception e)
             {
-                var msg = "Cannot enable revisions for documents as the revisions configuration" +
-                          $" in the database record is missing or not valid.";
+                var msg = "Cannot enable revisions for documents as the revisions configuration " +
+                          "in the database record is missing or not valid.";
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name, 
                     $"Revisions error in {_database.Name}", msg,
@@ -518,7 +518,7 @@ namespace Raven.Server.Documents.Revisions
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
-            long revisionEtag = 0;
+            long revisionEtag;
             if (table.ReadByKey(key, out TableValueReader tvr))
             {
                 revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
@@ -526,13 +526,9 @@ namespace Raven.Server.Documents.Revisions
             }
             else
             {
-                // we need to generate a unqiue etag if we got a tombstone revisions
-                // from replication, but we don't want to mess up the order of events
-                // so the delete revision etag we use is negative
-                var newEtag = _documentsStorage.GenerateNextEtag();
-                _documentsStorage.EnsureLastEtagIsPersisted(context, newEtag);
-
-                revisionEtag = -newEtag;
+                // we need to generate a unique etag if we got a tombstone revisions from replication, 
+                // but we don't want to mess up the order of events so the delete revision etag we use is negative
+                revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
             }
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
         }
