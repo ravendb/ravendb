@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public long? IncrementalBackupDurationInMs { get; set; }
 
-        public Exception Exception { get; set; }
+        public string Exception { get; set; }
 
         public IDisposable UpdateStats(bool isFullBackup)
         {
