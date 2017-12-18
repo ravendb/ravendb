@@ -1,5 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
-import genUtils = require("../../../common/generalUtils");
+import genUtils = require("common/generalUtils");
 
 class indexStatistics {
     isStale: boolean;
