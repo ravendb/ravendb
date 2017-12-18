@@ -85,6 +85,8 @@ namespace Raven.Server.Commercial
                 {
                     case null:
                         return 1;
+                    case 0:
+                        return int.MaxValue;
                     default:
                         return maxClusterSize.Value;
                 }
