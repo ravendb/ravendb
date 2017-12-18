@@ -17,56 +17,40 @@ namespace FastTests.Issues
         [Fact]
         public async Task NestedObjectShouldBeExportedAndImportedProperly()
         {
-            string tmpFile = null;
-            try
+            using (var store = GetDocumentStore())
             {
-                using (var store = GetDocumentStore())
+                using (var session = store.OpenSession())
                 {
-                    using (var session = store.OpenSession())
+                    session.Store(_testCompany, "companies/1");
+                    session.SaveChanges();
+                }
+
+                var client = new HttpClient();
+                var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies");
+
+                using (var commands = store.Commands())
+                {
+                    var getOperationIdCommand = new GetNextOperationIdCommand();
+                    await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
+                    var operationId = getOperationIdCommand.Result;
+
                     {
-                        session.Store(_testCompany, "companies/1");
-                        session.SaveChanges();
-                    }
+                        var csvImportCommand = new CsvImportCommand(stream, null, operationId);
 
-                    var client = new HttpClient();
-                    var stream = await client.GetStreamAsync($"{store.Urls[0]}/databases/{store.Database}/streams/queries?query=From%20companies");
-                    tmpFile = Path.GetTempFileName();
-                    using (var file = File.Create(tmpFile))
-                    {
-                        stream.CopyTo(file);
-                        await file.FlushAsync();
-                    }
+                        await commands.ExecuteAsync(csvImportCommand);
 
-                    using (var commands = store.Commands())
-                    {
-                        var getOperationIdCommand = new GetNextOperationIdCommand();
-                        await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
-                        var operationId = getOperationIdCommand.Result;
+                        var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
 
-                        using (var fileStream = File.OpenRead(tmpFile))
-                        {
-                            var csvImportCommand = new CsvImportCommand(fileStream, null, operationId);
-
-                            await commands.ExecuteAsync(csvImportCommand);
-
-                            var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
-
-                            await operation.WaitForCompletionAsync();
-                        }
-                    }
-
-                    using (var session = store.OpenSession())
-                    {
-                        var res = session.Query<Company>().ToList();
-                        Assert.Equal(2, res.Count);
-                        Assert.True(res[0].Equals(res[1]));
+                        await operation.WaitForCompletionAsync();
                     }
                 }
-            }
-            finally
-            {
-                if (tmpFile != null)
-                    IOExtensions.DeleteFile(tmpFile);
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.Query<Company>().ToList();
+                    Assert.Equal(2, res.Count);
+                    Assert.Equal(res[0],res[1]);
+                }
             }
         }
 

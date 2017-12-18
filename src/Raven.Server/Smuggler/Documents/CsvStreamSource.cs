@@ -243,7 +243,7 @@ namespace Raven.Server.Smuggler.Documents
         private object ParseValue(string s)
         {
             if (string.IsNullOrEmpty(s))
-                return s;
+                return null;
             if (s.StartsWith('\"') && s.EndsWith('\"'))
                 return s.Substring(1, s.Length - 2);
             if (s.StartsWith('[') && s.EndsWith(']'))
