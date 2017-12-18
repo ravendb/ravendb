@@ -10,4 +10,13 @@ namespace Sparrow.Platform.Posix
         public long tms_cutime; /* user time of children */
         public long tms_cstime; /* system time of children */
     };
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TimeSample_32bit
+    {
+        public int tms_utime;  /* user time */
+        public int  tms_stime;  /* system time */
+        public int tms_cutime; /* user time of children */
+        public int tms_cstime; /* system time of children */
+    };
 }

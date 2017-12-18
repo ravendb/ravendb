@@ -226,9 +226,24 @@ namespace Raven.Server.Utils
                 if (items.Length == 0)
                     continue;
 
-                var timeSample = new TimeSample();
-
-                var time = Syscall.times(ref timeSample);
+                long time = 0;
+                long tmsStime = 0;
+                long tmsUtime = 0;
+                    
+                if (PlatformDetails.Is32Bits == false)
+                {
+                    var timeSample = new TimeSample();
+                    time = Syscall.times(ref timeSample);
+                    tmsStime = timeSample.tms_stime;
+                    tmsUtime = timeSample.tms_utime;
+                }
+                else
+                {
+                    var timeSample = new TimeSample_32bit();
+                    time = Syscall.times(ref timeSample);
+                    tmsStime = timeSample.tms_stime;
+                    tmsUtime = timeSample.tms_utime;
+                }
                 if (time == -1)
                 {
                     if (Logger.IsInfoEnabled)
@@ -243,8 +258,8 @@ namespace Raven.Server.Utils
                     TotalSystemTime = ulong.Parse(items[3]),
                     TotalIdleTime = ulong.Parse(items[4]),
                     Time = time,
-                    LastSystemCpu = timeSample.tms_stime,
-                    LastUserCpu = timeSample.tms_utime,
+                    LastSystemCpu = tmsStime,
+                    LastUserCpu = tmsUtime,
                 };
             }
 
