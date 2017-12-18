@@ -42,8 +42,10 @@ namespace Raven.Client.Documents.Session.Tokens
             public ShapeToken WhereShape{ get; private set; }
             public double DistanceErrorPct{ get; private set; }
 
-            public WhereOptions(){}
-            
+            private WhereOptions(){}
+
+            public static WhereOptions Default() => new WhereOptions();
+
             public WhereOptions(bool exact)
             {
                 Exact = exact;
@@ -93,7 +95,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 FieldName = fieldName,
                 ParameterName = parameterName,
                 WhereOperator = op,
-                Options = options ?? new WhereOptions()
+                Options = options ?? WhereOptions.Default()
             };
         }
 

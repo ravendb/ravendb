@@ -20,7 +20,9 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Spatial4n.Core.Shapes;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeThisQuery;
 using Query = Raven.Server.Documents.Queries.AST.Query;
@@ -30,12 +32,12 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
-        public static Lucene.Net.Search.Query BuildQuery(QueryMetadata metadata, QueryExpression whereExpression,
+        public static Lucene.Net.Search.Query BuildQuery(DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var luceneQuery = ToLuceneQuery(metadata.Query, whereExpression, metadata, parameters, analyzer, factories);
+                var luceneQuery = ToLuceneQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, factories);
 
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -43,11 +45,11 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static MoreLikeThisQuery BuildMoreLikeThisQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, RavenPerFieldAnalyzerWrapper analyzer, QueryBuilderFactories factories)
+        public static MoreLikeThisQuery BuildMoreLikeThisQuery(DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, RavenPerFieldAnalyzerWrapper analyzer, QueryBuilderFactories factories)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var filterQuery = BuildQuery(metadata, whereExpression, parameters, analyzer, factories);
+                var filterQuery = BuildQuery(context, metadata, whereExpression, parameters, analyzer, factories);
                 var moreLikeThisQuery = ToMoreLikeThisQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, factories, out var baseDocument, out var options);
 
                 return new MoreLikeThisQuery
@@ -60,7 +62,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static Lucene.Net.Search.Query ToMoreLikeThisQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata,
+        private static Lucene.Net.Search.Query ToMoreLikeThisQuery(DocumentsOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, out string baseDocument, out BlittableJsonReaderObject options)
         {
             baseDocument = null;
@@ -81,7 +83,7 @@ namespace Raven.Server.Documents.Queries
 
             var firstArgument = moreLikeThisExpression.Arguments[0];
             if (firstArgument is BinaryExpression binaryExpression)
-                return ToLuceneQuery(query, binaryExpression, metadata, parameters, analyzer, factories);
+                return ToLuceneQuery(context, query, binaryExpression, metadata, parameters, analyzer, factories);
 
             var firstArgumentValue = GetValueAsString(GetValue(query, metadata, parameters, firstArgument).Value);
             if (bool.TryParse(firstArgumentValue, out var firstArgumentBool))
@@ -140,7 +142,7 @@ namespace Raven.Server.Documents.Queries
             return null;
         }
 
-        private static Lucene.Net.Search.Query ToLuceneQuery(Query query, QueryExpression expression, QueryMetadata metadata,
+        private static Lucene.Net.Search.Query ToLuceneQuery(DocumentsOperationContext documentsContext, Query query, QueryExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false)
         {
             if (expression == null)
@@ -157,8 +159,15 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.LessThanEqual:
                     case OperatorType.GreaterThanEqual:
                         {
+                            QueryExpression right = where.Right;
+
+                            if (where.Right is MethodExpression rme)
+                            {
+                                right = EvaluteMethod(documentsContext, rme, ref parameters);
+                            }
+
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
-                            var (value, valueType) = GetValue(query, metadata, parameters, where.Right, true);
+                            var (value, valueType) = GetValue(query, metadata, parameters, right, true);
 
                             var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
@@ -237,17 +246,17 @@ namespace Raven.Server.Documents.Queries
                     case OperatorType.AndNot:
                         var andPrefix = where.Operator == OperatorType.AndNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                         return LuceneQueryHelper.And(
-                            ToLuceneQuery(query, where.Left, metadata, parameters, analyzer, factories, exact),
+                            ToLuceneQuery(documentsContext, query, where.Left, metadata, parameters, analyzer, factories, exact),
                             LucenePrefixOperator.None,
-                            ToLuceneQuery(query, where.Right, metadata, parameters, analyzer, factories, exact),
+                            ToLuceneQuery(documentsContext, query, where.Right, metadata, parameters, analyzer, factories, exact),
                             andPrefix);
                     case OperatorType.Or:
                     case OperatorType.OrNot:
                         var orPrefix = where.Operator == OperatorType.OrNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                         return LuceneQueryHelper.Or(
-                            ToLuceneQuery(query, where.Left, metadata, parameters, analyzer, factories, exact),
+                            ToLuceneQuery(documentsContext, query, where.Left, metadata, parameters, analyzer, factories, exact),
                             LucenePrefixOperator.None,
-                            ToLuceneQuery(query, where.Right, metadata, parameters, analyzer, factories, exact),
+                            ToLuceneQuery(documentsContext, query, where.Right, metadata, parameters, analyzer, factories, exact),
                             orPrefix);
                 }
             }
@@ -330,7 +339,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Search:
                         return HandleSearch(query, me, metadata, parameters, analyzer);
                     case MethodType.Boost:
-                        return HandleBoost(query, me, metadata, parameters, analyzer, factories, exact);
+                        return HandleBoost(documentsContext, query, me, metadata, parameters, analyzer, factories, exact);
                     case MethodType.Regex:
                         return HandleRegex(query, me, metadata, parameters, factories);
                     case MethodType.StartsWith:
@@ -342,10 +351,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Exists:
                         return HandleExists(query, parameters, me, metadata);
                     case MethodType.Exact:
-                        return HandleExact(query, me, metadata, parameters, analyzer, factories);
-                    //                    case MethodType.CmpXchg:
-                    //                        var fieldName = ExtractIndexFieldName(query, parameters, me.Arguments[1], metadata);
-                    //                        return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard, exact: true);
+                        return HandleExact(documentsContext, query, me, metadata, parameters, analyzer, factories);
                     case MethodType.Spatial_Within:
                     case MethodType.Spatial_Contains:
                     case MethodType.Spatial_Disjoint:
@@ -360,6 +366,49 @@ namespace Raven.Server.Documents.Queries
             }
 
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
+        }
+
+        public static QueryExpression EvaluteMethod(DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
+        {
+            var server = documentsContext.DocumentDatabase.ServerStore;
+            switch (method.Name)
+            {
+                case "cmpxchg":
+                    using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var prefix = documentsContext.DocumentDatabase.Name + "/";
+                        object value = null;
+                        if (method.Arguments[0] is ValueExpression v)
+                        {
+                            if (method.Arguments[0] is FieldExpression fe)
+                            {
+                                server.Cluster.GetCmpXchg(ctx, prefix + fe.FieldValue).Value?.TryGetMember("Object", out value);
+                            }
+                            if (parameters.TryGetMember(v.Token, out object result) == false)
+                            {
+                                server.Cluster.GetCmpXchg(ctx, prefix + v.Token).Value?.TryGetMember("Object", out value);
+                            }
+                            else
+                            {
+                                server.Cluster.GetCmpXchg(ctx, prefix + result).Value?.TryGetMember("Object", out value);
+                                parameters.Modifications = new DynamicJsonValue
+                                {
+                                    [v.Token] = value
+                                };
+                                parameters = documentsContext.ReadObject(parameters, "add-parameter");
+                                return new ValueExpression(v.Token, ValueTokenType.Parameter);
+                            }
+                        }
+                        
+                        if (value == null)
+                        {
+                            return new ValueExpression(null, ValueTokenType.Null);
+                        }
+                        return new ValueExpression(value.ToString(), ValueTokenType.String);
+                    }
+            }
+            throw new ArgumentException($"Unknown method {method.Name}");
         }
 
         private static string GetValueAsString(object value)
@@ -521,12 +570,12 @@ namespace Raven.Server.Documents.Queries
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
         }
 
-        private static Lucene.Net.Search.Query HandleBoost(Query query, MethodExpression expression, QueryMetadata metadata,
+        private static Lucene.Net.Search.Query HandleBoost(DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact)
         {
             var boost = float.Parse(((ValueExpression)expression.Arguments[1]).Token.Value);
 
-            var q = ToLuceneQuery(query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact);
+            var q = ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact);
             q.Boost = boost;
 
             return q;
@@ -745,10 +794,10 @@ namespace Raven.Server.Documents.Queries
             return (SpatialUnits)su;
         }
 
-        private static Lucene.Net.Search.Query HandleExact(Query query, MethodExpression expression, QueryMetadata metadata,
+        private static Lucene.Net.Search.Query HandleExact(DocumentsOperationContext context, Query query, MethodExpression expression, QueryMetadata metadata,
             BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories)
         {
-            return ToLuceneQuery(query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact: true);
+            return ToLuceneQuery(context, query, expression.Arguments[0], metadata, parameters, analyzer, factories, exact: true);
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(Query query, QueryMetadata metadata,

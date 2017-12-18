@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var query = facetQuery.Query;
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
-            var baseQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var result in results)

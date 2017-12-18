@@ -400,6 +400,8 @@ namespace Raven.Server.Documents.Indexes.Debugging
         private static BlittableJsonReaderObject GetReduceResult(ulong reduceKeyHash, Index index, TransactionOperationContext context)
         {
             using (var reader = index.IndexPersistence.OpenIndexReader(context.Transaction.InnerTransaction))
+            using (index.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
             {
                 var queryParameters = context.ReadObject(new DynamicJsonValue
                 {
@@ -411,7 +413,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 var retriever = new MapReduceQueryResultRetriever(null, null, null, context, fieldsToFetch, null);
                 var result = reader
-                     .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, null, CancellationToken.None)
+                     .Query(ctx, query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, null, CancellationToken.None)
                     .ToList();
 
                 if (result.Count != 1)

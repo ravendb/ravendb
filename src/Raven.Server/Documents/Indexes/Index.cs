@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
 
-        protected DocumentDatabase DocumentDatabase;
+        internal DocumentDatabase DocumentDatabase;
 
         private Thread _indexingThread;
 
@@ -1833,20 +1833,6 @@ namespace Raven.Server.Documents.Indexes
                                 query.Metadata.Includes);
 
                             var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
-
-                            if (query.Metadata.WhereMethods.TryGetValue(QueryMetadata.WhereMethod.RightSideMethod, out var method))
-                            {
-                                if (query.Metadata.Query.Where is BinaryExpression be && be.Right is MethodExpression me)
-                                {
-                                    var value = method.EvaluateSingleMethod((QueryResultRetrieverBase)retriever, null);
-                                    query.QueryParameters.Modifications = new DynamicJsonValue
-                                    {
-                                        [me.Name] = value
-                                    };
-                                    query.QueryParameters = documentsContext.ReadObject(query.QueryParameters, "add-parameter");
-                                    be.Right = new ValueExpression(me.Name, ValueTokenType.Parameter);
-                                }
-                            }
                             
                             if (query.Metadata.IsMoreLikeThis)
                             {
@@ -1858,12 +1844,12 @@ namespace Raven.Server.Documents.Indexes
                             }
                             else if (query.Metadata.IsIntersect)
                             {
-                                documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
+                                documents = reader.IntersectQuery(documentsContext, query, fieldsToFetch, totalResults, skippedResults,
                                     retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
                             else
                             {
-                                documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
+                                documents = reader.Query(documentsContext, query, fieldsToFetch, totalResults, skippedResults,
                                     retriever, documentsContext, GetOrAddSpatialField, token.Token);
 
                             }
@@ -2094,7 +2080,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var totalResults = new Reference<int>();
-                foreach (var indexEntry in reader.IndexEntries(query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
+                foreach (var indexEntry in reader.IndexEntries(documentsContext, query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
                 {
                     result.AddResult(indexEntry);
                 }

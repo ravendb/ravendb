@@ -15,7 +15,6 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Parser;
-using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestions;
 using Sparrow;
 using Sparrow.Json;
@@ -1201,10 +1200,6 @@ namespace Raven.Server.Documents.Queries
                 if (leftSide is FieldExpression fe)
                 {
                     _metadata.AddWhereField(new QueryFieldName(fe.FieldValue, fe.IsQuoted), parameters, exact: _insideExact > 0, operatorType: operatorType);
-                    if (rightSide is MethodExpression meRight)
-                    {
-                        _metadata.WhereMethods.Add(WhereMethod.RightSideMethod, new SingleMethodEvaluator(_metadata, meRight, parameters)); 
-                    }
                 }
                 if (leftSide is MethodExpression me)
                 {
@@ -1212,9 +1207,8 @@ namespace Raven.Server.Documents.Queries
                     switch (methodType)
                     {
                         case MethodType.Id:// WHERE id() = [<Func> | <Value>]
-                            if (rightSide is MethodExpression meRight)
+                            if (rightSide is MethodExpression)
                             {
-                                _metadata.WhereMethods.Add(WhereMethod.FillIdsMethod, new SingleMethodEvaluator(_metadata, meRight, parameters)); 
                                 _metadata.AddWhereField(QueryFieldName.DocumentId, parameters, exact: _insideExact > 0, operatorType: operatorType);
                             }
                             else
@@ -1552,94 +1546,6 @@ namespace Raven.Server.Documents.Queries
                     throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
 
                 _metadata.AddWhereField(new QueryFieldName(f.FieldValue, f.IsQuoted), parameters);
-            }
-        }
-
-        public enum WhereMethod
-        {
-            FillIdsMethod,
-            RightSideMethod
-        }
-        public readonly Dictionary<WhereMethod, SingleMethodEvaluator> WhereMethods = new Dictionary<WhereMethod, SingleMethodEvaluator>();
-
-        public class SingleMethodEvaluator
-        {
-            private readonly QueryMetadata _metadata;
-            private readonly MethodExpression _expression;
-            private readonly BlittableJsonReaderObject _parameters;
-            private readonly Query _query;
-
-            public SingleMethodEvaluator(QueryMetadata metadata, MethodExpression me, BlittableJsonReaderObject parameters)
-            {
-                _query = metadata.Query;
-                _metadata = metadata;
-                _expression = me;
-                _parameters = parameters;
-            }
-
-            public object EvaluateSingleMethod(QueryResultRetrieverBase revtriver, Document doc)
-            {
-                _query.TryAddFunction(_expression.Name, (_expression.Name, null));
-                if (_expression.Arguments == null || _expression.Arguments.Count == 0)
-                {
-                    return revtriver.InvokeFunction(_expression.Name, _query, new object[] { });
-                }
-                var list = new List<object>();
-                foreach (var argument in _expression.Arguments)
-                {
-                    if (argument is MethodExpression inner)
-                    {
-                        var eval = new SingleMethodEvaluator(_metadata, inner, _parameters);
-                        list.Add(eval.EvaluateSingleMethod(revtriver, doc));
-                    }
-                    else if (argument is ValueExpression v)
-                    {
-                        if (_parameters.TryGetMember(v.Token, out var result) == false)
-                        {
-                            result = v.Token;
-                        }
-                        list.Add(result.ToString());
-                    }
-                    else if (argument is FieldExpression f)
-                    {
-                        if (f.IsQuoted)
-                        {
-                            list.Add(f.FieldValue);
-                            continue;
-                        }
-
-                        if (doc == null) 
-                            continue;
-                        
-                        if (_metadata.Query.From.Alias.HasValue)
-                        {
-                            var alias = _metadata.Query.From.Alias.Value;
-                            if (alias == f.FieldValue)
-                            {
-                                list.Add(doc);
-                            }
-                        }
-                        else if (string.IsNullOrEmpty(f.FieldValueWithoutAlias) == false)
-                        {
-                            revtriver.TryGetValueFromDocument(doc, f.FieldValueWithoutAlias, out object value);
-                            list.Add(value);
-                        }
-                        else if (string.IsNullOrEmpty(f.FieldValue) == false)
-                        {
-                            revtriver.TryGetValueFromDocument(doc, f.FieldValue, out object value);
-                            list.Add(value);
-                        }
-                        else
-                        {
-                            throw new ArgumentException($"Invalid field argument '{f}' for the method '{_expression.Name}'");
-                        }
-                    }
-                    else
-                    {
-                        throw new ArgumentException($"Invalid argument '{argument}' for the method '{_expression.Name}'");
-                    }
-                }
-                return revtriver.InvokeFunction(_expression.Name, _query, list.ToArray());
             }
         }
 
