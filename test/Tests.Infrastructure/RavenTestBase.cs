@@ -171,7 +171,7 @@ namespace FastTests
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
-                        store.Urls = result.NodesAddedTo.ToArray();
+                        store.Urls = result.NodesAddedTo.SelectMany(UseFiddler).ToArray();
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                         var task = WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
                         task.ConfigureAwait(false).GetAwaiter().GetResult();
@@ -186,8 +186,8 @@ namespace FastTests
                         {
                             if (server.Disposed)
                                 continue;
-
-                            if (store.Urls.Any(url => server.WebUrl.Contains(url)) == false)
+                            var serverUrl = UseFiddler(server.WebUrl);
+                            if (store.Urls.Any(url => serverUrl.Contains(url)) == false)
                                 continue;
 
                             try
