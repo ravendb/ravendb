@@ -547,11 +547,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var stateRequest = new GetServerWideOperationStateOperation(restoreResult.OperationId);
                 store.Maintenance.Server.Send(stateRequest);
 
-                SpinWait.SpinUntil(() =>
+                var result = SpinWait.SpinUntil(() =>
                 {
                     var state = store.Maintenance.Server.Send(stateRequest);
                     return state.Status == OperationStatus.Completed;
                 }, TimeSpan.FromSeconds(15));
+                Assert.True(result, "Backup didn't complete?");
 
                 using (var session = store.OpenAsyncSession(restoredDatabaseName))
                 {

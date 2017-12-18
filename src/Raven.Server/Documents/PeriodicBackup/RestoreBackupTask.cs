@@ -245,8 +245,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (entry.Name == RestoreSettings.SmugglerValuesFileName)
                         {
                             using (var input = entry.Open())
+                            using (var uncompressed = new GZipStream(input, CompressionMode.Decompress))
                             {
-                                var source = new StreamSource(input, context, database);
+                                var source = new StreamSource(uncompressed, context, database);
                                 var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                                     database.Time, smugglerOptions, onProgress: onProgress, token: _operationCancelToken.Token);
 
@@ -361,7 +362,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                         Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
-                .OrderBy(x => x);
+                .OrderBy(Path.GetFileNameWithoutExtension)
+                .ThenBy(File.GetLastWriteTimeUtc);
 
             if (string.IsNullOrWhiteSpace(_restoreConfiguration.LastFileNameToRestore))
                 return orderedFiles.ToList();
