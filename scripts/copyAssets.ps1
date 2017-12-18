@@ -33,12 +33,12 @@ function CopyStartCmd ( $targetDir ) {
 }
 
 function CopyStartAsServiceCmd ( $targetDir ) {
-    $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "start-as-service.ps1")
-    $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "start-as-service.ps1");
+    $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "setup-service.ps1")
+    $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "setup-service.ps1");
     Copy-Item $startAsServicePs1Path $startAsServicePs1TargetPath
     
-    $startAsServiceCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\start-as-service.ps1'"" `r`n"
-    $startAsServiceCmdTargetPath = [io.path]::combine($targetDir, "start-as-service.cmd");
+    $startAsServiceCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\setup-service.ps1'"" `r`n"
+    $startAsServiceCmdTargetPath = [io.path]::combine($targetDir, "setup-service.cmd");
     Set-Content -Path $startAsServiceCmdTargetPath $startAsServiceCmdContent
 }
 

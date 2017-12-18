@@ -4,6 +4,8 @@ function Get-ScriptDirectory
     Split-Path $Invocation.MyCommand.Path;
 }
 
+# this assumes that we are setting up the service and starting the wizard
+
 $ErrorActionPreference = "Stop";
 
 $scriptDirectory = Get-ScriptDirectory;
@@ -17,7 +19,7 @@ $port = Read-Host -Prompt 'Please enter a port number'
 [int]$portval = [int]::Parse($port)
 
 if ($portval -lt 0 -Or $portval -gt 65535){
-	Write-Host "Error. Port must be in the range 0-65535."
+	Write-Error "Error. Port must be in the range 0-65535."
 	exit 1
 }
 
@@ -30,7 +32,7 @@ try
 catch
 {
     write-error $_.Exception
-    exit 3
+    exit 2
 }
 
 Push-Location $serverDir;
@@ -43,7 +45,7 @@ Try
 catch
 {
     write-error $_.Exception
-    exit 1
+    exit 3
 }
 Finally
 {
@@ -51,6 +53,9 @@ Finally
 }
 
 Write-Host "Service started, server listening to http://127.0.0.1:$portval"
+Write-Host "You can now finish setting up the RavenDB service in the browser"
+
+sleep 3 # ugly, but need to give it time to startup
 
 start "http://127.0.0.1:$portval"
 
