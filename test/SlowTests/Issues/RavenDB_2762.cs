@@ -47,8 +47,15 @@ namespace SlowTests.Issues
 
                 Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
 
-                var recoveredErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                IndexingError[] recoveredErrors = null;
+                result = SpinWait.SpinUntil(() =>
+                {
+                    recoveredErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "test" }))[0].Errors;
+                    return recoveredErrors?.Length > 0;
+                }, TimeSpan.FromSeconds(20));
 
+
+                Assert.True(result, "Waited for 20 seconds for the index errors to be reloaded after start");
                 Assert.NotEmpty(recoveredErrors);
 
                 Assert.Equal(errors.Length, recoveredErrors.Length);

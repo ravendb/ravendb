@@ -34,11 +34,19 @@ namespace Tryouts
             for (int i = 0; i < 1000; i++)
             {
                 Console.WriteLine(i);
-                Parallel.For(0, 10, _ =>
+                Parallel.For(0, 1, _ =>
                 {
-                    using (var a = new RavenDB_3232())
+                    using (var a = new RavenDB_2762())
                     {
-                        a.ReplaceOfNonStaleIndex();
+                        try
+                        {
+                            a.IndexingErrorsShouldSurviveDbRestart();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
                     }
                 });
             }
