@@ -365,7 +365,7 @@ namespace FastTests.Smuggler
                     Disabled = false,
                     DeleteFrequencyInSec = 100,
                 };
-                await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config, store.Database));
+                await store.Maintenance.Server.SendAsync(new ConfigureExpirationOperation(config));
                 await session.SaveChangesAsync();
             }
         }

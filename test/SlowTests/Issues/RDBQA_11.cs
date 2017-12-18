@@ -171,7 +171,7 @@ namespace SlowTests.Issues
                     Disabled = false,
                     DeleteFrequencyInSec = 100,
                 };
-                store.Maintenance.Server.Send(new ConfigureExpirationOperation(config, store.Database));
+                store.Maintenance.Server.Send(new ConfigureExpirationOperation(config));
                 session.SaveChanges();
             }
         }

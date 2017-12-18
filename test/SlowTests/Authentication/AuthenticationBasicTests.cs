@@ -152,7 +152,7 @@ namespace SlowTests.Authentication
                     Database = dbName,
                 };
 
-                store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
+                store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr)); // DatabaseAdmin operation
                 var result = store.Maintenance.Server.Send(new GetConnectionStringsOperation(store.Database));
                 Assert.NotNull(result.RavenConnectionStrings);
             }
@@ -185,7 +185,7 @@ namespace SlowTests.Authentication
 
                 Assert.Throws<AuthorizationException>(() =>
                 {
-                    store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
+                    store.Maintenance.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr)); // DatabaseAdmin operation
                 });
             }
         }

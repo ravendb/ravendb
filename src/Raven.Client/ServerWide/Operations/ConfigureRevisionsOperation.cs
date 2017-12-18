@@ -12,35 +12,31 @@ namespace Raven.Client.ServerWide.Operations
     public class ConfigureRevisionsOperation : IServerOperation<ConfigureRevisionsOperationResult>
     {
         private readonly RevisionsConfiguration _configuration;
-        private readonly string _databaseName;
 
-        public ConfigureRevisionsOperation(RevisionsConfiguration configuration, string databaseName)
+        public ConfigureRevisionsOperation(RevisionsConfiguration configuration)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
         }
         public RavenCommand<ConfigureRevisionsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureRevisionsCommand(_configuration, _databaseName);
+            return new ConfigureRevisionsCommand(_configuration);
         }
     }
 
     public class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>
     {
         private readonly RevisionsConfiguration _configuration;
-        private readonly string _databaseName;
 
-        public ConfigureRevisionsCommand(RevisionsConfiguration configuration, string databaseName)
+        public ConfigureRevisionsCommand(RevisionsConfiguration configuration)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
         }
 
         public override bool IsReadRequest => false;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{_databaseName}/admin/revisions/config";
+            url = $"{node.Url}/databases/{node.Database}/admin/revisions/config";
 
             var request = new HttpRequestMessage
             {

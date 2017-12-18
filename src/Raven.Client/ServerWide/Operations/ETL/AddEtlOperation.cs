@@ -12,35 +12,31 @@ namespace Raven.Client.ServerWide.Operations.ETL
     public class AddEtlOperation<T> : IServerOperation<AddEtlOperationResult> where T : ConnectionString
     {
         private readonly EtlConfiguration<T> _configuration;
-        private readonly string _databaseName;
 
-        public AddEtlOperation(EtlConfiguration<T> configuration, string databaseName)
+        public AddEtlOperation(EtlConfiguration<T> configuration)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
         }
 
         public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new AddEtlCommand(_configuration, _databaseName);
+            return new AddEtlCommand(_configuration);
         }
 
         public class AddEtlCommand : RavenCommand<AddEtlOperationResult>
         {
             private readonly EtlConfiguration<T> _configuration;
-            private readonly string _databaseName;
 
-            public AddEtlCommand(EtlConfiguration<T> configuration, string databaseName)
+            public AddEtlCommand(EtlConfiguration<T> configuration)
             {
                 _configuration = configuration;
-                _databaseName = databaseName;
             }
 
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/etl";
+                url = $"{node.Url}/databases/{node.Database}/admin/etl";
 
                 var request = new HttpRequestMessage
                 {

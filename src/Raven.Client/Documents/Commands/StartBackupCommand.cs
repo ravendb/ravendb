@@ -10,19 +10,17 @@ namespace Raven.Client.Documents.Commands
         public override bool IsReadRequest => true;
 
         private readonly bool _isFullBackup;
-        private readonly string _databaseName;
         private readonly long _taskId;
 
-        public StartBackupCommand(bool isFullBackup, string databaseName, long taskId)
+        public StartBackupCommand(bool isFullBackup, long taskId)
         {
             _isFullBackup = isFullBackup;
-            _databaseName = databaseName;
             _taskId = taskId;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/backup/database?name={_databaseName}&isFullBackup={_isFullBackup}&taskId={_taskId}";
+            url = $"{node.Url}/databases/{node.Database}/admin/backup/database?isFullBackup={_isFullBackup}&taskId={_taskId}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post

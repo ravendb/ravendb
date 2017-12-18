@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.ETL
                                 Collections = {"Users"}
                             }
                         }
-                    }, store.Database));
+                    }));
                     
                     var alert = await notifications.TryDequeueOfTypeAsync<DynamicJsonValue>(TimeSpan.FromSeconds(30));
 

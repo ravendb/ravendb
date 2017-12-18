@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
-                var operation = new UpdatePeriodicBackupOperation(config, store.Database);
+                var operation = new UpdatePeriodicBackupOperation(config);
                 var result = await store.Maintenance.Server.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
@@ -98,7 +98,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
@@ -171,7 +171,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var operation = new UpdatePeriodicBackupOperation(config, store.Database);
+                var operation = new UpdatePeriodicBackupOperation(config);
                 var result = await store.Maintenance.Server.SendAsync(operation);
                 var periodicBackupTaskId = result.TaskId;
 
@@ -236,7 +236,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
@@ -297,7 +297,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
@@ -357,7 +357,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
@@ -442,7 +442,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
@@ -513,7 +513,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
@@ -610,7 +610,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
 
-                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config, store.Database));
+                var result = await store.Maintenance.Server.SendAsync(new UpdatePeriodicBackupOperation(config));
                 var periodicBackupTaskId = result.TaskId;
 
                 var operation = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);

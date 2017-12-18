@@ -12,35 +12,31 @@ namespace Raven.Client.ServerWide.Operations
     public class UpdatePeriodicBackupOperation : IServerOperation<UpdatePeriodicBackupOperationResult>
     {
         private readonly PeriodicBackupConfiguration _configuration;
-        private readonly string _databaseName;
 
-        public UpdatePeriodicBackupOperation(PeriodicBackupConfiguration configuration, string databaseName)
+        public UpdatePeriodicBackupOperation(PeriodicBackupConfiguration configuration)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
         }
 
         public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdatePeriodicBackupCommand(_configuration, _databaseName);
+            return new UpdatePeriodicBackupCommand(_configuration);
         }
 
         public class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>
         {
             private readonly PeriodicBackupConfiguration _configuration;
-            private readonly string _databaseName;
 
-            public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName)
+            public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration)
             {
                 _configuration = configuration;
-                _databaseName = databaseName;
             }
 
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/periodic-backup";
+                url = $"{node.Url}/databases/{node.Database}/admin/periodic-backup";
 
                 var request = new HttpRequestMessage
                 {

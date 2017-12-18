@@ -12,35 +12,31 @@ namespace Raven.Client.ServerWide.Operations
     public class ConfigureExpirationOperation : IServerOperation<ConfigureExpirationOperationResult>
     {
         private readonly ExpirationConfiguration _configuration;
-        private readonly string _databaseName;
 
-        public ConfigureExpirationOperation(ExpirationConfiguration configuration, string databaseName)
+        public ConfigureExpirationOperation(ExpirationConfiguration configuration)
         {
             _configuration = configuration;
-            _databaseName = databaseName;
         }
 
         public RavenCommand<ConfigureExpirationOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureExpirationCommand(_configuration, _databaseName);
+            return new ConfigureExpirationCommand(_configuration);
         }
 
         public class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
         {
             private readonly ExpirationConfiguration _configuration;
-            private readonly string _databaseName;
 
-            public ConfigureExpirationCommand(ExpirationConfiguration configuration, string databaseName)
+            public ConfigureExpirationCommand(ExpirationConfiguration configuration)
             {
                 _configuration = configuration;
-                _databaseName = databaseName;
             }
 
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{_databaseName}/admin/expiration/config";
+                url = $"{node.Url}/databases/{node.Database}/admin/expiration/config";
 
                 var request = new HttpRequestMessage
                 {
