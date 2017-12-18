@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Queries
             // for the query plan that we use, at any rate, they will either error
             // if the query uses them and it is missing or they are there and will
             // noop because they aren't being used
-            return (query.Query != metadata.QueryText);
+            return (query.Query == metadata.QueryText);
         }
 
         public void MaybeAddToCache(QueryMetadata metadata, string indexName)
