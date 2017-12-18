@@ -77,7 +77,7 @@ namespace SlowTests.Tests.Spatial
 
                     var iq = RavenTestHelper.GetIndexQuery(matchingVenues);
 
-                    Assert.Equal("FROM INDEX 'SpatialIdx' WHERE spatial.within(Coordinates, spatial.circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("from index 'SpatialIdx' where spatial.within(Coordinates, spatial.circle($p0, $p1, $p2))", iq.Query);
                     Assert.Equal(5d, iq.QueryParameters["p0"]);
                     Assert.Equal(38.9103000, iq.QueryParameters["p1"]);
                     Assert.Equal(-77.3942, iq.QueryParameters["p2"]);
@@ -102,7 +102,7 @@ namespace SlowTests.Tests.Spatial
 
                     var iq = RavenTestHelper.GetIndexQuery(matchingVenues);
 
-                    Assert.Equal("FROM INDEX 'SpatialIdx' WHERE spatial.within(Coordinates, spatial.circle($p0, $p1, $p2))", iq.Query);
+                    Assert.Equal("from index 'SpatialIdx' where spatial.within(Coordinates, spatial.circle($p0, $p1, $p2))", iq.Query);
                     Assert.Equal(5d, iq.QueryParameters["p0"]);
                     Assert.Equal(38.9103000, iq.QueryParameters["p1"]);
                     Assert.Equal(-77.3942, iq.QueryParameters["p2"]);

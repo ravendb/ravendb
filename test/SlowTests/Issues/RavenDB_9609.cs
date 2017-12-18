@@ -33,7 +33,7 @@ namespace SlowTests.Issues
                         .ProjectInto<ContactDetails>()
                         .Customize(x => x.WaitForNonStaleResults());
 
-                    Assert.Equal("FROM INDEX 'Companies/ByContact' SELECT Name, Phone",  RavenTestHelper.GetIndexQuery(query).Query);
+                    Assert.Equal("from index 'Companies/ByContact' select Name, Phone",  RavenTestHelper.GetIndexQuery(query).Query);
 
                     var results = query
                         .ToList();

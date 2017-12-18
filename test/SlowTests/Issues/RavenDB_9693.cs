@@ -21,7 +21,7 @@ namespace SlowTests.Issues
 
                     var iq = RavenTestHelper.GetIndexQuery(query);
 
-                    Assert.Equal("FROM Items WHERE Name = $p0 AND spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p1, $p2, $p3)) ORDER BY spatial.distance(someField, spatial.point($p4, $p5)) DESC", iq.Query);
+                    Assert.Equal("from Items where Name = $p0 and spatial.within(spatial.point(Latitude, Longitude), spatial.circle($p1, $p2, $p3)) order by spatial.distance(someField, spatial.point($p4, $p5)) desc", iq.Query);
                 }
             }
         }

@@ -16,12 +16,12 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override string ToString()
         {
-            return Source + " BETWEEN " + Min + " AND " + Max;
+            return Source + " between " + Min + " and " + Max;
         }
 
         public override string GetText()
         {
-            return Source.GetText() + " BETWEEN " + Min.GetText() + " AND " + Max.GetText();
+            return Source.GetText() + " between " + Min.GetText() + " and " + Max.GetText();
         }
     }
 }

@@ -1107,7 +1107,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (Includes == null || Includes.Count == 0)
                 return;
 
-            queryText.Append(" INCLUDE ");
+            queryText.Append(" include ");
             bool first = true;
             foreach (var include in Includes)
             {
@@ -1245,7 +1245,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
 
             writer
-                .Append(" SELECT ");
+                .Append(" select ");
 
             var token = SelectTokens.First;
             if (SelectTokens.Count == 1 && token.Value is DistinctToken)
@@ -1284,7 +1284,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (LoadTokens == null || LoadTokens.Count == 0)
                 return;
 
-            writer.Append(" LOAD ");
+            writer.Append(" load ");
 
             for (int i = 0; i < LoadTokens.Count; i++)
             {
@@ -1300,7 +1300,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
 
             writer
-                .Append(" WHERE ");
+                .Append(" where ");
 
             if (IsIntersect)
                 writer.Append("intersect(");
@@ -1325,7 +1325,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
 
             writer
-                .Append(" GROUP BY ");
+                .Append(" group by ");
 
             var token = GroupByTokens.First;
             while (token != null)
@@ -1345,7 +1345,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return;
 
             writer
-                .Append(" ORDER BY ");
+                .Append(" order by ");
 
             var token = OrderByTokens.First;
             while (token != null)

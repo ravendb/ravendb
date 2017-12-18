@@ -23,13 +23,13 @@ namespace Raven.Client.Documents.Session.Tokens
 
         private static readonly HashSet<string> RqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "AS",
-            "SELECT",
-            "WHERE",
-            "LOAD",
-            "GROUP",
-            "ORDER",
-            "INCLUDE"
+            "as",
+            "select",
+            "where",
+            "load",
+            "group",
+            "order",
+            "include"
         };
     }
 }

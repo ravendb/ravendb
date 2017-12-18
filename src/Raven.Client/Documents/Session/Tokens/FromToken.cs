@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (IsDynamic)
             {
                 writer
-                    .Append("FROM ");
+                    .Append("from ");
                 if(CollectionName.IndexOfAny(_whiteSpaceChars) != -1)
                 {
                     if (CollectionName.IndexOf('"') != -1)
@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Session.Tokens
             else
             {
                 writer
-                    .Append("FROM INDEX '")
+                    .Append("from index '")
                     .Append(IndexName)
                     .Append("'");
             }

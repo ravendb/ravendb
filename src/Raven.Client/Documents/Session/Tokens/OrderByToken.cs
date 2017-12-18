@@ -67,18 +67,18 @@ namespace Raven.Client.Documents.Session.Tokens
             switch (_ordering)
             {
                 case OrderingType.Long:
-                    writer.Append(" AS long");
+                    writer.Append(" as long");
                     break;
                 case OrderingType.Double:
-                    writer.Append(" AS double");
+                    writer.Append(" as double");
                     break;
                 case OrderingType.AlphaNumeric:
-                    writer.Append(" AS alphaNumeric");
+                    writer.Append(" as alphaNumeric");
                     break;
             }
 
             if (_descending) // we only add this if we have to, ASC is the default and reads nicer
-                writer.Append(" DESC");
+                writer.Append(" desc");
         }
     }
 }

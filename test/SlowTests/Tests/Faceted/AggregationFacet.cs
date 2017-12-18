@@ -192,7 +192,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var query = session.Query<Car>("Cars")
                         .AggregateBy(f => f.ByField(x => x.Make).SumOn(x => x.Price)).ToString();
-                    Assert.Equal("FROM INDEX 'Cars' SELECT facet(Make, sum(Price))", query);
+                    Assert.Equal("from index 'Cars' select facet(Make, sum(Price))", query);
                 }
             }
         }
@@ -208,7 +208,7 @@ namespace SlowTests.Tests.Faceted
                 {
                     var query = session.Query<Car>("Cars")
                         .AggregateBy(f => f.ByField(x => x.Make).SumOn(x => x.Price)).ToString();
-                    Assert.Equal("FROM INDEX 'Cars' SELECT facet(Make, sum(Price))", query);
+                    Assert.Equal("from index 'Cars' select facet(Make, sum(Price))", query);
                 }
             }
         }
