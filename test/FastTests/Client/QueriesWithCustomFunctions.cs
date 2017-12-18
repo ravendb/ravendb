@@ -1398,7 +1398,7 @@ from Users as u select output(u)", query.ToString());
                     var queryResult = query.ToList();
                     
                     Assert.Equal(1, queryResult.Count);
-                    Assert.Equal(Math.Ceiling((DateTime.Now - new DateTime(1942, 8, 1)).TotalDays), queryResult[0].Days);
+                    Assert.Equal(Math.Ceiling((DateTime.UtcNow - new DateTime(1942, 8, 1)).TotalDays), queryResult[0].Days);
                 }
             }
         }
