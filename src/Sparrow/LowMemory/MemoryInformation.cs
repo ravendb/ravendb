@@ -204,8 +204,21 @@ namespace Sparrow.LowMemory
                 if (PlatformDetails.RunningOnMacOsx == false)
                 {
                     // linux
-                    var info = new sysinfo_t();
-                    if (Syscall.sysinfo(ref info) != 0)
+                    int rc = 0;
+                    ulong totalram = 0;
+                    if (PlatformDetails.Is32Bits == false)
+                    {
+                        var info = new sysinfo_t();
+                        rc = Syscall.sysinfo(ref info);
+                        totalram = info.TotalRam;
+                    }
+                    else
+                    {
+                        var info = new sysinfo_t_32bit();
+                        rc = Syscall.sysinfo(ref info);
+                        totalram = info.TotalRam;
+                    }
+                    if (rc != 0)
                     {
                         if (Logger.IsInfoEnabled)
                             Logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
@@ -213,7 +226,7 @@ namespace Sparrow.LowMemory
                     }
 
                     availableRamInBytes = (ulong)GetAvailableMemoryFromProcMemInfo();
-                    totalPhysicalMemoryInBytes = info.TotalRam;
+                    totalPhysicalMemoryInBytes = totalram;
                 }
                 else
                 {
