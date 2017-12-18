@@ -20,6 +20,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Global;
 using Sparrow;
+using Sparrow.Utils;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -345,6 +346,7 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
 
                 var modifiedTicks = _database.Time.GetUtcNow().Ticks;
+                var idsOfDocumentsToUpdateAfterAttachmentDeletion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var documentType in Documents)
                 {
@@ -361,6 +363,12 @@ namespace Raven.Server.Smuggler.Documents
                                     _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, null, changeVector, new CollectionName(tombstone.Collection));
                                     break;
                                 case DocumentTombstone.TombstoneType.Attachment:
+                                    var idEnd = key.Content.IndexOf(SpecialChars.RecordSeparator);
+                                    if (idEnd < 1)
+                                        throw new InvalidOperationException("Cannot find a document ID inside the attachment key");
+                                    var id = key.Content.Substring(idEnd);
+                                    idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(id);
+
                                     _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector);
                                     break;
                                 case DocumentTombstone.TombstoneType.Revision:
@@ -425,6 +433,11 @@ namespace Raven.Server.Smuggler.Documents
                         PutAttachments(context, document);
                         _database.DocumentsStorage.Put(context, id, null, document.Data, modifiedTicks, null, document.Flags, document.NonPersistentFlags);
                     }
+                }
+
+                foreach (var id in idsOfDocumentsToUpdateAfterAttachmentDeletion)
+                {
+                    _database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, id);
                 }
 
                 return Documents.Count;

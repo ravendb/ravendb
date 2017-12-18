@@ -1,14 +1,16 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Revisions;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -88,6 +90,88 @@ namespace SlowTests.Client.Attachments
             finally
             {
                 File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task ExportFullThanDeleteAttachmentAndCreateAnotherOneThanExportIncrementalThanImport()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_store1"
+            }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Fitzchak"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var stream = new MemoryStream(new byte[] {1, 2, 3}))
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "file1", stream, "image/png"));
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                SpinWait.SpinUntil(() =>
+                {
+                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                    return getPeriodicBackupResult.Status?.LastEtag > 0;
+                }, TimeSpan.FromSeconds(15));
+
+                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
+                store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
+                using (var stream = new MemoryStream(new byte[] {4, 5, 6}))
+                    store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfDocuments);
+                Assert.Equal(1, stats.CountOfAttachments);
+                Assert.Equal(1, stats.CountOfUniqueAttachments);
+
+                SpinWait.SpinUntil(() =>
+                {
+                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
+                    return newLastEtag != etagForBackups;
+                }, TimeSpan.FromMinutes(2));
+            }
+
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseName = s => $"{s}_store2"
+            }))
+            {
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), Directory.GetDirectories(backupPath).First());
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfDocuments);
+                Assert.Equal(1, stats.CountOfAttachments);
+                Assert.Equal(1, stats.CountOfUniqueAttachments);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    Assert.Equal(DocumentFlags.HasAttachments.ToString(), metadata[Constants.Documents.Metadata.Flags]);
+                    var attachment = metadata.GetObjects(Constants.Documents.Metadata.Attachments).Single();
+                    Assert.Equal("file2", attachment.GetString(nameof(AttachmentName.Name)));
+                }
             }
         }
 
