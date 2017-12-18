@@ -1,21 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Runtime.Serialization.Json;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Smuggler;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
+using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_9519:RavenTestBase
+    public class RavenDB_9519 : RavenTestBase
     {
         [Fact]
         public async Task NestedObjectShouldBeExportedAndImportedProperly()
@@ -39,14 +36,29 @@ namespace FastTests.Issues
                         stream.CopyTo(file);
                         await file.FlushAsync();
                     }
-                    await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+
+                    using (var commands = store.Commands())
                     {
-                        FromCsv = true
-                    }, tmpFile);
+                        var getOperationIdCommand = new GetNextOperationIdCommand();
+                        await commands.RequestExecutor.ExecuteAsync(getOperationIdCommand, commands.Context);
+                        var operationId = getOperationIdCommand.Result;
+
+                        using (var fileStream = File.OpenRead(tmpFile))
+                        {
+                            var csvImportCommand = new CsvImportCommand(fileStream, null, operationId);
+
+                            await commands.ExecuteAsync(csvImportCommand);
+
+                            var operation = new Operation(commands.RequestExecutor, () => store.Changes(), store.Conventions, operationId);
+
+                            await operation.WaitForCompletionAsync();
+                        }
+                    }
+
                     using (var session = store.OpenSession())
                     {
                         var res = session.Query<Company>().ToList();
-                        Assert.Equal(2,res.Count);
+                        Assert.Equal(2, res.Count);
                         Assert.True(res[0].Equals(res[1]));
                     }
                 }
@@ -54,13 +66,11 @@ namespace FastTests.Issues
             finally
             {
                 if (tmpFile != null)
-                {
-                    File.Delete(tmpFile);
-                }
+                    IOExtensions.DeleteFile(tmpFile);
             }
         }
 
-        private Company _testCompany =  new Company
+        private readonly Company _testCompany = new Company
         {
             ExternalId = "WOLZA",
             Name = "Wolski  Zajazd",
@@ -84,7 +94,7 @@ namespace FastTests.Issues
                 Region = null
             },
             Phone = "(26) 642-7012",
-            Fax= "(26) 642-7012",
+            Fax = "(26) 642-7012",
         };
 
         private class Company
@@ -134,7 +144,38 @@ namespace FastTests.Issues
             public string Name { get; set; }
             public string Title { get; set; }
         }
+
+        private class CsvImportCommand : RavenCommand
+        {
+            private readonly Stream _stream;
+            private readonly string _collection;
+            private readonly long _operationId;
+
+            public override bool IsReadRequest => false;
+
+            public CsvImportCommand(Stream stream, string collection, long operationId)
+            {
+                _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+
+                _collection = collection;
+                _operationId = operationId;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/smuggler/import/csv?operationId={_operationId}&collection={_collection}";
+
+                var form = new MultipartFormDataContent
+                {
+                    {new StreamContent(_stream), "file", "name"}
+                };
+
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = form
+                };
+            }
+        }
     }
-
-
 }

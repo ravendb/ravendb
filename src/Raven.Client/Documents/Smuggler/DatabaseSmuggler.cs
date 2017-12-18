@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
-            if(_databaseName != null)
+            if (_databaseName != null)
                 _requestExecutor = store.GetRequestExecutor(_databaseName);
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
-            if(_requestExecutor == null)
+            if (_requestExecutor == null)
                 throw new InvalidOperationException("Cannot use Smuggler without a database defined, did you forget to call ForDatabase?");
 
             using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -210,8 +210,6 @@ namespace Raven.Client.Documents.Smuggler
             private readonly BlittableJsonReaderObject _options;
             private readonly Stream _stream;
             private readonly long _operationId;
-            private bool _fromCsv;
-            private string _collection;
 
             public override bool IsReadRequest => false;
 
@@ -226,17 +224,11 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(context));
                 _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, context);
                 _operationId = operationId;
-                _fromCsv = options.FromCsv;
-                _collection = options.CsvCollection;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                var csv = _fromCsv ? "/csv" : string.Empty;
-                string collection = string.Empty;
-                if (_fromCsv && string.IsNullOrEmpty(_collection) == false)
-                    collection = $"&collection={_collection}";
-                url = $"{node.Url}/databases/{node.Database}/smuggler/import{csv}?operationId={_operationId}{collection}";
+                url = $"{node.Url}/databases/{node.Database}/smuggler/import?operationId={_operationId}";
 
                 var form = new MultipartFormDataContent
                 {

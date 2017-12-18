@@ -47,8 +47,5 @@ namespace Raven.Server.Smuggler.Documents.Data
 
             return result;
         }
-
-        public bool FromCsv { get; set; }
-        public string CsvCollection { get; set; }
     }
 }
