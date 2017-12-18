@@ -846,7 +846,10 @@ namespace Raven.Server.Documents
                                                    $"but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.");
 
-                // this basically means that we tried to delete attachment that doesn't exist.
+                // This basically means that we tried to delete attachment that doesn't exist.
+                // We'll create a tombstones just to make sure that it would replicate the delete.
+                var attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
+                CreateTombstone(context, key, attachmentEtag, changeVector);
                 return;
             }
 

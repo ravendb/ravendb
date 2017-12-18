@@ -1184,15 +1184,9 @@ namespace Raven.Server.Documents
                 // ensures that the collection trees will be created
                 collectionName = ExtractCollectionName(context, collectionName.Name);
 
-                // delete etag is not relevant, but we need a unique one here
-                // we use a negative value here to indicate a missing replicated
-                // tombstone
-                var newEtag = GenerateNextEtag();
-                EnsureLastEtagIsPersisted(context, newEtag);
-                var dummyDocumentEtag = -newEtag;
                 var etag = CreateTombstone(context,
                     lowerId,
-                    dummyDocumentEtag, 
+                    GenerateNextEtagForReplicatedTombstoneMissingDocument(context), 
                     collectionName,
                     changeVector,
                     DateTime.UtcNow.Ticks,
@@ -1205,6 +1199,15 @@ namespace Raven.Server.Documents
                     Etag = etag
                 };
             }
+        }
+
+        public long GenerateNextEtagForReplicatedTombstoneMissingDocument(DocumentsOperationContext context)
+        {
+            // DocumentTombstone.DeleteEtag is not relevant, but we need a unique one here
+            // we use a negative value here to indicate a missing replicated tombstone
+            var newEtag = GenerateNextEtag();
+            EnsureLastEtagIsPersisted(context, newEtag);
+            return -newEtag;
         }
 
         // Note: Make sure to call this with a separator, to you won't delete "users/11" for "users/1"
