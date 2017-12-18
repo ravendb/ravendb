@@ -760,7 +760,20 @@ namespace Raven.Server.Smuggler.Documents
             };
         }
 
-        public struct LegacyAttachmentDetails        {            public LazyStringValue Id;            public string Hash;            public string Key;            public long Size;            public string Tag;            public BlittableJsonReaderObject Metadata;        }        private const char RecordSeperator = (char)SpecialChars.RecordSeparator;        private const string DummyDocumentPrefix = "files/";        public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
+        public struct LegacyAttachmentDetails
+        {
+            public LazyStringValue Id;
+            public string Hash;
+            public string Key;
+            public long Size;
+            public string Tag;
+            public BlittableJsonReaderObject Metadata;
+        }
+
+        private const char RecordSeperator = (char)SpecialChars.RecordSeparator;
+        private const string DummyDocumentPrefix = "files/";
+
+        public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                 data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
