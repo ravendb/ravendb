@@ -23,11 +23,11 @@ namespace Raven.Client.Documents.Session
         public IMetadataDictionary DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
-    public class AfterStoreEventArgs : EventArgs
+    public class AfterSaveChangesEventArgs : EventArgs
     {
         private IMetadataDictionary _documentMetadata;
 
-        public AfterStoreEventArgs(InMemoryDocumentSessionOperations session, string documentId, object entity)
+        public AfterSaveChangesEventArgs(InMemoryDocumentSessionOperations session, string documentId, object entity)
         {
             Session = session;
             DocumentId = documentId;

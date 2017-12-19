@@ -158,7 +158,7 @@ namespace Raven.Client.Documents
         public event Action<InMemoryDocumentSessionOperations> SessionCreatedInternal;
         public event Action<string> TopologyUpdatedInternal;
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
-        public event EventHandler<AfterStoreEventArgs> OnAfterStore;
+        public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
         public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
@@ -197,7 +197,7 @@ namespace Raven.Client.Documents
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)
         {
             session.OnBeforeStore += OnBeforeStore;
-            session.OnAfterStore += OnAfterStore;
+            session.OnAfterSaveChanges += OnAfterSaveChanges;
             session.OnBeforeDelete += OnBeforeDelete;
             session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
         }

@@ -33,7 +33,7 @@ namespace Raven.Client.Documents
         /// Store events
         /// </summary>
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
-        event EventHandler<AfterStoreEventArgs> OnAfterStore;
+        event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         /// <summary>
         /// Delete event
