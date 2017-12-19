@@ -524,7 +524,7 @@ namespace Raven.Server.Rachis
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
         private readonly Stopwatch _leadership = Stopwatch.StartNew();
-        private int VotersMajority => _voters.Count / 2 + 1;
+        private int VotersMajority => (_voters.Count + 1) / 2 + 1;
 
         public long LeaderShipDuration => _leadership.ElapsedMilliseconds;
 
