@@ -9,14 +9,19 @@ class nodeInfo {
     port = ko.observable<string>();
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
+    externalIpAddress = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
+    
+    showAdvancedSettings = ko.observable<boolean>(false);
     
     private hostnameIsOptional: KnockoutObservable<boolean>;
     
     constructor(hostnameIsOptional: KnockoutObservable<boolean>) {
         this.hostnameIsOptional = hostnameIsOptional;
         this.initValidation();
+        
+        _.bindAll(this, "toggleAdvanced");
         
         this.isLocal = ko.pureComputed(() => {
             return this.nodeTag() === 'A';
@@ -28,6 +33,10 @@ class nodeInfo {
     private initValidation() {
         this.port.extend({
             number: true
+        });
+        
+        this.externalIpAddress.extend({
+            validIpAddress: true
         });
         
         this.hostname.extend({
@@ -50,7 +59,8 @@ class nodeInfo {
             nodeTag: this.nodeTag,
             port: this.port, 
             ips: this.ips,
-            hostname: this.hostname
+            hostname: this.hostname,
+            externalIpAddress: this.externalIpAddress
         });
     }
 
@@ -73,12 +83,17 @@ class nodeInfo {
         }
         return serverUrl;
     }
+    
+    toggleAdvanced() {
+        this.showAdvancedSettings.toggle();
+    }
 
     toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
         return {
             Addresses: this.ips().map(x => x.ip()),
             Port: this.port() ? parseInt(this.port(), 10) : null,
-            PublicServerUrl: this.getServerUrl()
+            PublicServerUrl: this.getServerUrl(),
+            ExternalIpAddress: this.externalIpAddress() || null
         };
     }
 }
