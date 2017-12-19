@@ -96,6 +96,7 @@ namespace Raven.Client.Documents.Session.Operations
         public List<T> Complete<T>()
         {
             var queryResult = _currentQueryResults.CreateSnapshot();
+            queryResult.Results.BlittableValidation();
 
             if (DisableEntitiesTracking == false)
                 _session.RegisterIncludes(queryResult.Includes);

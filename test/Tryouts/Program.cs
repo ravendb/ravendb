@@ -9,6 +9,8 @@ using Raven.Server.Utils;
 using SlowTests.Server.Replication;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide;
+using System.Threading;
+using System.Net;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -33,11 +35,13 @@ namespace Tryouts
         }
         static void Main(string[] args)
         {
+            ServicePointManager.DefaultConnectionLimit = 100;
+            ThreadPool.SetMinThreads(25, 25);
             for (int i = 0; i < 100; i++)
             {
-                ResetBench();
+                //ResetBench();
                 ParallelBatchStores(1);
-                SimpleMap100QueriesParallelAllResults(2);                
+                SimpleMap100QueriesParallelAllResults(20);                
             }
         }
 
@@ -50,7 +54,7 @@ namespace Tryouts
             {
                 try
                 {
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation("Bench", true));
+                    var res = store.Maintenance.Server.Send(new DeleteDatabasesOperation("Bench", true));                    
                 }
                 catch { }
 
@@ -226,7 +230,8 @@ namespace Tryouts
                 using (var session = store.OpenSession())
                 {
                     var sp = Stopwatch.StartNew();
-                    session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "a").ToList();
+                    session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "a")
+                        .ToList();
                     Console.WriteLine($"Simple map index, all results: {sp.ElapsedMilliseconds}");
                 }
             }
@@ -282,24 +287,26 @@ namespace Tryouts
         {
             using (var store = new DocumentStore
             {
-                Urls = new[] { "http://localhost:8080" },
+                Urls = new[] { "http://localhost.fiddler:8080" },
                 Database = "Bench"
             }.Initialize())
             {
                 var sp = Stopwatch.StartNew();
-                Parallel.For(0, 100,
+                var completed = Parallel.For(0, 1000,
                     new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * modifier },
                     i =>
                     {
                         using (var session = store.OpenSession())
                         {
 
-                            session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "a").ToList();
+                            session.Query<User>().Customize(x => x.WaitForNonStaleResults())
+                                .Where(x => x.Name != "a")
+                                .ToList();
 
                         }
-                    });
+                    }).IsCompleted;
 
-                Console.WriteLine($"Simple map index, 100 queries parallel (x{modifier})all results: {sp.ElapsedMilliseconds}");
+                Console.WriteLine($"Simple map index, 100 queries parallel (x{modifier})all results: {sp.ElapsedMilliseconds}, completed: {completed}");
             }
         }
     }

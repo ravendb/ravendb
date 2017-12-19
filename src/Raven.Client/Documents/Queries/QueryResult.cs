@@ -61,6 +61,9 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public QueryResult CreateSnapshot()
         {
+#if DEBUG
+            Results.BlittableValidation();
+#endif
             return new QueryResult
             {
                 Results = Results,

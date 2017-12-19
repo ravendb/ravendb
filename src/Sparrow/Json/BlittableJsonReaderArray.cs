@@ -51,9 +51,13 @@ namespace Sparrow.Json
                 return new StreamReader(memoryStream).ReadToEnd();
             }
         }
-
-        public void Dispose()
+        public void BlittableValidation()
         {
+            _parent?.BlittableValidation();
+        }
+        
+        public void Dispose()
+        {            
             _parent?.Dispose();
         }
 

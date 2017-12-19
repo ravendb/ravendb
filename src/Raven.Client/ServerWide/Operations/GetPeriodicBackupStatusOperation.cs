@@ -42,7 +42,7 @@ namespace Raven.Client.ServerWide.Operations
             };
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             if(response == null)
                 ThrowInvalidResponse();

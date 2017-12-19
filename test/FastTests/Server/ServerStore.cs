@@ -90,7 +90,7 @@ namespace FastTests.Server
                 return message;
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = response;
             }
@@ -115,7 +115,7 @@ namespace FastTests.Server
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = response;
             }

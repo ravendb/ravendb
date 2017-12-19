@@ -580,7 +580,7 @@ namespace Raven.Client.Http
                         cachedItem.MightHaveBeenModified == false &&
                         command.CanCacheAggressively)
                     {
-                        command.SetResponse(cachedValue, fromCache: true);
+                        command.SetResponse(context ,cachedValue, fromCache: true);
                         return;
                     }
 
@@ -700,7 +700,7 @@ namespace Raven.Client.Http
                         cachedItem.NotModified();
 
                         if (command.ResponseType == RavenCommandResponseType.Object)
-                            command.SetResponse(cachedValue, fromCache: true);
+                            command.SetResponse(context, cachedValue, fromCache: true);
 
                         return;
                     }
@@ -909,7 +909,7 @@ namespace Raven.Client.Http
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)
-                        command.SetResponse(null, fromCache: false);
+                        command.SetResponse(context, null, fromCache: false);
                     else
                         command.SetResponseRaw(response, null, context);
                     return true;

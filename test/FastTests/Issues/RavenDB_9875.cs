@@ -1,0 +1,85 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Http;
+using Sparrow.Json;
+using Xunit;
+
+namespace FastTests.Issues
+{
+    public class RavenDB_9875 : NoDisposalNeeded
+    {
+        private readonly HashSet<Type> _willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat
+            = new HashSet<Type>
+            {
+                typeof(GetDocumentsCommand),
+                typeof(QueryCommand),
+                typeof(GetRevisionsBinEntryCommand),
+                typeof(GetRevisionsCommand),
+                typeof(BatchCommand),
+                typeof(PatchOperation.PatchCommand)
+            };
+
+        [Fact]
+        public void Commands_should_be_careful_about_blittable_usage()
+        {
+            var commandTypes = typeof(RavenCommand<>).Assembly.GetTypes().Where(t =>
+            {
+                while (t != typeof(object) && t != null && t.BaseType != null)
+                {
+                    if (t.BaseType.IsGenericType)
+                    {
+                        if (t.BaseType.GetGenericTypeDefinition() == typeof(RavenCommand<>))
+                            return true;
+                    }
+
+                    t = t.BaseType;
+                }
+
+                return false;
+            }).ToList();
+            var sb = new StringBuilder();
+            foreach (var type in commandTypes)
+            {
+                var t = type;
+                while(t.BaseType.IsGenericType == false)
+                {
+                    t = t.BaseType;
+                }
+                var arg = t.BaseType.GetGenericArguments()[0];
+                foreach (var item in arg.GetProperties())
+                {
+                    if(item.PropertyType == typeof(BlittableJsonReaderObject) ||
+                        item.PropertyType == typeof(BlittableJsonReaderArray)
+                        )
+                    {
+                        if(_willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat.Contains(type) == false)
+                        {
+                            sb.AppendLine("The type " + type.FullName + " has property " + item.Name + " of type " + item.PropertyType.FullName + " and didn't validate that is isn't copying the cached value correctly");
+                        }
+                    }
+                }
+                foreach (var item in arg.GetFields())
+                {
+                    if (item.FieldType == typeof(BlittableJsonReaderObject) ||
+                        item.FieldType == typeof(BlittableJsonReaderArray)
+                        )
+                    {
+                        if (_willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat.Contains(type) == false)
+                        {
+                            sb.AppendLine("The type " + type.FullName + " has filed " + item.Name + " of type " + item.FieldType.FullName + " and didn't validate that is isn't copying the cached value correctly");
+                        }
+                    }
+                }
+            }
+
+
+            if (sb.Length > 0)
+                throw new InvalidOperationException(sb.ToString());
+        }
+    }
+}

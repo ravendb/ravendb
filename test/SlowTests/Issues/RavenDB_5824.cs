@@ -130,7 +130,7 @@ namespace SlowTests.Issues
                     };
                 }
 
-                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
                 {
                     Result = (IndexStaleness)_conventions.DeserializeEntityFromBlittable(typeof(IndexStaleness), response);
                 }

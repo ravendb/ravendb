@@ -54,7 +54,7 @@ namespace Raven.Client.Http
 
         public abstract HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url);
 
-        public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        public virtual void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             if (ResponseType == RavenCommandResponseType.Empty ||
                 ResponseType == RavenCommandResponseType.Raw)
@@ -112,7 +112,7 @@ namespace Raven.Client.Http
                     {
                         CacheResponse(cache, url, response, json);
                     }
-                    SetResponse(json, fromCache: false);
+                    SetResponse(context, json, fromCache: false);
                     return ResponseDisposeHandling.Automatic;
                 }
 
