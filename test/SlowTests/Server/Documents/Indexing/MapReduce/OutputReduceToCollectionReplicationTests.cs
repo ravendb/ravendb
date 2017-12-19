@@ -59,7 +59,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
 
-                var operation = await store1.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Invoices"}),CancellationToken.None);
+                var operation = await store1.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Invoices"}));
                 await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {

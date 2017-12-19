@@ -36,26 +36,26 @@ namespace Raven.Client.Documents.Operations
 
         public TResult Send<TResult>(IOperation<TResult> operation, SessionInfo sessionInfo = null)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo: sessionInfo));
+            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo));
         }
 
-        public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), SessionInfo sessionInfo = null)
+        public Task SendAsync(IOperation operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                return _requestExecutor.ExecuteAsync(command, context, token, sessionInfo);
+                return _requestExecutor.ExecuteAsync(command, context, sessionInfo, token);
             }
         }
 
-        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, CancellationToken token = default(CancellationToken), SessionInfo sessionInfo = null)
+        public async Task<TResult> SendAsync<TResult>(IOperation<TResult> operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token, sessionInfo).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
 
                 return command.Result;
             }

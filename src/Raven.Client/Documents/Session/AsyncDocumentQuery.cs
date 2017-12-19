@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
@@ -825,7 +824,7 @@ namespace Raven.Client.Documents.Session
             using (QueryOperation.EnterQueryContext())
             {
                 var command = QueryOperation.CreateRequest();
-                await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
+                await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, TheSession.SessionInfo, token).ConfigureAwait(false);
                 QueryOperation.SetResult(command.Result);
             }
 

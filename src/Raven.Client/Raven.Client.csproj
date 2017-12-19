@@ -46,7 +46,7 @@
     <PackageReference Include="Lambda2Js.Signed" Version="3.0.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.6">
+    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.7">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0" />

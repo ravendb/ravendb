@@ -10,16 +10,16 @@ namespace Raven.Client.Documents.Operations
     {
         public Operation Send(IOperation<OperationIdResult> operation, SessionInfo sessionInfo = null)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation, default(CancellationToken), sessionInfo));
+            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo));
         }
 
-        public async Task<Operation> SendAsync(IOperation<OperationIdResult> operation, CancellationToken token = default(CancellationToken), SessionInfo sessionInfo = null)
+        public async Task<Operation> SendAsync(IOperation<OperationIdResult> operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token, sessionInfo).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
                 return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, command.Result.OperationId);
             }
         }

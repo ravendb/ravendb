@@ -35,7 +35,7 @@ namespace Raven.Client.ServerWide.Operations
             using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
             }
         }
 
@@ -45,7 +45,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
                 return command.Result;
             }
         }
@@ -61,7 +61,7 @@ namespace Raven.Client.ServerWide.Operations
             {
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
                 return new ServerWideOperation(_requestExecutor, () => _store.Changes(), _requestExecutor.Conventions, command.Result.OperationId);
             }
         }

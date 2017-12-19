@@ -390,7 +390,7 @@ namespace Raven.Server.Web.System
 
                 var res = await ServerStore.SendToLeaderAsync(reorder);
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.Index);
-                
+
                 NoContentStatus();
             }
         }
@@ -412,7 +412,7 @@ namespace Raven.Server.Web.System
                     var url = clusterTopology.GetUrlFromTag(member);
                     var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.Server.Certificate.Certificate);
                     executors.Add(requester);
-                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, cts.Token));
+                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, token: cts.Token));
                 }
 
                 while (true)
@@ -491,7 +491,7 @@ namespace Raven.Server.Web.System
         {
             var topology = databaseRecord.Topology;
 
-            if(topology == null)
+            if (topology == null)
                 return;
 
             if (topology.Members?.Count == 1 && topology.Members[0] == "?")
@@ -955,7 +955,7 @@ namespace Raven.Server.Web.System
                 var compactSettingsJson = context.ReadForDisk(RequestBodyStream(), string.Empty);
 
                 var compactSettings = JsonDeserializationServer.CompactSettings(compactSettingsJson);
-                
+
                 if (string.IsNullOrEmpty(compactSettings.DatabaseName))
                     throw new InvalidOperationException($"{nameof(compactSettings.DatabaseName)} is a required field when compacting a database.");
 
@@ -972,7 +972,7 @@ namespace Raven.Server.Web.System
                 }
 
                 var database = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(compactSettings.DatabaseName).Result;
-               
+
                 var token = new OperationCancelToken(ServerStore.ServerShutdown);
                 var compactDatabaseTask = new CompactDatabaseTask(
                     ServerStore,
@@ -991,20 +991,20 @@ namespace Raven.Server.Web.System
                         {
                             var before = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
                             var overallResult = new CompactionResult(compactSettings.DatabaseName);
-                            
+
                             // first fill in data 
                             foreach (var indexName in compactSettings.Indexes)
                             {
                                 var indexCompactionResult = new CompactionResult(indexName);
                                 overallResult.IndexesResults.Add(indexName, indexCompactionResult);
                             }
-                            
+
                             // then do actual compaction
                             foreach (var indexName in compactSettings.Indexes)
                             {
                                 var index = database.IndexStore.GetIndex(indexName);
                                 var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                index.Compact(onProgress, (CompactionResult) indexCompactionResult);
+                                index.Compact(onProgress, (CompactionResult)indexCompactionResult);
                                 indexCompactionResult.Processed = true;
                             }
 
@@ -1012,12 +1012,12 @@ namespace Raven.Server.Web.System
                             {
                                 overallResult.Skipped = true;
                                 overallResult.Processed = true;
-                                return overallResult;   
+                                return overallResult;
                             }
 
                             await compactDatabaseTask.Execute(onProgress, overallResult);
                             overallResult.Processed = true;
-                            
+
                             overallResult.SizeAfterCompactionInMb = CalculateStorageSizeInBytes(compactSettings.DatabaseName).Result / 1024 / 1024;
                             overallResult.SizeBeforeCompactionInMb = before;
 
@@ -1088,7 +1088,7 @@ namespace Raven.Server.Web.System
                 NoContentStatus();
             }
         }
-        
+
         [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task MigrateDatabaseOffline()
         {
@@ -1119,7 +1119,7 @@ namespace Raven.Server.Web.System
                 context.OpenReadTransaction();
                 await CreateDatabase(databaseName, configuration.DatabaseRecord, context, 1, null);
             }
-            
+
             var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName, true);
             if (database == null)
             {
@@ -1139,7 +1139,7 @@ namespace Raven.Server.Web.System
             {
                 StartInfo = processStartInfo,
                 EnableRaisingEvents = true,
-            };            
+            };
             process.Start();
             var result = new OfflineMigrationResult();
             var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
@@ -1150,8 +1150,8 @@ namespace Raven.Server.Web.System
             process.StandardInput.WriteLine();
             process.EnableRaisingEvents = true;
             process.Exited += (sender, e) => { processDone.Set(); };
-           
-           // don't await here - this operation is async - all we return is operation id 
+
+            // don't await here - this operation is async - all we return is operation id 
             var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
                 Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
                 onProgress =>
@@ -1163,16 +1163,16 @@ namespace Raven.Server.Web.System
                             // send some initial progess so studio can open details 
                             result.AddInfo("Starting migration");
                             onProgress(overallProgress);
-                            
+
                             while (true)
                             {
-                                var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration,token.Token);
+                                var (hasTimeout, readMessage) = await ReadLineOrTimeout(process, timeout, configuration, token.Token);
                                 if (readMessage == null)
                                 {
                                     // reached end of stream
                                     break;
                                 }
-                                if(token.Token.IsCancellationRequested)
+                                if (token.Token.IsCancellationRequested)
                                     throw new TaskCanceledException("Was requested to cancel the offline migration task");
                                 if (hasTimeout)
                                 {
@@ -1256,8 +1256,8 @@ namespace Raven.Server.Web.System
             }
             else
             {
-              progressLine = await readline.WithCancellation(token);
-            } 
+                progressLine = await readline.WithCancellation(token);
+            }
             return (false, progressLine);
         }
     }

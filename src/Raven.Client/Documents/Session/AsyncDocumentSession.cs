@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Session
             IncrementRequestCount();
 
             var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
-            await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -84,7 +84,8 @@ namespace Raven.Client.Documents.Session
 
         private void EnsureAsyncDocumentIdGeneration()
         {
-            if (_asyncDocumentIdGeneration != null) return;
+            if (_asyncDocumentIdGeneration != null)
+                return;
             _asyncDocumentIdGeneration = new AsyncDocumentIdGeneration(this, DocumentsByEntity.TryGetValue, (id, entity, metadata) => id);
         }
 
@@ -119,7 +120,7 @@ namespace Raven.Client.Documents.Session
                 if (command == null)
                     return;
 
-                await RequestExecutor.ExecuteAsync(command, Context, token, SessionInfo).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
                 saveChangesOperation.SetResult(command.Result);
             }
         }
