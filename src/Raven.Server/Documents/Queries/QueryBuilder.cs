@@ -22,7 +22,6 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Spatial4n.Core.Shapes;
 using MoreLikeThisQuery = Raven.Server.Documents.Queries.MoreLikeThis.MoreLikeThisQuery;
 using Query = Raven.Server.Documents.Queries.AST.Query;
@@ -163,7 +162,7 @@ namespace Raven.Server.Documents.Queries
 
                             if (where.Right is MethodExpression rme)
                             {
-                                right = EvaluteMethod(serverContext, documentsContext, rme, ref parameters);
+                                right = EvaluateMethod(query, metadata, serverContext, documentsContext, rme, ref parameters);
                             }
 
                             var fieldName = ExtractIndexFieldName(query, parameters, where.Left, metadata);
@@ -368,7 +367,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
-        public static QueryExpression EvaluteMethod(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
+        public static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, MethodExpression method, ref BlittableJsonReaderObject parameters)
         {
             var methodType = QueryMethod.GetMethodType(method.Name);
 
@@ -376,29 +375,13 @@ namespace Raven.Server.Documents.Queries
             switch (methodType)
             {
                 case MethodType.CmpXchg:
+                    var v = GetValue(query, metadata, parameters, method.Arguments[0]);
+                    if (v.Type != ValueTokenType.String)
+                        throw new InvalidQueryException("Expected value of type string, but got: " + v.Type, query.QueryText, parameters);
+
                     var prefix = documentsContext.DocumentDatabase.Name + "/";
                     object value = null;
-                    if (method.Arguments[0] is ValueExpression v)
-                    {
-                        if (method.Arguments[0] is FieldExpression fe)
-                        {
-                            server.Cluster.GetCmpXchg(serverContext, prefix + fe.FieldValue).Value?.TryGetMember("Object", out value);
-                        }
-                        if (parameters.TryGetMember(v.Token, out object result) == false)
-                        {
-                            server.Cluster.GetCmpXchg(serverContext, prefix + v.Token).Value?.TryGetMember("Object", out value);
-                        }
-                        else
-                        {
-                            server.Cluster.GetCmpXchg(serverContext, prefix + result).Value?.TryGetMember("Object", out value);
-                            parameters.Modifications = new DynamicJsonValue
-                            {
-                                [v.Token] = value
-                            };
-                            parameters = documentsContext.ReadObject(parameters, "add-parameter");
-                            return new ValueExpression(v.Token, ValueTokenType.Parameter);
-                        }
-                    }
+                    server.Cluster.GetCmpXchg(serverContext, prefix + v.Value).Value?.TryGetMember("Object", out value);
 
                     if (value == null)
                         return new ValueExpression(null, ValueTokenType.Null);

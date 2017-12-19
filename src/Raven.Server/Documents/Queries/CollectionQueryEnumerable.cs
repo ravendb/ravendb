@@ -380,7 +380,7 @@ namespace Raven.Server.Documents.Queries
                                 }
                                 if (value is MethodExpression right)
                                 {
-                                    var id = QueryBuilder.EvaluteMethod(_serverContext, _context, right, ref parameters);
+                                    var id = QueryBuilder.EvaluateMethod(_query, _metadata, _serverContext, _context, right, ref parameters);
                                     if (id is ValueExpression v)
                                         AddId(v.Token);
                                 }
