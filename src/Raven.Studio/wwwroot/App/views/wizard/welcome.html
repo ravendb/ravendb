@@ -1,10 +1,8 @@
 <h2 class="margin-bottom margin-top"><strong class="margin-right">1.</strong> Welcome</h2>
-
 <p>
-    The wizard will assist you with setting up your RavenDB server and selecting the right security option to best address your needs.<br />
-    Let's start with choosing your desired level of security.
+The wizard will assist you with setting up your RavenDB server.<br/>
+Let's start with choosing your desired level of security. Select the security option that best addresses your needs.
 </p>
-
 <div class="row flex-row">
     <div class="col-sm-8 flex-vertical">
         <div class="panel flex-vertical flex-grow">
@@ -18,33 +16,30 @@
                         </button>
                         <div class="padding">
                             <ul class="list">
-                                <li><i class="icon-plus"></i><span>secured communication via SSL/TLS 1.2</span></li>
-                                <li><i class="icon-plus"></i><span>authentication via X509 client certificates</span></li>
-                                <li><i class="icon-plus"></i><span>automatic certificate generation and renewal</span></li>
-                                <li><i class="icon-plus"></i><span>hassle free and automatic</span></li>
-                                <li><i class="icon-minus"></i><span>requires access to the public Internet</span></li>
+                                <li><i class="icon-plus"></i><span>Secured communication via SSL/TLS 1.2</span></li>
+                                <li><i class="icon-plus"></i><span>Authentication via X509 client certificates</span></li>
+                                <li><i class="icon-plus"></i><span>Automatic certificate generation and renewal</span></li>
+                                <li><i class="icon-plus"></i><span>Hassle free and automatic</span></li>
+                                <li><i class="icon-minus"></i><span>Requires access to the public Internet</span></li>
                             </ul>
-
                             <div class="small">
-                                Secure and easy to setup. Uses automatically generated server certificate via Let's Encrypt.
-                                Reduce administration overhead and easily deploy both inside your organization and public facing
-                                databases by handling all the certificates generation for you.
+                                Secure and easy to setup. Uses an automatically generated server certificate via Let's Encrypt. 
+                                Reduce administration overhead with easy deployment both inside your organization and on publicly facing databases by handling all the certificate generation for you.
                             </div>
                         </div>
                     </div>
                     <div class="col-sm-6">
                         <button data-bind="click: chooseSecured, disable: $root.model.runningOnPosix" class="btn btn-icon btn-default">
                             <i class="icon-certificate icon-xl"></i>
-                            <p class="lead">Provide your certificate</p>
+                            <p class="lead">Provide Your Own Certificate</p>
                         </button>
                         <div class="padding">
                             <ul class="list">
-                                <li><i class="icon-plus"></i><span>secured communication via SSL/TLS 1.2</span></li>
-                                <li><i class="icon-plus"></i><span>authentication via X509 client certificates</span></li>
-                                <li><i class="icon-plus"></i><span>does not require access to the public Internet</span></li>
-                                <li><i class="icon-minus"></i><span>manual certificate generation and renewal</span></li>
+                                <li><i class="icon-plus"></i><span>Secured communication via SSL/TLS 1.2</span></li>
+                                <li><i class="icon-plus"></i><span>Authentication via X509 client certificates</span></li>
+                                <li><i class="icon-plus"></i><span>Does not require access to the public Internet</span></li>
+                                <li><i class="icon-minus"></i><span>Manual certificate generation and renewal</span></li>
                             </ul>
-
                             <div class="small">
                                 Best to use with corporate configurations with existing PKI infrastructure or for those choosing to control
                                 their certificate's creation on their own. Can be used in secured setups without external access required.
@@ -60,29 +55,26 @@
         <div class="panel flex-vertical flex-grow">
             <div class="padding padding-lg flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-warning">UNSECURE</h2>
-                
                 <button data-bind="click: chooseUnsecured" class="btn btn-icon btn-default">
                     <i class="icon-unsecure icon-xl"></i>
                     <p class="lead">Unsecured</p>
                 </button>
                 <div class="padding">
                     <ul class="list">
-                        <li><i class="icon-plus"></i><span>ready to use in no time</span></li>
-                        <li><i class="icon-minus"></i><span>unsecured, running on http</span></li>
-                        <li><i class="icon-minus"></i><span>no authentication</span></li>
-                        <li><i class="icon-minus"></i><span>cannot host encrypted databases</span></li>
+                        <li><i class="icon-plus"></i><span>Ready to use in no time</span></li>
+                        <li><i class="icon-minus"></i><span>Unsecured, running on http</span></li>
+                        <li><i class="icon-minus"></i><span>No authentication</span></li>
+                        <li><i class="icon-minus"></i><span>Cannot host encrypted databases</span></li>
                     </ul>
-
                     <div class="small">
                         Useful for local development and enviroments without <i>any</i> requirements for security.
-                        <i>Not</i> suitable for public facing servers and storing production data.
+                        <i>Not</i> suitable for publicly facing servers and storing production data.
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
 <div class="bg-info padding flex-horizontal margin-top">
     <div>
         <i class="icon-info icon-lg"></i>
@@ -91,4 +83,3 @@
         In order to disable this guide and setup the server manually, please find the 'settings.json' file in your RavenDB installation directory and change the <strong>Setup.Mode</strong> value to <strong>None</strong>
     </div>
 </div>
-
