@@ -1235,6 +1235,12 @@ namespace Raven.Server.Documents.Queries
                     switch (methodType)
                     {
                         case MethodType.CmpXchg:
+                            if (rme.Arguments.Count != 1)
+                                throw new InvalidQueryException("Method cmpxchg() expects only one argument to be provided", QueryText, parameters);
+
+                            if (!(rme.Arguments[0] is ValueExpression))
+                                throw new InvalidQueryException($"Method cmpxchg() expects value token as second argument, got {rme.Arguments[0]} type", QueryText, parameters);
+
                             _metadata.HasCmpXchg = true;
                             break;
                     }
