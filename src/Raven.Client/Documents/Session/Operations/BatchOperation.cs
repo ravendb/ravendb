@@ -88,8 +88,8 @@ namespace Raven.Client.Documents.Session.Operations
                 _session.DocumentsById.Add(documentInfo);
                 _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 
-                var afterStoreEventArgs = new AfterStoreEventArgs(_session, documentInfo.Id, documentInfo.Entity);
-                _session.OnAfterStoreInvoke(afterStoreEventArgs);
+                var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
+                _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
             }
         }
 

@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Session
         protected internal readonly HashSet<object> DeletedEntities = new HashSet<object>(ObjectReferenceEqualityComparer<object>.Default);
 
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
-        public event EventHandler<AfterStoreEventArgs> OnAfterStore;
+        public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
         public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
 
@@ -742,9 +742,6 @@ more responsive application.
 
                         if (documentInfo.Entity != null)
                         {
-                            var afterStoreEventArgs = new AfterStoreEventArgs(this, documentInfo.Id, documentInfo.Entity);
-                            OnAfterStore?.Invoke(this, afterStoreEventArgs);
-
                             DocumentsByEntity.Remove(documentInfo.Entity);
                             result.Entities.Add(documentInfo.Entity);
                         }
@@ -1300,9 +1297,9 @@ more responsive application.
             }
         }
 
-        public void OnAfterStoreInvoke(AfterStoreEventArgs afterStoreEventArgs)
+        public void OnAfterSaveChangesInvoke(AfterSaveChangesEventArgs afterSaveChangesEventArgs)
         {
-            OnAfterStore?.Invoke(this, afterStoreEventArgs);
+            OnAfterSaveChanges?.Invoke(this, afterSaveChangesEventArgs);
         }
 
         public void OnBeforeQueryExecutedInvoke(BeforeQueryExecutedEventArgs beforeQueryExecutedEventArgs)
