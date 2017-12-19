@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Facets;
 using Raven.Server.Documents.Queries.Suggestions;
@@ -76,10 +77,8 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public TermsQueryResultServerSide ExecuteGetTermsQuery(string indexName, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
+        public TermsQueryResultServerSide ExecuteGetTermsQuery(Index index, string field, string fromValue, long? existingResultEtag, int pageSize, DocumentsOperationContext context, OperationCancelToken token)
         {
-            var index = GetIndex(indexName);
-
             var etag = index.GetIndexEtag();
             if (etag == existingResultEtag)
                 return TermsQueryResultServerSide.NotModifiedResult;

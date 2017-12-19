@@ -277,7 +277,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());
             }
 
-            var outputFieldsArray = GetArrayCreationExpression(fieldNamesValidator.Fields);
+            var fields = GetIndexedFields(definition, fieldNamesValidator);
+
+            var outputFieldsArray = GetArrayCreationExpression(fields);
             statements.Add(RoslynHelper.This(nameof(StaticIndexBase.OutputFields)).Assign(outputFieldsArray).AsExpressionStatement());
 
             var methods = methodDetector.Methods;
@@ -295,6 +297,30 @@ namespace Raven.Server.Documents.Indexes.Static
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<StaticIndexBase>()
                 .WithMembers(members.Add(ctor));
+        }
+
+        private static List<string> GetIndexedFields(IndexDefinition definition, FieldNamesValidator fieldNamesValidator)
+        {
+            var fields = fieldNamesValidator.Fields.ToList();
+
+            foreach (var spatialField in definition.Fields)
+            {
+                if (spatialField.Value.Spatial == null)
+                    continue;
+                if (spatialField.Value.Spatial.Strategy != Client.Documents.Indexes.Spatial.SpatialSearchStrategy.BoundingBox)
+                    continue;
+
+                fields.Remove(spatialField.Key);
+                fields.AddRange(new[]
+                {
+                    spatialField.Key + "__minX",
+                    spatialField.Key + "__minY",
+                    spatialField.Key + "__maxX",
+                    spatialField.Key + "__maxY",
+                });
+            }
+
+            return fields;
         }
 
         private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,

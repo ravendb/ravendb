@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries
             Database = database;
         }
 
-        protected Index GetIndex(string indexName)
+        public Index GetIndex(string indexName)
         {
             var index = Database.IndexStore.GetIndex(indexName);
             if (index == null)

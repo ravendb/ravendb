@@ -534,7 +534,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-                var result = Database.QueryRunner.ExecuteGetTermsQuery(name, field, fromValue, existingResultEtag, GetPageSize(), context, token);
+                var index = Database.QueryRunner.GetIndex(name);
+
+                var result = Database.QueryRunner.ExecuteGetTermsQuery(index, field, fromValue, existingResultEtag, GetPageSize(), context, token);
 
                 if (result.NotModified)
                 {
@@ -546,6 +548,29 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
+                    if(field.EndsWith("__minX") ||
+                        field.EndsWith("__minY") ||
+                        field.EndsWith("__maxX") ||
+                        field.EndsWith("__maxY"))
+                    {
+                        if (index.Definition.IndexFields != null &&
+                        index.Definition.IndexFields.TryGetValue(field.Substring(0, name.Length - 6), out var indexField) == true)
+                        {
+                            if (indexField.Spatial?.Strategy == Client.Documents.Indexes.Spatial.SpatialSearchStrategy.BoundingBox)
+                            {
+                                // here we need to convert these to numbers, otherwise the studio
+                                // can't display them in the studio
+                                var readableTerms = new HashSet<string>();
+                                foreach (var item in result.Terms)
+                                {
+                                    var num = Lucene.Net.Util.NumericUtils.PrefixCodedToDouble(item);
+                                    readableTerms.Add(NumberUtil.NumberToString(num));
+                                }
+                                result.Terms = readableTerms;
+                            }
+                        }
+                    }
+                    
                     writer.WriteTermsQueryResult(context, result);
                 }
 
