@@ -640,10 +640,16 @@ namespace Raven.Server.Commercial
 
                 foreach (var node in setupInfo.NodeSetupInfos)
                 {
+
                     var regNodeInfo = new RegistrationNodeInfo
                     {
                         SubDomain = (node.Key + "." + setupInfo.Domain).ToLower(),
-                        Ips = node.Value.Addresses
+                        Ips = node.Value.ExternalIpAddress == null
+                            ? node.Value.Addresses
+                            : new List<string>
+                            {
+                                node.Value.ExternalIpAddress
+                            }
                     };
 
                     if (map == null)
@@ -688,7 +694,7 @@ namespace Raven.Server.Commercial
                 try
                 {
                     progress.AddInfo("Registering DNS record(s)/challenge(s) in api.ravendb.net.");
-                    progress.AddInfo("Please wait between 30 seconds and a few minutes, depending on the number of domains(nodes).");
+                    progress.AddInfo("Please wait between 30 seconds and a few minutes.");
                     onProgress(progress);
                     response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/register",
                         new StringContent(serializeObject, Encoding.UTF8, "application/json"), token).ConfigureAwait(false);
@@ -1351,9 +1357,10 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'.{Environment.NewLine}" +
-                                                        $"Settings file:{settingsPath}.{Environment.NewLine} " +
-                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
+                    throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'. The specified ip address might not be reachable due to network issues.{Environment.NewLine}" +
+                                                        $"Settings file:{settingsPath}.{Environment.NewLine}" +
+                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
+                                                        "This can happen if the ip is external (behind a firewall). If this is the case, try going back to the previous screen and add the same ip as an external ip.", e);
                 }
                 
                 using (var httpMessageHandler = new HttpClientHandler())
