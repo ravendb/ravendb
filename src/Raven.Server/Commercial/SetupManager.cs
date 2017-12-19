@@ -829,7 +829,9 @@ namespace Raven.Server.Commercial
         {
             var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
 
-            var ips = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
+            var ips = localNode.ExternalIpAddress == null
+                ? localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray()
+                : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.Port)};
 
             var serverCert = setupInfo.GetX509Certificate();
 
@@ -851,7 +853,8 @@ namespace Raven.Server.Commercial
                 if (setupMode == SetupMode.LetsEncrypt)
                     await AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
 
-                await SimulateRunningServer(serverCert, localServerUrl, ips, token, setupInfo, serverStore.Configuration.ConfigPath, setupMode);
+                var localIps = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
+                await SimulateRunningServer(serverCert, localServerUrl, localIps, token, setupInfo, serverStore.Configuration.ConfigPath, setupMode);
             }
             catch (Exception e)
             {
@@ -1467,7 +1470,7 @@ namespace Raven.Server.Commercial
                     if (dnsResult.Status != 0)
                         throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
                                                             + $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
-                                                            Environment.NewLine + "Please wait a while until DNS propogation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
+                                                            Environment.NewLine + "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
 
                     JArray answers = dnsResult.Answer;
                     var googleIps = answers.Select(answer => answer["data"].ToString()).ToHashSet();
@@ -1475,7 +1478,7 @@ namespace Raven.Server.Commercial
                     if (googleIps.SetEquals(expectedIps) == false)
                         throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
                                                             + $"Expected to get these ips: {string.Join(", ", expectedIps)} while google's actual result was: {string.Join(", ", googleIps)}"
-                                                            + Environment.NewLine + "Please wait a while until DNS propogation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
+                                                            + Environment.NewLine + "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
                 }
 
                 // Resolving through google worked, now let's check locally
