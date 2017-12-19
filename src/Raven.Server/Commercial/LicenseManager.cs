@@ -11,8 +11,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
@@ -24,6 +26,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -1314,6 +1317,89 @@ namespace Raven.Server.Commercial
             return false;
         }
 
+        public bool HasHighlyAvailableTasks()
+        {
+            return _licenseStatus.HasHighlyAvailableTasks;
+        }
+
+        public string GetLastResponsibleNodeForTask(
+            IDatabaseTaskStatus databaseTaskStatus, 
+            DatabaseTopology databaseTopology,
+            IDatabaseTask databaseTask, 
+            NotificationCenter.NotificationCenter notificationCenter)
+        {
+            if (_licenseStatus.HasHighlyAvailableTasks)
+                return null;
+
+            var lastResponsibleNode = databaseTaskStatus.NodeTag;
+            if (lastResponsibleNode == null)
+                return null;
+
+            if (databaseTopology.AllNodes.Count() > 1 &&
+                databaseTopology.Members.Contains(lastResponsibleNode) == false)
+            {
+                var taskName = databaseTask.GetTaskName();
+                var message = $"Node {lastResponsibleNode} cannot exceute the task: '{taskName}'";
+                var alert = AlertRaised.Create(
+                    null,
+                    $@"You've reached your license limit ({EnumHelper.GetDescription(LimitType.HighlyAvailableTasks)})",
+                    message,
+                    AlertType.LicenseManager_HighlyAvailableTasks,
+                    NotificationSeverity.Warning,
+                    key: message,
+                    details: new MessageDetails
+                    {
+                        Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be exceuted " +
+                                  $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
+                                  $"or by any other node because your current license " +
+                                  $"doesn't include the dynamic nodes distribution feature. " + Environment.NewLine + 
+                                  $"You can choose a different mentor node that will execute the task " +
+                                  $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
+                                  $"Upgrading the license will allow RavenDB to manage that automatically."
+                    });
+
+                notificationCenter.Add(alert);
+            }
+
+            return lastResponsibleNode;
+        }
+
+        private static string GetTaskType(IDatabaseTask databaseTask)
+        {
+            switch (databaseTask)
+            {
+                case PeriodicBackupConfiguration _:
+                    return "Backup";
+                case SubscriptionState _:
+                    return "Subscription";
+                case RavenEtlConfiguration _:
+                    return "Raven ETL";
+                case SqlEtlConfiguration _:
+                    return "SQL ETL";
+                case ExternalReplication _:
+                    return "External Replication";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string GetMentorNodeState(IDatabaseTask databaseTask, DatabaseTopology databaseTopology)
+        {
+            var mentorNode = databaseTask.GetMentorNode();
+            return mentorNode == null ? "wasn't set" : $"'{mentorNode}' is {GetNodeState(databaseTopology, mentorNode)}";
+        }
+
+        private static string GetNodeState(DatabaseTopology databaseTopology, string nodeTag)
+        {
+            if (databaseTopology.Promotables.Contains(nodeTag))
+                return "in promotable state";
+
+            if (databaseTopology.Rehabs.Contains(nodeTag))
+                return "in rehab state";
+
+            return "not part of the cluster";
+        }
+
         public void AssertCanCreateEncryptedDatabase()
         {
             if (IsValid(out var licenseLimit) == false)
@@ -1333,7 +1419,8 @@ namespace Raven.Server.Commercial
         {
             var licenseLimit = new LicenseLimitException(limitType, message);
             if (addNotification)
-                LicenseLimitWarning.AddLicenseLimitNotification(_serverStore, licenseLimit);
+                LicenseLimitWarning.AddLicenseLimitNotification(_serverStore.NotificationCenter, licenseLimit);
+
             return licenseLimit;
         }
 

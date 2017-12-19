@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -13,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Migration
@@ -64,7 +64,7 @@ namespace Raven.Server.Smuggler.Migration
                 return;
 
             var buildInfo = await GetBuildInfo();
-            
+
             _buildMajorVersion = buildInfo.MajorVersion;
             _buildVersion = buildInfo.BuildVersion;
 
@@ -177,7 +177,7 @@ namespace Raven.Server.Smuggler.Migration
                     onProgress?.Invoke(result.Progress);
 
                     var majorVersion = _buildMajorVersion;
-                    var message = $"Importing from RavenDB {GetDescription(majorVersion)}";
+                    var message = $"Importing from RavenDB {EnumHelper.GetDescription(majorVersion)}";
 
                     result.AddInfo(message);
 
@@ -186,7 +186,7 @@ namespace Raven.Server.Smuggler.Migration
                         try
                         {
                             var migrationStateKey = $"{MigrationStateKeyBase}/" +
-                                                 $"{GetDescription(majorVersion)}/" +
+                                                 $"{EnumHelper.GetDescription(majorVersion)}/" +
                                                  $"{sourceDatabaseName}/" +
                                                  $"{_serverUrl}";
 
@@ -227,19 +227,6 @@ namespace Raven.Server.Smuggler.Migration
                 }, cancelToken.Token), id: operationId, token: cancelToken);
 
             return operationId;
-        }
-
-        public static string GetDescription(Enum value)
-        {
-            var fi = value.GetType().GetField(value.ToString());
-
-            if (fi != null)
-            {
-                var attributes = (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
-                return (attributes.Length > 0) ? attributes[0].Description : value.ToString();
-            }
-
-            return value.ToString();
         }
 
         private async Task CreateDatabaseIfNeeded(string databaseName)

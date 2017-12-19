@@ -15,7 +15,6 @@ using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Server.Rachis;
 using Raven.Server.Utils;
-using Raven.Client.Exceptions.Cluster;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -86,10 +85,11 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 ChangeVector = changeVector,
                 NodeTag = _serverStore.NodeTag,
+                HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
                 SubscriptionId = id,
                 SubscriptionName = name,
                 LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
-                LastKnownSubscriptionChangeVector = previousChangeVector,
+                LastKnownSubscriptionChangeVector = previousChangeVector
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -102,8 +102,9 @@ namespace Raven.Server.Documents.Subscriptions
             var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
             {
                 NodeTag = _serverStore.NodeTag,
+                HasHighlyAvailableTasks = _serverStore.LicenseManager.HasHighlyAvailableTasks(),
                 SubscriptionName = name,
-                LastClientConnectionTime = DateTime.UtcNow,
+                LastClientConnectionTime = DateTime.UtcNow
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -127,8 +128,8 @@ namespace Raven.Server.Documents.Subscriptions
             using (serverStoreContext.OpenReadTransaction())
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-                var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
-                var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription, _serverStore.Engine.CurrentState);
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
+                var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscription, subscription);
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     throw new SubscriptionDoesNotBelongToNodeException($"Subscripition with id {id} can't be proccessed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
@@ -397,14 +398,15 @@ namespace Raven.Server.Documents.Subscriptions
                     var subscriptionName = subscriptionStateKvp.Value.Connection?.Options?.SubscriptionName;
                     if (subscriptionName == null)
                         continue;
+
                     var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseRecord.DatabaseName, subscriptionName));
                     if (subscriptionBlittable == null)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionDoesNotExistException($"The subscription {subscriptionName} had been deleted"));
                         continue;
                     }
-                    var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
 
+                    var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
                     if (subscriptionState.Disabled)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} is disabled and cannot be used until enabled"));
@@ -417,7 +419,8 @@ namespace Raven.Server.Documents.Subscriptions
                         continue;
                     }
 
-                    if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.Engine.CurrentState) != _serverStore.NodeTag)
+                    var whoseTaskIsIt = _db.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
+                    if (whoseTaskIsIt != _serverStore.NodeTag)
                     {
                         DropSubscriptionConnection(subscriptionStateKvp.Key,
                             new SubscriptionDoesNotBelongToNodeException("Subscription operation was stopped, because it's now under different server's responsibility"));

@@ -810,6 +810,27 @@ namespace Raven.Server.Documents
             PeriodicBackupRunner.UpdateConfigurations(record);
         }
 
+        public string WhoseTaskIsIt(
+            DatabaseTopology databaseTopology, 
+            IDatabaseTask configuration, 
+            IDatabaseTaskStatus taskStatus, 
+            bool useLastResponsibleNodeIfNoAvailableNodes = false)
+        {
+            var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
+                ServerStore.Engine.CurrentState, configuration,
+                getLastReponsibleNode:
+                () => ServerStore.LicenseManager.GetLastResponsibleNodeForTask(
+                    taskStatus, 
+                    databaseTopology, 
+                    configuration,
+                    NotificationCenter));
+
+            if (whoseTaskIsIt == null && useLastResponsibleNodeIfNoAvailableNodes)
+                return taskStatus.NodeTag;
+
+            return whoseTaskIsIt;
+        }
+
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
         {
             yield return TxMerger.GeneralWaitPerformanceMetrics;

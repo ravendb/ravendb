@@ -30,5 +30,4 @@ namespace Raven.Server.ServerWide.Commands
             };
         }
     }
-
 }

@@ -284,7 +284,7 @@ namespace Raven.Server.Rachis
 
                         _connection?.Dispose();
 
-                        _leader?.NotifyAboutException(this, e);
+                        _leader?.NotifyAboutException(Tag, e);
                         _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                     }
                     finally

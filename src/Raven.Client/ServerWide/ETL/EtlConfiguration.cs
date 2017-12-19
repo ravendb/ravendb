@@ -82,6 +82,11 @@ namespace Raven.Client.ServerWide.ETL
 
         public abstract string GetDefaultTaskName();
 
+        public string GetTaskName()
+        {
+            return Name;
+        }
+
         public override string ToString()
         {
             return Name;

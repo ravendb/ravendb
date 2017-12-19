@@ -509,7 +509,7 @@ namespace RachisTests
 
             if (mentor != null)
             {
-                Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
+                Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
             }
 
             var task = subscription.Run(a =>
@@ -557,7 +557,7 @@ namespace RachisTests
                 var databaseRecord = someServer.ServerStore.Cluster.ReadDatabase(context, defaultDatabase);
                 var db = await someServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase).ConfigureAwait(false);
                 var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
-                tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, someServer.ServerStore.Engine.CurrentState);
+                tag = databaseRecord.Topology.WhoseTaskIsIt(someServer.ServerStore.Engine.CurrentState, subscriptionState, null);
             }
             Assert.NotNull(tag);
             DisposeServerAndWaitForFinishOfDisposal(Servers.First(x => x.ServerStore.NodeTag == tag));
@@ -616,7 +616,7 @@ namespace RachisTests
 
                 if (mentor != null)
                 {
-                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
                 }
 
                 await DisposeServerAndWaitForFinishOfDisposalAsync(leader);
@@ -667,7 +667,7 @@ namespace RachisTests
 
                 if (mentor != null)
                 {
-                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
                 }
 
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)
@@ -731,7 +731,7 @@ namespace RachisTests
 
                 if (mentor != null)
                 {
-                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(subscripitonState, RachisState.Follower));
+                    Assert.Equal(mentor, record.Topology.WhoseTaskIsIt(RachisState.Follower, subscripitonState, null));
                 }
 
                 using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionName)

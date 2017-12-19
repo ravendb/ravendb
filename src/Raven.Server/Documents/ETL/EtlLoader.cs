@@ -128,10 +128,16 @@ namespace Raven.Server.Documents.ETL
                 if (config.Disabled)
                     continue;
 
-                if (_databaseRecord.Topology.WhoseTaskIsIt(config, _serverStore.Engine.CurrentState) != _serverStore.NodeTag)
+                var configTransforms = config.Transforms;
+                if (configTransforms.Count == 0)
+                    yield break;
+
+                var processState = GetProcessState(configTransforms, _database, config.Name);
+                var whoseTaskIsIt = _database.WhoseTaskIsIt(_databaseRecord.Topology, config, processState);
+                if (whoseTaskIsIt != _serverStore.NodeTag)
                     continue;
 
-                foreach (var transform in config.Transforms)
+                foreach (var transform in configTransforms)
                 {
                     if (transform.Disabled)
                         continue;
@@ -147,6 +153,23 @@ namespace Raven.Server.Documents.ETL
                     yield return process;
                 }
             }
+        }
+
+        public static EtlProcessState GetProcessState(List<Transformation> configTransforms, DocumentDatabase database, string configurationName)
+        {
+            EtlProcessState processState = null;
+
+            foreach (var transform in configTransforms)
+            {
+                if (transform.Name == null)
+                    continue;
+
+                processState = EtlProcess.GetProcessState(database, configurationName, transform.Name);
+                if (processState.NodeTag != null)
+                    break;
+            }
+
+            return processState ?? new EtlProcessState();
         }
 
         public static void ThrownUnknownEtlConfiguration(Type type)

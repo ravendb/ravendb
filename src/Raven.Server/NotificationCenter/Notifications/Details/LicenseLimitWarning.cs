@@ -1,5 +1,6 @@
 ﻿using Raven.Client.Exceptions.Commercial;
 using Raven.Server.ServerWide;
+using Raven.Server.Web.System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
@@ -30,17 +31,17 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
             };
         }
 
-        public static void AddLicenseLimitNotification(ServerStore serverStore, LicenseLimitException licenseLimit)
+        public static void AddLicenseLimitNotification(NotificationCenter notificationCenter, LicenseLimitException licenseLimit)
         {
             var alert = AlertRaised.Create(
                 null,
-                "You've reached your license limit",
+                $@"You've reached your license limit ({EnumHelper.GetDescription(licenseLimit.Type)})",
                 licenseLimit.Message,
                 AlertType.LicenseManager_LicenseLimit,
                 NotificationSeverity.Warning,
                 details: new LicenseLimitWarning(licenseLimit));
 
-            serverStore.NotificationCenter.Add(alert);
+            notificationCenter.Add(alert);
         }
     }
 }

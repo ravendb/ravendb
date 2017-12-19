@@ -17,11 +17,14 @@ namespace Raven.Server.NotificationCenter.Notifications
         PeriodicBackup,
         Replication,
         Server_NewVersionAvailable,
+
         LicenseManager_InitializationError,
         LicenseManager_LeaseLicenseSuccess,
         LicenseManager_LeaseLicenseError,
         LicenseManager_LicenseUpdateMessage,
+        LicenseManager_HighlyAvailableTasks,
         LicenseManager_LicenseLimit,
+
         IndexStore_IndexCouldNotBeOpened,
         WarnIndexOutputsPerDocument,
         ErrorSavingReduceOutputDocuments,
