@@ -113,6 +113,8 @@ namespace Raven.Server.Commercial
 
         public bool HasSnmpMonitoring => GetValue<bool>("snmp");
 
+        public bool HasHighlyAvailableTasks => GetValue<bool>("highlyAvailableTasks");
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -138,7 +140,8 @@ namespace Raven.Server.Commercial
                 [nameof(HasRavenEtl)] = HasRavenEtl,
                 [nameof(HasSqlEtl)] = HasSqlEtl,
                 [nameof(HasSnmpMonitoring)] = HasSnmpMonitoring,
-                [nameof(DistributedCluster)] = DistributedCluster
+                [nameof(DistributedCluster)] = DistributedCluster,
+                [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks
             };
         }
     }

@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.PeriodicBackup
 {
-    public class PeriodicBackupStatus
+    public class PeriodicBackupStatus : IDatabaseTaskStatus
     {
         public long TaskId { get; set; }
 

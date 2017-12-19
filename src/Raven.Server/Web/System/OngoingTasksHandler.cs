@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -16,6 +17,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Routing;
@@ -26,6 +28,7 @@ using Sparrow.Json.Parsing;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Web.System
 {
@@ -97,7 +100,7 @@ namespace Raven.Server.Web.System
             foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context, SubscriptionState.SubscriptionPrefix(databaseRecord.DatabaseName)))
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
-                var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, ServerStore.Engine.CurrentState);
+                var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, subscriptionState, subscriptionState);
                 OngoingTaskConnectionStatus connectionStatus;
                 if (tag != ServerStore.NodeTag)
                 {
@@ -141,10 +144,11 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology dbTopology, ClusterTopology clusterTopology,
+        private OngoingTaskReplication GetExternalReplicationInfo(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
             ExternalReplication watcher, Dictionary<string, RavenConnectionString> connectionStrings)
         {
-            var tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
+            var taskStatus = ReplicationLoader.GetExternalReplicationState(Database, watcher.TaskId);
+            var tag = Database.WhoseTaskIsIt(databaseTopology, watcher, taskStatus);
 
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
             if (tag == ServerStore.NodeTag)
@@ -392,7 +396,7 @@ namespace Raven.Server.Web.System
 
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
-                yield return GetOngoingTaskBackup(backupConfiguration.TaskId, databaseRecord, backupConfiguration, dbTopology, clusterTopology);
+                yield return GetOngoingTaskBackup(backupConfiguration.TaskId, databaseRecord, backupConfiguration, clusterTopology);
             }
         }
 
@@ -400,15 +404,13 @@ namespace Raven.Server.Web.System
             long taskId, 
             DatabaseRecord databaseRecord,
             PeriodicBackupConfiguration backupConfiguration,
-            DatabaseTopology dbTopology,
             ClusterTopology clusterTopology)
         {
             var backupStatus = Database.PeriodicBackupRunner.GetBackupStatus(taskId);
             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
-
             var backupDestinations = backupConfiguration.GetDestinations();
-            var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, ServerStore.Engine.CurrentState);
+            var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, useLastResponsibleNodeIfNoAvailableNodes: true);
 
             return new OngoingTaskBackup
             {
@@ -644,7 +646,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException(
                             $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
-                    var res = GetEtlTaskStatus(databaseRecord, ravenEtl,out var tag, out var error);
+                    var res = GetEtlTaskStatus(databaseRecord, ravenEtl, out var tag, out var error);
 
                     yield return new OngoingTaskRavenEtlListView()
                     {
@@ -670,7 +672,8 @@ namespace Raven.Server.Web.System
             {
                 foreach (var sqlEtl in databaseRecord.SqlEtls)
                 {
-                    var tag = dbTopology.WhoseTaskIsIt(sqlEtl, ServerStore.Engine.CurrentState);
+                    var processState = EtlLoader.GetProcessState(sqlEtl.Transforms, Database, sqlEtl.Name);
+                    var tag = Database.WhoseTaskIsIt(databaseRecord.Topology, sqlEtl, processState);
 
                     var taskState = GetEtlTaskState(sqlEtl);
 
@@ -721,7 +724,9 @@ namespace Raven.Server.Web.System
         {
             (string Url, OngoingTaskConnectionStatus Status) res = (null, OngoingTaskConnectionStatus.None);
             error = null;
-            tag = record.Topology.WhoseTaskIsIt(ravenEtl, ServerStore.Engine.CurrentState);
+
+            var processState = EtlLoader.GetProcessState(ravenEtl.Transforms, Database, ravenEtl.Name);
+            tag = Database.WhoseTaskIsIt(record.Topology, ravenEtl, processState);
             if (tag == ServerStore.NodeTag)
             {
                 foreach (var process in Database.EtlLoader.Processes)
@@ -764,7 +769,10 @@ namespace Raven.Server.Web.System
                 {
                     var clusterTopology = ServerStore.GetClusterTopology(context);
                     var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                    var dbTopology = record?.Topology;
+                    if (record == null)
+                        throw new DatabaseDoesNotExistException(Database.Name);
+
+                    var dbTopology = record.Topology;
 
                     if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
                         throw new ArgumentException($"Unknown task type: {type}", "type");
@@ -773,7 +781,7 @@ namespace Raven.Server.Web.System
                     {
                         case OngoingTaskType.Replication:
 
-                            var watcher = record?.ExternalReplications.Find(x => x.TaskId == key);
+                            var watcher = record.ExternalReplications.Find(x => x.TaskId == key);
                             if (watcher == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -787,21 +795,21 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.Backup:
 
-                            var backupConfiguration = record?.PeriodicBackups?.Find(x => x.TaskId == key);
+                            var backupConfiguration = record.PeriodicBackups?.Find(x => x.TaskId == key);
                             if (backupConfiguration == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
 
-                            var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, dbTopology, clusterTopology);
+                            var backupTaskInfo = GetOngoingTaskBackup(key, record, backupConfiguration, clusterTopology);
 
                             WriteResult(context, backupTaskInfo);
                             break;
 
                         case OngoingTaskType.SqlEtl:
 
-                            var sqlEtl = record?.SqlEtls?.Find(x => x.TaskId == key);
+                            var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == key);
                             if (sqlEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -819,7 +827,7 @@ namespace Raven.Server.Web.System
 
                         case OngoingTaskType.RavenEtl:
 
-                            var ravenEtl = record?.RavenEtls?.Find(x => x.TaskId == key);
+                            var ravenEtl = record.RavenEtls?.Find(x => x.TaskId == key);
                             if (ravenEtl == null)
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -849,7 +857,7 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                            var tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.Engine.CurrentState);
+                            var tag = Database.WhoseTaskIsIt(record.Topology, subscriptionState, subscriptionState);
 
                             var subscriptionStateInfo = new SubscriptionStateWithNodeDetails
                             {
@@ -968,8 +976,9 @@ namespace Raven.Server.Web.System
                     {
                         using (context.OpenReadTransaction())
                         {
-                            var record = ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                            json[nameof(OngoingTask.ResponsibleNode)] = record.Topology.WhoseTaskIsIt(watcher, ServerStore.Engine.CurrentState);
+                            var databaseRecord = ServerStore.Cluster.ReadDatabase(context, Database.Name);
+                            var taskStatus = ReplicationLoader.GetExternalReplicationState(Database, watcher.TaskId);
+                            json[nameof(OngoingTask.ResponsibleNode)] = Database.WhoseTaskIsIt(databaseRecord.Topology, watcher, taskStatus);
                         }
 
                         json[nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId;

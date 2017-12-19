@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
             etlState.LastProcessedEtagPerNode[NodeTag] = LastProcessedEtag;
             etlState.ChangeVector = ChangeVector;
-
+            etlState.NodeTag = NodeTag;
 
             return context.ReadObject(etlState.ToJson(), GetItemId());
         }
@@ -65,8 +65,8 @@ namespace Raven.Server.ServerWide.Commands.ETL
             json[nameof(ConfigurationName)] = ConfigurationName;
             json[nameof(TransformationName)] = TransformationName;
             json[nameof(LastProcessedEtag)] = LastProcessedEtag;
-            json[nameof(NodeTag)] = NodeTag;
             json[nameof(ChangeVector)] = ChangeVector;
+            json[nameof(NodeTag)] = NodeTag;
         }
     }
 }

@@ -1,8 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTaskEditModel = require("models/database/tasks/ongoingTaskEditModel");
-import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
-import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import jsonUtil = require("common/jsonUtil");
 
 class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
@@ -160,7 +157,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
                 ResponsibleNode: null,
                 LastClientConnectionTime: null,
                 LastBatchAckTime: null,
-                MentorNode: null
+                MentorNode: null,
+                NodeTag: null
             });
     }
 }

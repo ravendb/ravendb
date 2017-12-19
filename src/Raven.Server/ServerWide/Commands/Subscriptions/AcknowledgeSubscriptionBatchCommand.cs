@@ -1,10 +1,8 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -17,6 +15,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
+        public bool HasHighlyAvailableTasks;
         public DateTime LastTimeServerMadeProgressWithDocuments;
 
         // for serializtion
@@ -41,8 +40,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            if (record.Topology.WhoseTaskIsIt(subscription, state) != NodeTag)
-                throw new SubscriptionDoesNotBelongToNodeException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not it's task to update this subscription");
+            var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, record.Topology, NodeTag);
+            if (record.Topology.WhoseTaskIsIt(state, subscription, lastResponsibleNode) != NodeTag)
+                throw new SubscriptionDoesNotBelongToNodeException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not its task to update this subscription");
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
@@ -53,10 +53,27 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value");
 
             subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
-
+            subscription.NodeTag = NodeTag;
             subscription.LastBatchAckTime = LastTimeServerMadeProgressWithDocuments;
 
             return context.ReadObject(subscription.ToJson(), subscriptionName);
+        }
+
+        public static Func<string> GetLastResponsibleNode(
+            bool hasHighlyAvailableTasks, 
+            DatabaseTopology topology,
+            string nodeTag)
+        {
+            return () =>
+            {
+                if (hasHighlyAvailableTasks)
+                    return null;
+
+                if (topology.Members.Contains(nodeTag) == false)
+                    return null;
+
+                return nodeTag;
+            };
         }
 
         public override void FillJson(DynamicJsonValue json)
@@ -65,6 +82,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
             json[nameof(LastKnownSubscriptionChangeVector)] = LastKnownSubscriptionChangeVector;
         }

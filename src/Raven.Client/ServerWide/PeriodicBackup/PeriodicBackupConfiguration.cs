@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Raven.Client.ServerWide.PeriodicBackup
 {
@@ -56,7 +57,15 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public string GetDefaultTaskName()
         {
-            return $"Periodic Backup, full:{FullBackupFrequency} incremental:{IncrementalBackupFrequency}";
+            var destinations = GetDestinations();
+            return destinations.Count == 0 ? 
+                $"{BackupType} w/o destinations" : 
+                $"{BackupType.ToString()} to {string.Join(", ", destinations)}";
+        }
+
+        public string GetTaskName()
+        {
+            return Name;
         }
 
         public bool HasBackupFrequencyChanged(PeriodicBackupConfiguration other)

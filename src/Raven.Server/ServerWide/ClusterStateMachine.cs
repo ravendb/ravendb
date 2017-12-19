@@ -195,6 +195,7 @@ namespace Raven.Server.ServerWide
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
+                    case nameof(UpdateExternalReplicationStateCommand):
                     case nameof(AcknowledgeSubscriptionBatchCommand):
                     case nameof(PutSubscriptionCommand):
                     case nameof(DeleteSubscriptionCommand):

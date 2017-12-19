@@ -55,6 +55,22 @@ namespace Raven.Server.Documents.ETL
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
         public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+
+        public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
+        {
+            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var stateBlittable = database.ServerStore.Cluster.Read(context, EtlProcessState.GenerateItemName(database.Name, configurationName, transformationName));
+
+                if (stateBlittable != null)
+                {
+                    return JsonDeserializationClient.EtlProcessState(stateBlittable);
+                }
+
+                return new EtlProcessState();
+            }
+        }
     }
 
     public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess where TExtracted : ExtractedItem where TConfiguration : EtlConfiguration<TConnectionString> where TConnectionString : ConnectionString
@@ -401,7 +417,7 @@ namespace Raven.Server.Documents.ETL
                     }
                     var didWork = false;
 
-                    var state = GetProcessState();
+                    var state = GetProcessState(Database, Configuration.Name, Transformation.Name);
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
@@ -461,8 +477,7 @@ namespace Raven.Server.Documents.ETL
                     if (didWork)
                     {
                         var command = new UpdateEtlProcessStateCommand(Database.Name, Configuration.Name, Transformation.Name, Statistics.LastProcessedEtag,
-                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector),
-                            _serverStore.NodeTag);
+                            ChangeVectorUtils.MergeVectors(Statistics.LastChangeVector, state.ChangeVector), _serverStore.NodeTag);
 
                         var sendToLeaderTask = _serverStore.SendToLeaderAsync(command);
                         sendToLeaderTask.Wait(CancellationToken);
@@ -526,7 +541,7 @@ namespace Raven.Server.Documents.ETL
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            var lastProcessedEtag = GetProcessState().GetLastProcessedEtagForNode(_serverStore.NodeTag);
+            var lastProcessedEtag = GetProcessState(Database, Configuration.Name, Transformation.Name).GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
             if (Transformation.ApplyToAllDocuments)
             {
@@ -544,22 +559,6 @@ namespace Raven.Server.Documents.ETL
             }
 
             return lastProcessedTombstones;
-        }
-
-        private EtlProcessState GetProcessState()
-        {
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var stateBlittable = _serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(Database.Name, Configuration.Name, Transformation.Name));
-
-                if (stateBlittable != null)
-                {
-                    return JsonDeserializationClient.EtlProcessState(stateBlittable);
-                }
-
-                return new EtlProcessState();
-            }
         }
 
         private void AddPerformanceStats(EtlStatsAggregator stats)

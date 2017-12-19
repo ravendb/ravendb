@@ -7,6 +7,7 @@ using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Commands.ETL;
@@ -43,6 +44,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, ExpirationConfiguration> ExpirationConfiguration = GenerateJsonDeserializationRoutine<ExpirationConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, PeriodicBackupConfiguration> PeriodicBackupConfiguration = GenerateJsonDeserializationRoutine<PeriodicBackupConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, ExternalReplicationState> ExternalReplicationState = GenerateJsonDeserializationRoutine<ExternalReplicationState>();
 
         public static readonly Func<BlittableJsonReaderObject, RestoreBackupConfiguration> RestoreBackupConfiguration = GenerateJsonDeserializationRoutine<RestoreBackupConfiguration>();
 
@@ -108,6 +111,7 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateRavenEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateRavenEtlCommand>(),
             [nameof(UpdateSqlEtlCommand)] = GenerateJsonDeserializationRoutine<UpdateSqlEtlCommand>(),
             [nameof(UpdateEtlProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateEtlProcessStateCommand>(),
+            [nameof(UpdateExternalReplicationStateCommand)] = GenerateJsonDeserializationRoutine<UpdateExternalReplicationStateCommand>(),
             [nameof(DeleteOngoingTaskCommand)] = GenerateJsonDeserializationRoutine<DeleteOngoingTaskCommand>(),
             [nameof(PutRavenConnectionString)] = GenerateJsonDeserializationRoutine<PutRavenConnectionString>(),
             [nameof(PutSqlConnectionString)] = GenerateJsonDeserializationRoutine<PutSqlConnectionString>(),

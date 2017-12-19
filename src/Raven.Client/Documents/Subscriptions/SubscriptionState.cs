@@ -11,13 +11,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class SubscriptionState : IDatabaseTask
+    public class SubscriptionState : IDatabaseTask, IDatabaseTaskStatus
     {
         public string Query { get; set; }
         public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public string MentorNode { get; set; }
+        public string NodeTag { get; set; }
         public DateTime? LastBatchAckTime { get; set; }  // Last time server made some progress with the subscriptions docs  
         public DateTime? LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
@@ -37,6 +38,11 @@ namespace Raven.Client.Documents.Subscriptions
             return SubscriptionName;
         }
 
+        public string GetTaskName()
+        {
+            return SubscriptionName;
+        }
+
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -46,6 +52,7 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
                 [nameof(MentorNode)] = MentorNode,
+                [nameof(NodeTag)] = NodeTag,
                 [nameof(LastBatchAckTime)] = LastBatchAckTime,
                 [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled

@@ -15,6 +15,12 @@ namespace Raven.Client.ServerWide
         ulong GetTaskKey();
         string GetMentorNode();
         string GetDefaultTaskName();
+        string GetTaskName();
+    }
+
+    public interface IDatabaseTaskStatus
+    {
+        string NodeTag { get; }
     }
 
     public class LeaderStamp : IDynamicJson
@@ -70,6 +76,11 @@ namespace Raven.Client.ServerWide
         {
             return _name;
         }
+
+        public string GetTaskName()
+        {
+            return _name;
+        }
     }
 
     public class InternalReplication : ReplicationNode
@@ -103,7 +114,7 @@ namespace Raven.Client.ServerWide
         public List<string> Promotables = new List<string>();
         public List<string> Rehabs = new List<string>();
 
-        public Dictionary<string,string> PredefinedMentors = new Dictionary<string, string>();
+        public Dictionary<string, string> PredefinedMentors = new Dictionary<string, string>();
         public Dictionary<string, string> DemotionReasons = new Dictionary<string, string>();
         public Dictionary<string, DatabasePromotionStatus> PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>();
 
@@ -128,7 +139,7 @@ namespace Raven.Client.ServerWide
             {
                 // if we are in rehab, but now are back online. We need to send all the new documents that we might have.
                 var url = clusterTopology.GetUrlFromTag(myTag);
-                var mentor = WhoseTaskIsIt(new PromotableTask(myTag, url, databaseName), state);
+                var mentor = WhoseTaskIsIt(state, new PromotableTask(myTag, url, databaseName), null);
                 if (mentor != null)
                 {
                     destinations.Add(new InternalReplication
@@ -159,7 +170,7 @@ namespace Raven.Client.ServerWide
                 
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 PredefinedMentors.TryGetValue(promotable, out var mentor);
-                if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName, mentor), state) == myTag)
+                if (WhoseTaskIsIt(state, new PromotableTask(promotable, url, databaseName, mentor), null) == myTag)
                 {
                     list.Add(url);
                 }
@@ -255,7 +266,10 @@ namespace Raven.Client.ServerWide
             Rehabs.RemoveAll(r => r == delDbFromNode);
         }
 
-        public string WhoseTaskIsIt(IDatabaseTask task, RachisState state)
+        public string WhoseTaskIsIt(
+            RachisState state, 
+            IDatabaseTask task,
+            Func<string> getLastReponsibleNode)
         {
             if (state == RachisState.Candidate || state == RachisState.Passive)
                 return null;
@@ -266,6 +280,10 @@ namespace Raven.Client.ServerWide
                 if (Members.Contains(mentorNode))
                     return mentorNode;
             }
+
+            var lastResponsibleNode = getLastReponsibleNode?.Invoke();
+            if (lastResponsibleNode != null)
+                return lastResponsibleNode;
 
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
@@ -286,7 +304,6 @@ namespace Raven.Client.ServerWide
                 topology.RemoveAt(index);
                 if (topology.Count == 0)
                     return null; // all nodes in the topology are probably in rehab
-
 
                 // rehash so it will likely go to a different member in the cluster
                 key = Hashing.Mix(key);

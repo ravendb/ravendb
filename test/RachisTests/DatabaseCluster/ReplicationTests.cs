@@ -399,7 +399,7 @@ namespace RachisTests.DatabaseCluster
 
                     var taskRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                     var replicationResult = (OngoingTaskReplication)await GetTaskInfo((DocumentStore)store, taskRes.TaskId, OngoingTaskType.Replication);
-                    Assert.Equal("C",replicationResult.ResponsibleNode.NodeTag);
+                    Assert.Equal("C", replicationResult.ResponsibleNode.NodeTag);
                 }
             }
 

@@ -13,7 +13,7 @@ namespace Raven.Client.ServerWide
         public string Name;
         public string ConnectionStringName;
         public string MentorNode;
-        public TimeSpan DelayReplicationFor; 
+        public TimeSpan DelayReplicationFor;
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
@@ -92,6 +92,11 @@ namespace Raven.Client.ServerWide
         public string GetDefaultTaskName()
         {
             return $"External Replication to {ConnectionStringName}";
+        }
+
+        public string GetTaskName()
+        {
+            return Name;
         }
     }
 }

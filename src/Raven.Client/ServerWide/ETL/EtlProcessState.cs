@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.ETL
 {
-    public class EtlProcessState
+    public class EtlProcessState : IDatabaseTaskStatus
     {
         public EtlProcessState()
         {
@@ -19,6 +19,8 @@ namespace Raven.Client.ServerWide.ETL
         public Dictionary<string, long> LastProcessedEtagPerNode { get; set; }
 
         public string ChangeVector { get; set; }
+
+        public string NodeTag { get; set; }
 
         public long GetLastProcessedEtagForNode(string nodeTag)
         {
@@ -35,7 +37,8 @@ namespace Raven.Client.ServerWide.ETL
                 [nameof(ConfigurationName)] = ConfigurationName,
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
-                [nameof(ChangeVector)] = ChangeVector
+                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(NodeTag)] = NodeTag
             };
 
             return json;

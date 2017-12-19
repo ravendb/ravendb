@@ -11,6 +11,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
@@ -19,6 +20,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -456,7 +458,12 @@ namespace Raven.Server.Documents.Replication
             var changes = FindExternalReplicationChanges(_externalDestinations, newRecord.ExternalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
-            var newDestinations = changes.AddedDestinations.Where(o => newRecord.Topology.WhoseTaskIsIt(o, _server.Engine.CurrentState) == _server.NodeTag).ToList();
+            var newDestinations = changes.AddedDestinations.Where(configuration =>
+            {
+                var taskStatus = GetExternalReplicationState(Database, configuration.TaskId);
+                var whoseTaskIsIt = Database.WhoseTaskIsIt(newRecord.Topology, configuration, taskStatus);
+                return whoseTaskIsIt == _server.NodeTag;
+            }).ToList();
             foreach (var externalReplication in newDestinations.ToList())
             {
                 if (ValidateConnectionString(newRecord, externalReplication, out var connectionString) == false)
@@ -472,6 +479,17 @@ namespace Raven.Server.Documents.Replication
             foreach (var newDestination in newDestinations)
             {
                 _externalDestinations.Add(newDestination);
+            }
+        }
+
+        public static ExternalReplicationState GetExternalReplicationState(DocumentDatabase database, long taskId)
+        {
+            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var stateBlittable = database.ServerStore.Cluster.Read(context, ExternalReplicationState.GenerateItemName(database.Name, taskId));
+
+                return stateBlittable != null ? JsonDeserializationCluster.ExternalReplicationState(stateBlittable) : new ExternalReplicationState();
             }
         }
 

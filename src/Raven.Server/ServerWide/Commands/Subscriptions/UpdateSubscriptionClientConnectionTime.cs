@@ -6,9 +6,10 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class UpdateSubscriptionClientConnectionTime:UpdateValueForDatabaseCommand    {
+    public class UpdateSubscriptionClientConnectionTime : UpdateValueForDatabaseCommand {
         public string SubscriptionName;
         public string NodeTag;
+        public bool HasHighlyAvailableTasks;
         public DateTime LastClientConnectionTime;
 
         private UpdateSubscriptionClientConnectionTime():base(null){}
@@ -27,11 +28,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
-            if (record.Topology.WhoseTaskIsIt(subscription, state) != NodeTag)
+            var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, record.Topology, NodeTag);
+            if (record.Topology.WhoseTaskIsIt(state, subscription, lastResponsibleNode) != NodeTag)
                 throw new InvalidOperationException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
-
             subscription.LastClientConnectionTime = LastClientConnectionTime;
+            subscription.NodeTag = NodeTag;
 
             return context.ReadObject(subscription.ToJson(), itemId);
         }
@@ -40,6 +42,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks;
             json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
         }
     }

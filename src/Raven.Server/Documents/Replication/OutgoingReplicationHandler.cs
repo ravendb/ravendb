@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
-using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Replication;
@@ -23,6 +22,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Threading;
@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
-                            string msg = $"{OutgoingReplicationThreadName} got an unexpected exception during initial handshake error:{e}";
+                            var msg = $"{OutgoingReplicationThreadName} got an unexpected exception during initial handshake error: {e.Message}";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
@@ -244,6 +244,12 @@ namespace Raven.Server.Documents.Replication
                                             var didWork = documentSender.ExecuteReplicationOnce(scope, ref nextReplicateAt);
                                             if (didWork == false)
                                                 break;
+
+                                            if (Destination is ExternalReplication externalReplication)
+                                            {
+                                                var taskId = externalReplication.TaskId;
+                                                UpdateExternalReplicationInfo(taskId);
+                                            }
 
                                             DocumentsSend?.Invoke(this);
 
@@ -377,6 +383,24 @@ namespace Raven.Server.Documents.Replication
                               $"Replication stopped (will be retried later).", e);
                 Failed?.Invoke(this, e);
             }
+        }
+
+        private void UpdateExternalReplicationInfo(long taskId)
+        {
+            var command = new UpdateExternalReplicationStateCommand(_database.Name)
+            {
+                ExternalReplicationState = new ExternalReplicationState
+                {
+                    TaskId = taskId,
+                    NodeTag = _parent._server.NodeTag,
+                    LastSentEtag = _lastSentDocumentEtag,
+                    SourceChangeVector = _lastSentChangeVector,
+                    DestinationChangeVector = LastAcceptedChangeVector
+                }
+            };
+
+            // we don't wait to see if the command was applied on purpose
+            _parent._server.SendToLeaderAsync(command);
         }
 
         private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
@@ -622,7 +646,7 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
-
+        private string _lastSentChangeVector;
         internal void SendHeartbeat(string changeVector)
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
@@ -640,6 +664,7 @@ namespace Raven.Server.Documents.Replication
                     };
                     if (changeVector != null)
                     {
+                        _lastSentChangeVector = changeVector;
                         heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
                     }
                     documentsContext.Write(writer, heartbeat);

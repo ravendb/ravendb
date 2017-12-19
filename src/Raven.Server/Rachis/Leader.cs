@@ -635,17 +635,19 @@ namespace Raven.Server.Rachis
 
         public System.Collections.Concurrent.ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
-        public void NotifyAboutException(FollowerAmbassador node, Exception e)
+        public void NotifyAboutException(string nodeTag, Exception e)
         {
+            var title = $"Node {nodeTag} encountered an error";
             var alert = AlertRaised.Create(
                 null,
-                $"Node {node.Tag} encountered an error",
-                node.StatusMessage,
+                title,
+                $"Failed to talk with {nodeTag}, message: {e.Message}",
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
+                key: title,
                 details: new ExceptionDetails(e));
             _engine.Notify(alert);
-            ErrorsList.Enqueue((node.Tag, alert));
+            ErrorsList.Enqueue((nodeTag, alert));
             ErrorsList.Reduce(25);
         }
 
