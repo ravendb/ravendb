@@ -291,9 +291,7 @@ class createDatabase extends dialogViewModelBase {
             const nodeTags = this.databaseModel.replication.nodes().map(x => x.tag());
             this.encryptionSection.configureEncryption(this.databaseModel.encryption.key(), nodeTags)
                 .done(() => encryptionTask.resolve())
-                .fail(() => {
-                    return this.spinners.create(false);
-                });
+                .fail(() => this.spinners.create(false));                
         } else {
             encryptionTask.resolve();
         }

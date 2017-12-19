@@ -280,9 +280,11 @@
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group" style="min-height: 62px">
-            <div class="input-group" data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
+            <div class="input-group" title="Set the number of nodes that will contain the database" 
+                 data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput" class="form-control">
+                <input class="form-control" type="number" min="0" title="Set the number of nodes that will contain the database" 
+                       data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
                     With replication factor set to 1 data won't be replicated.
                 </div>
