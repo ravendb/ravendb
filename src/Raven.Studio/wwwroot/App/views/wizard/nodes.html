@@ -119,6 +119,19 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <button class="btn btn-default" data-bind="click: toggleAdvanced, visible: $root.showAdvancedSettings">Advanced</button>
+                    
+                    <div data-bind="collapse: showAdvancedSettings">
+                        <div class="form-group" data-bind="validationElement: externalIpAddress">
+                            <label class="control-label">External IP address</label>
+                            <div class="flex-grow">
+                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter external IP address"
+                                       data-bind="textInput: externalIpAddress">
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </div>
