@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -254,6 +255,7 @@ namespace Raven.Server.Web.System
 
             var nodesTopology = new NodesTopology();
 
+            var statuses = ServerStore.GetNodesStatuses();
             if (topology != null)
             {
                 foreach (var member in topology.Members)
@@ -266,24 +268,24 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     nodesTopology.Members.Add(GetNodeId(node));
-                    SetNodeStatus(topology, member, nodesTopology);
+                    SetNodeStatus(topology, member, nodesTopology, statuses);
                 }
 
                 foreach (var promotable in topology.Promotables)
                 {
                     topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
                     var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.Engine.CurrentState);
+                    var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
                     nodesTopology.Promotables.Add(GetNodeId(node, mentor));
-                    SetNodeStatus(topology, promotable, nodesTopology);
+                    SetNodeStatus(topology, promotable, nodesTopology, statuses);
                 }
 
                 foreach (var rehab in topology.Rehabs)
                 {
                     var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.Engine.CurrentState);
+                    var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
                     nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
-                    SetNodeStatus(topology, rehab, nodesTopology);
+                    SetNodeStatus(topology, rehab, nodesTopology, statuses);
                 }
             }
 
@@ -343,7 +345,11 @@ namespace Raven.Server.Web.System
             context.Write(writer, doc);
         }
 
-        private static void SetNodeStatus(DatabaseTopology topology, string nodeTag, NodesTopology nodesTopology)
+        private static void SetNodeStatus(
+            DatabaseTopology topology, 
+            string nodeTag, 
+            NodesTopology nodesTopology, 
+            Dictionary<string, NodeStatus> nodeStatuses)
         {
             var nodeStatus = new DbGroupNodeStatus
             {
@@ -357,6 +363,15 @@ namespace Raven.Server.Web.System
             {
                 nodeStatus.LastError = reason;
             }
+
+            if (nodeStatus.LastStatus == DatabasePromotionStatus.Ok &&
+                nodeStatuses.TryGetValue(nodeTag, out var serverNodeStatus) &&
+                serverNodeStatus.Connected == false)
+            {
+                nodeStatus.LastError = serverNodeStatus.ErrorDetails;
+                nodeStatus.LastStatus = DatabasePromotionStatus.NotResponding;
+            }
+
             nodesTopology.Status[nodeTag] = nodeStatus;
         }
 
