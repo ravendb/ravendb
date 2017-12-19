@@ -64,7 +64,7 @@ namespace Raven.Client.Http
 
         public Topology Topology => _nodeSelector?.Topology;
 
-        private ServerNode TopologyTakenFromNode;
+        private ServerNode _topologyTakenFromNode;
 
         public HttpClient HttpClient { get; }
 
@@ -304,29 +304,29 @@ namespace Raven.Client.Http
 
         }
 
-        public void Execute<TResult>(RavenCommand<TResult> command,
+        public void Execute<TResult>(
+            RavenCommand<TResult> command,
             JsonOperationContext context,
-            CancellationToken token = default(CancellationToken),
             SessionInfo sessionInfo = null)
         {
-            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, token, new SessionInfo(sessionInfo?.SessionId ?? 0, false)));
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo));
         }
 
         public Task ExecuteAsync<TResult>(
             RavenCommand<TResult> command,
             JsonOperationContext context,
-            CancellationToken token = default(CancellationToken),
-            SessionInfo sessionInfo = null)
+            SessionInfo sessionInfo = null,
+            CancellationToken token = default(CancellationToken))
         {
             var topologyUpdate = _firstTopologyUpdate;
 
             if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion || _disableTopologyUpdates)
             {
                 var (nodeIndex, chosenNode) = ChooseNodeForRequest(command, sessionInfo);
-                return ExecuteAsync(chosenNode, nodeIndex, context, command, token, sessionInfo: sessionInfo);
+                return ExecuteAsync(chosenNode, nodeIndex, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token);
             }
 
-            return UnlikelyExecuteAsync(command, context, token, topologyUpdate, sessionInfo);
+            return UnlikelyExecuteAsync(command, context, topologyUpdate, sessionInfo, token);
         }
 
         public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, SessionInfo sessionInfo = null)
@@ -348,13 +348,13 @@ namespace Raven.Client.Http
                     throw new ArgumentOutOfRangeException();
             }
         }
-        
+
         private async Task UnlikelyExecuteAsync<TResult>(
             RavenCommand<TResult> command,
             JsonOperationContext context,
-            CancellationToken token,
             Task topologyUpdate,
-            SessionInfo sessionInfo = null)
+            SessionInfo sessionInfo,
+            CancellationToken token)
         {
             try
             {
@@ -384,7 +384,7 @@ namespace Raven.Client.Http
             }
 
             var (currentIndex, currentNode) = ChooseNodeForRequest(command, sessionInfo);
-            await ExecuteAsync(currentNode, currentIndex, context, command, token, true, sessionInfo).ConfigureAwait(false);
+            await ExecuteAsync(currentNode, currentIndex, context, command, true, sessionInfo, token).ConfigureAwait(false);
         }
 
         private void UpdateTopologyCallback(object _)
@@ -438,7 +438,7 @@ namespace Raven.Client.Http
                     await UpdateTopologyAsync(serverNode, Timeout.Infinite).ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
-                    TopologyTakenFromNode = serverNode;
+                    _topologyTakenFromNode = serverNode;
                     return;
                 }
                 catch (AuthorizationException)
@@ -564,9 +564,9 @@ namespace Raven.Client.Http
             int? nodeIndex,
             JsonOperationContext context,
             RavenCommand<TResult> command,
-            CancellationToken token = default(CancellationToken),
             bool shouldRetry = true,
-            SessionInfo sessionInfo = null)
+            SessionInfo sessionInfo = null,
+            CancellationToken token = default(CancellationToken))
         {
             var request = CreateRequest(context, chosenNode, command, out string url);
 
@@ -580,7 +580,7 @@ namespace Raven.Client.Http
                         cachedItem.MightHaveBeenModified == false &&
                         command.CanCacheAggressively)
                     {
-                        command.SetResponse(context ,cachedValue, fromCache: true);
+                        command.SetResponse(context, cachedValue, fromCache: true);
                         return;
                     }
 
@@ -767,9 +767,9 @@ namespace Raven.Client.Http
             var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, all of them seem to be down or not responding. " +
                           $"I've tried to access the following nodes: {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0])}.";
 
-            if (TopologyTakenFromNode != null)
+            if (_topologyTakenFromNode != null)
             {
-                message += $"{Environment.NewLine}I was able to fetch {TopologyTakenFromNode.Database} topology from {TopologyTakenFromNode.Url}.{Environment.NewLine}" + 
+                message += $"{Environment.NewLine}I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}" +
                            $"fetched topology : {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
             }
 
@@ -1153,7 +1153,7 @@ namespace Raven.Client.Http
                     continue;
 
                 var extensionsString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
-                
+
                 supported = extensionsString.Contains("1.3.6.1.5.5.7.3.2") || extensionsString.Contains("Client Authentication"); // Client Authentication
             }
 

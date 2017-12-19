@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -13,14 +14,14 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
-        public async Task<PatchStatus> SendAsync(PatchOperation operation, CancellationToken token = default(CancellationToken))
+        public async Task<PatchStatus> SendAsync(PatchOperation operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
         {
             JsonOperationContext context;
             using (GetContext(out context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
 
                 if (command.StatusCode == HttpStatusCode.NotModified)
                     return PatchStatus.NotModified;
@@ -32,19 +33,18 @@ namespace Raven.Client.Documents.Operations
             }
         }
 
-        public PatchOperation.Result<TEntity> Send<TEntity>(PatchOperation<TEntity> operation)
+        public PatchOperation.Result<TEntity> Send<TEntity>(PatchOperation<TEntity> operation, SessionInfo sessionInfo = null)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation));
+            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo));
         }
 
-        public async Task<PatchOperation.Result<TEntity>> SendAsync<TEntity>(PatchOperation<TEntity> operation, CancellationToken token = default(CancellationToken))
+        public async Task<PatchOperation.Result<TEntity>> SendAsync<TEntity>(PatchOperation<TEntity> operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
         {
-            JsonOperationContext context;
-            using (GetContext(out context))
+            using (GetContext(out var context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
 
                 var result = new PatchOperation.Result<TEntity>();
 

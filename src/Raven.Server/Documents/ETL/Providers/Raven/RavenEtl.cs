@@ -5,6 +5,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.ETL;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.ServerWide;
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             
             try
             {
-                _requestExecutor.Execute(batchCommand, context, CancellationToken);
+                AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
                 _recentUrl = _requestExecutor.Url;
             }
             catch (OperationCanceledException e)

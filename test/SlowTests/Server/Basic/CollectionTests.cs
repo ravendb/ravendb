@@ -31,7 +31,7 @@ namespace SlowTests.Server.Basic
                     await session.SaveChangesAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Users" }), CancellationToken.None);
+                var operation = await store.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Users" }));
                 await operation.WaitForCompletionAsync();
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());

@@ -65,7 +65,7 @@ namespace SlowTests.SlowTests.Bugs
 
                 await (await store.Operations.SendAsync(new PatchByQueryOperation(
                     new IndexQuery { Query = $"FROM INDEX '{stats.IndexName}' UPDATE {{ this.FullName = this.FirstName + ' ' + this.LastName; }}" }
-                ), CancellationToken.None))
+                )))
                 .WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var db = store.OpenAsyncSession())

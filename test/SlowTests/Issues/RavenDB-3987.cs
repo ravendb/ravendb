@@ -108,13 +108,12 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation1 = await store.Operations.SendAsync(new DeleteByQueryOperation<Person>("Person/ByName", x => x.Name == "Bob"),
-                    CancellationToken.None);
+                var operation1 = await store.Operations.SendAsync(new DeleteByQueryOperation<Person>("Person/ByName", x => x.Name == "Bob"));
                 await operation1.WaitForCompletionAsync();
 
                 WaitForIndexing(store);
 
-                var operation2 = await store.Operations.SendAsync(new DeleteByQueryOperation<Person, Person_ByAge>(x => x.Age < 35), CancellationToken.None);
+                var operation2 = await store.Operations.SendAsync(new DeleteByQueryOperation<Person, Person_ByAge>(x => x.Age < 35));
                 await operation2.WaitForCompletionAsync();
 
                 using (var session = store.OpenAsyncSession())

@@ -33,12 +33,12 @@ namespace Raven.Server.Smuggler.Migration
 
         public Importer(
             string migrationStateKey,
-            string serverUrl, 
-            string sourceDatabaseName, 
-            SmugglerResult result, 
-            Action<IOperationProgress> onProgress, 
-            DocumentDatabase database, 
-            OperationCancelToken cancelToken) 
+            string serverUrl,
+            string sourceDatabaseName,
+            SmugglerResult result,
+            Action<IOperationProgress> onProgress,
+            DocumentDatabase database,
+            OperationCancelToken cancelToken)
             : base(migrationStateKey, serverUrl, sourceDatabaseName, result, onProgress, database, cancelToken)
         {
             _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(ServerUrl, DatabaseName, Database.ServerStore.Server.Certificate.Certificate, DocumentConventions.Default);
@@ -95,7 +95,7 @@ namespace Raven.Server.Smuggler.Migration
                     {
                         LastEtag = smugglerResult.GetLastEtag()
                     };
-                
+
                     var importInfoBlittable = EntityToBlittable.ConvertEntityToBlittable(importInfo, DocumentConventions.Default, context);
                     await SaveLastOperationState(importInfoBlittable);
                     return;
@@ -169,7 +169,7 @@ namespace Raven.Server.Smuggler.Migration
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var getNextOperationIdRequest = new GetNextOperationIdCommand();
-                await _requestExecutor.ExecuteAsync(getNextOperationIdRequest, context, CancelToken.Token);
+                await _requestExecutor.ExecuteAsync(getNextOperationIdRequest, context, token: CancelToken.Token);
                 return getNextOperationIdRequest.Result;
             }
         }

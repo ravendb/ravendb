@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                 var command = new GetDocumentsCommand(new[] { orderId }, new[] { "Employee" },false);
                 using (var commands = store.Commands())
                 {
-                    commands.RequestExecutor.Execute(command, commands.Context, CancellationToken.None);
+                    commands.RequestExecutor.Execute(command, commands.Context);
 
                     var result = command.Result;
                     Assert.Equal(1, result.Includes.Count);

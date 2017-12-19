@@ -364,7 +364,7 @@ namespace SlowTests.Cluster
                     for (var sessionId = 0; sessionId < 5; sessionId++)
                     {
                         requestExecutor.Cache.Clear(); //make sure we do not use request cache
-                        await requestExecutor.ExecuteAsync(new GetStatisticsCommand(), tmpContext, CancellationToken.None, new SessionInfo(sessionId, false));
+                        await requestExecutor.ExecuteAsync(new GetStatisticsCommand(), tmpContext, new SessionInfo(sessionId, false));
                     }
                 }
             }

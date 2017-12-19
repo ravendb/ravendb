@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
-            await _session.RequestExecutor.ExecuteAsync(command, _session.Context).ConfigureAwait(false);
+            await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo).ConfigureAwait(false);
 
             return ProcessResults(command.Result, _session.Conventions);
         }

@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly JsonSerializer _defaultSerializer;
         private readonly Func<object, StreamWriter, bool> _customEntitySerializer;
         private readonly Func<object, StreamWriter, bool> _customMetadataSerializer;
-        
+
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
             _disposeOnce = new DisposeOnceAsync<SingleAttempt>(async () =>
@@ -212,18 +212,18 @@ namespace Raven.Client.Documents.BulkInsert
                     _resetContext.Dispose();
                 }
             });
-            
+
             _token = token;
             _requestExecutor = store.GetRequestExecutor(database);
             _currentWriter = new StreamWriter(new MemoryStream());
             _backgroundWriter = new StreamWriter(new MemoryStream());
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _streamExposerContent = new StreamExposerContent();
-            
+
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
             _customMetadataSerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeMetadataToJsonStream;
-            
+
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
@@ -233,7 +233,7 @@ namespace Raven.Client.Documents.BulkInsert
                 return;
 
             var bulkInsertGetIdRequest = new GetNextOperationIdCommand();
-            await _requestExecutor.ExecuteAsync(bulkInsertGetIdRequest, _context, _token).ConfigureAwait(false);
+            await _requestExecutor.ExecuteAsync(bulkInsertGetIdRequest, _context, token: _token).ConfigureAwait(false);
             _operationId = bulkInsertGetIdRequest.Result;
         }
 
@@ -284,66 +284,66 @@ namespace Raven.Client.Documents.BulkInsert
             }
 
             if (metadata == null)
-                {
-                    metadata = new MetadataAsDictionary();
-                }
-                if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
-                {
-                    var collection = _requestExecutor.Conventions.GetCollectionName(entity);
-                    metadata.Add(Constants.Documents.Metadata.Collection, collection);
-                }
-                
-                if (_first == false)
-                {
-                    _currentWriter.Write(',');
-                }
-                _first = false;
-                try
-                {
-                    _currentWriter.Write("{'Id':'");
-                    _currentWriter.Write(id);
-                    _currentWriter.Write("','Type':'PUT','Document':");
+            {
+                metadata = new MetadataAsDictionary();
+            }
+            if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
+            {
+                var collection = _requestExecutor.Conventions.GetCollectionName(entity);
+                metadata.Add(Constants.Documents.Metadata.Collection, collection);
+            }
 
-                    if (_customEntitySerializer == null || _customEntitySerializer(entity, _currentWriter) == false)
-                    {
-                        _defaultSerializer.Serialize(_currentWriter, entity);
-                    }
-                    
-                    _currentWriter.Flush();
-                    _currentWriter.BaseStream.Position--;
-                    _currentWriter.Write(",'@metadata':");
-                    
-                    if (_customMetadataSerializer == null || _customMetadataSerializer(entity, _currentWriter) == false)
-                    {
-                        _defaultSerializer.Serialize(_currentWriter, metadata);
-                    }
-                    
-                    _currentWriter.Write("}}");
-                    _currentWriter.Flush();
-                    if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
-                        _asyncWrite.IsCompleted)
-                    {
-                        await _asyncWrite.ConfigureAwait(false);
+            if (_first == false)
+            {
+                _currentWriter.Write(',');
+            }
+            _first = false;
+            try
+            {
+                _currentWriter.Write("{'Id':'");
+                _currentWriter.Write(id);
+                _currentWriter.Write("','Type':'PUT','Document':");
 
-                        var tmp = _currentWriter;
-                        _currentWriter = _backgroundWriter;
-                        _backgroundWriter = tmp;
-                        _currentWriter.BaseStream.SetLength(0);
-                        ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                        _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
-                    }
-                }
-                catch (Exception e)
+                if (_customEntitySerializer == null || _customEntitySerializer(entity, _currentWriter) == false)
                 {
-                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                    if (error != null)
-                    {
-                        throw error;
-                    }
-                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+                    _defaultSerializer.Serialize(_currentWriter, entity);
                 }
+
+                _currentWriter.Flush();
+                _currentWriter.BaseStream.Position--;
+                _currentWriter.Write(",'@metadata':");
+
+                if (_customMetadataSerializer == null || _customMetadataSerializer(entity, _currentWriter) == false)
+                {
+                    _defaultSerializer.Serialize(_currentWriter, metadata);
+                }
+
+                _currentWriter.Write("}}");
+                _currentWriter.Flush();
+                if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
+                    _asyncWrite.IsCompleted)
+                {
+                    await _asyncWrite.ConfigureAwait(false);
+
+                    var tmp = _currentWriter;
+                    _currentWriter = _backgroundWriter;
+                    _backgroundWriter = tmp;
+                    _currentWriter.BaseStream.SetLength(0);
+                    ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                    _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                }
+            }
+            catch (Exception e)
+            {
+                var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                if (error != null)
+                {
+                    throw error;
+                }
+                await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+            }
         }
-        
+
         private static void VerifyValidId(string id)
         {
             if (string.IsNullOrEmpty(id))
@@ -360,7 +360,7 @@ namespace Raven.Client.Documents.BulkInsert
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
             var stateRequest = new GetOperationStateCommand(_requestExecutor.Conventions, _operationId);
-            await _requestExecutor.ExecuteAsync(stateRequest, _context, _token).ConfigureAwait(false);
+            await _requestExecutor.ExecuteAsync(stateRequest, _context, token: _token).ConfigureAwait(false);
 
             if (!(stateRequest.Result.Result is OperationExceptionResult error))
                 return null;
@@ -373,7 +373,7 @@ namespace Raven.Client.Documents.BulkInsert
         private StreamWriter _currentWriter, _backgroundWriter;
         private Task _asyncWrite = Task.CompletedTask;
         private int _maxSizeInBuffer = 1024 * 1024;
- 
+
 
         private async Task EnsureStream()
         {
@@ -383,7 +383,7 @@ namespace Raven.Client.Documents.BulkInsert
             var bulkCommand = new BulkInsertCommand(
                 _operationId,
                 _streamExposerContent);
-            _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, _token);
+            _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, token: _token);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
 
@@ -393,7 +393,7 @@ namespace Raven.Client.Documents.BulkInsert
                 _compressedStream = new GZipStream(_stream, CompressionLevel, leaveOpen: true);
                 _requestBodyStream = _compressedStream;
             }
-            
+
             _currentWriter.Write('[');
         }
 
@@ -411,7 +411,7 @@ namespace Raven.Client.Documents.BulkInsert
             await WaitForId().ConfigureAwait(false);
             try
             {
-                await _requestExecutor.ExecuteAsync(new KillOperationCommand(_operationId), _context, _token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(new KillOperationCommand(_operationId), _context, token: _token).ConfigureAwait(false);
             }
             catch (RavenException)
             {
@@ -445,7 +445,7 @@ namespace Raven.Client.Documents.BulkInsert
         {
             if (_generateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id))
                 return id;
-            
+
             id = _generateEntityIdOnTheClient.GenerateDocumentIdForStorage(entity);
             _generateEntityIdOnTheClient.TrySetIdentity(entity, id); //set Id property if it was null
             return id;

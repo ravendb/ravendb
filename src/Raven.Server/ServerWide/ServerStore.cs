@@ -468,7 +468,7 @@ namespace Raven.Server.ServerWide
                 OnTopologyChanged(null, GetClusterTopology(context));
 
                 // if we are in passive/candidate state, we prevent from tasks to be performed by this node.
-                if (state.From == RachisState.Passive || state.To == RachisState.Passive || 
+                if (state.From == RachisState.Passive || state.To == RachisState.Passive ||
                     state.From == RachisState.Candidate || state.To == RachisState.Candidate)
                 {
                     RefreshOutgoingTasks();
@@ -587,37 +587,37 @@ namespace Raven.Server.ServerWide
                             if (Server.Certificate?.Certificate != null &&
                                 (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
                                 return; // we still have time for all the nodes to update themselves 
-                            
+
                         }
-                        
-                        if (cert.TryGet("Certificate", out string certBase64) == false || 
+
+                        if (cert.TryGet("Certificate", out string certBase64) == false ||
                             cert.TryGet("Thumbprint", out string certThumbprint) == false)
                             throw new InvalidOperationException("Invalid server cert value, expected to get Certificate and Thumbprint properties");
 
                         if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
                             return;// already replaced it, nothing to do
-                        
+
                         // and now we have to replace the cert...
                         if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
                         {
                             NotificationCenter.Add(AlertRaised.Create(
                                 null,
-                                "Unable to refresh server certificate", 
-                                "Cluster wanted to install updated server certificate, but no path has been configured", 
-                                AlertType.ClusterTopologyWarning, 
+                                "Unable to refresh server certificate",
+                                "Cluster wanted to install updated server certificate, but no path has been configured",
+                                AlertType.ClusterTopologyWarning,
                                 NotificationSeverity.Error,
                                 "Cluster.Certificate.Install.Error"));
                             return;
                         }
-                    
+
 
                         var bytesToSave = Convert.FromBase64String(certBase64);
-                        var newClusterCertificate = new X509Certificate2(bytesToSave,(string)null, X509KeyStorageFlags.Exportable);
-                        
-                        if(Logger.IsOperationsEnabled)
+                        var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
+
+                        if (Logger.IsOperationsEnabled)
                             Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.FriendlyName} - {newClusterCertificate.Thumbprint}");
-                        
-                        
+
+
                         if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
                         {
                             bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
@@ -628,9 +628,9 @@ namespace Raven.Server.ServerWide
                             certStream.Write(bytesToSave, 0, bytesToSave.Length);
                             certStream.Flush(true);
                         }
-                        
+
                         Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
-                        
+
                     }
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
@@ -643,7 +643,7 @@ namespace Raven.Server.ServerWide
                         if (cert.TryGet("Thumbprint", out string certThumbprint) == false)
                             throw new InvalidOperationException("Invalid server cert value, expected to get Thumbprint property");
 
-                        if(cert.TryGet("Certificate", out string base64Cert) == false)
+                        if (cert.TryGet("Certificate", out string base64Cert) == false)
                             throw new InvalidOperationException("Invalid server cert value, expected to get Certificate property");
 
                         var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert));
@@ -1042,7 +1042,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     command = new PutSqlConnectionString(connection, databaseName);
-                    
+
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
@@ -1059,45 +1059,45 @@ namespace Raven.Server.ServerWide
             UpdateDatabaseCommand command;
 
             var databaseRecord = LoadDatabaseRecord(databaseName, out var _);
-            
+
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    
+
                     // Don't delete the connection string if used by tasks types: External Replication || Raven Etl
                     foreach (var ravenETlTask in databaseRecord.RavenEtls)
                     {
                         if (ravenETlTask.ConnectionStringName == connectionStringName)
                         {
                             throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {ravenETlTask.Name}");
-                        }    
+                        }
                     }
-                    
+
                     foreach (var replicationTask in databaseRecord.ExternalReplications)
                     {
                         if (replicationTask.ConnectionStringName == connectionStringName)
                         {
                             throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {replicationTask.Name}");
-                        }    
+                        }
                     }
-                    
+
                     command = new RemoveRavenConnectionString(connectionStringName, databaseName);
                     break;
-                    
+
                 case ConnectionStringType.Sql:
-                    
+
                     // Don't delete the connection string if used by tasks types: SQL Etl
                     foreach (var sqlETlTask in databaseRecord.SqlEtls)
                     {
                         if (sqlETlTask.ConnectionStringName == connectionStringName)
                         {
                             throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {sqlETlTask.Name}");
-                        }    
+                        }
                     }
-                    
+
                     command = new RemoveSqlConnectionString(connectionStringName, databaseName);
                     break;
-                    
+
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
@@ -1152,7 +1152,7 @@ namespace Raven.Server.ServerWide
                             }
                             catch (DatabaseDisabledException)
                             {
-                                
+
                             }
                         });
 
@@ -1218,7 +1218,7 @@ namespace Raven.Server.ServerWide
                             resourceTask.Result.Configuration.Core.RunInMemory)
                             continue;
                         var idleDbInstance = resourceTask.Result;
-                        if(SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance)  < maxTimeDatabaseCanBeIdle)
+                        if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
                             continue;
 
                         DatabasesLandlord.UnloadDirectly(db);
@@ -1296,7 +1296,7 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState != RachisState.Passive)
                 return;
 
-            _engine.Bootstrap(publicServerUrl  ?? _server.ServerStore.GetNodeHttpServerUrl());
+            _engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl());
             LicenseManager.TryActivateLicense();
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
@@ -1323,9 +1323,9 @@ namespace Raven.Server.ServerWide
 
         public void EnsureServerCertificateIsInClusterState(string name)
         {
-            if (Server.Certificate?.Certificate == null) 
+            if (Server.Certificate?.Certificate == null)
                 return;
-            
+
             // Also need to register my own certificate in the cluster, for other nodes to trust me
             RegisterServerCertificateInCluster(Server.Certificate.Certificate, name).Wait(ServerShutdown);
         }
@@ -1417,7 +1417,7 @@ namespace Raven.Server.ServerWide
             var identityInfo = identityInfoResult as List<long> ?? throw new InvalidOperationException(
                     $"Expected to get result from raft command that should generate a cluster-wide batch identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
 
-           return identityInfo;
+            return identityInfo;
         }
 
         public License LoadLicense()
@@ -1583,7 +1583,7 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    await _clusterRequestExecutor.ExecuteAsync(command, context, ServerShutdown);
+                    await _clusterRequestExecutor.ExecuteAsync(command, context, token: ServerShutdown);
                 }
                 catch
                 {

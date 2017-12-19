@@ -9,9 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -110,7 +108,7 @@ namespace FastTests
 
                     var command = new PutDocumentCommand(id, changeVector, documentJson);
 
-                    await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
+                    await RequestExecutor.ExecuteAsync(command, Context, token: cancellationToken);
 
                     return command.Result;
                 }
@@ -172,7 +170,7 @@ namespace FastTests
                 if (id == null)
                     throw new ArgumentNullException(nameof(id));
 
-                var command = new GetDocumentsCommand(id, includes: null,metadataOnly: metadataOnly);
+                var command = new GetDocumentsCommand(id, includes: null, metadataOnly: metadataOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -392,12 +390,12 @@ namespace FastTests
 
             public Task ExecuteAsync<TResult>(RavenCommand<TResult> command, CancellationToken cancellationToken = default(CancellationToken))
             {
-                return RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
+                return RequestExecutor.ExecuteAsync(command, Context, token: cancellationToken);
             }
 
-            public void Execute<TResult>(RavenCommand<TResult> command, CancellationToken cancellationToken = default(CancellationToken))
+            public void Execute<TResult>(RavenCommand<TResult> command)
             {
-                RequestExecutor.Execute(command, Context, cancellationToken);
+                RequestExecutor.Execute(command, Context);
             }
         }
     }
