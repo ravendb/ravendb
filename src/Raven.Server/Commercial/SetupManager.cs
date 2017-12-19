@@ -1412,6 +1412,7 @@ namespace Raven.Server.Commercial
                             }
 
                             throw new InvalidOperationException($"Client failed to contact webhost listening to '{serverUrl}'.{Environment.NewLine}" +
+                                                                $"Are you blocked by a firewall? Make sure the port is open.{Environment.NewLine}" +
                                                                 $"Settings file:{settingsPath}.{Environment.NewLine}" +
                                                                 $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
                                                                 $"Response: {response?.StatusCode}.{Environment.NewLine}{result}", e);
