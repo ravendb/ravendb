@@ -400,7 +400,8 @@ namespace Raven.Server.Documents.Replication
             };
 
             // we don't wait to see if the command was applied on purpose
-            _parent._server.SendToLeaderAsync(command);
+            _parent._server.SendToLeaderAsync(command)
+                .IgnoreUnobservedExceptions();
         }
 
         private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
