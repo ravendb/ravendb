@@ -42,6 +42,7 @@ namespace Raven.Server.Commercial
         {
             public string PublicServerUrl { get; set; }
             public int Port { get; set; }
+            public string ExternalIpAddress { get; set; }
             public List<string> Addresses { get; set; }
 
             public DynamicJsonValue ToJson()
@@ -50,6 +51,7 @@ namespace Raven.Server.Commercial
                 {
                     [nameof(PublicServerUrl)] = PublicServerUrl,
                     [nameof(Port)] = Port,
+                    [nameof(ExternalIpAddress)] = ExternalIpAddress,
                     [nameof(Addresses)] = new DynamicJsonArray(Addresses)
                 };
             }
