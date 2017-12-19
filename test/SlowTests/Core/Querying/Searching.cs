@@ -361,9 +361,9 @@ namespace SlowTests.Core.Querying
                             Ranges =
                             {
                                 "Cost <= 200",
-                                "Cost >= 300 AND Cost <= 400",
-                                "Cost >= 500 AND Cost <= 600",
-                                "Cost >= 700 AND Cost <= 800",
+                                "Cost >= 300 and Cost <= 400",
+                                "Cost >= 500 and Cost <= 600",
+                                "Cost >= 700 and Cost <= 800",
                                 "Cost >= 900"
                             }
                         },
@@ -372,8 +372,8 @@ namespace SlowTests.Core.Querying
                             Ranges =
                             {
                                 "Megapixels <= 3",
-                                "Megapixels >= 4 AND Megapixels <= 7",
-                                "Megapixels >= 8 AND Megapixels <= 10",
+                                "Megapixels >= 4 and Megapixels <= 7",
+                                "Megapixels >= 8 and Megapixels <= 10",
                                 "Megapixels >= 11"
                             }
                         }
@@ -397,11 +397,11 @@ namespace SlowTests.Core.Querying
                     Assert.Equal(5, facetResults["Cost"].Values.Count);
                     Assert.Equal("Cost <= 200", facetResults["Cost"].Values[0].Range);
                     Assert.Equal(3, facetResults["Cost"].Values[0].Count);
-                    Assert.Equal("Cost >= 300 AND Cost <= 400", facetResults["Cost"].Values[1].Range);
+                    Assert.Equal("Cost >= 300 and Cost <= 400", facetResults["Cost"].Values[1].Range);
                     Assert.Equal(2, facetResults["Cost"].Values[1].Count);
-                    Assert.Equal("Cost >= 500 AND Cost <= 600", facetResults["Cost"].Values[2].Range);
+                    Assert.Equal("Cost >= 500 and Cost <= 600", facetResults["Cost"].Values[2].Range);
                     Assert.Equal(2, facetResults["Cost"].Values[2].Count);
-                    Assert.Equal("Cost >= 700 AND Cost <= 800", facetResults["Cost"].Values[3].Range);
+                    Assert.Equal("Cost >= 700 and Cost <= 800", facetResults["Cost"].Values[3].Range);
                     Assert.Equal(2, facetResults["Cost"].Values[3].Count);
                     Assert.Equal("Cost >= 900", facetResults["Cost"].Values[4].Range);
                     Assert.Equal(1, facetResults["Cost"].Values[4].Count);
@@ -409,9 +409,9 @@ namespace SlowTests.Core.Querying
                     Assert.Equal(4, facetResults["Megapixels"].Values.Count);
                     Assert.Equal("Megapixels <= 3", facetResults["Megapixels"].Values[0].Range);
                     Assert.Equal(4, facetResults["Megapixels"].Values[0].Count);
-                    Assert.Equal("Megapixels >= 4 AND Megapixels <= 7", facetResults["Megapixels"].Values[1].Range);
+                    Assert.Equal("Megapixels >= 4 and Megapixels <= 7", facetResults["Megapixels"].Values[1].Range);
                     Assert.Equal(4, facetResults["Megapixels"].Values[1].Count);
-                    Assert.Equal("Megapixels >= 8 AND Megapixels <= 10", facetResults["Megapixels"].Values[2].Range);
+                    Assert.Equal("Megapixels >= 8 and Megapixels <= 10", facetResults["Megapixels"].Values[2].Range);
                     Assert.Equal(2, facetResults["Megapixels"].Values[2].Count);
                     Assert.Equal("Megapixels >= 11", facetResults["Megapixels"].Values[3].Range);
                     Assert.Equal(0, facetResults["Megapixels"].Values[3].Count);
@@ -435,11 +435,11 @@ namespace SlowTests.Core.Querying
                     Assert.Equal(5, facetResults["Cost"].Values.Count);
                     Assert.Equal("Cost <= 200", facetResults["Cost"].Values[0].Range);
                     Assert.Equal(3, facetResults["Cost"].Values[0].Count);
-                    Assert.Equal("Cost >= 300 AND Cost <= 400", facetResults["Cost"].Values[1].Range);
+                    Assert.Equal("Cost >= 300 and Cost <= 400", facetResults["Cost"].Values[1].Range);
                     Assert.Equal(2, facetResults["Cost"].Values[1].Count);
-                    Assert.Equal("Cost >= 500 AND Cost <= 600", facetResults["Cost"].Values[2].Range);
+                    Assert.Equal("Cost >= 500 and Cost <= 600", facetResults["Cost"].Values[2].Range);
                     Assert.Equal(2, facetResults["Cost"].Values[2].Count);
-                    Assert.Equal("Cost >= 700 AND Cost <= 800", facetResults["Cost"].Values[3].Range);
+                    Assert.Equal("Cost >= 700 and Cost <= 800", facetResults["Cost"].Values[3].Range);
                     Assert.Equal(2, facetResults["Cost"].Values[3].Count);
                     Assert.Equal("Cost >= 900", facetResults["Cost"].Values[4].Range);
                     Assert.Equal(1, facetResults["Cost"].Values[4].Count);
@@ -447,9 +447,9 @@ namespace SlowTests.Core.Querying
                     Assert.Equal(4, facetResults["Megapixels"].Values.Count);
                     Assert.Equal("Megapixels <= 3", facetResults["Megapixels"].Values[0].Range);
                     Assert.Equal(4, facetResults["Megapixels"].Values[0].Count);
-                    Assert.Equal("Megapixels >= 4 AND Megapixels <= 7", facetResults["Megapixels"].Values[1].Range);
+                    Assert.Equal("Megapixels >= 4 and Megapixels <= 7", facetResults["Megapixels"].Values[1].Range);
                     Assert.Equal(4, facetResults["Megapixels"].Values[1].Count);
-                    Assert.Equal("Megapixels >= 8 AND Megapixels <= 10", facetResults["Megapixels"].Values[2].Range);
+                    Assert.Equal("Megapixels >= 8 and Megapixels <= 10", facetResults["Megapixels"].Values[2].Range);
                     Assert.Equal(2, facetResults["Megapixels"].Values[2].Count);
                     Assert.Equal("Megapixels >= 11", facetResults["Megapixels"].Values[3].Range);
                     Assert.Equal(0, facetResults["Megapixels"].Values[3].Count);
