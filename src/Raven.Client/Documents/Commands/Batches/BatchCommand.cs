@@ -87,11 +87,17 @@ namespace Raven.Client.Documents.Commands.Batches
             return request;
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
                 throw new InvalidOperationException("Got null response from the server after doing a batch, something is very wrong. Probably a garbled response.");
-
+            // this should never actually occur, we are not caching the response of batch commands, but keeping it here anyway
+            if (fromCache)
+            {
+                // we have to clone the response here because  otherwise the cached item might be freed while
+                // we are still looking at this result, so we clone it to the side
+                response = response.Clone(context);
+            }
             Result = JsonDeserializationClient.BlittableArrayResult(response);
         }
 

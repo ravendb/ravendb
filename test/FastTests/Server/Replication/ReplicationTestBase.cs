@@ -275,7 +275,7 @@ namespace FastTests.Server.Replication
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null ||
                     response.TryGet("Stats", out BlittableJsonReaderArray stats) == false)
@@ -317,7 +317,7 @@ namespace FastTests.Server.Replication
                 };
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
                     ThrowInvalidResponse();

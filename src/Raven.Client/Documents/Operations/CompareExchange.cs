@@ -133,7 +133,7 @@ namespace Raven.Client.Documents.Operations
                 }
             }
             
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 response.TryGet("Results", out BlittableJsonReaderArray array);
                 Result = GetResult(array);
@@ -185,7 +185,7 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = CmpXchgResult<T>.ParseFromBlittable(response, _conventions);
             }
@@ -233,7 +233,7 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = CmpXchgResult<T>.ParseFromBlittable(response, _conventions);
             }
@@ -302,7 +302,7 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 Result = CmpXchgResult<T>.ParseFromBlittable(response, _conventions);
             }

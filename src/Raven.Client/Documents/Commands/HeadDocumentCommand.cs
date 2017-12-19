@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Commands
             return Task.FromResult(ResponseDisposeHandling.Automatic);
         }
 
-        public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             Debug.Assert(fromCache == false);
 

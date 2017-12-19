@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -70,6 +71,8 @@ namespace Raven.Client.Http
                 // Do the actual deallocation. 
                 if (Allocation != null)
                 {
+                    
+
                     Cache._unmanagedBuffersPool.Return(Allocation);
                     Interlocked.Add(ref Cache._totalSize, -Size);
                 }
@@ -107,6 +110,9 @@ namespace Raven.Client.Http
 
         public unsafe void Set(string url, string changeVector, BlittableJsonReaderObject result)
         {
+#if DEBUG
+            result.BlittableValidation();
+#endif 
             var mem = _unmanagedBuffersPool.Allocate(result.Size);
             result.CopyTo(mem.Address);
             if (Interlocked.Add(ref _totalSize, result.Size) > _maxSize)
@@ -255,7 +261,12 @@ namespace Raven.Client.Http
                     changeVector = item.ChangeVector;
 
                     obj = item.Ptr != null ? new BlittableJsonReaderObject(item.Ptr, item.Size, context) : null;
-
+#if DEBUG
+                    if(obj != null)
+                    {
+                        obj.BlittableValidation();
+                    }
+#endif
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Url returned from the cache with etag: {changeVector}. {url}.");
 

@@ -80,7 +80,7 @@ namespace SlowTests.Issues
                     };
                 }
 
-                public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
                 {
                     response.TryGet(nameof(FormatOperation.Result.Expression), out string function);
 
