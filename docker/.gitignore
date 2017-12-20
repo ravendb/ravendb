@@ -2,3 +2,4 @@
 *.zip
 secrets.env
 license.env
+settings.json
