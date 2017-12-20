@@ -33,15 +33,6 @@ class footer {
     licenseClass = license.licenseCssClass;
     supportClass = license.supportCssClass;
 
-    developerLicenseMessage = ko.pureComputed(() => {
-        const licenseStatus = license.licenseStatus();
-        if (!licenseStatus || licenseStatus.Type !== "Developer") {
-            return null;
-        }
-
-        return "Developer License - Not for Production Use";
-    });
-
     forDatabase(db: database) {
         this.db(db);
         this.stats(null);

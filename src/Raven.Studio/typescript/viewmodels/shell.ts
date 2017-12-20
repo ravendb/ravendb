@@ -67,6 +67,7 @@ class shell extends viewModelBase {
 
     licenseStatus = license.licenseCssClass;
     supportStatus = license.supportCssClass;
+    developerLicense = license.developerLicense;
     
     clientCertificate = clientCertificateModel.certificateInfo;
 
