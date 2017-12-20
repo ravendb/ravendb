@@ -222,7 +222,7 @@ namespace Raven.Server.Rachis
 
                 foreach (var nonVoter in clusterTopology.Watchers)
                 {
-                    if (_nonVoters.TryGetValue(nonVoter.Key, out FollowerAmbassador existingInstance))
+                    if (old.TryGetValue(nonVoter.Key, out FollowerAmbassador existingInstance))
                     {
                         existingInstance.UpdateLeaderWake(_noop);
 
