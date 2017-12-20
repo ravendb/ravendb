@@ -89,18 +89,13 @@ namespace Raven.Server.Smuggler.Documents
             if (type == null)
                 return DatabaseItemType.None;
 
-            while (
-                type.Equals("Transformers", StringComparison.OrdinalIgnoreCase) || 
-                type.Equals("DocsDeletions", StringComparison.OrdinalIgnoreCase) ||
-                type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase)
-                )
+            while (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
             {
                 SkipArray();
                 type = ReadType();
                 if (type == null)
                     break;
             }
-
 
             return GetType(type);
         }
@@ -149,7 +144,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-        
+
         public long SkipType(DatabaseItemType type, Action<long> onSkipped)
         {
             switch (type)
@@ -163,6 +158,8 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
                 case DatabaseItemType.CmpXchg:
+                case DatabaseItemType.LegacyDocsDeletions:
+                case DatabaseItemType.LegacyAttachmentDeletions:
                     return SkipArray(onSkipped);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -182,6 +179,17 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions)
         {
             return ReadLegacyAttachments(actions);
+        }
+
+        public IEnumerable<string> GetLegacyAttachmentDeletions()
+        {
+            foreach (var id in ReadLegacyDeletions())
+                yield return $"{DummyDocumentPrefix}{id}";
+        }
+
+        public IEnumerable<string> GetLegacyDocsDeletions()
+        {
+            return ReadLegacyDeletions();
         }
 
         public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
@@ -350,6 +358,17 @@ namespace Raven.Server.Smuggler.Documents
             finally
             {
                 builder.Dispose();
+            }
+        }
+
+        private IEnumerable<string> ReadLegacyDeletions()
+        {
+            foreach (var item in ReadArray())
+            {
+                if (item.TryGet("Key", out string key) == false)
+                    continue;
+
+                yield return key;
             }
         }
 
@@ -666,12 +685,12 @@ namespace Raven.Server.Smuggler.Documents
                     builder.Reset();
 
                     var conflict = new DocumentConflict();
-                    if (data.TryGet(nameof(DocumentConflict.Id), out conflict.Id) && 
-                        data.TryGet(nameof(DocumentConflict.Collection), out conflict.Collection) && 
-                        data.TryGet(nameof(DocumentConflict.Flags), out string flags) && 
-                        data.TryGet(nameof(DocumentConflict.ChangeVector), out conflict.ChangeVector) && 
-                        data.TryGet(nameof(DocumentConflict.Etag), out conflict.Etag) && 
-                        data.TryGet(nameof(DocumentConflict.LastModified), out conflict.LastModified) && 
+                    if (data.TryGet(nameof(DocumentConflict.Id), out conflict.Id) &&
+                        data.TryGet(nameof(DocumentConflict.Collection), out conflict.Collection) &&
+                        data.TryGet(nameof(DocumentConflict.Flags), out string flags) &&
+                        data.TryGet(nameof(DocumentConflict.ChangeVector), out conflict.ChangeVector) &&
+                        data.TryGet(nameof(DocumentConflict.Etag), out conflict.Etag) &&
+                        data.TryGet(nameof(DocumentConflict.LastModified), out conflict.LastModified) &&
                         data.TryGet(nameof(DocumentConflict.Doc), out conflict.Doc))
                     {
                         conflict.Flags = Enum.Parse<DocumentFlags>(flags);
@@ -697,8 +716,8 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         internal unsafe LegacyAttachmentDetails ProcessLegacyAttachment(
-            DocumentsOperationContext context, 
-            BlittableJsonReaderObject data, 
+            DocumentsOperationContext context,
+            BlittableJsonReaderObject data,
             ref DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet("Key", out string key) == false)
@@ -736,9 +755,9 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         public static LegacyAttachmentDetails GenerateLegacyAttachmentDetails(
-            DocumentsOperationContext context, 
-            Stream decodedStream, 
-            string key, 
+            DocumentsOperationContext context,
+            Stream decodedStream,
+            string key,
             BlittableJsonReaderObject metadata,
             ref DocumentItem.AttachmentStream attachment)
         {
@@ -841,13 +860,19 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
-            
+
             if (type.Equals(nameof(DatabaseItemType.CmpXchg), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.CmpXchg;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;
-            
+
+            if (type.Equals("DocsDeletions", StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.LegacyDocsDeletions;
+
+            if (type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.LegacyAttachmentDeletions;
+
             throw new InvalidOperationException("Got unexpected property name '" + type + "' on " + _parser.GenerateErrorState());
         }
 

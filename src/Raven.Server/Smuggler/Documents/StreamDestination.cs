@@ -201,6 +201,11 @@ namespace Raven.Server.Smuggler.Documents
                 });
             }
 
+            public void DeleteDocument(string id)
+            {
+                // no-op
+            }
+
             public Stream GetTempStream()
             {
                 throw new NotSupportedException();

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -154,6 +155,11 @@ namespace Raven.Server.Smuggler.Documents
                     Conflict = conflict
                 });
                 HandleBatchOfDocumentsIfNecessary();
+            }
+
+            public void DeleteDocument(string id)
+            {
+                AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(new DeleteDocumentCommand(id, null, _database)).AsTask());
             }
 
             public Stream GetTempStream()

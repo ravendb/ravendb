@@ -63,7 +63,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     currentType = _source.GetNextType();
                 }
-                
+
                 if (ensureStepsProcessed)
                 {
                     EnsureStepProcessed(result.Documents);
@@ -92,10 +92,26 @@ namespace Raven.Server.Smuggler.Documents
 
         private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType)
         {
-            if ((_options.OperateOnTypes & type) != type && type != DatabaseItemType.LegacyAttachments )
+            if ((_options.OperateOnTypes & type) != type)
             {
-                SkipType(type, result);
-                return;
+                switch (type)
+                {
+                    case DatabaseItemType.LegacyDocsDeletions:
+                        // process only those when we are processing documents
+                        if ((_options.OperateOnTypes & DatabaseItemType.Documents) != DatabaseItemType.Documents)
+                        {
+                            SkipType(type, result);
+                            return;
+                        }
+                        break;
+                    case DatabaseItemType.LegacyAttachments:
+                    case DatabaseItemType.LegacyAttachmentDeletions:
+                        // we cannot skip those?
+                        break;
+                    default:
+                        SkipType(type, result);
+                        return;
+                }
             }
 
             result.AddInfo($"Started processing {type}.");
@@ -125,7 +141,13 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyAttachments:
                     counts = ProcessLegacyAttachments(result);
                     break;
-                    case DatabaseItemType.CmpXchg:
+                case DatabaseItemType.LegacyDocsDeletions:
+                    counts = ProcessLegacyDocsDeletions(result);
+                    break;
+                case DatabaseItemType.LegacyAttachmentDeletions:
+                    counts = ProcessLegacyAttachmentDeletions(result);
+                    break;
+                case DatabaseItemType.CmpXchg:
                     counts = ProcessCmpXchg(result);
                     break;
                 default:
@@ -169,6 +191,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.CmpXchg:
                     counts = result.CmpXchg;
+                    break;
+                case DatabaseItemType.LegacyDocsDeletions:
+                    counts = new SmugglerProgressBase.Counts();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -393,7 +418,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (_options.IncludeExpired == false && 
+                    if (_options.IncludeExpired == false &&
                         ExpirationStorage.HasExpired(item.Document.Data, _time.GetUtcNow()))
                     {
                         SkipDocument(item, result);
@@ -451,7 +476,7 @@ namespace Raven.Server.Smuggler.Documents
 
             return result.CmpXchg;
         }
-        
+
         private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)
         {
             using (var actions = _destination.Documents())
@@ -462,7 +487,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     result.Documents.ReadCount++;
                     result.Documents.Attachments.ReadCount++;
-                    if (result.Documents.Attachments.ReadCount % 1000 > 0)
+                    if (result.Documents.Attachments.ReadCount % 1000 == 0)
                     {
                         var message = $"Read {result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
                         result.AddInfo(message);
@@ -481,6 +506,66 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Documents;
+        }
+
+        private SmugglerProgressBase.Counts ProcessLegacyAttachmentDeletions(SmugglerResult result)
+        {
+            var counts = new SmugglerProgressBase.Counts();
+            using (var actions = _destination.Documents())
+            {
+                foreach (var id in _source.GetLegacyAttachmentDeletions())
+                {
+                    counts.ReadCount++;
+
+                    if (counts.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {counts.ReadCount:#,#;;0} legacy attachment deletions.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    try
+                    {
+                        actions.DeleteDocument(id);
+                    }
+                    catch (Exception)
+                    {
+                        counts.ErroredCount++;
+                    }
+                }
+            }
+
+            return counts;
+        }
+
+        private SmugglerProgressBase.Counts ProcessLegacyDocsDeletions(SmugglerResult result)
+        {
+            var counts = new SmugglerProgressBase.Counts();
+            using (var actions = _destination.Documents())
+            {
+                foreach (var id in _source.GetLegacyDocsDeletions())
+                {
+                    counts.ReadCount++;
+
+                    if (counts.ReadCount % 1000 == 0)
+                    {
+                        var message = $"Read {counts.ReadCount:#,#;;0} legacy document deletions.";
+                        result.AddInfo(message);
+                        _onProgress.Invoke(result.Progress);
+                    }
+
+                    try
+                    {
+                        actions.DeleteDocument(id);
+                    }
+                    catch (Exception)
+                    {
+                        counts.ErroredCount++;
+                    }
+                }
+            }
+
+            return counts;
         }
 
         private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result)

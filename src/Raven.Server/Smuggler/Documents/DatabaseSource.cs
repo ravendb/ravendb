@@ -100,6 +100,16 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<DocumentItem>();
         }
 
+        public IEnumerable<string> GetLegacyAttachmentDeletions()
+        {
+            return Enumerable.Empty<string>();
+        }
+
+        public IEnumerable<string> GetLegacyDocsDeletions()
+        {
+            return Enumerable.Empty<string>();
+        }
+
         public Stream GetAttachmentStream(LazyStringValue hash, out string tag)
         {
             using (Slice.External(_context.Allocator, hash, out Slice hashSlice))
@@ -133,7 +143,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     yield return conflict;
                 }
-                
+
                 yield break;
             }
 
