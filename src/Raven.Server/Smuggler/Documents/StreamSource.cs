@@ -89,7 +89,11 @@ namespace Raven.Server.Smuggler.Documents
             if (type == null)
                 return DatabaseItemType.None;
 
-            while (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
+            while (
+                type.Equals("Transformers", StringComparison.OrdinalIgnoreCase) || 
+                type.Equals("DocsDeletions", StringComparison.OrdinalIgnoreCase) ||
+                type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase)
+                )
             {
                 SkipArray();
                 type = ReadType();
