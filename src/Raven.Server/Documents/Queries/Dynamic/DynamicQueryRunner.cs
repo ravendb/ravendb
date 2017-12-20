@@ -29,14 +29,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override async Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
             OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, token.Token, customStalenessWaitTimeout: TimeSpan.FromSeconds(60));
+            var index = await MatchIndex(query, true, TimeSpan.FromSeconds(60), token.Token);
 
             await index.StreamQuery(response, writer, query, documentsContext, token);
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, token.Token);
+            var index = await MatchIndex(query, true, null, token.Token);
 
             if (existingResultEtag.HasValue)
             {
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, false, token.Token);
+            var index = await MatchIndex(query, false, null, token.Token);
 
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(query.Metadata.CollectionName);
@@ -67,19 +67,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public override async Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, token.Token);
+            var index = await MatchIndex(query, true, null, token.Token);
 
             return await ExecuteDelete(query, index, options, context, onProgress, token);
         }
 
         public override async Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var index = await MatchIndex(query, true, token.Token);
+            var index = await MatchIndex(query, true, null, token.Token);
 
             return await ExecutePatch(query, index, options, patch, patchArgs, context, onProgress, token);
         }
 
-        private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, CancellationToken token, TimeSpan? customStalenessWaitTimeout = null)
+        private async Task<Index> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
         {
             Index index;
             if (query.Metadata.AutoIndexName != null)
@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         }
                     });
 
-                if (query.WaitForNonStaleResults && 
+                if (query.WaitForNonStaleResults &&
                     Database.Configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
                     TimeSpan.Zero)
                     await t; // this is used in testing, mainly

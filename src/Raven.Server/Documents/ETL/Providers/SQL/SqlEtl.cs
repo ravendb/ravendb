@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 foreach (var table in records)
                 {
-                    var stats = writer.Write(table, CancellationToken);
+                    var stats = writer.Write(table, null, CancellationToken);
 
                     LogStats(stats, table);
                 }
@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     {
                         var commands = new List<DbCommand>();
 
-                        writer.Write(records, CancellationToken, commands);
+                        writer.Write(records, commands, CancellationToken);
 
                         summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
                     }

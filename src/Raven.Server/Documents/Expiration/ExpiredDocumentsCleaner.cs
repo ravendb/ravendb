@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Expiration
                 {
                     using (context.OpenReadTransaction())
                     {
-                        var expired = _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, CancellationToken, out var duration);
+                        var expired = _database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, currentTime, out var duration, CancellationToken);
                         if (expired == null || expired.Count == 0)
                             return;
 

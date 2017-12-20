@@ -55,7 +55,7 @@ namespace Raven.Server.Commercial
         {
             if (IsValidEmail(email) == false)
                 throw new ArgumentException("Invalid e-mail format" + email);
-            
+
             using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
             {
                 var account = await acmeClient.NewRegistraton("mailto:" + email);
@@ -63,7 +63,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo, ServerStore serverStore)
+        public static async Task<IOperationResult> SetupSecuredTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult
             {
@@ -83,7 +83,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await ValidateServerCanRunWithSuppliedSettings(token, setupInfo, serverStore, SetupMode.Secured);
+                    await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.Secured, token);
                 }
                 catch (Exception e)
                 {
@@ -98,7 +98,7 @@ namespace Raven.Server.Commercial
                 try
                 {
                     progress.SettingsZipFile =
-                        await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, token, SetupMode.Secured, setupInfo, serverStore);
+                        await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.Secured, setupInfo, serverStore, token);
                 }
                 catch (Exception e)
                 {
@@ -145,7 +145,7 @@ namespace Raven.Server.Commercial
             using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
             {
                 var dictionary = new Dictionary<string, Task<Challenge>>();
-                var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary, serverStore);
+                var challengeResult = await InitialLetsEncryptChallenge(setupInfo, cache, acmeClient, dictionary, serverStore, token);
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}.");
@@ -153,7 +153,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await UpdateDnsRecordsForCertificateRefreshTask(token, challengeResult.Challanges, setupInfo);
+                    await UpdateDnsRecordsForCertificateRefreshTask(challengeResult.Challanges, setupInfo, token);
 
                     // Cache the current DNS topology so we can check it again
                 }
@@ -170,13 +170,13 @@ namespace Raven.Server.Commercial
                         if (Logger.IsOperationsEnabled)
                             Logger.Operations("Let's encrypt validation successful, acquiring certificate now...");
                     },
-                    token,
                     setupInfo,
                     dictionary,
                     acmeClient,
                     challengeResult,
-                    cache, 
-                    serverStore);
+                    cache,
+                    serverStore,
+                    token);
 
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Successfully acquired certificate from Let's Encrypt.");
@@ -185,7 +185,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, CancellationToken token, SetupInfo setupInfo, ServerStore serverStore)
+        public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult
             {
@@ -201,7 +201,7 @@ namespace Raven.Server.Commercial
                     throw new InvalidOperationException("The provided license for " + setupInfo.License.Name + " has expired (" + licenseStatus.Expiration + ")");
 
                 AssertNoClusterDefined(serverStore);
-                
+
                 progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
                 onProgress(progress);
                 try
@@ -222,7 +222,7 @@ namespace Raven.Server.Commercial
                 using (var acmeClient = new AcmeClient(new Uri(serverStore.Configuration.Core.AcmeUrl)))
                 {
                     var dictionary = new Dictionary<string, Task<Challenge>>();
-                    var challengeResult = await InitialLetsEncryptChallenge(token, setupInfo, cache, acmeClient, dictionary, serverStore);
+                    var challengeResult = await InitialLetsEncryptChallenge(setupInfo, cache, acmeClient, dictionary, serverStore, token);
 
                     progress.Processed++;
                     progress.AddInfo(challengeResult.Challanges != null
@@ -235,7 +235,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await UpdateDnsRecordsTask(onProgress, progress, token, challengeResult.Challanges, setupInfo);
+                        await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challanges, setupInfo, token);
                     }
                     catch (Exception e)
                     {
@@ -253,15 +253,13 @@ namespace Raven.Server.Commercial
                             progress.AddInfo("Acquiring certificate.");
                             onProgress(progress);
                         },
-                        token,
                         setupInfo,
                         dictionary,
                         acmeClient,
                         challengeResult,
-                        cache, 
-                        serverStore);
-
-
+                        cache,
+                        serverStore,
+                        token);
 
                     progress.Processed++;
                     progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
@@ -270,7 +268,7 @@ namespace Raven.Server.Commercial
 
                     try
                     {
-                        await ValidateServerCanRunWithSuppliedSettings(token, setupInfo, serverStore, SetupMode.LetsEncrypt);
+                        await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.LetsEncrypt, token);
                     }
                     catch (Exception e)
                     {
@@ -286,13 +284,13 @@ namespace Raven.Server.Commercial
                     try
                     {
                         progress.SettingsZipFile =
-                            await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, token, SetupMode.LetsEncrypt, setupInfo, serverStore);
+                            await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
                     }
                     catch (Exception e)
                     {
                         throw new InvalidOperationException("Failed to create the configuration settings.", e);
                     }
-                    
+
                     progress.Processed++;
                     progress.AddInfo("Configuration settings created.");
                     progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode finished successfully.");
@@ -313,8 +311,8 @@ namespace Raven.Server.Commercial
             {
                 throw new InvalidOperationException("This node is part of an already configured cluster and cannot be setup automatically any longer." +
                                                     Environment.NewLine +
-                                                    "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." + 
-                                                    Environment.NewLine + 
+                                                    "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." +
+                                                    Environment.NewLine +
                                                     "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
                                                     );
             }
@@ -344,8 +342,7 @@ namespace Raven.Server.Commercial
             await serverStore.Cluster.WaitForIndexNotification(res.Index);
         }
 
-        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, CancellationToken token, SetupInfo setupInfo, Dictionary<string, Task<Challenge>> dictionary, AcmeClient acmeClient,
-            (Dictionary<string, string> Challanges, byte[] Key) challengeResult, LetsEncryptCache cache, ServerStore serverStore)
+        private static async Task<X509Certificate2> CompleteAuthorizationAndGetCertificate(Action onValdiationSuccessful, SetupInfo setupInfo, Dictionary<string, Task<Challenge>> dictionary, AcmeClient acmeClient, (Dictionary<string, string> Challanges, byte[] Key) challengeResult, LetsEncryptCache cache, ServerStore serverStore, CancellationToken token)
         {
             if (challengeResult.Challanges == null && cache.Certificate != null)
             {
@@ -451,7 +448,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<(Dictionary<string, string> Challanges, byte[] Key)> InitialLetsEncryptChallenge(CancellationToken token, SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient, Dictionary<string, Task<Challenge>> dictionary, ServerStore serverStore)
+        private static async Task<(Dictionary<string, string> Challanges, byte[] Key)> InitialLetsEncryptChallenge(SetupInfo setupInfo, LetsEncryptCache cache, AcmeClient acmeClient, Dictionary<string, Task<Challenge>> dictionary, ServerStore serverStore, CancellationToken token)
         {
             try
             {
@@ -534,9 +531,8 @@ namespace Raven.Server.Commercial
         }
 
         private static async Task UpdateDnsRecordsForCertificateRefreshTask(
-            CancellationToken token,
             Dictionary<string, string> map,
-            SetupInfo setupInfo)
+            SetupInfo setupInfo, CancellationToken token)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {
@@ -625,9 +621,9 @@ namespace Raven.Server.Commercial
         private static async Task UpdateDnsRecordsTask(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
-            CancellationToken token,
             Dictionary<string, string> map,
-            SetupInfo setupInfo)
+            SetupInfo setupInfo,
+            CancellationToken token)
         {
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, new CancellationTokenSource(TimeSpan.FromMinutes(15)).Token))
             {
@@ -808,7 +804,7 @@ namespace Raven.Server.Commercial
             var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
             var requestedEndpoints = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port));
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
-            
+
 
             var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
             var activeTcpListeners = ipProperties.GetActiveTcpListeners();
@@ -825,13 +821,13 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task ValidateServerCanRunWithSuppliedSettings(CancellationToken token, SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode)
+        public static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
             var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
 
             var ips = localNode.ExternalIpAddress == null
                 ? localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray()
-                : new[] {new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.Port)};
+                : new[] { new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.Port) };
 
             var serverCert = setupInfo.GetX509Certificate();
 
@@ -854,7 +850,7 @@ namespace Raven.Server.Commercial
                     await AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
 
                 var localIps = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
-                await SimulateRunningServer(serverCert, localServerUrl, localIps, token, setupInfo, serverStore.Configuration.ConfigPath, setupMode);
+                await SimulateRunningServer(serverCert, localServerUrl, localIps, setupInfo, serverStore.Configuration.ConfigPath, setupMode, token);
             }
             catch (Exception e)
             {
@@ -990,7 +986,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, CancellationToken token, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
+        private static async Task<byte[]> CompleteClusterConfigurationAndGetSettingsZip(Action<IOperationProgress> onProgress, SetupProgressAndResult progress, SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             try
             {
@@ -1037,18 +1033,18 @@ namespace Raven.Server.Commercial
 
                             serverStore.Server.Certificate =
                                 SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password);
-                            
+
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {
                                 if (node.Key == LocalNodeTag)
                                     continue;
-                                    
+
                                 progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
                                 onProgress(progress);
 
                                 setupInfo.NodeSetupInfos[node.Key].PublicServerUrl =
                                     GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port, out var _);
-                                
+
                                 try
                                 {
                                     await serverStore.AddNodeToClusterAsync(setupInfo.NodeSetupInfos[node.Key].PublicServerUrl, node.Key, validateNotInTopology: false);
@@ -1315,7 +1311,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, CancellationToken token, SetupInfo setupInfo, string settingsPath, SetupMode setupMode)
+        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, SetupInfo setupInfo, string settingsPath, SetupMode setupMode, CancellationToken token)
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server, settingsPath);
             configuration.Initialize();
@@ -1365,7 +1361,7 @@ namespace Raven.Server.Commercial
                                                         $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
                                                         "This can happen if the ip is external (behind a firewall). If this is the case, try going back to the previous screen and add the same ip as an external ip.", e);
                 }
-                
+
                 using (var httpMessageHandler = new HttpClientHandler())
                 {
                     // on MacOS this is not supported because Apple...
@@ -1381,7 +1377,7 @@ namespace Raven.Server.Commercial
                             return true;
                         };
                     }
-                    
+
                     using (var client = new HttpClient(httpMessageHandler)
                     {
                         BaseAddress = new Uri(serverUrl),
@@ -1426,7 +1422,7 @@ namespace Raven.Server.Commercial
                     await webHost.StopAsync(TimeSpan.Zero);
             }
         }
-        
+
         private static async Task<bool> CanResolveHostNameLocally(string serverUrl, IPEndPoint[] expectedAddresses)
         {
             var expectedIps = expectedAddresses.Select(address => address.Address.ToString()).ToHashSet();
