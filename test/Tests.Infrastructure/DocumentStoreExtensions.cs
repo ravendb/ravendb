@@ -32,13 +32,15 @@ namespace FastTests
             private readonly IDocumentStore _store;
             public readonly RequestExecutor RequestExecutor;
 
+            public readonly InMemoryDocumentSessionOperations Session;
+
             public readonly JsonOperationContext Context;
             private readonly IDisposable _returnContext;
 
             public DatabaseCommands(IDocumentStore store, string databaseName)
             {
                 _store = store ?? throw new ArgumentNullException(nameof(store));
-
+                Session = (InMemoryDocumentSessionOperations)_store.OpenSession();
                 RequestExecutor = store.GetRequestExecutor(databaseName);
 
                 _returnContext = RequestExecutor.ContextPool.AllocateOperationContext(out Context);
@@ -221,11 +223,14 @@ namespace FastTests
 
             public async Task<QueryResult> QueryAsync(IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
             {
-                var command = new QueryCommand(_store.Conventions, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
+                using (var s = _store.OpenAsyncSession())
+                {
+                    var command = new QueryCommand((InMemoryDocumentSessionOperations)s, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
 
-                await RequestExecutor.ExecuteAsync(command, Context);
+                    await RequestExecutor.ExecuteAsync(command, Context);
 
-                return command.Result;
+                    return command.Result;
+                }
             }
 
             public void Batch(List<ICommandData> commands)
@@ -298,6 +303,7 @@ namespace FastTests
 
             public void Dispose()
             {
+                Session.Dispose();
                 _returnContext?.Dispose();
             }
 

@@ -105,7 +105,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
         {
             _query = GetIndexQuery(isAsync);
 
-            return new QueryCommand(_session.Conventions, _query);
+            return new QueryCommand(_session, _query);
         }
 
         public override string ToString()

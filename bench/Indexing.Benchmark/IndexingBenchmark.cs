@@ -4,6 +4,7 @@ using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Indexing.Benchmark
@@ -48,11 +49,12 @@ namespace Indexing.Benchmark
 
                 var requestExecuter = _store.GetRequestExecutor();
                 JsonOperationContext context;
+                using(var session = _store.OpenSession())
                 using (requestExecuter.ContextPool.AllocateOperationContext(out context))
                 {
                     do
                     {
-                        var queryCommand = new QueryCommand(_store.Conventions, new IndexQuery
+                        var queryCommand = new QueryCommand((InMemoryDocumentSessionOperations)session, new IndexQuery
                         {
                             Query = $"FROM INDEX '{test.Index.IndexName}'",
                             PageSize = 0,

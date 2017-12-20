@@ -6,6 +6,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
@@ -32,9 +33,10 @@ namespace SlowTests.Issues
                 }
 
                 var requestExecuter = store.GetRequestExecutor();
+                using(var session = store.OpenAsyncSession())
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new TestQueryCommand(store.Conventions, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
+                    var command = new TestQueryCommand((InMemoryDocumentSessionOperations)session, store.Conventions, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
 
                     var sw = Stopwatch.StartNew();
                     Assert.Throws<AllTopologyNodesDownException>(() => requestExecuter.Execute(command, context));
@@ -47,7 +49,7 @@ namespace SlowTests.Issues
 
         private class TestQueryCommand : QueryCommand
         {
-            public TestQueryCommand(DocumentConventions conventions, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, indexQuery, metadataOnly, indexEntriesOnly)
+            public TestQueryCommand(InMemoryDocumentSessionOperations session, DocumentConventions conventions, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(session, indexQuery, metadataOnly, indexEntriesOnly)
             {
                 Timeout = TimeSpan.FromMilliseconds(100);
             }

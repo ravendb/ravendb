@@ -52,8 +52,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _session.IncrementRequestCount();
             LogQuery();
-
-            return new QueryCommand(_session.Conventions, _indexQuery, _metadataOnly, _indexEntriesOnly);
+            return new QueryCommand(_session, _indexQuery, _metadataOnly, _indexEntriesOnly);
         }
 
         public void SetResult(QueryResult queryResult)
@@ -95,6 +94,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public List<T> Complete<T>()
         {
+            _session.AssertNotDisposed(); // ensure that the user didn't do an async query then closed the session early
             var queryResult = _currentQueryResults.CreateSnapshot();
             queryResult.Results.BlittableValidation();
 

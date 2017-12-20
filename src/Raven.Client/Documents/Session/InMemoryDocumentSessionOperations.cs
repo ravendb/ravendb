@@ -983,6 +983,12 @@ more responsive application.
                 DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
         }
 
+        public void AssertNotDisposed()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException("session");
+        }
+
         private void Dispose(bool isDisposing)
         {
             if (_isDisposed)

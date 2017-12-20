@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -17,11 +18,13 @@ namespace Raven.Client.Documents.Commands
         private readonly IndexQuery _indexQuery;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
+        private readonly InMemoryDocumentSessionOperations _session;
 
-        public QueryCommand(DocumentConventions conventions, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public QueryCommand(InMemoryDocumentSessionOperations session, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
-            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+            _conventions = _session.Conventions ?? throw new ArgumentNullException(nameof(_session.Conventions));
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
@@ -58,6 +61,8 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                     {
+                        // this is here to catch people closing the session before the ToListAsync() completes
+                        _session.AssertNotDisposed();
                         using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
@@ -77,6 +82,7 @@ namespace Raven.Client.Documents.Commands
                 Result = null;
                 return;
             }
+            _session.AssertNotDisposed(); // verify that we don't have async query with the user closing the session
             if (fromCache)
             {
                 // we have to clone the response here because  otherwise the cached item might be freed while

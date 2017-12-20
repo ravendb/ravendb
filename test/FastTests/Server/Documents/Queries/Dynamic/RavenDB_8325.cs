@@ -35,7 +35,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic
 
                     using (var cmds = store.Commands())
                     {
-                        var command = new QueryCommand(store.Conventions, new IndexQuery
+                        var command = new QueryCommand(cmds.Session, new IndexQuery
                         {
                             Query = "from Items where Value >= $p0 order by Value",
                             QueryParameters = new Parameters()
