@@ -625,7 +625,7 @@ namespace RachisTests
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = 20,
-                    MaxErrorousPeriod = TimeSpan.FromSeconds(6)
+                    MaxErroneousPeriod = TimeSpan.FromSeconds(6)
                 }))
                 {
                     var task = subscription.Run(a => { });
@@ -674,7 +674,7 @@ namespace RachisTests
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = 20,
-                    MaxErrorousPeriod = TimeSpan.FromSeconds(6)
+                    MaxErroneousPeriod = TimeSpan.FromSeconds(6)
                 }))
                 {
                     var batchProccessed = new AsyncManualResetEvent();
@@ -738,7 +738,7 @@ namespace RachisTests
                 {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                     MaxDocsPerBatch = 20,
-                    MaxErrorousPeriod = TimeSpan.FromSeconds(120)
+                    MaxErroneousPeriod = TimeSpan.FromSeconds(120)
                 }))
                 {
                     var batchProccessed = new AsyncManualResetEvent();

@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Subscriptions
             Strategy = SubscriptionOpeningStrategy.OpenIfFree;
             MaxDocsPerBatch = 4096;
             TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5);
-            MaxErrorousPeriod = TimeSpan.FromMinutes(5);
+            MaxErroneousPeriod = TimeSpan.FromMinutes(5);
         }
 
         /// <summary>
@@ -112,12 +112,19 @@ namespace Raven.Client.Documents.Subscriptions
         /// Max amount that the server will try to retriev and send to client. Default: 4096
         /// </summary>
         public int MaxDocsPerBatch { get; set; }
-        
+
         /// <summary>
-        /// Maximum amount of time during which a subscription connection may be in errorrous state. Default: 5 minutes
+        /// Maximum amount of time during which a subscription connection may be in erroneous state. Default: 5 minutes
         /// </summary>
-        public TimeSpan MaxErrorousPeriod { get; set; }
-        
+        public TimeSpan MaxErroneousPeriod { get; set; }
+
+        [Obsolete("Use MaxErroneousPeriod instead")]
+        public TimeSpan MaxErrorousPeriod
+        {
+            get => MaxErroneousPeriod;
+            set => MaxErroneousPeriod = value;
+        }
+
         /// <summary>
         /// Will continue the subscription work until the server have no more new documents to send.
         /// That's a usefull practice for ad-hoc, one-time, persistant data processing. 

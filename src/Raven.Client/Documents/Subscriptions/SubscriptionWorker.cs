@@ -543,10 +543,10 @@ namespace Raven.Client.Documents.Subscriptions
                 return;
             }
 
-            if ((DateTime.Now - LastConnectionFailure) > _options.MaxErrorousPeriod)
+            if ((DateTime.Now - LastConnectionFailure) > _options.MaxErroneousPeriod)
             {                
                 throw new SubscriptionInvalidStateException(
-                    $"Subscription connection was in invalide state for more than {_options.MaxErrorousPeriod} and therefore will be terminated");
+                    $"Subscription connection was in invalid state for more than {_options.MaxErroneousPeriod} and therefore will be terminated");
                 
             }
 
