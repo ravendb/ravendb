@@ -1,90 +1,103 @@
 <div id="about-page" class="content-margin">
 
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-lg-6 text-center">
             <i class="icon-logo text-primary"></i>
-            <p>
-                <small>Copyright &copy; 2009 - 2017 Hibernating Rhinos. All rights reserved</small>
-            </p>
-            
-            <table>
-                <tr>
-                    <th>Server version</th>
-                    <td><span data-bind="text: serverVersion().FullVersion"></span></td>
-                </tr>
-                <tr>
-                    <th>Studio version</th>
-                    <td><span data-bind="text: clientVersion()"></span></td>
-                </tr>
-            </table>
-            
-            <p>
-                Care to share your thoughts on our product?<br />
+
+            <div class="flex-horizontal margin-bottom">
+                <div class="flex-grow"></div>
+                <table>
+                    <tr>
+                        <th>Server version</th>
+                        <td><span data-bind="text: serverVersion().FullVersion"></span></td>
+                    </tr>
+                    <tr>
+                        <th>Studio version</th>
+                        <td><span data-bind="text: clientVersion()"></span></td>
+                    </tr>
+                </table>
+                <div class="flex-grow"></div>
+            </div>
+            <div class="margin-top">
+                <p class="lead margin-bottom">
+                    Care to share your thoughts on our product?
+                </p>
                 <a data-bind="click: openFeedbackForm" class="btn btn-info">
                     <i class="icon-rocket"></i>
                     <span>Send feedback</span>
                 </a>
-            </p>
+            </div>
+
+            <div class="margin-top">
+                <small>Copyright &copy; 2009 - 2017 Hibernating Rhinos. All rights reserved</small>
+            </div>
 
         </div>
-        <div class="col-md-6">
-            <div class="flex-horizontal">
-                <div data-bind="attr: { class: 'roundborder ' + licenseCssClass() }">
-                    <i class="icon-license-information"></i>
+        <div class="col-lg-6">
+            <div class="panel padding padding-sm margin-bottom">
+                <div class="flex-horizontal flex-content-center flex-wrap">
+                    <div data-bind="attr: { class: 'roundborder flex-noshrink ' + licenseCssClass() }">
+                        <i class="icon-license-information"></i>
+                    </div>
+                    <div class="flex-grow license-info">
+                        <div>
+                            <h2>License information</h2>
+
+                            <table>
+                                <tr>
+                                    <th>Type</th>
+                                    <td data-bind="text: licenseType"></td>
+                                </tr>
+                                <tr data-bind="visible: formattedExpiration">
+                                    <th>Expires</th>
+                                    <td><span data-bind="text: formattedExpiration"></span></td>
+                                </tr>
+                                <tr data-bind="visible: shortDescription">
+                                    <th>Limits</th>
+                                    <td><span data-bind="text: shortDescription"></span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div data-bind="visible: registered" class="license-actions">
+                            
+                                <button class="btn btn-primary" data-bind="click: register, visible: !registered()">Register</button>
+                            
+                                <button class="btn btn-primary" data-bind="click: register">Replace License</button>
+                            
+                            <span class="force-license-update">
+                                <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, css: { 'btn-spinner': spinners.forceLicenseUpdate }">
+                                    <i class="icon-force"></i>
+                                    <span>Force Update</span>
+                                </button>
+                            </span>
+                        </div>
+                    </div>
+                    
+
                 </div>
-                <div class="flex-grow padding">
-                    <div>
-                        <h2>License information</h2>
-                        
+            </div>
+            <div class="panel padding padding-sm">
+                <div class="flex-horizontal flex-content-center flex-wrap">
+                    <div data-bind="attr: { class: 'roundborder flex-noshrink ' + supportCssClass() }">
+                        <i class="icon-support"></i>
+                    </div>
+                    <div class="flex-grow license-info">
+                        <h2>Support plan</h2>
+
                         <table>
                             <tr>
                                 <th>Type</th>
-                                <td data-bind="text: licenseType"></td>
-                            </tr>
-                            <tr data-bind="visible: formattedExpiration">
-                                <th>Expires</th>
-                                <td><span data-bind="text: formattedExpiration"></span></td>
-                            </tr>
-                            <tr data-bind="visible: shortDescription">
-                                <th>Limits</th>
-                                <td><span data-bind="text: shortDescription"></span></td>
+                                <td><span data-bind="text: supportLabel"></span></td>
                             </tr>
                         </table>
+                        <div class="license-actions">
+                            <a href="https://ravendb.net/support" target="_blank" class="btn btn-success" data-bind="visible: canUpgradeSupport">
+                                <i class="icon-support"></i>
+                                <span>Upgrade</span>
+                            </a>
+                        </div>
                     </div>
-                    <button class="btn btn-primary" data-bind="click: register, visible: !registered()">Register</button>
-                </div>
-                <div data-bind="visible: registered">
-                    <div>
-                        <button class="btn btn-primary" data-bind="click: register">Replace License</button>
-                    </div>
-                    <div class="force-license-update">
-                        <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, css: { 'btn-spinner': spinners.forceLicenseUpdate }">
-                            <i class="icon-force"></i>
-                            <span>Force Update</span>
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-            <div class="flex-horizontal">
-                <div data-bind="attr: { class: 'roundborder ' + supportCssClass() }">
-                    <i class="icon-support"></i>
-                </div>
-                <div class="flex-grow padding">
-                    <h2>Support plan</h2>
                     
-                    <table>
-                        <tr>
-                            <th>Type</th>
-                            <td><span data-bind="text: supportLabel"></span></td>
-                        </tr>
-                    </table>
-                </div>
-                <div>
-                    <a href="https://ravendb.net/support" target="_blank" class="btn btn-success" data-bind="visible: canUpgradeSupport">
-                        <i class="icon-support"></i>
-                        <span>Upgrade</span>
-                    </a>
                 </div>
             </div>
         </div>
