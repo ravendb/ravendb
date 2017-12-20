@@ -934,7 +934,8 @@ namespace Raven.Server.Documents.Queries
 
         public QueryFieldName GetIndexFieldName(FieldExpression fe, BlittableJsonReaderObject parameters)
         {
-            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName))
+            if (_aliasToName.TryGetValue(fe.Compound[0], out var indexFieldName) && 
+                fe.Compound[0] != Query.From.Alias)
             {
                 if (fe.Compound.Count != 1)
                     throw new InvalidQueryException("Field alias " + fe.Compound[0] + " cannot be used in a compound field, but got: " + fe, QueryText, parameters);
