@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
@@ -194,8 +195,18 @@ namespace Raven.Server.Documents
 
         private void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)
         {
-            using (DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out var database))
+            IDisposable removeLockAndReturn = null;
+            try
             {
+                try
+                {
+                    removeLockAndReturn = DatabasesCache.RemoveLockAndReturn(dbName, CompleteDatabaseUnloading, out _);
+                }
+                catch (AggregateException ae ) when (nameof(DeleteDatabase).Equals(ae.InnerException.Data["Source"]))
+                {
+                    // this is already in the process of being deleted, we can just exit and let another thread handle it
+                    return;
+                }
                 if (deletionInProgress == DeletionInProgressStatus.HardDelete)
                 {
                     RavenConfiguration configuration;
@@ -210,6 +221,7 @@ namespace Raven.Server.Documents
                         if (_logger.IsInfoEnabled)
                             _logger.Info("Could not create database configuration", ex);
                     }
+
                     // this can happen if the database record was already deleted
                     if (configuration != null)
                     {
@@ -228,6 +240,10 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
+            }
+            finally
+            {
+                removeLockAndReturn?.Dispose();
             }
             NotifyLeaderAboutRemoval(dbName);
         }

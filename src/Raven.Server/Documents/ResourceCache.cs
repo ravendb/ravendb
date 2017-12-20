@@ -129,7 +129,8 @@ namespace Raven.Server.Documents
                 {
                     Data =
                     {
-                        [DatabasesLandlord.DoNotRemove] = true
+                        [DatabasesLandlord.DoNotRemove] = true,
+                        ["Source"] = caller
                     }
                 });
                
