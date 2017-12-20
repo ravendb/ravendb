@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Xunit;
 
@@ -49,7 +48,7 @@ namespace FastTests.Issues
                 {
                     var res = session.Query<Company>().ToList();
                     Assert.Equal(2, res.Count);
-                    Assert.Equal(res[0],res[1]);
+                    Assert.Equal(res[0], res[1]);
                 }
             }
         }
@@ -103,6 +102,11 @@ namespace FastTests.Issues
                        && Address?.Line1 == other.Address?.Line1 && Address?.Line2 == other.Address?.Line2 && Address?.PostalCode == other.Address?.PostalCode
                        && Address?.Region == other.Address?.Region && Address?.Location?.Latitude == other.Address?.Location?.Latitude
                        && Address?.Location?.Longitude == other.Address?.Location?.Longitude && Phone == other.Phone && Fax == other.Fax;
+            }
+
+            public override int GetHashCode()
+            {
+                return 1;
             }
         }
 

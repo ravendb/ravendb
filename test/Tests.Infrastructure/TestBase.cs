@@ -90,8 +90,11 @@ namespace FastTests
                 using (var sr = new StreamReader(file))
                 {
                     var json = JObject.Parse(sr.ReadToEnd());
-                    if (json.TryGetValue("maxParallelThreads", out JToken token))
-                        maxNumberOfConcurrentTests = token.Value<int>();
+
+                    if (json.TryGetValue("maxRunningTests", out var testsToken))
+                        maxNumberOfConcurrentTests = testsToken.Value<int>();
+                    else if (json.TryGetValue("maxParallelThreads", out var threadsToken))
+                        maxNumberOfConcurrentTests = threadsToken.Value<int>();
                 }
             }
 
