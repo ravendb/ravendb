@@ -306,6 +306,7 @@ namespace Raven.Client.Documents.Session
 
         public void AddParameter(string name, object value)
         {
+            name = name.TrimStart('$');
             if (QueryParameters.ContainsKey(name))
                 throw new InvalidOperationException("The parameter " + name + " was already added");
             QueryParameters[name] = value;
