@@ -11,12 +11,12 @@ namespace Voron.Util.Settings
 
         public override VoronPathSetting Combine(string path)
         {
-            return new VoronPathSetting(Path.Combine(_path, path));
+            return new VoronPathSetting(Path.Combine(_path, path), _baseDataDir?.FullPath);
         }
 
         public override VoronPathSetting Combine(VoronPathSetting path)
         {
-            return new VoronPathSetting(Path.Combine(_path, path._path));
+            return new VoronPathSetting(Path.Combine(_path, path._path), _baseDataDir?.FullPath);
         }
     }
 
