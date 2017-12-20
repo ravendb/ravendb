@@ -105,7 +105,7 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<string>();
         }
 
-        public IEnumerable<string> GetLegacyDocsDeletions()
+        public IEnumerable<string> GetLegacyDocumentDeletions()
         {
             return Enumerable.Empty<string>();
         }
