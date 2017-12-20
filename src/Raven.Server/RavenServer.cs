@@ -650,7 +650,7 @@ namespace Raven.Server
                     StartListeners(host, port, status);
                 }
             }
-            else if (tcpServerUrl.Length == 0 && ushort.TryParse(tcpServerUrl[0], out ushort shortPort))
+            else if (tcpServerUrl.Length == 1 && ushort.TryParse(tcpServerUrl[0], out ushort shortPort))
             {
                 foreach (var serverUrl in Configuration.Core.ServerUrls)
                 {
@@ -684,7 +684,7 @@ namespace Raven.Server
                 foreach (var ipAddress in GetListenIpAddresses(host))
                 {
                     if (Logger.IsInfoEnabled)
-                        Logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrls} and bind to {ipAddress} at {port}");
+                        Logger.Info($"RavenDB TCP is configured to use {string.Join(", ", Configuration.Core.TcpServerUrls)} and bind to {ipAddress} at {port}");
 
                     var listener = new TcpListener(ipAddress, status.Port != 0 ? status.Port : port);
                     status.Listeners.Add(listener);
