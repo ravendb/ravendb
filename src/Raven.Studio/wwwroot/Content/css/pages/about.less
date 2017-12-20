@@ -1,14 +1,24 @@
 ﻿#about-page {
-
-
     table td, table th {
         padding-right: 20px;
         padding-bottom: 10px;
     }
 
+    .license-info {
+        @media (min-width: @screen-sm) {
+            min-width: 380px;
+        }
+    }
+
+    .license-actions {
+
+        .btn-block {
+            min-width: 150px;
+        }
+    }
+
     .icon-logo {
-        font-size: 150px;
-        margin-left: -50px;
+        font-size: 130px;
     }
 
     .path {
@@ -36,11 +46,11 @@
         width: 100px;
         height: 100px;
         position: relative;
+        margin-right: @grid-gutter-width;
     }
 
     @media (min-height:900px) {
         .roundborder {
-            margin-top: 30px;
             width: 150px;
             height: 150px;
         }
@@ -113,7 +123,7 @@
         }
     }
 
-    .force-license-update{
+    .force-license-update {
         margin-top: 10px;
     }
 }
