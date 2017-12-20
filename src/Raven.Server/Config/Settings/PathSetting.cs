@@ -21,12 +21,12 @@ namespace Raven.Server.Config.Settings
 
         public override PathSetting Combine(string path)
         {
-            return new PathSetting(Path.Combine(_path, path));
+            return new PathSetting(Path.Combine(_path, path), _baseDataDir?.FullPath);
         }
 
         public override PathSetting Combine(PathSetting path)
         {
-            return new PathSetting(Path.Combine(_path, path._path));
+            return new PathSetting(Path.Combine(_path, path._path), _baseDataDir?.FullPath);
         }
 
         private static string EnsureResourceInfo(string path, ResourceType type, string name)

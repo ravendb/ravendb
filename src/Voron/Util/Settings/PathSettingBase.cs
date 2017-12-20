@@ -8,7 +8,7 @@ namespace Voron.Util.Settings
 {
     public abstract class PathSettingBase<T>
     {
-        private readonly PathSettingBase<T> _baseDataDir;
+        protected readonly PathSettingBase<T> _baseDataDir;
         protected readonly string _path;
 
         protected string _fullPath;
