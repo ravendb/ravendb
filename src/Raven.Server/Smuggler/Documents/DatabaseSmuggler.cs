@@ -96,7 +96,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 switch (type)
                 {
-                    case DatabaseItemType.LegacyDocsDeletions:
+                    case DatabaseItemType.LegacyDocumentDeletions:
                         // process only those when we are processing documents
                         if ((_options.OperateOnTypes & DatabaseItemType.Documents) != DatabaseItemType.Documents)
                         {
@@ -141,8 +141,8 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyAttachments:
                     counts = ProcessLegacyAttachments(result);
                     break;
-                case DatabaseItemType.LegacyDocsDeletions:
-                    counts = ProcessLegacyDocsDeletions(result);
+                case DatabaseItemType.LegacyDocumentDeletions:
+                    counts = ProcessLegacyDocumentDeletions(result);
                     break;
                 case DatabaseItemType.LegacyAttachmentDeletions:
                     counts = ProcessLegacyAttachmentDeletions(result);
@@ -192,7 +192,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.CmpXchg:
                     counts = result.CmpXchg;
                     break;
-                case DatabaseItemType.LegacyDocsDeletions:
+                case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
                     break;
                 default:
@@ -539,12 +539,12 @@ namespace Raven.Server.Smuggler.Documents
             return counts;
         }
 
-        private SmugglerProgressBase.Counts ProcessLegacyDocsDeletions(SmugglerResult result)
+        private SmugglerProgressBase.Counts ProcessLegacyDocumentDeletions(SmugglerResult result)
         {
             var counts = new SmugglerProgressBase.Counts();
             using (var actions = _destination.Documents())
             {
-                foreach (var id in _source.GetLegacyDocsDeletions())
+                foreach (var id in _source.GetLegacyDocumentDeletions())
                 {
                     counts.ReadCount++;
 

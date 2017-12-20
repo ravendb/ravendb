@@ -158,7 +158,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
                 case DatabaseItemType.CmpXchg:
-                case DatabaseItemType.LegacyDocsDeletions:
+                case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                     return SkipArray(onSkipped);
                 default:
@@ -187,7 +187,7 @@ namespace Raven.Server.Smuggler.Documents
                 yield return $"{DummyDocumentPrefix}{id}";
         }
 
-        public IEnumerable<string> GetLegacyDocsDeletions()
+        public IEnumerable<string> GetLegacyDocumentDeletions()
         {
             return ReadLegacyDeletions();
         }
@@ -868,7 +868,7 @@ namespace Raven.Server.Smuggler.Documents
                 return DatabaseItemType.LegacyAttachments;
 
             if (type.Equals("DocsDeletions", StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.LegacyDocsDeletions;
+                return DatabaseItemType.LegacyDocumentDeletions;
 
             if (type.Equals("AttachmentsDeletions", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachmentDeletions;
