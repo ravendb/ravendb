@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Conventions
     /// <summary>
     /// The default json contract will serialize all properties and all public fields
     /// </summary>
-    internal class DefaultRavenContractResolver : DefaultContractResolver
+    public class DefaultRavenContractResolver : DefaultContractResolver
     {
         [ThreadStatic]
         private static ExtensionDataSetter _currentExtensionSetter;
