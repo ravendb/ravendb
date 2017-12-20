@@ -5,7 +5,7 @@ RUN apt-get update \
     && apt-get install -y \
     && apt-get install --no-install-recommends curl bzip2 libunwind8 libicu55 libcurl3 ca-certificates jq -y
 
-ENV RAVEN_DataDir=/databases RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
+ENV RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
 EXPOSE 8080 38888 161
 
@@ -25,6 +25,6 @@ HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
 
 WORKDIR /opt/RavenDB/Server
 
-VOLUME /databases /opt/RavenDB/cert /opt/RavenDB/secrets
+VOLUME /opt/RavenDB/Server/RavenData /opt/RavenDB/cert /opt/RavenDB/secrets
 
 CMD /opt/RavenDB/run-raven.sh
