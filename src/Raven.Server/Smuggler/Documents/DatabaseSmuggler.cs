@@ -528,9 +528,10 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         actions.DeleteDocument(id);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         counts.ErroredCount++;
+                        result.AddError($"Could not delete document (legacy attachment deletion) with id '{id}': {e.Message}");
                     }
                 }
             }
@@ -558,9 +559,10 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         actions.DeleteDocument(id);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         counts.ErroredCount++;
+                        result.AddError($"Could not delete document (legacy document deletion) with id '{id}': {e.Message}");
                     }
                 }
             }
@@ -663,9 +665,11 @@ namespace Raven.Server.Smuggler.Documents
             // skipping "Raven/Replication/DatabaseIdsCache" and
             // "Raven/Replication/Sources/{GUID}" and
             // "Raven/Backup/Periodic/Setup" and
-            // "Raven/Backup/Status"
+            // "Raven/Backup/Status" and 
+            // "Raven/Backup/Periodic/Status"
             if (document.Id.Size != 34 && document.Id.Size != 62 &&
-                document.Id.Size != 27 && document.Id.Size != 19)
+                document.Id.Size != 27 && document.Id.Size != 19 &&
+                document.Id.Size != 28)
                 return false;
 
             if (document.Id.StartsWith("Raven/") == false)
@@ -674,6 +678,7 @@ namespace Raven.Server.Smuggler.Documents
             return document.Id == "Raven/Replication/DatabaseIdsCache" ||
                    document.Id == "Raven/Backup/Periodic/Setup" ||
                    document.Id == "Raven/Backup/Status" ||
+                   document.Id == "Raven/Backup/Periodic/Status" ||
                    document.Id.StartsWith("Raven/Replication/Sources/");
         }
 
