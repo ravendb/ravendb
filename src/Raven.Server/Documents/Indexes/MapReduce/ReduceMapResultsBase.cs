@@ -9,7 +9,6 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
-using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -101,13 +100,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         case MapResultsStorageType.Tree:
                             using (treeScopeStats.Start())
                             {
-                                HandleTreeReduction(indexContext, treeScopeStats, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
+                                HandleTreeReduction(indexContext, treeScopeStats, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table, token);
                             }
                             break;
                         case MapResultsStorageType.Nested:
                             using (nestedValuesScopeStats.Start())
                             {
-                                HandleNestedValuesReduction(indexContext, nestedValuesScopeStats, token, modifiedStore, writer, reduceKeyHash);
+                                HandleNestedValuesReduction(indexContext, nestedValuesScopeStats, modifiedStore, writer, reduceKeyHash, token);
                             }
                             break;
 
@@ -141,8 +140,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         }
 
         private void HandleNestedValuesReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
-                    CancellationToken token, MapReduceResultsStore modifiedStore,
-                    IndexWriteOperation writer, LazyStringValue reduceKeyHash)
+                    MapReduceResultsStore modifiedStore,
+                    IndexWriteOperation writer, LazyStringValue reduceKeyHash, CancellationToken token)
         {
             EnsureValidNestedValuesReductionStats(stats);
 
@@ -188,10 +187,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
         }
-        
+
         private void HandleTreeReduction(TransactionOperationContext indexContext, IndexingStatsScope stats,
-            CancellationToken token, MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
-            IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table)
+             MapReduceResultsStore modifiedStore, LowLevelTransaction lowLevelTransaction,
+            IndexWriteOperation writer, LazyStringValue reduceKeyHash, Table table, CancellationToken token)
         {
             EnsureValidTreeReductionStats(stats);
 
@@ -391,7 +390,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                 }
 
-                HandleTreeReduction(indexContext, stats, token, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table);
+                HandleTreeReduction(indexContext, stats, modifiedStore, lowLevelTransaction, writer, reduceKeyHash, table, token);
             }
         }
 

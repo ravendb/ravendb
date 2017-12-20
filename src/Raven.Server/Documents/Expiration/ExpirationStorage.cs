@@ -57,8 +57,8 @@ namespace Raven.Server.Documents.Expiration
                 tree.MultiAdd(ticksSlice, lowerId);
         }
 
-        public Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> GetExpiredDocuments(DocumentsOperationContext context, 
-            DateTime currentTime, CancellationToken cancellationToken, out Stopwatch duration)
+        public Dictionary<Slice, List<(Slice LowerId, LazyStringValue Id)>> GetExpiredDocuments(DocumentsOperationContext context,
+            DateTime currentTime, out Stopwatch duration, CancellationToken cancellationToken)
         {
             var currentTicks = currentTime.Ticks;
 

@@ -70,7 +70,7 @@ namespace Raven.Server.Web.System
             {
                 var json = context.Read(RequestBodyStream(), "license activation");
                 var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
-                
+
                 var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
                 var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
@@ -136,24 +136,24 @@ namespace Raven.Server.Web.System
         public Task GetSetupParameters()
         {
             AssertOnlyInSetupMode();
-            var setupParameters =  SetupParameters.Get(ServerStore);
+            var setupParameters = SetupParameters.Get(ServerStore);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(SetupParameters.FixedServerPortNumber));
-                
+
                 if (setupParameters.FixedServerPortNumber.HasValue)
                 {
                     writer.WriteInteger(setupParameters.FixedServerPortNumber.Value);
                 }
                 else
                 {
-                    writer.WriteNull();   
+                    writer.WriteNull();
                 }
-                
+
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(SetupParameters.IsPosix));
                 writer.WriteBool(setupParameters.IsPosix);
 
@@ -326,7 +326,7 @@ namespace Raven.Server.Web.System
                     null,
                     "Setting up RavenDB in secured mode.",
                     Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupSecuredTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
+                    progress => SetupManager.SetupSecuredTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;
@@ -388,7 +388,7 @@ namespace Raven.Server.Web.System
                 var operationResult = await ServerStore.Operations.AddOperation(
                     null, "Setting up RavenDB with a Let's Encrypt certificate",
                     Documents.Operations.Operations.OperationType.Setup,
-                    progress => SetupManager.SetupLetsEncryptTask(progress, operationCancelToken.Token, setupInfo, ServerStore),
+                    progress => SetupManager.SetupLetsEncryptTask(progress, setupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, operationCancelToken);
 
                 var zip = ((SetupProgressAndResult)operationResult).SettingsZipFile;

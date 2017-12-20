@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _tx.Rollback();
         }
 
-        private int InsertItems(string tableName, string pkName, List<ToSqlItem> toInsert, CancellationToken token, Action<DbCommand> commandCallback = null)
+        private int InsertItems(string tableName, string pkName, List<ToSqlItem> toInsert, Action<DbCommand> commandCallback, CancellationToken token)
         {
             var inserted = 0;
 
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
         }
 
-        public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToSqlItem> toDelete, CancellationToken token, Action<DbCommand> commandCallback = null)
+        public int DeleteItems(string tableName, string pkName, bool parameterize, List<ToSqlItem> toDelete, Action<DbCommand> commandCallback, CancellationToken token)
         {
             const int maxParams = 1000;
 
@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             }
         }
 
-        public SqlWriteStats Write(SqlTableWithRecords table, CancellationToken token, List<DbCommand> commands = null)
+        public SqlWriteStats Write(SqlTableWithRecords table, List<DbCommand> commands, CancellationToken token)
         {
             var stats = new SqlWriteStats();
 
@@ -387,12 +387,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
             {
                 // first, delete all the rows that might already exist there
-                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentIdColumn, _etl.Configuration.ParameterizeDeletes, table.Deletes, token, collectCommands);
+                stats.DeletedRecordsCount = DeleteItems(table.TableName, table.DocumentIdColumn, _etl.Configuration.ParameterizeDeletes, table.Deletes, collectCommands, token);
             }
 
             if (table.Inserts.Count > 0)
             {
-                stats.InsertedRecordsCount = InsertItems(table.TableName, table.DocumentIdColumn, table.Inserts, token, collectCommands);
+                stats.InsertedRecordsCount = InsertItems(table.TableName, table.DocumentIdColumn, table.Inserts, collectCommands, token);
             }
 
             return stats;
