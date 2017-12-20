@@ -10,6 +10,8 @@ COPY RavenDB.zip install-raven.ps1 run-raven.ps1 healthcheck.ps1 c:/
 
 RUN powershell -c 'c:\install-raven.ps1'
 
+COPY settings.json c:/ravendb/Server
+
 VOLUME c:/ravendb/Server/RavenData c:/ravendb/cert c:/ravendb/secrets c:/ravendb/config
 
 WORKDIR C:/ravendb/Server
