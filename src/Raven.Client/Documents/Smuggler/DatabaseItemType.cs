@@ -15,5 +15,7 @@ namespace Raven.Client.Documents.Smuggler
         LegacyAttachments = 1 << 6,
         Conflicts = 1 << 7,
         CmpXchg = 1 << 8,
+        LegacyDocsDeletions = 1 << 9,
+        LegacyAttachmentDeletions = 1 << 10
     }
 }

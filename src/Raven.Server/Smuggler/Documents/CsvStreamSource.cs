@@ -288,6 +288,16 @@ namespace Raven.Server.Smuggler.Documents
             return Enumerable.Empty<DocumentItem>();
         }
 
+        public IEnumerable<string> GetLegacyAttachmentDeletions()
+        {
+            return Enumerable.Empty<string>();
+        }
+
+        public IEnumerable<string> GetLegacyDocsDeletions()
+        {
+            return Enumerable.Empty<string>();
+        }
+
         public IEnumerable<DocumentTombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return Enumerable.Empty<DocumentTombstone>();
