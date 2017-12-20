@@ -60,7 +60,16 @@ class licenseModel {
         return `${status.MaxCores} Cores, ${maxMemory}, Max cluster size: ${maxClusterSize}`;
     });
 
+    static developerLicense = ko.pureComputed(() => {
+        const licenseStatus = licenseModel.licenseStatus();
+        
+        if (!licenseStatus || licenseStatus.Type !== "Developer") {
+            return false;
+        }
 
+        return true;
+    })
+    
     static licenseCssClass = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
         if (!status || status.Type === "None") {

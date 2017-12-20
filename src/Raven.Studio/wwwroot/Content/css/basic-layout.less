@@ -2,6 +2,7 @@
 @menu-width-collapsed: 120px;
 @navbar-height: 70px;
 @navbar-height-xs: 51px;
+@top-alert-height: 23px;
 
 @menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
 @layout-border: @gray-dark;
@@ -70,6 +71,21 @@ body {
         overflow-x: hidden;
     }
 
+}
+
+.top-alert {
+    .padding.padding-xs;
+    display: block;
+    width: 100%;
+    font-size: 16px;
+    height: @top-alert-height;
+    text-align: center;
+    line-height: 19px;
+
+    color: @gray-dark;
+    font-weight: bold;
+    background-image: repeating-linear-gradient(-45deg, fadeout(@brand-warning-light, 0%), fadeout(@brand-warning-light, 0%) 3px, fadeout(darken(@brand-warning-light, 10%), 0%) 3px, fadeout(darken(@brand-warning-light, 10%), 0%) 6px);
+    text-transform: uppercase;
 }
 
 .absolute-fill {
