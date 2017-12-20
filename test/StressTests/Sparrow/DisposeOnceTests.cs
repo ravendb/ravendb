@@ -11,7 +11,7 @@ using Xunit;
 
 namespace StressTests.Sparrow
 {
-    
+
     /// <summary>
     /// Provides a TaskScheduler that provides control over priorities, fairness, and the underlying threads utilized.
     /// </summary>
@@ -29,7 +29,8 @@ namespace StressTests.Sparrow
             /// <param name="scheduler">The scheduler.</param>
             public QueuedTaskSchedulerDebugView(QueuedTaskScheduler scheduler)
             {
-                if (scheduler == null) throw new ArgumentNullException("scheduler");
+                if (scheduler == null)
+                    throw new ArgumentNullException("scheduler");
                 _scheduler = scheduler;
             }
 
@@ -51,7 +52,8 @@ namespace StressTests.Sparrow
                 get
                 {
                     List<TaskScheduler> queues = new List<TaskScheduler>();
-                    foreach (var group in _scheduler._queueGroups) queues.AddRange(group.Value);
+                    foreach (var group in _scheduler._queueGroups)
+                        queues.AddRange(group.Value);
                     return queues;
                 }
             }
@@ -109,8 +111,10 @@ namespace StressTests.Sparrow
             int maxConcurrencyLevel)
         {
             // Validate arguments
-            if (targetScheduler == null) throw new ArgumentNullException("underlyingScheduler");
-            if (maxConcurrencyLevel < 0) throw new ArgumentOutOfRangeException("concurrencyLevel");
+            if (targetScheduler == null)
+                throw new ArgumentNullException("underlyingScheduler");
+            if (maxConcurrencyLevel < 0)
+                throw new ArgumentOutOfRangeException("concurrencyLevel");
 
             // Initialize only those fields relevant to use an underlying scheduler.  We don't
             // initialize the fields relevant to using our own custom threads.
@@ -120,7 +124,7 @@ namespace StressTests.Sparrow
             // If 0, use the number of logical processors.  But make sure whatever value we pick
             // is not greater than the degree of parallelism allowed by the underlying scheduler.
             _concurrencyLevel = maxConcurrencyLevel != 0 ? maxConcurrencyLevel : Environment.ProcessorCount;
-            if (targetScheduler.MaximumConcurrencyLevel > 0 && 
+            if (targetScheduler.MaximumConcurrencyLevel > 0 &&
                 targetScheduler.MaximumConcurrencyLevel < _concurrencyLevel)
             {
                 _concurrencyLevel = targetScheduler.MaximumConcurrencyLevel;
@@ -152,9 +156,12 @@ namespace StressTests.Sparrow
         {
             // Validates arguments (some validation is left up to the Thread type itself).
             // If the thread count is 0, default to the number of logical processors.
-            if (threadCount < 0) throw new ArgumentOutOfRangeException("concurrencyLevel");
-            else if (threadCount == 0) _concurrencyLevel = Environment.ProcessorCount;
-            else _concurrencyLevel = threadCount;
+            if (threadCount < 0)
+                throw new ArgumentOutOfRangeException("concurrencyLevel");
+            else if (threadCount == 0)
+                _concurrencyLevel = Environment.ProcessorCount;
+            else
+                _concurrencyLevel = threadCount;
 
             // Initialize the queue used for storing tasks
             _blockingTaskQueue = new BlockingCollection<Task>();
@@ -168,12 +175,14 @@ namespace StressTests.Sparrow
                     Priority = threadPriority,
                     IsBackground = !useForegroundThreads,
                 };
-                if (threadName != null) _threads[i].Name = threadName + " (" + i + ")";
+                if (threadName != null)
+                    _threads[i].Name = threadName + " (" + i + ")";
                 _threads[i].SetApartmentState(threadApartmentState);
             }
 
             // Start all of the threads
-            foreach (var thread in _threads) thread.Start();
+            foreach (var thread in _threads)
+                thread.Start();
         }
 
         /// <summary>The dispatch loop run by all threads in this scheduler.</summary>
@@ -182,7 +191,8 @@ namespace StressTests.Sparrow
         private void ThreadBasedDispatchLoop(Action threadInit, Action threadFinally)
         {
             _taskProcessingThread.Value = true;
-            if (threadInit != null) threadInit();
+            if (threadInit != null)
+                threadInit();
             try
             {
                 // If the scheduler is disposed, the cancellation token will be set and
@@ -211,10 +221,12 @@ namespace StressTests.Sparrow
                                     // Find the next task based on our ordering rules...
                                     Task targetTask;
                                     QueuedTaskSchedulerQueue queueForTargetTask;
-                                    lock (_queueGroups) FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
+                                    lock (_queueGroups)
+                                        FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
 
                                     // ... and if we found one, run it
-                                    if (targetTask != null) queueForTargetTask.ExecuteTask(targetTask);
+                                    if (targetTask != null)
+                                        queueForTargetTask.ExecuteTask(targetTask);
                                 }
                             }
                         }
@@ -235,7 +247,8 @@ namespace StressTests.Sparrow
             finally
             {
                 // Run a cleanup routine if there was one
-                if (threadFinally != null) threadFinally();
+                if (threadFinally != null)
+                    threadFinally();
                 _taskProcessingThread.Value = false;
             }
         }
@@ -246,7 +259,8 @@ namespace StressTests.Sparrow
             get
             {
                 int count = 0;
-                foreach (var group in _queueGroups) count += group.Value.Count;
+                foreach (var group in _queueGroups)
+                    count += group.Value.Count;
                 return count;
             }
         }
@@ -256,7 +270,7 @@ namespace StressTests.Sparrow
         {
             get
             {
-                return (_targetScheduler != null ? 
+                return (_targetScheduler != null ?
                     (IEnumerable<Task>)_nonthreadsafeTaskQueue : (IEnumerable<Task>)_blockingTaskQueue)
                     .Where(t => t != null).Count();
             }
@@ -305,7 +319,8 @@ namespace StressTests.Sparrow
         protected override void QueueTask(Task task)
         {
             // If we've been disposed, no one should be queueing
-            if (_disposeCancellation.IsCancellationRequested) throw new ObjectDisposedException(GetType().Name);
+            if (_disposeCancellation.IsCancellationRequested)
+                throw new ObjectDisposedException(GetType().Name);
 
             // If the target scheduler is null (meaning we're using our own threads),
             // add the task to the blocking queue
@@ -363,7 +378,8 @@ namespace StressTests.Sparrow
                         Task targetTask;
                         lock (_nonthreadsafeTaskQueue)
                         {
-                            if (_nonthreadsafeTaskQueue.Count == 0) break;
+                            if (_nonthreadsafeTaskQueue.Count == 0)
+                                break;
                             targetTask = _nonthreadsafeTaskQueue.Dequeue();
                         }
 
@@ -372,7 +388,8 @@ namespace StressTests.Sparrow
                         QueuedTaskSchedulerQueue queueForTargetTask = null;
                         if (targetTask == null)
                         {
-                            lock (_queueGroups) FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
+                            lock (_queueGroups)
+                                FindNextTask_NeedsLock(out targetTask, out queueForTargetTask);
                         }
 
                         // Now if we finally have a task, run it.  If the task
@@ -380,8 +397,10 @@ namespace StressTests.Sparrow
                         // as a thunk to execute its task.
                         if (targetTask != null)
                         {
-                            if (queueForTargetTask != null) queueForTargetTask.ExecuteTask(targetTask);
-                            else TryExecuteTask(targetTask);
+                            if (queueForTargetTask != null)
+                                queueForTargetTask.ExecuteTask(targetTask);
+                            else
+                                TryExecuteTask(targetTask);
                         }
                     }
                 }
@@ -482,7 +501,8 @@ namespace StressTests.Sparrow
 
             // We're about to remove the queue, so adjust the index of the next
             // round-robin starting location if it'll be affected by the removal
-            if (queueGroup.NextQueueIndex >= index) queueGroup.NextQueueIndex--;
+            if (queueGroup.NextQueueIndex >= index)
+                queueGroup.NextQueueIndex--;
 
             // Remove it
             queueGroup.RemoveAt(index);
@@ -498,8 +518,10 @@ namespace StressTests.Sparrow
             /// <returns>An enumerable of indices for this group.</returns>
             public IEnumerable<int> CreateSearchOrder()
             {
-                for (int i = NextQueueIndex; i < Count; i++) yield return i;
-                for (int i = 0; i < NextQueueIndex; i++) yield return i;
+                for (int i = NextQueueIndex; i < Count; i++)
+                    yield return i;
+                for (int i = 0; i < NextQueueIndex; i++)
+                    yield return i;
             }
         }
 
@@ -518,7 +540,8 @@ namespace StressTests.Sparrow
                 /// <param name="queue">The queue to be debugged.</param>
                 public QueuedTaskSchedulerQueueDebugView(QueuedTaskSchedulerQueue queue)
                 {
-                    if (queue == null) throw new ArgumentNullException("queue");
+                    if (queue == null)
+                        throw new ArgumentNullException("queue");
                     _queue = queue;
                 }
 
@@ -562,11 +585,13 @@ namespace StressTests.Sparrow
             /// <param name="task">The task to be queued.</param>
             protected override void QueueTask(Task task)
             {
-                if (_disposed) throw new ObjectDisposedException(GetType().Name);
+                if (_disposed)
+                    throw new ObjectDisposedException(GetType().Name);
 
                 // Queue up the task locally to this queue, and then notify
                 // the parent scheduler that there's work available
-                lock (_pool._queueGroups) _workItems.Enqueue(task);
+                lock (_pool._queueGroups)
+                    _workItems.Enqueue(task);
                 _pool.NotifyNewWorkItem();
             }
 
@@ -707,7 +732,7 @@ namespace StressTests.Sparrow
             Assert.Equal(counter, numRetries);
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-9904")]
         [InlineData(2, 1000)]
         [InlineData(4, 10000)]
         [InlineData(8, 100000)]
@@ -743,7 +768,7 @@ namespace StressTests.Sparrow
             });
         }
 
-        [Theory]
+        [Theory(Skip = "RavenDB-9904")]
         [InlineData(2, 1000)]
         [InlineData(4, 10000)]
         [InlineData(8, 100000)]
@@ -804,7 +829,7 @@ namespace StressTests.Sparrow
                 });
 
                 long pendingAttempts = numAttempts;
-                
+
                 using (var resetEvent = new ManualResetEvent(false))
                 {
                     for (int i = 0; i < numAttempts; i++)
@@ -829,7 +854,7 @@ namespace StressTests.Sparrow
             });
         }
 
-        [Theory(Skip="For this test to work, we need a multithreaded preemptive scheduler for the tasks.")]
+        [Theory(Skip = "For this test to work, we need a multithreaded preemptive scheduler for the tasks.")]
         [InlineData(4, 10, 40, 5000)]
         [InlineData(8, 10, 80, 5000)]
         [InlineData(16, 10, 160, 5000)]
