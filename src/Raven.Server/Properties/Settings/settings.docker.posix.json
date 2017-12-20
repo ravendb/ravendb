@@ -1,6 +1,5 @@
 ﻿{
     "Setup.Mode": "Initial",
     "DataDir": "RavenData",
-    "Security.UnsecuredAccessAllowed": "PrivateNetwork",
-    "ServerUrl.Tcp": "38888"
+    "Security.UnsecuredAccessAllowed": "PrivateNetwork"
 }
