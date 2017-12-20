@@ -2,15 +2,15 @@ FROM microsoft/dotnet:runtime-nanoserver
 
 HEALTHCHECK --start-period=60s CMD powershell -c 'c:\healthcheck.ps1'
 
-ENV DATA_DIR=c:/databases CUSTOM_CONFIG_FILE='' PUBLIC_SERVER_URL='' PUBLIC_TCP_SERVER_URL='' UNSECURED_ACCESS_ALLOWED='' LOGS_MODE='' CERTIFICATE_PATH='' CERTIFICATE_PASSWORD='' CERTIFICATE_PASSWORD_FILE='' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
-
-VOLUME c:/databases c:/ravendb/cert c:/ravendb/secrets c:/ravendb/config
+ENV RAVEN_ARGS='' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
 EXPOSE 8080 38888 161
 
 COPY RavenDB.zip install-raven.ps1 run-raven.ps1 healthcheck.ps1 c:/
 
 RUN powershell -c 'c:\install-raven.ps1'
+
+VOLUME c:/ravendb/Server/RavenData c:/ravendb/cert c:/ravendb/secrets c:/ravendb/config
 
 WORKDIR C:/ravendb/Server
 
