@@ -5,7 +5,7 @@ RUN apt-get update \
     && apt-get install -y \
     && apt-get install --no-install-recommends curl bzip2 libunwind8 libicu55 libcurl3 ca-certificates jq -y
 
-ENV DATA_DIR=/databases CUSTOM_CONFIG_FILE='' PUBLIC_SERVER_URL='' PUBLIC_TCP_SERVER_URL='' CERTIFICATE_PATH='' CERTIFICATE_PASSWORD='' CERTIFICATE_PASSWORD_FILE='' UNSECURED_ACCESS_ALLOWED='' LOGS_MODE='' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
+ENV RAVEN_DataDir=/databases RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
 EXPOSE 8080 38888 161
 
@@ -19,6 +19,7 @@ RUN cd /opt \
     && rm -rf /var/lib/apt/lists/*
 
 COPY run-raven.sh healthcheck.sh /opt/RavenDB/
+COPY settings.json /opt/RavenDB/Server
 
 HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
 
