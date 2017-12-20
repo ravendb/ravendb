@@ -11,6 +11,7 @@ class nodeInfo {
     isLocal: KnockoutComputed<boolean>;
     externalIpAddress = ko.observable<string>();
     
+    effectiveIpAddress: KnockoutComputed<string>;
     validationGroup: KnockoutValidationGroup;
     
     showAdvancedSettings = ko.observable<boolean>(false);
@@ -21,13 +22,24 @@ class nodeInfo {
         this.hostnameIsOptional = hostnameIsOptional;
         this.initValidation();
         
-        _.bindAll(this, "toggleAdvanced");
-        
         this.isLocal = ko.pureComputed(() => {
             return this.nodeTag() === 'A';
         });
         
         this.ips.push(new ipEntry());
+        
+        this.effectiveIpAddress = ko.pureComputed(() => {
+           const externalIp = this.externalIpAddress();
+           if (externalIp && this.showAdvancedSettings()) {
+               return externalIp;
+           }
+           
+           if (this.ips().length) {
+               return this.ips()[0].ip();
+           }
+           
+           return "";
+        });
     }
 
     private initValidation() {
@@ -84,9 +96,6 @@ class nodeInfo {
         return serverUrl;
     }
     
-    toggleAdvanced() {
-        this.showAdvancedSettings.toggle();
-    }
 
     toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
         return {
