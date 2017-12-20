@@ -120,18 +120,28 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-default" data-bind="click: toggleAdvanced, visible: $root.showAdvancedSettings">Advanced</button>
-                    
-                    <div data-bind="collapse: showAdvancedSettings">
-                        <div class="form-group" data-bind="validationElement: externalIpAddress">
-                            <label class="control-label">External IP address</label>
-                            <div class="flex-grow">
-                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter external IP address"
-                                       data-bind="textInput: externalIpAddress">
+                    <div data-bind="if: $root.canCustomizeIp">
+                        <p class="text-info bg-info padding padding-sm">
+                            <i class="icon-info"></i> RavenDB will update the DNS record for 
+                            <strong data-bind="text: (nodeTag() ? nodeTag().toLocaleUpperCase() : '') + '.' + $root.model.createFullNodeNameObservable($data)()"></strong>
+                            to IP Address: <strong data-bind="text: effectiveIpAddress"></strong>
+                        </p>
+
+                        <div class="checkbox">
+                            <input id="customize" type="checkbox" data-bind="checked: showAdvancedSettings">
+                            <label for="customize">Customize the DNS record IP Address</label>
+                        </div>
+                        
+                        <div data-bind="collapse: showAdvancedSettings">
+                            <div class="form-group" data-bind="validationElement: externalIpAddress">
+                                <label class="control-label">External IP address</label>
+                                <div class="flex-grow">
+                                    <input type="text" autocomplete="off" class="form-control" placeholder="Enter external IP address"
+                                           data-bind="textInput: externalIpAddress">
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
                 </div>
             </div>
         </div>
