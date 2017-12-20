@@ -18,6 +18,9 @@ function BuildWindowsDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
 
     Copy-Item -Path $packagePath -Destination ./ravendb-nanoserver/RavenDB.zip -Force
 
+    $settingsPath = Join-Path -Path $projectDir -ChildPath "src\Raven.Server\Properties\Settings\settings.docker.windows.json"
+    Copy-Item -Path $settingsPath -Destination ./ravendb-nanoserver/settings.json -Force
+
     docker build ./ravendb-nanoserver `
         -t ravendb/ravendb:$version-windows-nanoserver `
         -t ravendb/ravendb:windows-nanoserver-latest
