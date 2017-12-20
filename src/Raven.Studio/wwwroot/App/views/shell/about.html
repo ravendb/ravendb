@@ -60,9 +60,7 @@
                         </div>
                         <div data-bind="visible: registered" class="license-actions">
                             
-                                <button class="btn btn-primary" data-bind="click: register, visible: !registered()">Register</button>
-                            
-                                <button class="btn btn-primary" data-bind="click: register">Replace License</button>
+                            <button class="btn btn-primary" data-bind="click: register">Replace License</button>
                             
                             <span class="force-license-update">
                                 <button class="btn btn-info" data-bind="click: forceLicenseUpdate, disable: spinners.forceLicenseUpdate, css: { 'btn-spinner': spinners.forceLicenseUpdate }">
@@ -70,6 +68,9 @@
                                     <span>Force Update</span>
                                 </button>
                             </span>
+                        </div>
+                        <div data-bind="visible: !registered()" class="license-actions">
+                            <button class="btn btn-primary" data-bind="click: register">Register</button>
                         </div>
                     </div>
                     
