@@ -1312,7 +1312,7 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
-                serverStore.InvokeLicenseChanged();
+                serverStore.LicenseManager.ReloadLicense();
 
                 // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                 var onDatabaseChanged = DatabaseChanged;
