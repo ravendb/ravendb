@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using JetBrains.Annotations;
@@ -13,6 +16,7 @@ using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Sparrow.Platform;
 using BigInteger = Org.BouncyCastle.Math.BigInteger;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
@@ -28,10 +32,42 @@ namespace Raven.Server.Utils
             return selfSignedCertificateBasedOnPrivateKey;
         }
 
+        public static void RegisterCertificateInOperatingSystem(X509Certificate2 cert)
+        {
+            if (cert.HasPrivateKey) // the check if made anyway, to ensure we never fail on just these environments
+                throw new InvalidOperationException("When registering the certificate for the purpose of TRUSTED_ISSUERS, we don't want the private key");
+
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                if (Environment.OSVersion.Version.Major >= 6 &&
+                    Environment.OSVersion.Version.Minor > 1)
+                    return; // windows 8 does not need this
+            }
+
+            // due to the way TRUSTED_ISSUERS work in Linux and Windows previous to Win 7
+            // we need to register the certificate in the operating system so the SSL impl
+            // will send the appropriate signers.
+            // At least on Linux, this is done by looking at the _issuers_ of certs in the 
+            // root store
+            using (var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
+            {
+                store.Open(OpenFlags.ReadWrite);
+
+                foreach (var certificate in store.Certificates)
+                {
+                    if (certificate.Issuer == cert.Issuer)
+                        return; // something with the same issuer is already there, can skip
+                }
+
+                store.Add(cert);
+            }
+        }
+
         public static X509Certificate2 CreateSelfSignedClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder, out byte[] certBytes)
         {
-            var readCertificate = new X509CertificateParser().ReadCertificate(certificateHolder.Certificate.Export(X509ContentType.Cert));
-            return CreateSelfSignedCertificateBasedOnPrivateKey(
+            var serverCertBytes = certificateHolder.Certificate.Export(X509ContentType.Cert);
+            var readCertificate = new X509CertificateParser().ReadCertificate(serverCertBytes);
+            CreateSelfSignedCertificateBasedOnPrivateKey(
                 commonNameValue,
                 readCertificate.SubjectDN,
                 (certificateHolder.PrivateKey.Key, readCertificate.GetPublicKey()),
@@ -39,6 +75,28 @@ namespace Raven.Server.Utils
                 false,
                 5,
                 out certBytes);
+
+
+            ValidateNoPrivateKeyInServerCert(serverCertBytes);
+
+            var collection = new X509Certificate2Collection();
+            collection.Import(certBytes, null, X509KeyStorageFlags.Exportable);
+            collection.Import(serverCertBytes);
+
+            certBytes = collection.Export(X509ContentType.Pfx);
+
+            RegisterCertificateInOperatingSystem(new X509Certificate2(collection.Export(X509ContentType.Cert)));
+            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+        }
+
+        private static void ValidateNoPrivateKeyInServerCert(byte[] serverCertBytes)
+        {
+            var collection = new X509Certificate2Collection();
+            // without the server private key here
+            collection.Import(serverCertBytes);
+
+            if (new X509Certificate2Collection().OfType<X509Certificate2>().FirstOrDefault(x => x.HasPrivateKey) != null)
+                throw new InvalidOperationException("After export of CERT, still have private key from signer in certificate, should NEVER happen");
         }
 
         public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string commonNameValue, RavenServer.CertificateHolder certificateHolder)

@@ -125,37 +125,38 @@ namespace Raven.Server.Web.Authentication
                 using (var s = entry.Open())
                     s.Write(certBytes,0, certBytes.Length);
 
-                entry = archive.CreateEntry(certificate.Name + ".pem");
-                using (var s = entry.Open())
-                {
-                    WriteCertificateAsPem(clientCertBytes, certificate.Password, s);
-                }
+                WriteCertificateAsPem(certificate.Name, clientCertBytes, certificate.Password, archive);
             }
 
             return ms.ToArray();
         }
 
 
-        public static void WriteCertificateAsPem(byte[] rawBytes, string exportPassword, Stream s)
+        public static void WriteCertificateAsPem(string name, byte[] rawBytes, string exportPassword, ZipArchive s)
         {
-            
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
             var entry = a.GetCertificate(a.Aliases.Cast<string>().First());
             var key = a.Aliases.Cast<string>().Select(a.GetKey).First(x => x != null);
-            
-            using (var writer = new StreamWriter(s, Encoding.ASCII, 1024, leaveOpen: true))
+
+            using (var stream = s.CreateEntry(name + ".crt").Open())
+            using(var writer = new StreamWriter(stream))
             {
                 var pw = new PemWriter(writer);
                 pw.WriteObject(entry.Certificate);
+            }
+            using (var stream = s.CreateEntry(name + ".key").Open())
+            using (var writer = new StreamWriter(stream))
+            {
+                var pw = new PemWriter(writer);
 
                 object privateKey;
                 if (exportPassword != null)
                 {
                     privateKey = new MiscPemGenerator(
                             key.Key,
-                            "AES-128-CBC",
-                            exportPassword.ToCharArray(), 
+                            "DES-EDE3-CBC",
+                            exportPassword.ToCharArray(),
                             CertificateUtils.GetSeededSecureRandom())
                         .Generate();
                 }
