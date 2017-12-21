@@ -1260,7 +1260,7 @@ namespace Voron.Data.Fixed
                         siblingPage.NumberOfEntries * sizeOfEntryInPage
                         );
                     oldNumberOfPages = page.NumberOfEntries;
-                    siblingPage.NumberOfEntries += page.NumberOfEntries;
+                    page.NumberOfEntries += siblingPage.NumberOfEntries;
                     // we need to set the leftmost key in the entries we
                     // moved to the key of the page we are going to remove
                     // to avoid smallest being injected into the sibling
