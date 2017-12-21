@@ -22,7 +22,7 @@ namespace Sparrow.LowMemory
         private const string PageFileName = "pagefile.sys";
 
         // ReSharper disable InconsistentNaming
-        public static bool WindowsIsSwappingOnHddInsteadOfSsd()
+        public static string WindowsIsSwappingOnHddInsteadOfSsd()
         {
             try
             {
@@ -66,7 +66,7 @@ namespace Sparrow.LowMemory
                 if (ssdDriveCount > 0 && hddDrivesWithPageFile.Count == 0)
                 {
                     //the system has ssd drives and has no hdd drives with a page file on them
-                    return false;
+                    return null;
                 }
 
                 var message = $"A page file was found on HDD drive{(hddDrivesWithPageFile.Count > 1 ? "s" : string.Empty)}: " +
@@ -76,13 +76,13 @@ namespace Sparrow.LowMemory
                 if (Log.IsInfoEnabled)
                     Log.Info(message);
 
-                return true;
+                return string.Join(", ", hddDrivesWithPageFile);
             }
             catch (Exception e)
             {
                 if (Log.IsInfoEnabled)
                     Log.Info("Failed to determine page file that is located on HDD", e);
-                return false;
+                return null;
             }
         }
 
@@ -374,14 +374,14 @@ namespace Sparrow.LowMemory
             return query_disk_extents.Extents[0].DiskNumber;
         }
 
-        public static bool PosixIsSwappingOnHddInsteadOfSsd()
+        public static string PosixIsSwappingOnHddInsteadOfSsd()
         {
             {
                 var path = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile();
                 if (path == null) // on error return as if no swap problem
-                    return false;
+                    return null;
 
-                var foundRotationalDiskDrive = false;
+                string foundRotationalDiskDrive = null;
                 foreach (string partition in path)
                 {
                     // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
@@ -389,20 +389,22 @@ namespace Sparrow.LowMemory
                     var disk = reg.Replace(partition, "").Replace("/dev/", "");
                     var filename = $"/sys/block/{disk}/queue/rotational";
                     var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
+                    
+                    
                     if (isHdd == -1)
-                        return false;
+                        return null;
                     if (isHdd == 1)
-                        foundRotationalDiskDrive = true;
+                        foundRotationalDiskDrive = filename;
                     else if (isHdd != 0)
                     {
                         if (Log.IsOperationsEnabled)
                             Log.Operations($"Got invalid value (not 0 or 1) from {filename} = {isHdd}, assumes this is not a rotational disk");
-                        foundRotationalDiskDrive = false;
+                        foundRotationalDiskDrive = null;
                     }
                 }
 
-                var hddSwapsInsteadOfSsd = false;
-                if (foundRotationalDiskDrive)
+                string hddSwapsInsteadOfSsd = null;
+                if (foundRotationalDiskDrive != null)
                 {
                     // search if ssd drive is available
                     HashSet<string> disks = KernelVirtualFileSystemUtils.GetAllDisksFromPartitionsFile();
@@ -412,7 +414,7 @@ namespace Sparrow.LowMemory
                         var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
                         if (isHdd == 0)
                         {
-                            hddSwapsInsteadOfSsd = true;
+                            hddSwapsInsteadOfSsd = disk;
                             break;
                         }
                     }
