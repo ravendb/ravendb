@@ -379,10 +379,9 @@ namespace Raven.Server.Documents
                                 {
                                     throw;
                                 }
-                                NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
-                                return;
                             }
-                          
+                            NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
+                            return;
                         }
                         previous.Dispose();
 
