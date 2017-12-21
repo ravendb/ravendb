@@ -130,7 +130,7 @@ namespace Voron.Data.Fixed
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal long GetKey(int position)
+        public long GetKey(int position)
         {
             return GetEntry(Pointer + StartPosition, position, _entrySize)->Key;
         }

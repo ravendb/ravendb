@@ -795,7 +795,7 @@ namespace Voron.Data.Fixed
 
                         if (p.IsBranch)
                         {
-                            for (int j = 0; j < p.NumberOfEntries; j++)
+                            for (int j= p.NumberOfEntries - 1; j >= 0; j--)
                             {
                                 var chhildNumber = p.GetEntry(j)->PageNumber;
                                 stack.Push(GetReadOnlyPage(chhildNumber));
@@ -1237,6 +1237,7 @@ namespace Voron.Data.Fixed
                 return null;
             }
 
+            int oldNumberOfPages;
             System.Diagnostics.Debug.Assert(parentPage.NumberOfEntries >= 2);//otherwise this isn't a valid branch page
             if (parentPage.LastSearchPosition == 0)
             {
@@ -1258,7 +1259,15 @@ namespace Voron.Data.Fixed
                         siblingPage.Pointer + siblingPage.StartPosition,
                         siblingPage.NumberOfEntries * sizeOfEntryInPage
                         );
-                    page.NumberOfEntries += siblingPage.NumberOfEntries;
+                    oldNumberOfPages = page.NumberOfEntries;
+                    siblingPage.NumberOfEntries += page.NumberOfEntries;
+                    // we need to set the leftmost key in the entries we
+                    // moved to the key of the page we are going to remove
+                    // to avoid smallest being injected into the sibling
+                    // page, see RavenDB-9916
+                    page.SetKey(
+                        parentPage.GetKey(parentPage.LastSearchPosition+1),
+                        oldNumberOfPages);
 
                     FreePage(siblingNum);
 
@@ -1275,9 +1284,19 @@ namespace Voron.Data.Fixed
                     siblingPage.Pointer + siblingPage.StartPosition,
                     entriesToTake * sizeOfEntryInPage
                     );
+                oldNumberOfPages = page.NumberOfEntries;
+               
                 page.NumberOfEntries += (ushort)entriesToTake;
                 siblingPage.NumberOfEntries -= (ushort)entriesToTake;
                 siblingPage.StartPosition += (ushort)(sizeOfEntryInPage * entriesToTake);
+
+                // we need to set the leftmost key in the entries we
+                // moved to the key of the page we are going to remove
+                // to avoid smallest being injected into the sibling
+                // page, see RavenDB-9916
+                page.SetKey(
+                    parentPage.GetKey(parentPage.LastSearchPosition+1),
+                    oldNumberOfPages);
 
                 // now update the new separator in the sibling position in the parent
                 var newSeparator = siblingPage.GetKey(0);
@@ -1302,8 +1321,15 @@ namespace Voron.Data.Fixed
                         page.Pointer + page.StartPosition,
                         page.NumberOfEntries * sizeOfEntryInPage
                         );
+                    oldNumberOfPages = siblingPage.NumberOfEntries;
                     siblingPage.NumberOfEntries += page.NumberOfEntries;
-
+                    // we need to set the leftmost key in the entries we
+                    // moved to the key of the page we are going to remove
+                    // to avoid smallest being injected into the sibling
+                    // page, see RavenDB-9916
+                    siblingPage.SetKey(
+                        parentPage.GetKey(parentPage.LastSearchPosition),
+                        oldNumberOfPages);
                     FreePage(page.PageNumber);
 
                     // now fix parent ref, in this case, just removing it is enough
@@ -1333,6 +1359,11 @@ namespace Voron.Data.Fixed
                     siblingPage.Pointer + siblingPage.StartPosition + ((siblingPage.NumberOfEntries - entriesToTake) * sizeOfEntryInPage),
                     entriesToTake * sizeOfEntryInPage
                     );
+
+                // we don't need to do any fixup of the values themselves, because we take only the rightmost half
+                // of the values from the left sibling and that doesn't include the [smallest] value by definition
+                // RavenDB-9916
+
                 page.NumberOfEntries += (ushort)entriesToTake;
                 siblingPage.NumberOfEntries -= (ushort)entriesToTake;
 

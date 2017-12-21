@@ -11,6 +11,11 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide;
 using System.Threading;
 using System.Net;
+using SlowTests.Voron.Issues;
+using Voron;
+using Voron.Data.Tables;
+using Sparrow.Binary;
+using Voron.Data.Fixed;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -33,16 +38,9 @@ namespace Tryouts
         {
             public string Name { get; set; }
         }
-        static void Main(string[] args)
+        static unsafe void Main(string[] args)
         {
-            ServicePointManager.DefaultConnectionLimit = 100;
-            ThreadPool.SetMinThreads(25, 25);
-            for (int i = 0; i < 100; i++)
-            {
-                //ResetBench();
-                ParallelBatchStores(1);
-                SimpleMap100QueriesParallelAllResults(20);                
-            }
+            new RavenDB_9916().Should_not_corrupt_state_deleting_from_nested_page_left_side();
         }
 
         private static void ResetBench()
