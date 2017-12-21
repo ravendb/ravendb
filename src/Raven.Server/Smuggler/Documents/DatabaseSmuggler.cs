@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -324,21 +325,7 @@ namespace Raven.Server.Smuggler.Documents
                                 indexDefinition.Name = $"Legacy/{indexDefinition.Name}";
                             }
 
-                            try
-                            {
-                                if (_options.RemoveAnalyzers)
-                                {
-                                    foreach (var indexDefinitionField in indexDefinition.Fields)
-                                        indexDefinitionField.Value.Analyzer = null;
-                                }
-
-                                actions.WriteIndex(indexDefinition);
-                            }
-                            catch (Exception e)
-                            {
-                                result.Indexes.ErroredCount++;
-                                result.AddError($"Could not write index '{indexDefinition.Name}': {e.Message}");
-                            }
+                            WriteIndex(result, indexDefinition, actions, retryOnError: true);
                             break;
                         case IndexType.Faulty:
                             break;
@@ -349,6 +336,73 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Indexes;
+        }
+
+        private void WriteIndex(SmugglerResult result, IndexDefinition indexDefinition, IIndexActions actions, bool retryOnError)
+        {
+            try
+            {
+                if (_options.RemoveAnalyzers)
+                {
+                    foreach (var indexDefinitionField in indexDefinition.Fields)
+                        indexDefinitionField.Value.Analyzer = null;
+                }
+
+                actions.WriteIndex(indexDefinition);
+            }
+            catch (Exception e)
+            {
+                var exceptionMessage = e.Message;
+                if (exceptionMessage.Contains("No overload for method 'LoadDocument' takes 1 arguments"))
+                {
+                    exceptionMessage = $"{e.Message}" + Environment.NewLine +
+                            "LoadDocument requires a generic argument for its usage (the type of the loaded document)" + Environment.NewLine +
+                            "For example: " + Environment.NewLine +
+                                "\tfrom doc in doc.Orders" + Environment.NewLine +
+                                "\tlet company = LoadDocument(doc.Company, \"Companies\")" + Environment.NewLine +
+                                "\tselect new {" + Environment.NewLine +
+                                    "\t\tCompanyName: comapny.Name" + Environment.NewLine +
+                                "\t}" + Environment.NewLine;
+                }
+                else if (retryOnError && 
+                         (exceptionMessage.Contains("The name 'AbstractIndexCreationTask' does not exist in the current context") ||
+                          exceptionMessage.Contains("The name 'SpatialIndex' does not exist in the current context") ||
+                          exceptionMessage.Contains("The type or namespace name 'Abstractions' does not exist in the namespace 'Raven' (are you missing an assembly reference?)")))
+                {
+                    var maps = new HashSet<string>();
+                    foreach (var map in indexDefinition.Maps)
+                    {
+                        maps.Add(ReplaceLegacyMethods(map));
+                    }
+
+                    if (indexDefinition.Reduce != null)
+                    {
+                        indexDefinition.Reduce = ReplaceLegacyMethods(indexDefinition.Reduce);
+                    }
+
+                    indexDefinition.Maps = maps;
+                    WriteIndex(result, indexDefinition, actions, retryOnError: false);
+                    return;
+                }
+
+                result.Indexes.ErroredCount++;
+                var errorMessage = $"Could not write index '{indexDefinition.Name}', error: {exceptionMessage}" + Environment.NewLine +
+                                   $"Maps: [{Environment.NewLine}{string.Join($", {Environment.NewLine}", indexDefinition.Maps)}{Environment.NewLine}]";
+
+                if (indexDefinition.Reduce != null)
+                {
+                    errorMessage += Environment.NewLine + $"Reduce: {indexDefinition.Reduce}";
+                }
+                result.AddError(errorMessage);
+            }
+
+            string ReplaceLegacyMethods(string str)
+            {
+                return str
+                    .Replace("AbstractIndexCreationTask.SpatialGenerate", "CreateSpatialField")
+                    .Replace("SpatialIndex.Generate", "CreateSpatialField")
+                    .Replace("new Raven.Abstractions.Linq.DynamicList", string.Empty);
+            }
         }
 
         private SmugglerProgressBase.Counts ProcessRevisionDocuments(SmugglerResult result)
