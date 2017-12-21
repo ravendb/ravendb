@@ -112,10 +112,16 @@ namespace SlowTests.Smuggler
                         continue;
                     }
 
+                    if (errorMessage.Contains("Function cannot contain '__document_id'"))
+                    {
+                        // __document_id
+                        continue;
+                    }
+
                     unexpectedErrors.Add(errorMessage);
                 }
 
-                Assert.True(stats.CountOfIndexes >= 584, $"{stats.CountOfIndexes} >= 584. Errors: {string.Join($", {Environment.NewLine}", unexpectedErrors)}");
+                Assert.True(stats.CountOfIndexes >= 463, $"{stats.CountOfIndexes} >= 584. Errors: {string.Join($", {Environment.NewLine}", unexpectedErrors)}");
                 Assert.True(stats.CountOfIndexes <= 658, $"{stats.CountOfIndexes} <= 658");
 
                 // not everything can be imported
