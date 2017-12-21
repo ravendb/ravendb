@@ -265,7 +265,7 @@ namespace FastTests
             return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
 
-        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null)
+        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
         {
             var admin = store.Maintenance.ForDatabase(dbName);
 
@@ -288,6 +288,11 @@ namespace FastTests
                     break;
                 }
                 Thread.Sleep(32);
+            }
+
+            if (allowErrors)
+            {
+                return;
             }
 
             var perf = admin.Send(new GetIndexPerformanceStatisticsOperation());

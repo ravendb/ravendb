@@ -20,7 +20,7 @@ namespace SlowTests.Issues
                 var failingIndex = new Failing_index();
                 failingIndex.Execute(store);
 
-                var count = IndexFailureInformation.SufficientNumberOfAttemptsToCheckFailureRate - 1;
+                var count = IndexFailureInformation.SufficientNumberOfAttemptsToCheckFailureRate / 2;
 
                 using (var session = store.OpenSession())
                 {
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                WaitForIndexing(store);
+                WaitForIndexing(store, allowErrors: true);
                 
                 SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexStatisticsOperation(failingIndex.IndexName)).State == IndexState.Error, TimeSpan.FromSeconds(15));
 
