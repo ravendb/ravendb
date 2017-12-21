@@ -356,7 +356,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (exceptionMessage.Contains("No overload for method 'LoadDocument' takes 1 arguments"))
                 {
                     exceptionMessage = $"{e.Message}" + Environment.NewLine +
-                            "LoadDocument requires a generic argument for its usage (the type of the loaded document)" + Environment.NewLine +
+                            "LoadDocument requires a second argument which is a collection name of the loaded document" + Environment.NewLine +
                             "For example: " + Environment.NewLine +
                                 "\tfrom doc in doc.Orders" + Environment.NewLine +
                                 "\tlet company = LoadDocument(doc.Company, \"Companies\")" + Environment.NewLine +
