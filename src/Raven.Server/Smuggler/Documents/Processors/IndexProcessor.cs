@@ -136,6 +136,21 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 Reduce = legacyIndexDefinition.Reduce
             };
 
+            if (indexDefinition.Maps != null)
+            {
+                foreach (var map in indexDefinition.Maps)
+                {
+                    if (IsFunctionValid(map, out var message) == false)
+                        throw new InvalidOperationException($"Map function of legacy index '{name}' is invalid. {message}");
+                }
+            }
+
+            if (indexDefinition.Reduce != null)
+            {
+                if (IsFunctionValid(indexDefinition.Reduce, out var message) == false)
+                    throw new InvalidOperationException($"Reduce function of legacy index '{name}' is invalid. {message}");
+            }
+
             foreach (var kvp in legacyIndexDefinition.Analyzers)
             {
                 if (indexDefinition.Fields.ContainsKey(kvp.Key) == false)
@@ -204,6 +219,25 @@ namespace Raven.Server.Smuggler.Documents.Processors
             }
 
             return indexDefinition;
+        }
+
+        private static bool IsFunctionValid(string function, out string message)
+        {
+            message = null;
+
+            if (string.IsNullOrWhiteSpace(function))
+            {
+                message = "Function cannot be null.";
+                return false;
+            }
+
+            if (function.Contains("__document_id"))
+            {
+                message = "Function cannot contain '__document_id'.";
+                return false;
+            }
+
+            return true;
         }
     }
 }
