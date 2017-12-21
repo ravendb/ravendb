@@ -230,10 +230,26 @@ namespace Raven.Server.ServerWide
                         PutValue<LicenseLimits>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutCertificateCommand):
-                        PutValue<CertificateDefinition>(context, type, cmd, index, leader);
+                        var cert = PutValue<CertificateDefinition>(context, type, cmd, index, leader);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
                         if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
+
+                        Task.Run(() =>
+                        {
+                            try
+                            {
+                                // we do this in an async manner because on some machines it pops up a UI and we need to ensure
+                                // that it isn't blocking the state machine
+                                CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(Convert.FromBase64String(cert.Certificate)));
+                            }
+                            catch (Exception e)
+                            {
+                                if(_parent.Log.IsOperationsEnabled)
+                                    _parent.Log.Operations($"Failed to register {cert.Name} in the operating system", e);
+                            }
+                        });
+
                         break;
                     case nameof(PutClientConfigurationCommand):
                         PutValue<ClientConfiguration>(context, type, cmd, index, leader);
@@ -662,7 +678,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private void PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private T PutValue<T>(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             try
             {
@@ -672,7 +688,6 @@ namespace Raven.Server.ServerWide
                 {
                     NotifyLeaderAboutError(index, leader,
                         new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls"));
-                    return;
                 }
 
                 using (Slice.From(context.Allocator, command.Name, out Slice valueName))
@@ -680,6 +695,7 @@ namespace Raven.Server.ServerWide
                 using (var rec = context.ReadObject(command.ValueToJson(), "inner-val"))
                 {
                     UpdateValue(index, items, valueNameLowered, valueName, rec);
+                    return command.Value;
                 }
             }
             finally

@@ -1094,12 +1094,7 @@ namespace Raven.Server.Commercial
                                 var export = clientCert.Export(X509ContentType.Pfx);
                                 entryStream.Write(export, 0, export.Length);
                             }
-
-                            entry = archive.CreateEntry($"admin.client.certificate.{name}.pem");
-                            using (var entryStream = entry.Open())
-                            {
-                                AdminCertificatesHandler.WriteCertificateAsPem(certBytes, null, entryStream);
-                            }
+                            AdminCertificatesHandler.WriteCertificateAsPem($"admin.client.certificate.{name}", certBytes, null, archive);
                         }
                         catch (Exception e)
                         {
