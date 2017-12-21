@@ -214,12 +214,17 @@ namespace Voron.Debugging
                 else
                 {
                     var key =
-                     *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * Math.Max(i, 1)));
+                     *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i));
                     var pageNum = *(long*)(page.Pointer + page.StartPosition + (((sizeof(long) + sizeof(long))) * i) + sizeof(long));
 
                     var s = key.ToString("#,#");
                     if (i == 0)
-                        s = "[smallest]";
+                    {
+                        if (key == long.MinValue)
+                            s = "[smallest]";
+                        else
+                            s = "[smallest " + s + "]";
+                    }
 
                     var fstPage = tx.GetPage(pageNum);
                     RenderFixedSizeTreePage(tx, new FixedSizeTreePage(fstPage.Pointer, header->ValueSize + sizeof(long), Constants.Storage.PageSize), sw, header, s, false);
