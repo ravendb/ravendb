@@ -374,13 +374,18 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         maps.Add(ReplaceLegacyMethods(map));
                     }
+                    indexDefinition.Maps = maps;
 
                     if (indexDefinition.Reduce != null)
                     {
                         indexDefinition.Reduce = ReplaceLegacyMethods(indexDefinition.Reduce);
                     }
 
-                    indexDefinition.Maps = maps;
+                    result.AddMessage($"Replaced legacy methods in index: {indexDefinition.Name}: " + Environment.NewLine +
+                                      "AbstractIndexCreationTask.SpatialGenerate -> CreateSpatialField" + Environment.NewLine +
+                                      "SpatialIndex.Generate -> CreateSpatialField" + Environment.NewLine +
+                                      "new Raven.Abstractions.Linq.DynamicList was removed");
+
                     WriteIndex(result, indexDefinition, actions, retryOnError: false);
                     return;
                 }
