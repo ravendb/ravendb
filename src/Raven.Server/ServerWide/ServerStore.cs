@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Certes.Acme;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -1718,6 +1719,46 @@ namespace Raven.Server.ServerWide
                 [nameof(LogSummary.Entries)] = entries
             };
             return json;
+        }
+
+        public void EnsureRegistrationOfCertificatesForTrustedIssuers(X509Certificate2 certificate)
+        {
+            try
+            {
+                //This is ugly, but we have to deal with the TRUSTED_ISSUERS and need to register the server and client certificates 
+                //properly so the SSL on Windows 7 and Linux will handle that until we upgrade
+
+                CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(certificate.Export(X509ContentType.Cert)));
+
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    foreach (var item in Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue))
+                    {
+                        var def = JsonDeserializationServer.CertificateDefinition(item.Value);
+
+                        var cert = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                        CertificateUtils.RegisterCertificateInOperatingSystem(cert);
+                    }
+
+                    foreach (var localCertKey in Cluster.GetCertificateKeysFromLocalState(context))
+                    {
+                        // if there are trusted certificates in the local state, we will register them in the cluster now
+                        using (var localCertificate = Cluster.GetLocalState(context, localCertKey))
+                        {
+                            var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                            var cert = new X509Certificate2(Convert.FromBase64String(def.Certificate));
+                            CertificateUtils.RegisterCertificateInOperatingSystem(cert);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+               if(Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to registered certificates in operating system to deal with TRUSTED_ISSUERS", e);
+            }
+
         }
     }
 }

@@ -105,11 +105,13 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            Certificate = LoadCertificate() ??
-                                       new CertificateHolder();
+            Certificate = LoadCertificate() ?? new CertificateHolder();
+   
             try
             {
                 ServerStore.Initialize();
+
+                ServerStore.EnsureRegistrationOfCertificatesForTrustedIssuers(Certificate.Certificate);
             }
             catch (Exception e)
             {
@@ -985,7 +987,21 @@ namespace Raven.Server
             var certificateHolder = Certificate;
             var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password);
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
+            {
                 _httpsConnectionAdapter.SetCertificate(certificate);
+                if (newCertHolder.CertificateForClients != null)
+                {
+                    try
+                    {
+                        CertificateUtils.RegisterCertificateInOperatingSystem(new X509Certificate2(Convert.FromBase64String(newCertHolder.CertificateForClients)));
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to register new certificate in the operating system", e);
+                    }
+                }
+            }
         }
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
