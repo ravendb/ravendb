@@ -1,4 +1,4 @@
-param([switch]$DryRun = $False)
+param([switch]$DryRun = $False, [switch]$RemoveImages = $True)
 
 $ErrorActionPreference = 'Stop'
 
@@ -133,6 +133,10 @@ try {
     $linuxPackageWildcard = "..\artifacts\*nightly-*-*-linux-x64.tar.bz2"
     $version = DetermineVersionFromPackageFilename $linuxPackageWildcard
     Copy-Item -Path $linuxPackageWildcard -Destination ".\ravendb-ubuntu1604\RavenDB.tar.bz2" -Force
+
+    $settingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.posix.json"
+    Copy-Item -Path $settingsPath -Destination ./ravendb-ubuntu1604/settings.json -Force
+
     $ubuntuImageTags = GetImageTags $version $UBUNTU
     $buildCmd = GetBuildCommand -DockerDir ".\ravendb-ubuntu1604" -Platform $UBUNTU -ImageTags $ubuntuImageTags
 
@@ -141,7 +145,9 @@ try {
     CheckLastExitCode
 
     PushImages $ubuntuImageTags
-    RemoveImages $ubuntuImageTags
+    if ($RemoveImages -eq $True) {
+        RemoveImages $ubuntuImageTags
+    }
 
     # switch daemon to windows engine
     SwitchDaemon
@@ -150,6 +156,10 @@ try {
     $winPackageWildcard = "..\artifacts\RavenDB-4.0.0-nightly-*-*-windows-x64.zip"
     $version = DetermineVersionFromPackageFilename $winPackageWildcard
     Copy-Item -Path $winPackageWildcard -Destination ".\ravendb-nanoserver\RavenDB.zip" -Force
+
+    $settingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.windows.json"
+    Copy-Item -Path $settingsPath -Destination ./ravendb-nanoserver/settings.json -Force
+    
     $windowsImageTags = GetImageTags $version $WINDOWS
     $buildCmd = GetBuildCommand -DockerDir ".\ravendb-nanoserver" -Platform $WINDOWS -ImageTags $windowsImageTags
 
@@ -158,7 +168,10 @@ try {
     CheckLastExitCode
 
     PushImages $windowsImageTags
-    RemoveImages $windowsImageTags
+
+    if ($RemoveImages -eq $True) {
+        RemoveImages $windowsImageTags
+    }
 
 } finally {
     Pop-Location
