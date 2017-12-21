@@ -94,10 +94,6 @@ namespace Raven.Server.ServerWide
 
         public long LastClientConfigurationIndex { get; private set; } = -2;
 
-        public event EventHandler LicenseChanged;
-
-        public event EventHandler LicenseLimitsChanged;
-
         public Operations Operations { get; }
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
@@ -667,10 +663,10 @@ namespace Raven.Server.ServerWide
                     LastClientConfigurationIndex = t.Index;
                     break;
                 case nameof(PutLicenseCommand):
-                    InvokeLicenseChanged();
+                    LicenseManager.ReloadLicense();
                     break;
                 case nameof(PutLicenseLimitsCommand):
-                    LicenseLimitsChanged?.Invoke(null, null);
+                    LicenseManager.ReloadLicenseLimits();
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
                     {
@@ -678,11 +674,6 @@ namespace Raven.Server.ServerWide
                     }
                     break;
             }
-        }
-
-        public void InvokeLicenseChanged()
-        {
-            LicenseChanged?.Invoke(null, null);
         }
 
         public IEnumerable<string> GetSecretKeysNames(TransactionOperationContext context)

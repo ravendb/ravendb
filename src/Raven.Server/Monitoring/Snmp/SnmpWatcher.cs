@@ -40,6 +40,32 @@ namespace Raven.Server.Monitoring.Snmp
         public SnmpWatcher(RavenServer server)
         {
             _server = server;
+            _server.ServerStore.LicenseManager.LicenseChanged += OnLicenseChanged;
+        }
+
+        private void OnLicenseChanged()
+        {
+            if (_server.Configuration.Monitoring.Snmp.Enabled == false)
+                return;
+
+            _locker.Wait();
+
+            try
+            {
+                var snmpEngine = _snmpEngine;
+                if (snmpEngine == null) // precaution
+                    return;
+
+                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring();
+                if (activate)
+                    snmpEngine.Start();
+                else
+                    snmpEngine.Stop();
+            }
+            finally
+            {
+                _locker.Release();
+            }
         }
 
         public void Execute()
@@ -47,15 +73,24 @@ namespace Raven.Server.Monitoring.Snmp
             if (_server.Configuration.Monitoring.Snmp.Enabled == false)
                 return;
 
-            if (_server.ServerStore.LicenseManager.CanUseSnmpMonitoring() == false)
-                return;
+            _locker.Wait();
 
-            _objectStore = CreateStore(_server);
+            try
+            {
+                _objectStore = CreateStore(_server);
 
-            _snmpEngine = CreateSnmpEngine(_server, _objectStore);
-            _snmpEngine.Start();
+                _snmpEngine = CreateSnmpEngine(_server, _objectStore);
 
-            _server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
+                var activate = _server.ServerStore.LicenseManager.CanUseSnmpMonitoring();
+                if (activate)
+                    _snmpEngine.Start();
+
+                _server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += AddDatabaseIfNecessary;
+            }
+            finally
+            {
+                _locker.Release();
+            }
 
             AsyncHelpers.RunSync(AddDatabases);
         }

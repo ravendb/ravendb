@@ -54,6 +54,10 @@ namespace Raven.Server.Commercial
         private readonly SemaphoreSlim _licenseLimitsSemaphore = new SemaphoreSlim(1);
         private readonly bool _skipLeasingErrorsLogging;
 
+        public event Action LicenseChanged;
+
+        public event Action LicenseLimitsChanged;
+
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
@@ -66,13 +70,6 @@ namespace Raven.Server.Commercial
                 CommitHash = ServerVersion.CommitHash,
                 FullVersion = ServerVersion.FullVersion
             };
-
-            _serverStore.LicenseChanged += (_, e) =>
-            {
-                ReloadLicense();
-                ReloadLicenseLimits();
-            };
-            _serverStore.LicenseLimitsChanged += (_, e) => ReloadLicenseLimits();
         }
 
         private RSAParameters RSAParameters
@@ -117,7 +114,6 @@ namespace Raven.Server.Commercial
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
                 ReloadLicense();
-                ReloadLicenseLimits();
             }
             catch (Exception e)
             {
@@ -138,7 +134,7 @@ namespace Raven.Server.Commercial
             return _licenseStatus;
         }
 
-        private void ReloadLicense()
+        public void ReloadLicense()
         {
             var license = _serverStore.LoadLicense();
             if (license == null)
@@ -175,6 +171,10 @@ namespace Raven.Server.Commercial
 
                 _serverStore.NotificationCenter.Add(alert);
             }
+
+            LicenseChanged?.Invoke();
+
+            ReloadLicenseLimits();
         }
 
         public void ReloadLicenseLimits()
@@ -205,6 +205,8 @@ namespace Raven.Server.Commercial
             }
 
             AsyncHelpers.RunSync(() => CalculateLicenseLimits());
+
+            LicenseLimitsChanged?.Invoke();
         }
 
         private int GetClusterSize()
