@@ -345,13 +345,14 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                if (MemoryInformation.IsSwappingOnHddInsteadOfSsd())
+                var swapping = MemoryInformation.IsSwappingOnHddInsteadOfSsd();
+                if (swapping != null)
                 {
                     var alert = AlertRaised.Create(
                         null,
                         "Swap Storage Type Warning",
                         "OS swapping on at least one HDD drive while there is at least one SSD drive on this system. " +
-                        "This can cause a slowdown, consider moving swap-partition/pagefile to SSD",
+                        "This can cause a slowdown, consider moving swap-partition/pagefile to SSD. The current HDD spinning drive with swapping : " + swapping,
                         AlertType.SwappingHddInsteadOfSsd,
                         NotificationSeverity.Warning);
                     if (NotificationCenter.IsInitialized)

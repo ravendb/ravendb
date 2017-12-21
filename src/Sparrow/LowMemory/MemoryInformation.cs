@@ -374,7 +374,7 @@ namespace Sparrow.LowMemory
             LowLastFiveMinutes = lowLastFiveMinutes;
         }
 
-        public static bool IsSwappingOnHddInsteadOfSsd()
+        public static string IsSwappingOnHddInsteadOfSsd()
         {
             if (PlatformDetails.RunningOnPosix)
                 return CheckPageFileOnHdd.PosixIsSwappingOnHddInsteadOfSsd();
