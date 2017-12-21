@@ -1265,10 +1265,12 @@ namespace Voron.Data.Fixed
                     // moved to the key of the page we are going to remove
                     // to avoid smallest being injected into the sibling
                     // page, see RavenDB-9916
-                    page.SetKey(
-                        parentPage.GetKey(parentPage.LastSearchPosition+1),
-                        oldNumberOfPages);
-
+                    if (page.IsBranch)
+                    {
+                        page.SetKey(
+                            parentPage.GetKey(parentPage.LastSearchPosition + 1),
+                            oldNumberOfPages);
+                    }
                     FreePage(siblingNum);
 
                     // now fix parent ref, in this case, just removing it is enough
@@ -1294,10 +1296,12 @@ namespace Voron.Data.Fixed
                 // moved to the key of the page we are going to remove
                 // to avoid smallest being injected into the sibling
                 // page, see RavenDB-9916
-                page.SetKey(
-                    parentPage.GetKey(parentPage.LastSearchPosition+1),
-                    oldNumberOfPages);
-
+                if (page.IsBranch)
+                {
+                    page.SetKey(
+                        parentPage.GetKey(parentPage.LastSearchPosition + 1),
+                        oldNumberOfPages);
+                }
                 // now update the new separator in the sibling position in the parent
                 var newSeparator = siblingPage.GetKey(0);
                 parentPage.SetKey(newSeparator, 1);
@@ -1327,9 +1331,12 @@ namespace Voron.Data.Fixed
                     // moved to the key of the page we are going to remove
                     // to avoid smallest being injected into the sibling
                     // page, see RavenDB-9916
-                    siblingPage.SetKey(
-                        parentPage.GetKey(parentPage.LastSearchPosition),
-                        oldNumberOfPages);
+                    if (siblingPage.IsBranch)
+                    {
+                        siblingPage.SetKey(
+                          parentPage.GetKey(parentPage.LastSearchPosition),
+                          oldNumberOfPages);
+                    }
                     FreePage(page.PageNumber);
 
                     // now fix parent ref, in this case, just removing it is enough
