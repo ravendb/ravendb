@@ -17,9 +17,12 @@ namespace Raven.TestDriver
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
                 result?.Kill();
-                throw;
+                throw new InvalidOperationException("Unble to execute server." + Environment.NewLine +
+                    "Command was: " + Environment.NewLine +
+                    (processStartInfo.WorkingDirectory ?? Directory.GetCurrentDirectory()) + "> "
+                    + processStartInfo.FileName + " " + processStartInfo.Arguments
+                    , e);
             }
 
             return result;
