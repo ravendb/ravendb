@@ -246,21 +246,20 @@ namespace Raven.Client.Documents.Linq
                     value = GetNewExpressionValue(expression);
                     return true;
                 case ExpressionType.Lambda:
-                    value = ((LambdaExpression)expression).Compile().DynamicInvoke();
+                    var lambda = ((LambdaExpression)expression);
+                    value = lambda.Compile().DynamicInvoke();
                     return true;
                 case ExpressionType.Call:
                     if (expression is MethodCallExpression mce)
                     {
-                        var args = new object[mce.Arguments.Count];
-                        for (var index = 0; index < mce.Arguments.Count; index++)
-                        {
-                            if (GetValueFromExpressionWithoutConversion(mce.Arguments[index], out value) == false)
-                                return false;
-                            args[index] = value;
-                        }
                         if (mce.Method.DeclaringType == typeof(RavenQuery) &&
                             mce.Method.Name == nameof(RavenQuery.CmpXchg))
                         {
+                            if (TryGetMethodArguments(mce, out var args) == false)
+                            {
+                                value = null;
+                                return false;
+                            }
                             value = CmpXchg.Value((string)args[0]);
                             return true;
                         }
@@ -296,6 +295,23 @@ namespace Raven.Client.Documents.Linq
                     value = null;
                     return false;
             }
+        }
+
+        private static bool TryGetMethodArguments(MethodCallExpression mce,  out object[] args)
+        {
+            args = new object[mce.Arguments.Count];
+            for (var index = 0; index < mce.Arguments.Count; index++)
+            {
+                if(mce.Arguments[index].NodeType == ExpressionType.Lambda)
+                {
+                    args[index] = ((LambdaExpression)mce.Arguments[index]).Compile();
+                    continue;
+                }
+                if (GetValueFromExpressionWithoutConversion(mce.Arguments[index], out var value) == false)
+                    return false;
+                args[index] = value;
+            }
+            return true;
         }
 
         private static object GetNewExpressionValue(Expression expression)

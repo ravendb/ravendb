@@ -1723,6 +1723,8 @@ namespace Raven.Server.ServerWide
 
         public void EnsureRegistrationOfCertificatesForTrustedIssuers(X509Certificate2 certificate)
         {
+            if (certificate == null)
+                return;
             try
             {
                 //This is ugly, but we have to deal with the TRUSTED_ISSUERS and need to register the server and client certificates 
