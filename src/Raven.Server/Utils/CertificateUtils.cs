@@ -37,6 +37,9 @@ namespace Raven.Server.Utils
             if (cert.HasPrivateKey) // the check if made anyway, to ensure we never fail on just these environments
                 throw new InvalidOperationException("When registering the certificate for the purpose of TRUSTED_ISSUERS, we don't want the private key");
 
+            if (PlatformDetails.RunningOnPosix == false)
+                return;
+
             // due to the way TRUSTED_ISSUERS work in Linux and Windows previous to Win 7
             // we need to register the certificate in the operating system so the SSL impl
             // will send the appropriate signers.
