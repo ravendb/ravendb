@@ -10,6 +10,7 @@ param(
     [switch]$JustStudio,
     [switch]$JustNuget,
     [switch]$Debug,
+    [switch]$DryRunVersionBump = $false,
     [switch]$Help)
 
 $ErrorActionPreference = "Stop"
@@ -159,5 +160,5 @@ Foreach ($spec in $targets) {
 write-host "Done creating packages."
 
 if ($versionObj.BuildType.ToLower() -eq 'stable') {
-    BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType
+    BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
 }

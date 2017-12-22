@@ -33,7 +33,11 @@ function FormatBuildDownloadVersion($versionInfo) {
     if ($buildType.ToLower() -eq 'nightly') {
         $versionString = "$builtAtString-$((Get-Culture).textinfo.toTitleCase($buildType))"
     } else {
-        $versionString = "$buildNumber-$((Get-Culture).textinfo.toTitleCase($buildType))"
+        if ($buildType.ToLower() -eq 'stable') {
+            $versionString = $buildNumber
+        } else {
+            $versionString = "$buildNumber-$((Get-Culture).textinfo.toTitleCase($buildType))"
+        }
     }
 
     return $versionString

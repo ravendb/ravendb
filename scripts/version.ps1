@@ -76,7 +76,7 @@ function GetVersionInfo() {
     return Get-Content -Path $RELEASE_INFO_FILE | ConvertFrom-Json
 }
 
-function BumpVersion ($projectDir, $versionPrefix, $buildType) {
+function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False) {
     if ($buildType.ToLower() -ne "stable") {
         return
     }
@@ -104,9 +104,13 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType) {
     
     $commitMessage = "Bump version to $newVersion"
     
-    UpdateFileInGitHub $fileUri $assemblyInfoFileContent $commitMessage $branch $githubFileData
-
-    write-host "Bumped version in the repository $repoOwner/$repo ($branch) to $newVersion."
+    if ($dryRun) {
+        write-host "DRY RUN: Bumped version in the repository $repoOwner/$repo ($branch) to $newVersion."
+    }
+    else {
+        UpdateFileInGitHub $fileUri $assemblyInfoFileContent $commitMessage $branch $githubFileData
+        write-host "Bumped version in the repository $repoOwner/$repo ($branch) to $newVersion."
+    }
 }
 
 
