@@ -3382,6 +3382,78 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
                 }
             }
         }
+        
+        [Fact]
+        public void IsNullOrEmptySupport()
+        {                      
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" });
+                    session.Store(new User { Name = "Bob", LastName = "" });
+                    session.Store(new User { Name = "Phil"});
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Name = string.IsNullOrEmpty(user.LastName) ? user.Name : user.LastName,
+                                };
+                    
+                    Assert.Equal("from Users as user " +
+                                 "select { Name : (user.LastName == null || user.LastName === \"\")?user.Name:user.LastName }", query.ToString());
+                    
+                    var queryResult = query.ToList();
+                    
+                    Assert.Equal(3, queryResult.Count);
+                    
+                    Assert.Equal("Garcia", queryResult[0].Name);
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal("Phil", queryResult[2].Name);
+
+                }
+            }
+        }
+        
+        [Fact]
+        public void IsNullOrWhitespaceSupport()
+        {                      
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" });
+                    session.Store(new User { Name = "Bob", LastName = " " });
+                    session.Store(new User { Name = "Phil"});
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    Name = string.IsNullOrWhiteSpace(user.LastName) ? user.Name : user.LastName,
+                                };
+                    
+                    Assert.Equal("from Users as user " +
+                                 "select { Name : (!user.LastName || !user.LastName.trim())?user.Name:user.LastName }", query.ToString());
+                    
+                    var queryResult = query.ToList();
+                    
+                    Assert.Equal(3, queryResult.Count);
+                    
+                    Assert.Equal("Garcia", queryResult[0].Name);
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal("Phil", queryResult[2].Name);
+                }
+            }
+        }
+
 
         public class ProjectionParameters : RavenTestBase
         {
