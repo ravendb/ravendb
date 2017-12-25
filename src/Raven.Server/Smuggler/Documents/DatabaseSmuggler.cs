@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -325,7 +324,7 @@ namespace Raven.Server.Smuggler.Documents
                                 indexDefinition.Name = $"Legacy/{indexDefinition.Name}";
                             }
 
-                            WriteIndex(result, indexDefinition, actions, retryOnError: true);
+                            WriteIndex(result, indexDefinition, actions);
                             break;
                         case IndexType.Faulty:
                             break;
@@ -338,7 +337,7 @@ namespace Raven.Server.Smuggler.Documents
             return result.Indexes;
         }
 
-        private void WriteIndex(SmugglerResult result, IndexDefinition indexDefinition, IIndexActions actions, bool retryOnError)
+        private void WriteIndex(SmugglerResult result, IndexDefinition indexDefinition, IIndexActions actions)
         {
             try
             {
@@ -353,41 +352,30 @@ namespace Raven.Server.Smuggler.Documents
             catch (Exception e)
             {
                 var exceptionMessage = e.Message;
-                if (exceptionMessage.Contains("No overload for method 'LoadDocument' takes 1 arguments"))
+                if (exceptionMessage.Contains("CS1501") && exceptionMessage.Contains("'LoadDocument'"))
                 {
-                    exceptionMessage = $"{e.Message}" + Environment.NewLine +
+                    exceptionMessage = 
                             "LoadDocument requires a second argument which is a collection name of the loaded document" + Environment.NewLine +
                             "For example: " + Environment.NewLine +
                                 "\tfrom doc in doc.Orders" + Environment.NewLine +
                                 "\tlet company = LoadDocument(doc.Company, \"Companies\")" + Environment.NewLine +
                                 "\tselect new {" + Environment.NewLine +
                                     "\t\tCompanyName: comapny.Name" + Environment.NewLine +
-                                "\t}" + Environment.NewLine;
+                                "\t}" + Environment.NewLine +
+                            exceptionMessage + Environment.NewLine;
                 }
-                else if (retryOnError && 
-                         (exceptionMessage.Contains("The name 'AbstractIndexCreationTask' does not exist in the current context") ||
-                          exceptionMessage.Contains("The name 'SpatialIndex' does not exist in the current context") ||
-                          exceptionMessage.Contains("The type or namespace name 'Abstractions' does not exist in the namespace 'Raven' (are you missing an assembly reference?)")))
+                else if (exceptionMessage.Contains("CS0103") &&
+                         (exceptionMessage.Contains("'AbstractIndexCreationTask'") ||
+                          exceptionMessage.Contains("'SpatialIndex'")))
                 {
-                    var maps = new HashSet<string>();
-                    foreach (var map in indexDefinition.Maps)
-                    {
-                        maps.Add(ReplaceLegacyMethods(map));
-                    }
-                    indexDefinition.Maps = maps;
-
-                    if (indexDefinition.Reduce != null)
-                    {
-                        indexDefinition.Reduce = ReplaceLegacyMethods(indexDefinition.Reduce);
-                    }
-
-                    result.AddMessage($"Replaced legacy methods in index: {indexDefinition.Name}: " + Environment.NewLine +
-                                      "AbstractIndexCreationTask.SpatialGenerate -> CreateSpatialField" + Environment.NewLine +
-                                      "SpatialIndex.Generate -> CreateSpatialField" + Environment.NewLine +
-                                      "new Raven.Abstractions.Linq.DynamicList was removed");
-
-                    WriteIndex(result, indexDefinition, actions, retryOnError: false);
-                    return;
+                    exceptionMessage = "'AbstractIndexCreationTask.SpatialGenerate' can be replaced with 'CreateSpatialField'" + Environment.NewLine +
+                                       "'SpatialIndex.Generate' can be replaced with 'CreateSpatialField'" + Environment.NewLine +
+                                       exceptionMessage + Environment.NewLine;
+                }
+                else if (exceptionMessage.Contains("CS0234") && exceptionMessage.Contains("'Abstractions'"))
+                {
+                    exceptionMessage = "'Raven.Abstractions.Linq.DynamicList' can be removed" + Environment.NewLine +
+                                       $"{exceptionMessage}" + Environment.NewLine;
                 }
 
                 result.Indexes.ErroredCount++;
@@ -398,15 +386,8 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     errorMessage += Environment.NewLine + $"Reduce: {indexDefinition.Reduce}";
                 }
-                result.AddError(errorMessage);
-            }
 
-            string ReplaceLegacyMethods(string str)
-            {
-                return str
-                    .Replace("AbstractIndexCreationTask.SpatialGenerate", "CreateSpatialField")
-                    .Replace("SpatialIndex.Generate", "CreateSpatialField")
-                    .Replace("new Raven.Abstractions.Linq.DynamicList", string.Empty);
+                result.AddError(errorMessage);
             }
         }
 
