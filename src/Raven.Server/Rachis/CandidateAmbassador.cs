@@ -20,7 +20,7 @@ namespace Raven.Server.Rachis
         public string StatusMessage;
         public AmbassadorStatus Status;
         private Thread _thread;
-        private MultipleUseFlag _running = new MultipleUseFlag();
+        private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public long TrialElectionWonAtTerm { get; set; }
         public long RealElectionWonAtTerm { get; set; }
         public string Tag => _tag;

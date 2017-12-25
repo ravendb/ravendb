@@ -458,7 +458,7 @@ namespace Raven.Server.Rachis
 
         private void SetNewStateInTx(TransactionOperationContext context,
             RachisState rachisState,
-            IDisposable disposable,
+            IDisposable parent,
             long expectedTerm,
             string stateChangedReason,
             Action beforeStateChangedEvent = null)
@@ -470,11 +470,12 @@ namespace Raven.Server.Rachis
             _currentLeader = null;
             LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
-
             _disposables.Clear();
 
-            if (disposable != null)
-                _disposables.Add(disposable);
+            if (parent != null)
+            {
+                _disposables.Add(parent);
+            }
             else if (rachisState != RachisState.Passive)
             {
                 // if we are back to null state, wait to become candidate if no one talks to us
@@ -529,6 +530,25 @@ namespace Raven.Server.Rachis
 
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
+                        // we need to dispose the parent before disposing the reset of it's ambassadors.
+                        if (toDispose.Count > 0)
+                        {
+                            try
+                            {
+                                toDispose[0].Dispose();
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // nothing to do
+                            }
+                            catch (Exception e)
+                            {
+                                if (Log.IsInfoEnabled)
+                                {
+                                    Log.Info("Failed to dispose the parent during new rachis state transition", e);
+                                }
+                            }
+                        }
                         Parallel.ForEach(toDispose, d =>
                         {
                             try
@@ -590,7 +610,7 @@ namespace Raven.Server.Rachis
         public async Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
-            if (leader == null)
+            if (leader == null || CurrentState != RachisState.Leader)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             var putTask = leader.PutAsync(cmd);

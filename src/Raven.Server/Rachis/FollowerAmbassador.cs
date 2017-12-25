@@ -60,7 +60,7 @@ namespace Raven.Server.Rachis
         private string _lastSentMsg;
         private Thread _thread;
         private RemoteConnection _connection;
-        private MultipleUseFlag _running = new MultipleUseFlag();
+        private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
 
         public string Tag => _tag;
 

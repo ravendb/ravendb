@@ -21,7 +21,7 @@ namespace Raven.Server.Rachis
         private Thread _thread;
         public long RunRealElectionAtTerm { get; private set; }
 
-        private MultipleUseFlag _running = new MultipleUseFlag();
+        private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public bool Running => _running.IsRaised();
         public ElectionResult ElectionResult;
 
@@ -155,7 +155,7 @@ namespace Raven.Server.Rachis
                         if (RunRealElectionAtTerm != ElectionTerm &&
                             trialElectionsCount >= majority)
                         {
-                            CastVoteForSelf("Won in the trial eletions");
+                            CastVoteForSelf("Won in the trial elections");
                         }
                     }
                 }

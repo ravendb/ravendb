@@ -685,7 +685,7 @@ namespace Raven.Server
                 var errors = new List<Exception>();
                 foreach (var ipAddress in GetListenIpAddresses(host))
                 {
-                    if (Logger.IsInfoEnabled)
+                    if (Configuration.Core.TcpServerUrls != null && Logger.IsInfoEnabled)
                         Logger.Info($"RavenDB TCP is configured to use {string.Join(", ", Configuration.Core.TcpServerUrls)} and bind to {ipAddress} at {port}");
 
                     var listener = new TcpListener(ipAddress, status.Port != 0 ? status.Port : port);
