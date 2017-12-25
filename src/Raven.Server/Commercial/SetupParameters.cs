@@ -15,11 +15,14 @@ namespace Raven.Server.Commercial
         
         public bool IsPosix { get; set; }
 
+        public bool IsDocker { get; set; }
+
         public static SetupParameters Get(ServerStore serverStore)
         {
             var result = new SetupParameters();
             DetermineFixedPortNumber(serverStore, result);
             result.IsPosix = PlatformDetails.RunningOnPosix;
+            result.IsDocker = Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER") == "true";
             return result;
         }
 

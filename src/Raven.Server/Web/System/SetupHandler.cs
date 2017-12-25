@@ -157,6 +157,11 @@ namespace Raven.Server.Web.System
                 writer.WritePropertyName(nameof(SetupParameters.IsPosix));
                 writer.WriteBool(setupParameters.IsPosix);
 
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(SetupParameters.IsDocker));
+                writer.WriteBool(setupParameters.IsDocker);
+
                 writer.WriteEndObject();
             }
 
@@ -187,6 +192,11 @@ namespace Raven.Server.Web.System
                             if (x.Address.AddressFamily != AddressFamily.InterNetwork)
                                 return false;
                             var addressBytes = x.Address.GetAddressBytes();
+
+                            // filter 127.xxx.xxx.xxx out, in docker only
+                            if (SetupParameters.Get(ServerStore).IsDocker && addressBytes[0] == 127)
+                                return false;
+
                             return addressBytes[0] != 169 || addressBytes[1] != 254;
                         })
                         .Select(addr => addr.Address.ToString())
