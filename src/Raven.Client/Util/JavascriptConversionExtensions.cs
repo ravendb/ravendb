@@ -958,9 +958,7 @@ namespace Raven.Client.Util
                 using (writer.Operation(binaryExpression))
                 {
                     context.Visitor.Visit(binaryExpression.Left);
-                    writer.Write(" !== null && ");
-                    context.Visitor.Visit(binaryExpression.Left);
-                    writer.Write(" !== undefined ? ");
+                    writer.Write(" != null ? ");
                     context.Visitor.Visit(binaryExpression.Left);
                     writer.Write(" : ");
                     context.Visitor.Visit(binaryExpression.Right);
@@ -998,13 +996,8 @@ namespace Raven.Client.Util
                 var writer = context.GetWriter();                
                 context.PreventDefault();
                 
-                writer.Write("(");
                 context.Visitor.Visit(expression);                
-                writer.Write(op == ExpressionType.Equal ? "===null||" : "!==null&&");
-                context.Visitor.Visit(expression);
-                writer.Write(op == ExpressionType.Equal ? "===" : "!==");
-                writer.Write("undefined)");
-                
+                writer.Write(op == ExpressionType.Equal ? "==null" : "!=null");                
             }
         }
 
