@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Patch
 {
     public abstract class JintNullPropgationReferenceResolver : IReferenceResolver
     {
-        public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
+        public virtual bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
         {
             value = Null.Instance;
             return true;

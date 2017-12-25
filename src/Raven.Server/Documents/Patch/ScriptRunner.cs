@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine = new Engine(options =>
                 {
                     options.LimitRecursion(64)
-                        .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
+                        .SetReferencesResolver(_refResolver)
                         .MaxStatements(_configuration.Patching.MaxStepsForScript)
                         .Strict()
                         .AddObjectConverter(new JintGuidConverter())
@@ -131,6 +131,8 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("startsWith", new ClrFunctionInstance(ScriptEngine, StartsWith));
                 ScriptEngine.SetValue("endsWith", new ClrFunctionInstance(ScriptEngine, EndsWith));
                 ScriptEngine.SetValue("regex", new ClrFunctionInstance(ScriptEngine, Regex));
+
+                ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, ExplodeArgs));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
 
@@ -260,6 +262,18 @@ namespace Raven.Server.Documents.Patch
                 if (obj.IsUndefined())
                     return "undefined";
                 return obj.ToString();
+            }
+
+            public JsValue ExplodeArgs(JsValue self, JsValue[] args)
+            {
+                if(args.Length != 2)
+                    throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
+                if(args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
+                {
+                    _refResolver.ExplodeArgsOn(args[0], boi);
+                    return self;
+                }
+                throw new InvalidOperationException("Raven_ExplodeArgs(this, args) second argument must be BlittableObjectInstance");
             }
 
             public JsValue PutDocument(JsValue self, JsValue[] args)
@@ -563,6 +577,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             private JsValue[] _args = Array.Empty<JsValue>();
+            private JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
             public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
             {
@@ -581,6 +596,10 @@ namespace Raven.Server.Documents.Patch
                 catch (JavaScriptException e)
                 {
                     throw CreateFullError(ctx, e);
+                }
+                finally
+                {
+                    _refResolver.ExplodeArgsOn(null, null);
                 }
                 return new ScriptRunnerResult(this, result);
             }

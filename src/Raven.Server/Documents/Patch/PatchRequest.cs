@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Patch
                 case PatchRequestType.Patch:
                     return $@"
  function __actual_func(args) {{ 
-
+Raven_ExplodeArgs(this, args);
 {Script}
 
 }};
