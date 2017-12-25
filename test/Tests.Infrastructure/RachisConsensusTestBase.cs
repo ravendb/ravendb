@@ -136,8 +136,9 @@ namespace Tests.Infrastructure
             int seed = PredictableSeeds ? _random.Next(int.MaxValue) : _count;
             var configuration = new RavenConfiguration(caller, ResourceType.Server);
             configuration.Initialize();
-
+            configuration.Core.RunInMemory = true;
             var serverStore = new RavenServer(configuration).ServerStore;
+            serverStore.Initialize();
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
             rachis.Initialize(storageEnvironment, configuration, configuration.Core.ServerUrls[0]);
