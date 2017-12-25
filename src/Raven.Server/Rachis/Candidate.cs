@@ -8,6 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Sparrow.Threading;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Rachis
 {
@@ -52,14 +53,14 @@ namespace Raven.Server.Rachis
 
                     if (clusterTopology.Members.Count == 1)
                     {
-                        CastVoteForSelf();
-                        _engine.SwitchToLeaderState(ElectionTerm, "I\'m the only one in the cluster, so no need for elections, I rule.");
+                        CastVoteForSelf("Single member cluster, natural leader");
+                        _engine.SwitchToLeaderState(ElectionTerm, "I'm the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
 
                     if (IsForcedElection)
                     {
-                        CastVoteForSelf();
+                        CastVoteForSelf("Voting for self in forced elections");
                     }
                     else
                     {
@@ -90,7 +91,7 @@ namespace Raven.Server.Rachis
                             // timeout? 
                             if (IsForcedElection)
                             {
-                                CastVoteForSelf();
+                                CastVoteForSelf("Timeout during forced elections");
                             }
                             else
                             {
@@ -132,7 +133,7 @@ namespace Raven.Server.Rachis
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
                             _engine.SetNewState(RachisState.Passive, this, engineCurrentTerm,
-                                "I just learned from the leader that I\'m not in their topology, moving to passive state");
+                                "I just learned from the leader that I'm not in their topology, moving to passive state");
                             break;
                         }
 
@@ -147,14 +148,14 @@ namespace Raven.Server.Rachis
                             {
                                 connections[candidateAmbassador.Tag] = candidateAmbassador.Connection;
                             }
-                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} nodes to leadership", connections);
+                            _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {realElectionsCount} nodes to leadership in {ElectionTerm}", connections);
 
                             break;
                         }
                         if (RunRealElectionAtTerm != ElectionTerm &&
                             trialElectionsCount >= majority)
                         {
-                            CastVoteForSelf();
+                            CastVoteForSelf("Won in the trial eletions");
                         }
                     }
                 }
@@ -168,14 +169,14 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void CastVoteForSelf()
+        private void CastVoteForSelf(string reason)
         {
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 ElectionTerm = _engine.CurrentTerm + 1;
 
-                _engine.CastVoteInTerm(context, ElectionTerm, _engine.Tag);
+                _engine.CastVoteInTerm(context, ElectionTerm, _engine.Tag, reason);
 
                 RunRealElectionAtTerm = ElectionTerm;
 

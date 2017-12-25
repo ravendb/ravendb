@@ -42,12 +42,13 @@ namespace Raven.Server.Rachis
                         long lastIndex;
                         long lastTerm;
                         string whoGotMyVoteIn;
+                        long lastVotedTerm;
 
                         using (context.OpenReadTransaction())
                         {
                             lastIndex = _engine.GetLastEntryIndex(context);
                             lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
-                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                            (whoGotMyVoteIn, lastVotedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
 
                             clusterTopology = _engine.GetTopology(context);
                         }
@@ -133,6 +134,16 @@ namespace Raven.Server.Rachis
                             });
                             continue;
                         }
+                        if(lastVotedTerm > rv.Term)
+                        {
+                            _connection.Send(context, new RequestVoteResponse
+                            {
+                                Term = _engine.CurrentTerm,
+                                VoteGranted = false,
+                                Message = $"Already voted for another node in {lastVotedTerm}"
+                            });
+                            continue;
+                        }
 
                         if (lastTerm > rv.LastLogTerm)
                         {
@@ -182,14 +193,20 @@ namespace Raven.Server.Rachis
                         bool alreadyVoted = false;
                         using (context.OpenWriteTransaction())
                         {
-                            whoGotMyVoteIn = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                            long votedTerm;
+                            (whoGotMyVoteIn,votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
                             if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
                             {
                                 alreadyVoted = true;
                             }
+                            else if(votedTerm > rv.Term)
+                            {
+                                alreadyVoted = true;
+                                whoGotMyVoteIn = "another node in higher term: " + votedTerm;
+                            }
                             else
                             {
-                                _engine.CastVoteInTerm(context, rv.Term, rv.Source);
+                                _engine.CastVoteInTerm(context, rv.Term, rv.Source, "Casting vote as elector");
                             }
                             context.Transaction.Commit();
                         }

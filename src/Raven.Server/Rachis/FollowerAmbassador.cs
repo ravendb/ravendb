@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Threading;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -59,7 +60,7 @@ namespace Raven.Server.Rachis
         private string _lastSentMsg;
         private Thread _thread;
         private RemoteConnection _connection;
-        private bool _dispose;
+        private MultipleUseFlag _running = new MultipleUseFlag();
 
         public string Tag => _tag;
 
@@ -114,7 +115,7 @@ namespace Raven.Server.Rachis
             try
             {
                 var needNewConnection = _connection == null;
-                while (_leader.Running && _dispose == false)
+                while (_leader.Running && _running)
                 {
                     try
                     {
@@ -178,7 +179,7 @@ namespace Raven.Server.Rachis
                         var disposeRequested = false;
                         while (_leader.Running && disposeRequested == false)
                         {
-                            disposeRequested = _dispose; // we give last loop before closing
+                            disposeRequested = _running == false; // we give last loop before closing
                             entries.Clear();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
@@ -608,9 +609,8 @@ namespace Raven.Server.Rachis
                     {
                         // we need to abort the current leadership
                         var msg = $"Follower ambassador {_engine.Tag}: found election term {llr.CurrentTerm} that is higher than ours {engineCurrentTerm}";
-                        _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm,
-                            msg);
-                        _engine.FoundAboutHigherTerm(llr.CurrentTerm);
+                        _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, msg);
+                        _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
                         throw new InvalidOperationException(msg);
                     }
 
@@ -711,7 +711,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            _dispose = true;
+            _running.Lower();
             if (_engine.Log.IsInfoEnabled)
             {
                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Request to dispose node {_tag}");

@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
 {
@@ -19,7 +20,7 @@ namespace Raven.Server.Rachis
         public string StatusMessage;
         public AmbassadorStatus Status;
         private Thread _thread;
-        private bool _disposed;
+        private MultipleUseFlag _running = new MultipleUseFlag();
         public long TrialElectionWonAtTerm { get; set; }
         public long RealElectionWonAtTerm { get; set; }
         public string Tag => _tag;
@@ -49,15 +50,18 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            _disposed = true;
+            _running.Lower();
             if (_candidate.ElectionResult != ElectionResult.Won)
             {
-                Connection?.Dispose();
+                Volatile.Read(ref Connection)?.Dispose();
+
                 if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 {
                     while (_thread.Join(16) == false)
                     {
-                        Connection?.Dispose();
+                        // the thread may have create a new connection, so need
+                        // to dispose that as well
+                        Volatile.Read(ref Connection)?.Dispose();
                     }
                 }
             }
@@ -75,7 +79,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
-                while (_candidate.Running && _disposed == false)
+                while (_candidate.Running && _running)
                 {
                     try
                     {
@@ -105,7 +109,9 @@ namespace Raven.Server.Rachis
                         Status = AmbassadorStatus.Connected;
                         StatusMessage = $"Connected to {_tag}";
 
-                        Connection = new RemoteConnection(_tag, _engine.Tag, stream);
+                        Stopwatch sp;
+                        var connection = new RemoteConnection(_tag, _engine.Tag, stream);
+                        Interlocked.Exchange(ref Connection, connection);//publish the new connection
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
                             ClusterTopology topology;
@@ -118,7 +124,7 @@ namespace Raven.Server.Rachis
                                 lastLogTerm = _engine.GetTermForKnownExisting(context, lastLogIndex);
                             }
                             Debug.Assert(topology.TopologyId != null);
-                            Connection.Send(context, new RachisHello
+                            connection.Send(context, new RachisHello
                             {
                                 TopologyId = topology.TopologyId,
                                 DebugSourceIdentifier = _engine.Tag,
@@ -134,7 +140,8 @@ namespace Raven.Server.Rachis
                                 if (_candidate.IsForcedElection == false ||
                                     _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                 {
-                                    Connection.Send(context, new RequestVote
+                                    sp = Stopwatch.StartNew();
+                                    connection.Send(context, new RequestVote
                                     {
                                         Source = _engine.Tag,
                                         Term = currentElectionTerm,
@@ -144,7 +151,10 @@ namespace Raven.Server.Rachis
                                         LastLogTerm = lastLogTerm
                                     });
 
-                                    rvr = Connection.Read<RequestVoteResponse>(context);
+                                    rvr = connection.Read<RequestVoteResponse>(context);
+
+                                    if (_engine.Log.IsInfoEnabled)
+                                        _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
                                     if (rvr.Term > currentElectionTerm)
                                     {
@@ -155,7 +165,7 @@ namespace Raven.Server.Rachis
                                         {
                                             _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
                                         }
-                                        _engine.FoundAboutHigherTerm(rvr.Term);
+                                        _engine.FoundAboutHigherTerm(rvr.Term, "Higher term found from node " + Tag);
                                         throw new InvalidOperationException(message);
                                     }
                                     NotInTopology = rvr.NotInTopology;
@@ -163,7 +173,7 @@ namespace Raven.Server.Rachis
                                     {
                                         if (_engine.Log.IsInfoEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reason: {rvr.Message}");
+                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag}  in {rvr.Term} reason: {rvr.Message}");
                                         }
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
@@ -175,8 +185,8 @@ namespace Raven.Server.Rachis
 
                                     _candidate.WaitForChangeInState();
                                 }
-
-                                Connection.Send(context, new RequestVote
+                                sp = Stopwatch.StartNew();
+                                connection.Send(context, new RequestVote
                                 {
                                     Source = _engine.Tag,
                                     Term = currentElectionTerm,
@@ -186,7 +196,9 @@ namespace Raven.Server.Rachis
                                     LastLogTerm = lastLogTerm
                                 });
 
-                                rvr = Connection.Read<RequestVoteResponse>(context);
+                                rvr = connection.Read<RequestVoteResponse>(context);
+                                if (_engine.Log.IsInfoEnabled)
+                                    _engine.Log.Info($"Candidate RequestVote real vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
                                 if (rvr.Term > currentElectionTerm)
                                 {
@@ -197,7 +209,7 @@ namespace Raven.Server.Rachis
                                     }
                                     // we need to abort the current elections
                                     _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, message);
-                                    _engine.FoundAboutHigherTerm(rvr.Term);
+                                    _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     throw new InvalidOperationException(message);
                                 }
                                 NotInTopology = rvr.NotInTopology;
@@ -205,13 +217,17 @@ namespace Raven.Server.Rachis
                                 {
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} reason: {rvr.Message}");
+                                        _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} in {rvr.Term} reason: {rvr.Message}");
                                     }
                                     // we go a negative response here, so we can't proceed
                                     // we'll need to wait until the candidate has done something, like
                                     // change term or given up
                                     _candidate.WaitForChangeInState();
                                     continue;
+                                }
+                                if (_engine.Log.IsInfoEnabled)
+                                {
+                                    _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a positive response from {_tag} in {rvr.Term}: {rvr.Message}");
                                 }
                                 RealElectionWonAtTerm = rvr.Term;
                                 _candidate.WaitForChangeInState();

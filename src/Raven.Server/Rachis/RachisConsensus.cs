@@ -27,6 +27,7 @@ using Raven.Server.Config;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Rachis
 {
@@ -337,7 +338,7 @@ namespace Raven.Server.Rachis
         private void SwitchToSingleLeader(TransactionOperationContext context)
         {
             var electionTerm = CurrentTerm + 1;
-            CastVoteInTerm(context, electionTerm, Tag);
+            CastVoteInTerm(context, electionTerm, Tag, "Switching to single leader");
 
             if (Log.IsInfoEnabled)
             {
@@ -528,7 +529,7 @@ namespace Raven.Server.Rachis
 
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
-                        foreach (var d in toDispose)
+                        Parallel.ForEach(toDispose, d =>
                         {
                             try
                             {
@@ -545,7 +546,7 @@ namespace Raven.Server.Rachis
                                     Log.Info("Failed to dispose during new rachis state transition", e);
                                 }
                             }
-                        }
+                        });
                     });
                 }
             };
@@ -1263,7 +1264,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public void FoundAboutHigherTerm(long term)
+        public void FoundAboutHigherTerm(long term, string reason)
         {
             if (term == CurrentTerm)
                 return;
@@ -1276,18 +1277,18 @@ namespace Raven.Server.Rachis
                     if (term == CurrentTerm)
                         return;
 
-                    CastVoteInTerm(context, term, votedFor: null);
+                    CastVoteInTerm(context, term, votedFor: null, reason: reason);
 
                     tx.Commit();
                 }
             }
         }
 
-        public unsafe void CastVoteInTerm(TransactionOperationContext context, long term, string votedFor)
+        public unsafe void CastVoteInTerm(TransactionOperationContext context, long term, string votedFor, string reason)
         {
             Debug.Assert(context.Transaction != null);
             if (term <= CurrentTerm)
-                throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change " + Environment.StackTrace);
+                throw new ConcurrencyException($"The current term {CurrentTerm} is larger than {term}, aborting change");
 
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
             using (state.DirectAdd(CurrentTermSlice, sizeof(long), out byte* ptr))
@@ -1295,7 +1296,11 @@ namespace Raven.Server.Rachis
                 *(long*)ptr = term;
             }
 
-            votedFor = votedFor ?? String.Empty;
+            votedFor = votedFor ?? string.Empty;
+
+            if (Log.IsInfoEnabled)
+                Log.Info($"Casting vote for {votedFor} in {term} because: {reason}");
+
 
             var size = Encoding.UTF8.GetByteCount(votedFor);
 
@@ -1310,7 +1315,7 @@ namespace Raven.Server.Rachis
             CurrentTerm = term;
         }
 
-        public string GetWhoGotMyVoteIn(TransactionOperationContext context, long term)
+        public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(TransactionOperationContext context, long term)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -1320,11 +1325,11 @@ namespace Raven.Server.Rachis
             var votedTerm = read?.Reader.ReadLittleEndianInt64();
 
             if (votedTerm != term)
-                return null;
+                return (null, votedTerm.Value);
 
             read = state.Read(VotedForSlice);
 
-            return read?.Reader.ReadString(read.Reader.Length);
+            return (read?.Reader.ReadString(read.Reader.Length), votedTerm ?? 0);
         }
 
         public event EventHandler OnDispose;

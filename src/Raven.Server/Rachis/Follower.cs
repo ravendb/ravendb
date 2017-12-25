@@ -225,7 +225,7 @@ namespace Raven.Server.Rachis
             }
             if (negotiation.Term > _engine.CurrentTerm)
             {
-                _engine.FoundAboutHigherTerm(negotiation.Term);
+                _engine.FoundAboutHigherTerm(negotiation.Term, "Leader has higher term, updating...");
             }
 
             long prevTerm;
