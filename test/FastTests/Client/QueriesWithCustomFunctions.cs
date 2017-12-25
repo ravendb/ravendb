@@ -1599,7 +1599,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                         };
 
                     Assert.Equal("from Users as u select { FirstName : u.Name, " +
-                                 "LastName : u.LastName !== null && u.LastName !== undefined ? u.LastName : \"Has no last name\" }"
+                                 "LastName : u.LastName != null ? u.LastName : \"Has no last name\" }"
                         , query.ToString());
 
                     var queryResult = query.ToList();
@@ -3350,7 +3350,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
         }
         
         [Fact]
-        public void When_Comparing_to_Null_Should_Also_Compare_to_Undefined()
+        public void Can_Do_Null_Comparison_On_Undefined_Member()
         {                      
             using (var store = GetDocumentStore())
             {
@@ -3372,7 +3372,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
                                 };
                     
                     Assert.Equal("from Users as user select " +
-                                 "{ HasGroups : (user.Groups!==null&&user.Groups!==undefined) }", query.ToString());
+                                 "{ HasGroups : user.Groups!=null }", query.ToString());
                     
                     var queryResult = query.ToList();
                     
@@ -3658,7 +3658,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
 
                         Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return (\"id2\"===null||\"id2\"===undefined)||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(function(x){return \"id2\"==null||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
 
                         var result = projection.ToList();
