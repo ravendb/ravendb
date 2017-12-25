@@ -867,7 +867,7 @@ namespace Raven.Server.Commercial
 
         private void SetAffinity(Process process, int cores)
         {
-            if (ProcessorInfo.ProcessorCount <= cores)
+            if (ProcessorInfo.ProcessorCount < cores)
                 return;
 
             try
@@ -946,7 +946,7 @@ namespace Raven.Server.Commercial
             try
             {
                 var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
-                if (memoryInfo.UsableMemory <= ramInGb)
+                if (memoryInfo.UsableMemory < ramInGb)
                     return;
 
                 var maxWorkingSetInBytes = (long)Size.ConvertToBytes(ramInGb, SizeUnit.Gigabytes);
