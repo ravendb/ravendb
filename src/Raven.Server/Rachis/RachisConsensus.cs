@@ -530,25 +530,6 @@ namespace Raven.Server.Rachis
 
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
-                        // we need to dispose the parent before disposing the reset of it's ambassadors.
-                        if (toDispose.Count > 0)
-                        {
-                            try
-                            {
-                                toDispose[0].Dispose();
-                            }
-                            catch (ObjectDisposedException)
-                            {
-                                // nothing to do
-                            }
-                            catch (Exception e)
-                            {
-                                if (Log.IsInfoEnabled)
-                                {
-                                    Log.Info("Failed to dispose the parent during new rachis state transition", e);
-                                }
-                            }
-                        }
                         Parallel.ForEach(toDispose, d =>
                         {
                             try

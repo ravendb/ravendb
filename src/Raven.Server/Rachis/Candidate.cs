@@ -23,7 +23,7 @@ namespace Raven.Server.Rachis
 
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public bool Running => _running.IsRaised();
-        public ElectionResult ElectionResult;
+        public volatile ElectionResult ElectionResult;
 
         public Candidate(RachisConsensus engine)
         {
