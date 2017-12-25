@@ -860,6 +860,14 @@ namespace Raven.Server.Commercial
 
         public static void ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
+            if (SetupParameters.Get(serverStore).IsDocker)
+            {
+                if (setupInfo.NodeSetupInfos[LocalNodeTag].Addresses.Any(ip => ip.StartsWith("127.")))
+                {
+                    throw new InvalidOperationException("When the server is running in Docker, you cannot bind to ip 127.X.X.X, please use the hostname instead.");
+                }
+            }
+
             if (setupMode == SetupMode.LetsEncrypt)
             {
                 if (setupInfo.NodeSetupInfos.ContainsKey(LocalNodeTag) == false)
