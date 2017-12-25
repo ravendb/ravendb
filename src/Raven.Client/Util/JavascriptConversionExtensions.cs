@@ -1076,6 +1076,12 @@ namespace Raven.Client.Util
                     case "Replace":
                         newName = "replace";
                         break;
+                    case "IsNullOrEmpty":
+                        newName = "nullOrEmpty";
+                        break;
+                    case "IsNullOrWhiteSpace":
+                        newName = "nullOrWhitespace";
+                        break;
                     default:
                         return;
                 }
@@ -1085,86 +1091,101 @@ namespace Raven.Client.Util
 
                 using (writer.Operation(mce))
                 {
-                    if (newName == "join")
+                    switch (newName)
                     {
-                        if (mce.Arguments.Count > 2)
-                        {
-                            writer.Write("[");
-
-                            for (int i = 1; i < mce.Arguments.Count; i++)
+                        case "join":
+                            if (mce.Arguments.Count > 2)
                             {
-                                if (i != 1)
+                                writer.Write("[");
+
+                                for (int i = 1; i < mce.Arguments.Count; i++)
                                 {
-                                    writer.Write(", ");
-                                }
-                                context.Visitor.Visit(mce.Arguments[i]);
-                            }
-
-                            writer.Write("]");
-                        }
-                        else
-                        {
-                            context.Visitor.Visit(mce.Arguments[1]);
-                        }
-
-                        writer.Write($".{newName}(");
-                        context.Visitor.Visit(mce.Arguments[0]);
-                        writer.Write(")");
-                    }
-                    else
-                    {
-                        context.Visitor.Visit(mce.Object);
-                        writer.Write($".{newName}(");
-
-                        if (newName == "split")
-                        {
-                            writer.Write("new RegExp(");
-                            if (mce.Arguments[0] is NewArrayExpression arrayExpression)
-                            {
-                                for (var i = 0; i < arrayExpression.Expressions.Count; i++)
-                                {
-                                    if (i != 0)
+                                    if (i != 1)
                                     {
-                                        writer.Write("+\"|\"+");
+                                        writer.Write(", ");
                                     }
-
-                                    context.Visitor.Visit(arrayExpression.Expressions[i]);
+                                    context.Visitor.Visit(mce.Arguments[i]);
                                 }
+
+                                writer.Write("]");
                             }
                             else
                             {
-                                context.Visitor.Visit(mce.Arguments[0]);
+                                context.Visitor.Visit(mce.Arguments[1]);
                             }
 
-                            writer.Write(", \"g\")");
-                        }
-                        else if (newName == "replace")
-                        {
-                            writer.Write("new RegExp(");
+                            writer.Write($".{newName}(");
                             context.Visitor.Visit(mce.Arguments[0]);
-                            writer.Write(", \"g\"), ");
+                            writer.Write(")");
+                            break;
+                        case "nullOrEmpty":
+                            writer.Write("(");
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(" == null || ");
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(" === \"\")");
+                            break;
+                        case "nullOrWhitespace":
+                            writer.Write("(!");
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(" || !");
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(".trim())");
+                            break;
+                        default:
+                            context.Visitor.Visit(mce.Object);
+                            writer.Write($".{newName}(");
 
-                            context.Visitor.Visit(mce.Arguments[1]);
-                        }
-                        else
-                        {
-                            for (var i = 0; i < mce.Arguments.Count; i++)
+                            if (newName == "split")
                             {
-                                if (i != 0)
+                                writer.Write("new RegExp(");
+                                if (mce.Arguments[0] is NewArrayExpression arrayExpression)
                                 {
-                                    writer.Write(", ");
+                                    for (var i = 0; i < arrayExpression.Expressions.Count; i++)
+                                    {
+                                        if (i != 0)
+                                        {
+                                            writer.Write("+\"|\"+");
+                                        }
+
+                                        context.Visitor.Visit(arrayExpression.Expressions[i]);
+                                    }
+                                }
+                                else
+                                {
+                                    context.Visitor.Visit(mce.Arguments[0]);
                                 }
 
-                                context.Visitor.Visit(mce.Arguments[i]);
+                                writer.Write(", \"g\")");
                             }
-                        }
+                            else if (newName == "replace")
+                            {
+                                writer.Write("new RegExp(");
+                                context.Visitor.Visit(mce.Arguments[0]);
+                                writer.Write(", \"g\"), ");
 
-                        writer.Write(")");
+                                context.Visitor.Visit(mce.Arguments[1]);
+                            }
+                            else
+                            {
+                                for (var i = 0; i < mce.Arguments.Count; i++)
+                                {
+                                    if (i != 0)
+                                    {
+                                        writer.Write(", ");
+                                    }
 
-                        if (mce.Method.Name == "Contains")
-                        {
-                            writer.Write(" !== -1");
-                        }
+                                    context.Visitor.Visit(mce.Arguments[i]);
+                                }
+                            }
+
+                            writer.Write(")");
+
+                            if (mce.Method.Name == "Contains")
+                            {
+                                writer.Write(" !== -1");
+                            }
+                            break;
                     }
                 }
             }
