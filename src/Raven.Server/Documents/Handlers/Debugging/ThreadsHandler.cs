@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -13,6 +14,29 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
+        [RavenAction("/admin/debug/remote-connections", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task ListRemoteConnections()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(write,
+                    new DynamicJsonValue
+                    {
+                        ["Remote Connections"] = new DynamicJsonArray(RemoteConnection.RemoteConnectionsList.ToList()
+                            .Select(connection => new DynamicJsonValue
+                            {
+                                [nameof(RemoteConnection.RemoteConnectionInfo.Caller)] = connection.Caller,
+                                [nameof(RemoteConnection.RemoteConnectionInfo.Destination)] = connection.Destination,
+                                [nameof(RemoteConnection.RemoteConnectionInfo.StartAt)] = connection.StartAt,
+                                [nameof(RemoteConnection.RemoteConnectionInfo.Number)] = connection.Number,
+                            }))
+                    });
+                write.Flush();
+            }
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task RunawayThreads()
         {

@@ -3,6 +3,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.Rachis
 {
@@ -199,7 +200,7 @@ namespace Raven.Server.Rachis
                             {
                                 alreadyVoted = true;
                             }
-                            else if(votedTerm > rv.Term)
+                            else if(votedTerm >= rv.Term)
                             {
                                 alreadyVoted = true;
                                 whoGotMyVoteIn = "another node in higher term: " + votedTerm;

@@ -460,6 +460,11 @@ namespace Raven.Server.ServerWide
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
+            if (Engine.Log.IsInfoEnabled)
+            {
+                Engine.Log.Info($"State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}");
+            }
+
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
