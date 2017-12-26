@@ -903,15 +903,18 @@ namespace Raven.Server.Commercial
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
-                var notification = PerformanceHint.Create(
-                    null,
-                    "Your database can be faster - not all cores are used",
-                    $"Your server is currently using only {cores} core{Pluralize(cores)} " +
-                    $"out of the {Environment.ProcessorCount} that it has available",
-                    PerformanceHintType.UnusedCapacity,
-                    NotificationSeverity.Info,
-                    "LicenseManager");
-                _serverStore.NotificationCenter.Add(notification);
+                if (ProcessorInfo.ProcessorCount > cores)
+                {
+                    var notification = PerformanceHint.Create(
+                        null,
+                        "Your database can be faster - not all cores are used",
+                        $"Your server is currently using only {cores} core{Pluralize(cores)} " +
+                        $"out of the {Environment.ProcessorCount} that it has available",
+                        PerformanceHintType.UnusedCapacity,
+                        NotificationSeverity.Info,
+                        "LicenseManager");
+                    _serverStore.NotificationCenter.Add(notification);
+                }
             }
             catch (Exception e)
             {
