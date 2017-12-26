@@ -178,7 +178,8 @@ namespace Raven.Server.Documents.Replication
                     var batchSize = _parent._database.Configuration.Replication.MaxItemsCount;
                     var maxSizeToSend = _parent._database.Configuration.Replication.MaxSizeToSend;
                     long size = 0;
-                    int numberOfItemsSent = 0;
+                    var numberOfItemsSent = 0;
+                    var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     short lastTransactionMarker = -1;
                     using (_stats.Storage.Start())
                     {
@@ -229,13 +230,23 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                                 size += item.Stream.Length;
 
-                            if (AddReplicationItemToBatch(item, _stats.Storage))
+                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo))
                                 numberOfItemsSent++;
+
+                            numberOfItemsSent++;
                         }
                     }
 
                     if (_log.IsInfoEnabled)
+                    {
+                        if (skippedReplicationItemsInfo.SkippedItems > 0)
+                        {
+                            var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
+                            _log.Info(message);
+                        }
+                        
                         _log.Info($"Found {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count} attachment's streams to replicate to {_parent.Node.FromString()}.");
+                    }
 
                     if (_orderedReplicaItems.Count == 0)
                     {
@@ -308,17 +319,65 @@ namespace Raven.Server.Documents.Replication
             return delayReplicationFor;
         }
 
-        private unsafe bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        private class SkippedReplicationItemsInfo
+        {
+            public long SkippedItems { get; private set; }
+
+            private long _skippedArtificialDocuments;
+            private long _startEtag;
+            private long _endEtag;
+            private string _startChangeVector;
+            private string _endChangeVector;
+
+            public void Update(ReplicationBatchItem item, bool isArtificial = false)
+            {
+                SkippedItems++;
+                if (isArtificial)
+                    _skippedArtificialDocuments++;
+
+                if (_startChangeVector != null)
+                {
+                    _startChangeVector = item.ChangeVector;
+                    _startEtag = item.Etag;
+                }
+
+                _endChangeVector = item.ChangeVector;
+                _endEtag = item.Etag;
+            }
+
+            public string GetInfoForDebug(string destinationChangeVector)
+            {
+                var message = $"Skipped {SkippedItems:#,#;;0} items";
+                if (_skippedArtificialDocuments > 0)
+                    message += $" ({_skippedArtificialDocuments:#,#;;0} artificial documents)";
+
+                message += $", start etag: {_startEtag:#,#;;0}, end etag: {_endEtag:#,#;;0}, " +
+                           $"start change vector: {_startChangeVector}, end change vector: {_endChangeVector}, " +
+                           $"destination change vector: {destinationChangeVector}";
+
+                return message;
+            }
+
+            public void Reset()
+            {
+                SkippedItems = 0;
+                _skippedArtificialDocuments = 0;
+                _startEtag = 0;
+                _endEtag = 0;
+                _startChangeVector = null;
+                _endChangeVector = null;
+            }
+        }
+
+        private bool AddReplicationItemToBatch(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document ||
-                     item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
+                item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
                 if ((item.Flags & DocumentFlags.Artificial) == DocumentFlags.Artificial)
                 {
                     stats.RecordArtificialDocumentSkip();
-
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Skipping replication of {item.Id} because it is an artificial document");
+                    skippedReplicationItemsInfo.Update(item, isArtificial: true);
                     return false;
                 }
             }
@@ -327,10 +386,18 @@ namespace Raven.Server.Documents.Replication
             if (ChangeVectorUtils.GetConflictStatus(item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
-
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Skipping replication of {item.Type} '{item.Id}' because destination has a higher change vector. Current: {item.ChangeVector} < Destination: {_parent.LastAcceptedChangeVector} ");
+                skippedReplicationItemsInfo.Update(item);
                 return false;
+            }
+
+            if (skippedReplicationItemsInfo.SkippedItems > 0)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    var message = skippedReplicationItemsInfo.GetInfoForDebug(_parent.LastAcceptedChangeVector);
+                    _log.Info(message);
+                }
+                skippedReplicationItemsInfo.Reset();
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
@@ -361,7 +428,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var item in _orderedReplicaItems)
             {
                 var value = item.Value;
-                WriteItemToServer(documentsContext,value, stats);
+                WriteItemToServer(documentsContext, value, stats);
             }
 
             foreach (var item in _replicaAttachmentStreams)
