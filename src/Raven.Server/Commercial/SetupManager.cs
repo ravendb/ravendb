@@ -799,13 +799,19 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
+        public static async Task AssertLocalNodeCanListenToEndpoints(SetupInfo setupInfo, ServerStore serverStore)
         {
             var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
-            var requestedEndpoints = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port));
+            var localIps = new List<IPEndPoint>();
+
+            // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to 
+            foreach (var hostnameOrIp in localNode.Addresses)
+            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+
+            var requestedEndpoints = localIps.ToArray();
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
-
-
+            
             var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
             var activeTcpListeners = ipProperties.GetActiveTcpListeners();
 
@@ -824,10 +830,11 @@ namespace Raven.Server.Commercial
         public static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
             var localNode = setupInfo.NodeSetupInfos[LocalNodeTag];
+            var localIps = new List<IPEndPoint>();
 
-            var ips = localNode.ExternalIpAddress == null
-                ? localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray()
-                : new[] { new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.Port) };
+            foreach (var hostnameOrIp in localNode.Addresses)
+                foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
 
             var serverCert = setupInfo.GetX509Certificate();
 
@@ -838,19 +845,26 @@ namespace Raven.Server.Commercial
                 if (serverStore.Server.ListenEndpoints.Port == localNode.Port)
                 {
                     var currentIps = serverStore.Server.ListenEndpoints.Addresses;
-                    if (ips.Length == 0 && currentIps.Length == 1 &&
+                    if (localIps.Count == 0 && currentIps.Length == 1 &&
                         (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
                         return; // listen to any ip in this 
 
-                    if (ips.All(ip => currentIps.Contains(ip.Address)))
+                    if (localIps.All(ip => currentIps.Contains(ip.Address)))
                         return; // we already listen to all these IPs, no need to check
                 }
 
                 if (setupMode == SetupMode.LetsEncrypt)
-                    await AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
+                {
+                    // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
+                    var ips = localNode.ExternalIpAddress == null
+                        ? localIps.ToArray()
+                        : new[] { new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.Port) };
 
-                var localIps = localNode.Addresses.Select(ip => new IPEndPoint(IPAddress.Parse(ip), localNode.Port)).ToArray();
-                await SimulateRunningServer(serverCert, localServerUrl, localIps, setupInfo, serverStore.Configuration.ConfigPath, setupMode, token);
+                    await AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
+                }
+
+                // Here we send the actual ips we will bind to in the local machine.
+                await SimulateRunningServer(serverCert, localServerUrl, localIps.ToArray(), setupInfo, serverStore.Configuration.ConfigPath, setupMode, token);
             }
             catch (Exception e)
             {
@@ -1359,10 +1373,13 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
+                    var externalIpMsg = setupMode == SetupMode.LetsEncrypt
+                        ? "This can happen if the ip is external (behind a firewall). If this is the case, try going back to the previous screen and add the same ip as an external ip."
+                        : "";
+
                     throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'. The specified ip address might not be reachable due to network issues.{Environment.NewLine}" +
                                                         $"Settings file:{settingsPath}.{Environment.NewLine}" +
-                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" +
-                                                        "This can happen if the ip is external (behind a firewall). If this is the case, try going back to the previous screen and add the same ip as an external ip.", e);
+                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" + externalIpMsg, e);
                 }
 
                 using (var httpMessageHandler = new HttpClientHandler())
