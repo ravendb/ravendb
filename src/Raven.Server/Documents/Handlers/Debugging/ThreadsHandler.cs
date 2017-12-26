@@ -14,29 +14,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/remote-connections", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task ListRemoteConnections()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                context.Write(write,
-                    new DynamicJsonValue
-                    {
-                        ["Remote Connections"] = new DynamicJsonArray(RemoteConnection.RemoteConnectionsList.ToList()
-                            .Select(connection => new DynamicJsonValue
-                            {
-                                [nameof(RemoteConnection.RemoteConnectionInfo.Caller)] = connection.Caller,
-                                [nameof(RemoteConnection.RemoteConnectionInfo.Destination)] = connection.Destination,
-                                [nameof(RemoteConnection.RemoteConnectionInfo.StartAt)] = connection.StartAt,
-                                [nameof(RemoteConnection.RemoteConnectionInfo.Number)] = connection.Number,
-                            }))
-                    });
-                write.Flush();
-            }
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task RunawayThreads()
         {
@@ -59,6 +36,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName) ?
                                         (threadName ?? "Thread Pool Thread") : "Unmanaged Thread",
                                     [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
+                                    [nameof(ThreadInfo.Duration)] = thread.TotalProcessorTime.TotalMilliseconds,
                                     [nameof(ThreadInfo.State)] = thread.ThreadState,
                                     [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,
                                     [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
@@ -84,6 +62,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public int Id { get; set; }
             public string Name { get; set; }
             public DateTime StartingTime { get; set; }
+            public DateTime Duration { get; set; }
             public ThreadState State { get; set; }
             public ThreadWaitReason? WaitReason { get; set; }
             public TimeSpan TotalProcessorTime { get; set; }

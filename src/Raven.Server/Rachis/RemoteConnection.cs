@@ -30,16 +30,7 @@ namespace Raven.Server.Rachis
             _destTag = dest;
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
-            var number = Interlocked.Increment(ref _connectionNumber);
-
-            _info = new RemoteConnectionInfo
-            {
-                Caller = caller,
-                Destination = dest,
-                StartAt = DateTime.UtcNow,
-                Number = number
-            };
-            RemoteConnectionsList.Add(_info);
+            RegisterConnection(dest, caller);
         }
 
         public class RemoteConnectionInfo
@@ -50,7 +41,7 @@ namespace Raven.Server.Rachis
             public int Number;
         }
 
-        private readonly RemoteConnectionInfo _info;
+        private RemoteConnectionInfo _info;
         private static int _connectionNumber = 0; 
         public static ConcurrentSet<RemoteConnectionInfo> RemoteConnectionsList = new ConcurrentSet<RemoteConnectionInfo>();
 
@@ -61,16 +52,7 @@ namespace Raven.Server.Rachis
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
-
-            var number = Interlocked.Increment(ref _connectionNumber);
-            _info = new RemoteConnectionInfo
-            {
-                Caller = caller,
-                Destination = dest,
-                StartAt = DateTime.UtcNow,
-                Number = number
-            };
-            RemoteConnectionsList.Add(_info);
+            RegisterConnection(dest, caller);
         }
 
         public void Send(JsonOperationContext context, RachisHello helloMsg)
@@ -431,6 +413,19 @@ namespace Raven.Server.Rachis
             return $"Remote connection (cluster) : {_src} > {_destTag}";
         }
 
+        private void RegisterConnection(string dest, string caller)
+        {
+            var number = Interlocked.Increment(ref _connectionNumber);
+            _info = new RemoteConnectionInfo
+            {
+                Caller = caller,
+                Destination = dest,
+                StartAt = DateTime.UtcNow,
+                Number = number
+            };
+            RemoteConnectionsList.Add(_info);
+        }
+
         private static void ValidateMessage(string expectedType, BlittableJsonReaderObject json)
         {
             if (json.TryGet("Type", out string type) == false || type != expectedType)
@@ -448,7 +443,7 @@ namespace Raven.Server.Rachis
                 }
             }
             throw new InvalidDataException(
-                $"Expected to get type of \'{expectedType}\' message, but got unkonwn message: {json}");
+                $"Expected to get type of \'{expectedType}\' message, but got unknown message: {json}");
         }
     }
 }
