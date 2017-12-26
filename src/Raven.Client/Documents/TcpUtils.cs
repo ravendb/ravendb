@@ -99,15 +99,21 @@ namespace Raven.Client.Documents
             return tcpClient;
         }
 
-        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate)
+        internal static async Task<Stream> WrapStreamWithSslAsync(TcpClient tcpClient, TcpConnectionInfo info, X509Certificate2 storeCertificate, 
+            TimeSpan? timeout)
         {
-            Stream stream = tcpClient.GetStream();
+            var networkStream = tcpClient.GetStream();
+            if (timeout != null)
+            {
+                networkStream.ReadTimeout =  
+                    networkStream.WriteTimeout = (int)timeout.Value.TotalMilliseconds;
+            }
+            Stream stream = networkStream;
             if (info.Certificate == null)
                 return stream;
 
             var expectedCert = new X509Certificate2(Convert.FromBase64String(info.Certificate));
             var sslStream = new SslStream(stream, false, (sender, actualCert, chain, errors) => expectedCert.Equals(actualCert));
-
             await sslStream.AuthenticateAsClientAsync(new Uri(info.Url).Host, new X509CertificateCollection(new X509Certificate[]{storeCertificate}), SslProtocols.Tls12, false).ConfigureAwait(false);
             stream = sslStream;
             return stream;
