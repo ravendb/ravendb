@@ -258,7 +258,7 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<(TcpClient TcpClient, Stream Connection)> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout)
             {
                 var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, _log);
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.Server.Certificate.Certificate, timeout);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {

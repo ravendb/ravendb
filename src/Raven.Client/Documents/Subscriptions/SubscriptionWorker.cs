@@ -183,7 +183,7 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate, requestExecutor.DefaultTimeout).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
                 var serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
