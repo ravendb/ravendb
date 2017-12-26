@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
         private async Task<(TcpClient TcpClient, Stream Connection)> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TimeSpan timeout, Logger log)
         {
             var tcpClient = await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, timeout, log);
-            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.Certificate.Certificate);
+            var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.Certificate.Certificate, timeout);
             return (tcpClient, connection);
         }
 
