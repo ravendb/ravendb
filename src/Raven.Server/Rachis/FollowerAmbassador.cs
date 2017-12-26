@@ -131,7 +131,8 @@ namespace Raven.Server.Rachis
                                 {
                                     _connection?.Dispose();
                                     var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
-                                    _connection = new RemoteConnection(_tag, _engine.Tag, stream);
+                                    var con = new RemoteConnection(_tag, _engine.Tag, stream);
+                                    Interlocked.Exchange(ref _connection, con);
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
                                     {
@@ -176,10 +177,8 @@ namespace Raven.Server.Rachis
                         UpdateLastMatchFromFollower(matchIndex);
                         SendSnapshot(_connection.Stream);
                         var entries = new List<BlittableJsonReaderObject>();
-                        var disposeRequested = false;
-                        while (_leader.Running && disposeRequested == false)
+                        while (_leader.Running && _running)
                         {
-                            disposeRequested = _running == false; // we give last loop before closing
                             entries.Clear();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
@@ -249,7 +248,7 @@ namespace Raven.Server.Rachis
                                 UpdateLastMatchFromFollower(aer.LastLogIndex);
                             }
                             
-                            if(disposeRequested)
+                            if(_running == false)
                                 break;
                             
                             var task = _leader.WaitForNewEntries();
@@ -341,7 +340,7 @@ namespace Raven.Server.Rachis
         private void ThrowInvalidTermChanged(AppendEntriesResponse aer)
         {
             throw new ConcurrencyException("The current engine term has changed (" + aer.CurrentTerm + " -> " + _engine.CurrentTerm + "), this " +
-                                           "ambassor term is no longer valid");
+                                           "ambassador term is no longer valid");
         }
 
         private void SendSnapshot(Stream stream)
@@ -718,12 +717,18 @@ namespace Raven.Server.Rachis
             }
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
             {
-                if (_thread.Join(TimeSpan.FromSeconds(60)) == false)
+                Volatile.Read(ref _connection)?.Dispose();
+
+                while (_thread.Join(TimeSpan.FromSeconds(1)) == false)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Waited 60 seconds for disposing node {_tag}, continue the thread anyway.");
+                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to close, disposing connection and trying");
                     }
+                    // the thread may have create a new connection, so need
+                    // to dispose that as well
+
+                    Volatile.Read(ref _connection)?.Dispose();
                 }
             }
         }

@@ -35,14 +35,14 @@ namespace Raven.Server.Rachis
             _url = url;
             _certificate = certificate;
             Status = AmbassadorStatus.Started;
-            StatusMessage = $"Started Candidate Ambasaddor for {_engine.Tag} > {_tag}";
+            StatusMessage = $"Started Candidate Ambassador for {_engine.Tag} > {_tag}";
         }
 
         public void Start()
         {
             _thread = new Thread(Run)
             {
-                Name = $"Candidate Ambasaddor for {_engine.Tag} > {_tag}",
+                Name = $"Candidate Ambassador for {_engine.Tag} > {_tag}",
                 IsBackground = true
             };
             _thread.Start();
@@ -57,10 +57,14 @@ namespace Raven.Server.Rachis
 
                 if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 {
-                    while (_thread.Join(16) == false)
+                    while (_thread.Join(TimeSpan.FromSeconds(1)) == false)
                     {
                         // the thread may have create a new connection, so need
                         // to dispose that as well
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to close, disposing connection and trying");
+                        }
                         Volatile.Read(ref Connection)?.Dispose();
                     }
                 }
