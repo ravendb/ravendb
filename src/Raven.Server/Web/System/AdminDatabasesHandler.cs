@@ -138,7 +138,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Can't add node {node} to database {name} topology because database {name} is encrypted but node {node} doesn't have an SSL certificate.");
 
                     databaseRecord.Topology.Promotables.Add(node);
-                    databaseRecord.Topology.DemotionReasons[node] = "Joined the Db-Group as a new promotable node";
+                    databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
                     databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
 
@@ -162,7 +162,7 @@ namespace Raven.Server.Web.System
                     node = allNodes[rand % allNodes.Count];
 
                     databaseRecord.Topology.Promotables.Add(node);
-                    databaseRecord.Topology.DemotionReasons[node] = "Joined the Db-Group as a new promotable node";
+                    databaseRecord.Topology.DemotionReasons[node] = "Joined the DB-Group as a new promotable node";
                     databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
 
