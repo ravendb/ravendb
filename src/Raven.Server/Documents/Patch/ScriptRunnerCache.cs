@@ -110,12 +110,14 @@ namespace Raven.Server.Documents.Patch
 
         private int CleanTheCache()
         {
-            foreach (var pair in _cache.OrderBy(x => x.Value.Value.Runs)
+            // it's expensive, but OrderBy is not thread safe..
+            var cacheClone = _cache.ToList();
+            foreach (var pair in cacheClone.OrderBy(x => x.Value.Value.Runs)
                 .Take(_configuration.Patching.MaxNumberOfCachedScripts / 4)
             )
             {
                 _cache.TryRemove(pair.Key, out _);
-            }
+            }            
             int count = 0;
             foreach (var pair in _cache)
             {
