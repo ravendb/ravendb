@@ -572,8 +572,8 @@ namespace Raven.Server.ServerWide.Maintenance
             if (lastSentEtag < mentorsEtag)
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
-                          $"Last sent Etag: {lastSentEtag}" + Environment.NewLine +
-                          $"Mentor's Etag: {mentorsEtag}";
+                          $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
+                          $"Mentor's Etag: {mentorsEtag:#,#;;0}";
                 if (_logger.IsInfoEnabled)
                 {
                     _logger.Info(msg);
