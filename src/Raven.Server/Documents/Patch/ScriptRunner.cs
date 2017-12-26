@@ -273,6 +273,8 @@ namespace Raven.Server.Documents.Patch
                     _refResolver.ExplodeArgsOn(args[0], boi);
                     return self;
                 }
+                if (args[1].IsNull() || args[1].IsUndefined())
+                    return self;// noop
                 throw new InvalidOperationException("Raven_ExplodeArgs(this, args) second argument must be BlittableObjectInstance");
             }
 
