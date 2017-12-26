@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     var changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext);
 
-                    var lastEtagFromSrc = Database.DocumentsStorage.GetLastReplicateEtagFrom(
+                    var lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
                         documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
                     if (_log.IsInfoEnabled)
                         _log.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
