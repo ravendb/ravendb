@@ -763,7 +763,7 @@ namespace Raven.Server.ServerWide
                 fixed (byte* pKey = key)
                 fixed (byte* pExistingKey = existingKey)
                 {
-                    bool areEqual = Sparrow.Memory.Compare(pKey, pExistingKey, key.Length) == 0;
+                    bool areEqual = Sodium.sodium_memcmp(pKey, pExistingKey, (UIntPtr)key.Length) == 0;
                     Sodium.ZeroMemory(pExistingKey, key.Length);
                     if (areEqual)
                     {
