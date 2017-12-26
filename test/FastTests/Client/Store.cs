@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Session;
+﻿using System;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -52,7 +53,8 @@ namespace FastTests.Client
                     outerSession.Store(user, "users/1");
                     outerSession.SaveChanges();
 
-                    var changeVector1 = outerSession.Advanced.GetChangeVectorFor(user);
+                    var changeVector = outerSession.Advanced.GetChangeVectorFor(user);
+                    var lastModified = outerSession.Advanced.GetLastModifiedFor(user);
 
                     using (var innerSession = store.OpenSession())
                     {
@@ -66,8 +68,11 @@ namespace FastTests.Client
                     outerSession.Advanced.Refresh(user);
                     
                     Assert.NotNull(docInfo.ChangeVector);
-                    Assert.NotEqual(docInfo.ChangeVector, changeVector1);
-                    Assert.NotEqual(outerSession.Advanced.GetChangeVectorFor(user), changeVector1);
+                    Assert.NotEqual(docInfo.GetLastModified(), DateTime.MinValue);
+                    Assert.NotEqual(docInfo.ChangeVector, changeVector);
+                    Assert.NotEqual(docInfo.GetLastModified(), lastModified);
+                    Assert.NotEqual(outerSession.Advanced.GetChangeVectorFor(user), changeVector);
+                    Assert.NotEqual(outerSession.Advanced.GetLastModifiedFor(user), lastModified);
                 }
             }
         }

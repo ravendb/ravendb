@@ -234,17 +234,29 @@ namespace Raven.Client.Documents.Session
             return null;
         }
 
+        public DateTime? GetLastModifiedFor<T>(T instance)
+        {
+            if (instance == null)
+                throw new ArgumentNullException(nameof(instance));
+
+            var documentInfo = GetDocumentInfo(instance);
+            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.LastModified, out DateTime lastModified))
+                return lastModified;
+
+            return null;
+        }
+
         private DocumentInfo GetDocumentInfo<T>(T instance)
         {
             if (DocumentsByEntity.TryGetValue(instance, out DocumentInfo documentInfo))
                 return documentInfo;
 
             if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out string id) == false && (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
-                throw new InvalidOperationException("Could not find the document id for " + instance);
+                throw new InvalidOperationException($"Could not find the document id for {instance}");
 
             AssertNoNonUniqueInstance(instance, id);
 
-            throw new ArgumentException("Document " + id + " doesn't exist in the session");
+            throw new ArgumentException($"Document {id} doesn\'t exist in the session");
         }
 
         /// <summary>
@@ -1369,6 +1381,14 @@ more responsive application.
 
         public string Collection { get; set; }
 
+        public DateTime GetLastModified()
+        {
+            if (Metadata.TryGet(Constants.Documents.Metadata.LastModified, out DateTime lastModified) == false)
+                throw new InvalidOperationException($"Document {Id} must have a last modified field");
+
+            return lastModified;
+        }
+
         public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)
         {
             if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
@@ -1376,7 +1396,7 @@ more responsive application.
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
                 throw new InvalidOperationException("Document must have an id");
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
-                throw new InvalidOperationException("Document " + id + " must have an Change Vector");
+                throw new InvalidOperationException($"Document {id} must have a Change Vector");
 
             var newDocumentInfo = new DocumentInfo
             {

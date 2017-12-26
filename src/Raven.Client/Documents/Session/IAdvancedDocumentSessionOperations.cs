@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -121,6 +120,14 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="instance">The instance.</param>
         string GetChangeVectorFor<T>(T instance);
+
+        /// <summary>
+        ///     Gets last modified date for the specified entity.
+        ///     If the entity is transient, it will load the metadata from the store
+        ///     and associate the current state of the entity with the metadata from the server.
+        /// </summary>
+        /// <param name="instance">The instance.</param>
+        DateTime? GetLastModifiedFor<T>(T instance);
 
         /// <summary>
         ///     Determines whether the specified entity has changed.
