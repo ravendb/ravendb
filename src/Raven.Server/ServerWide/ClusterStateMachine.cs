@@ -1328,8 +1328,6 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
-                serverStore.LicenseManager.ReloadLicense();
-
                 // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                 var onDatabaseChanged = DatabaseChanged;
                 if (onDatabaseChanged != null)
@@ -1344,6 +1342,9 @@ namespace Raven.Server.ServerWide
 
                 context.Transaction.Commit();
             }
+
+            // reload license can send a notification which will open a write tx
+            serverStore.LicenseManager.ReloadLicense();
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
