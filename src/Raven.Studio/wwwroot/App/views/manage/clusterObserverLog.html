@@ -11,7 +11,7 @@
                             <span>Refresh</span>
                         </button>
                     </div>
-                    <div>Term: <span data-bind="text: topology().currentTerm"></span></div>
+                    <div>Term: <span data-bind="text: topology().currentTerm().toLocaleString()"></span></div>
                     <div class="flex-separator"></div>
                     <div>
                         <button class="btn btn-default" title="Cluster observer won't be making any decisions"
