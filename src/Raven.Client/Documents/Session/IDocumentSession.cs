@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Session
         void SaveChanges();
 
         /// <summary>
-        ///     Stores entity in session with given id and forces concurrency check with given Etag.
+        ///     Stores entity in session with given id and forces concurrency check with given change-vector.
         /// </summary>
         void Store(object entity, string changeVector, string id);
 
