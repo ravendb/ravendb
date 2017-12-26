@@ -204,7 +204,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
-                            var msg = $"{OutgoingReplicationThreadName} got an unexpected exception during initial handshake error: {e.Message}";
+                            var msg = $"{OutgoingReplicationThreadName} got an unexpected exception during initial handshake";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
