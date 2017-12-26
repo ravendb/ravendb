@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Util
 {
@@ -140,7 +141,6 @@ namespace Raven.Client.Util
                             {
                                 context.Visitor.Visit(methodCallExpression.Arguments[0]);
                                 writer.Write(".reduce(function(_obj, _cur) {");
-
                                 writer.Write("_obj[");
                                 context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 writer.Write("(_cur)] = ");
@@ -439,6 +439,21 @@ namespace Raven.Client.Util
 
                 return typeof(Dictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition()) ||
                        typeof(IDictionary<,>).IsAssignableFrom(type.GetGenericTypeDefinition());
+            }
+        }
+        
+        public class NullableSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is MemberExpression memberExpression &&
+                    memberExpression.Member.Name == "Value" &&
+                    memberExpression.Expression.Type.IsNullableType())
+                {
+                    context.PreventDefault();
+                    context.Visitor.Visit(memberExpression.Expression);
+                }
+
             }
         }
 
@@ -1215,7 +1230,7 @@ namespace Raven.Client.Util
             public Dictionary<string, string> AliasesToIdProperty { get; set; }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
+            {                
                 if (!(context.Node is MemberExpression member))
                     return;
 
