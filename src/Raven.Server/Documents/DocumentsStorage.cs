@@ -1506,16 +1506,17 @@ namespace Raven.Server.Documents
             }
         }
 
-        public long GetLastReplicateEtagFrom(DocumentsOperationContext context, string dbId)
+        public static long GetLastReplicatedEtagFrom(DocumentsOperationContext context, string dbId)
         {
             var readTree = context.Transaction.InnerTransaction.ReadTree(LastReplicatedEtagsSlice);
             var readResult = readTree.Read(dbId);
             if (readResult == null)
                 return 0;
+
             return readResult.Reader.ReadLittleEndianInt64();
         }
 
-        public void SetLastReplicateEtagFrom(DocumentsOperationContext context, string dbId, long etag)
+        public static void SetLastReplicatedEtagFrom(DocumentsOperationContext context, string dbId, long etag)
         {
             var etagsTree = context.Transaction.InnerTransaction.CreateTree(LastReplicatedEtagsSlice);
             using (Slice.From(context.Allocator, dbId, out Slice dbIdSlice))

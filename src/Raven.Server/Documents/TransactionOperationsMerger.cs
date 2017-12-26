@@ -291,7 +291,7 @@ namespace Raven.Server.Documents
             {
                 foreach (var repEtag in context.LastReplicationEtagFrom)
                 {
-                    context.DocumentDatabase.DocumentsStorage.SetLastReplicateEtagFrom(context, repEtag.Key, repEtag.Value);
+                    DocumentsStorage.SetLastReplicatedEtagFrom(context, repEtag.Key, repEtag.Value);
                 }
             }
         }
@@ -483,7 +483,6 @@ namespace Raven.Server.Documents
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
                 meter.IncreamentCommands(op.Execute(context));
-
 
                 if (previousOperation != null && previousOperation.IsCompleted)
                 {

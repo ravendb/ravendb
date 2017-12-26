@@ -276,7 +276,8 @@ namespace Raven.Server.Documents.Replication
                         AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
-                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _replicationFromAnotherSource);
+                            // saving the change vector and the last received document etag
+                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
                             if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                             {
                                 if (_log.IsInfoEnabled)
@@ -841,35 +842,49 @@ namespace Raven.Server.Documents.Replication
         private class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _changeVector;
+            private readonly long _lastDocumentEtag;
+            private readonly string _sourceDatabaseId;
             private readonly AsyncManualResetEvent _trigger;
 
-            public MergedUpdateDatabaseChangeVectorCommand(string chageVector, AsyncManualResetEvent trigger)
+            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
             {
-                _changeVector = chageVector;
+                _changeVector = changeVector;
+                _lastDocumentEtag = lastDocumentEtag;
+                _sourceDatabaseId = sourceDatabaseId;
                 _trigger = trigger;
             }
+
             public override int Execute(DocumentsOperationContext context)
             {
+                var operationsCount = 0;
+                var lastReplicatedEtag = DocumentsStorage.GetLastReplicatedEtagFrom(context, _sourceDatabaseId);
+                if (_lastDocumentEtag > lastReplicatedEtag)
+                {
+                    DocumentsStorage.SetLastReplicatedEtagFrom(context, _sourceDatabaseId, _lastDocumentEtag);
+                    operationsCount++;
+                }
+
                 var current = DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
-                if (conflictStatus == ConflictStatus.Update)
+                if (conflictStatus != ConflictStatus.Update)
+                    return operationsCount;
+
+                operationsCount++;
+                var merged = ChangeVectorUtils.MergeVectors(current, _changeVector);
+                DocumentsStorage.SetDatabaseChangeVector(context, merged);
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
-                    var merged = ChangeVectorUtils.MergeVectors(current, _changeVector);
-                    DocumentsStorage.SetDatabaseChangeVector(context, merged);
-                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                    try
                     {
-                        try
-                        {
-                            _trigger.Set();
-                        }
-                        catch
-                        {
-                            //
-                        }
-                    };
-                    return 1;
-                }
-                return 0;
+                        _trigger.Set();
+                    }
+                    catch
+                    {
+                        //
+                    }
+                };
+
+                return operationsCount;
             }
         }
 
@@ -1071,7 +1086,7 @@ namespace Raven.Server.Documents.Replication
                     // instead of : SetDatabaseChangeVector -> maxReceivedChangeVectorByDatabase , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     context.LastDatabaseChangeVector = maxReceivedChangeVectorByDatabase;
 
-                    // instead of : SetLastReplicateEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
+                    // instead of : SetLastReplicatedEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     if (context.LastReplicationEtagFrom == null)
                         context.LastReplicationEtagFrom = new Dictionary<string, long>();
                     context.LastReplicationEtagFrom[_incoming.ConnectionInfo.SourceDatabaseId] = _lastEtag;
