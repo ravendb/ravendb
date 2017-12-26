@@ -23,8 +23,8 @@ fi
 
 eval 
 
-if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.0\.[3-9]$ ]] ; then
-    echo ".NETcore 2.0.3 (or newer) not found. Installing.."
+if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.0\.[4-9]$ ]] ; then
+    echo ".NETcore 2.0.4 (or newer) not found. Installing.."
     
     if [ -z "$CURL_CMD" ]; then
         sudo apt-get install -y curl 
@@ -39,7 +39,7 @@ if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.0\.[3-9]$ ]] ; then
     fi
     
     sudo apt-get update
-    sudo apt-get install -y dotnet-sdk-2.0.3
+    sudo apt-get install -y dotnet-sdk-2.1.3
     
     mkdir ./dotnet_tmp
     cd ./dotnet_tmp
@@ -48,7 +48,7 @@ if [[ ! "$DOTNET_VERSION_CMD" =~ ^2\.0\.[3-9]$ ]] ; then
     cd ..
     sudo rm -rf ./dotnet_tmp
 else
-    echo ".NETcore 2.0.3 (or newer) is installed."
+    echo ".NETcore 2.0.4 (or newer) is installed."
 fi
 
 if [ -z "$POWERSHELL_CMD" ] ; then
