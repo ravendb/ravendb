@@ -29,6 +29,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\nuget.ps1'
 . '.\scripts\target.ps1'
 . '.\scripts\help.ps1'
+. '.\scripts\sign.ps1'
 
 if ($Help) {
     Help
@@ -102,6 +103,7 @@ $versionObj = SetVersionInfo
 $version = $versionObj.Version
 $versionSuffix = $versionObj.VersionSuffix
 $buildNumber = $versionObj.BuildNumber
+$buildType = $versionObj.BuildType.ToLower()
 Write-Host -ForegroundColor Green "Building $version"
 
 ValidateClientDependencies $CLIENT_SRC_DIR $SPARROW_SRC_DIR
@@ -153,12 +155,22 @@ Foreach ($spec in $targets) {
     $buildOptions = @{
         "DontBuildStudio" = !!$DontBuildStudio;
     }
+    
+    if ($buildNumber -ne $DEV_BUILD_NUMBER -or $buildType -eq 'nightly') {
+        if ($spec.IsUnix -eq $False) {
+            $serverPath = [io.path]::combine($specOutDirs.Server, "Raven.Server.exe");
+            $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
+            
+            SignFile $PROJECT_DIR $serverPath
+            SignFile $PROJECT_DIR $rvnPath
+        }
+    }
 
     CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version $buildOptions
 }
 
 write-host "Done creating packages."
 
-if ($versionObj.BuildType.ToLower() -eq 'stable') {
+if ($buildType -eq 'stable') {
     BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
 }
