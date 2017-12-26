@@ -55,7 +55,10 @@ namespace Raven.Client.Http
             public bool AddRef()
             {
                 // May return false if the memory has been already released.
-                return Interlocked.Increment(ref _usages) > 1;
+                var result = Interlocked.Increment(ref _usages) > 1;
+                if (result == false)
+                    ReleaseRef();
+                return result;
             }
 
             public void ReleaseRef()
@@ -130,11 +133,14 @@ namespace Raven.Client.Http
                 Generation = Generation
             };
 
+            HttpCacheItem old=null;
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
-                oldItem.ReleaseRef();
+                old = oldItem;
                 return httpCacheItem;
             });
+
+            old?.ReleaseRef();
         }
 
         public void SetNotFound(string url)
@@ -164,8 +170,7 @@ namespace Raven.Client.Http
 
             try
             {
-                Debug.Assert(_isFreeSpaceRunning);
-
+                Debug.Assert(_isFreeSpaceRunning);                
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
 
@@ -197,14 +202,13 @@ namespace Raven.Client.Http
                     if (_items.TryRemove(item.Key, out var value) == false)
                         continue;
 
+                    // We explicitly ignore the case of a cached value
+                    // that was changed while we are clearing free space
+                    // the result of such a scenario is early eviction of
+                    // a value from the cache. Not enough for us to worry
+                    // about.
+
                     value.ReleaseRef();
-
-                    if (item.Value != value)
-                    {
-                        item.Value.ReleaseRef();
-                        sizeCleared += item.Value.Size;
-                    }
-
                     sizeCleared += value.Size;
                 }
             }
