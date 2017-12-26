@@ -27,7 +27,6 @@ using Raven.Server.Config;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Rachis
 {
@@ -591,7 +590,7 @@ namespace Raven.Server.Rachis
         public async Task<(long Index, object Result)> PutAsync(CommandBase cmd)
         {
             var leader = _currentLeader;
-            if (leader == null || CurrentState != RachisState.Leader)
+            if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
             var putTask = leader.PutAsync(cmd);
