@@ -167,10 +167,10 @@ namespace Raven.Server.ServerWide
 
             if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
             {
-                var tempKey = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+                var tempKey = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];
                 fixed (byte* pTempKey = tempKey)
                 {
-                    Sodium.randombytes_buf(pTempKey, (UIntPtr)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
+                    Sodium.randombytes_buf(pTempKey, (UIntPtr)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
                     var encryptProtectedData = EncryptProtectedData(secret, entropy, tempKey);
                     

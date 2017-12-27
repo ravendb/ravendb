@@ -386,9 +386,9 @@ namespace Sparrow
 
         public static readonly byte[] Context = Encoding.UTF8.GetBytes("Raven DB");
         
-        public static byte[] GenerateRandomBuffer(int numberOfBits)
+        public static byte[] GenerateRandomBuffer(int numberOfBytes)
         {
-            var buffer = new byte[numberOfBits / 8];
+            var buffer = new byte[numberOfBytes];
             fixed (byte* p = buffer)
             {
                 randombytes_buf(p, (UIntPtr)buffer.Length);
