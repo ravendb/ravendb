@@ -274,11 +274,12 @@ namespace Voron.Impl.Journal
 
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
 
+            bool hashIsValid;
             if (options.EncryptionEnabled)
             {
                 // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
                 var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;
-                var size = (4*Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
+                var size = (4 * Constants.Size.Kilobyte) * GetNumberOf4KbFor(sizeof(TransactionHeader) + pagesSize);
 
                 var ptr = NativeMemory.Allocate4KbAlignedMemory(size, out var thread);
                 var buffer = new EncryptionBuffer
@@ -295,6 +296,7 @@ namespace Voron.Impl.Journal
                 try
                 {
                     DecryptTransaction((byte*)current, options);
+                    hashIsValid = true;
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -303,7 +305,10 @@ namespace Voron.Impl.Journal
                     return false;
                 }
             }
-            bool hashIsValid = ValidatePagesHash(options, current);
+            else
+            {
+                hashIsValid = ValidatePagesHash(options, current);
+            }
 
             if (LastTransactionHeader == null)
                 return hashIsValid;

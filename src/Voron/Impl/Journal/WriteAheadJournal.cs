@@ -1448,11 +1448,20 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = reportedCompressionLength;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
-            if (performCompression)
-                txHeader->Hash = Hashing.XXHash64.Calculate(txHeaderPtr + sizeof(TransactionHeader), (ulong)compressedLen, (ulong)txHeader->TransactionId);
+            if (_env.Options.EncryptionEnabled == false)
+            {
+                if (performCompression)
+                    txHeader->Hash = Hashing.XXHash64.Calculate(txHeaderPtr + sizeof(TransactionHeader), (ulong)compressedLen, (ulong)txHeader->TransactionId);
+                else
+                    txHeader->Hash = Hashing.XXHash64.Calculate(txPageInfoPtr, (ulong)totalSizeWritten, (ulong)txHeader->TransactionId);
+            }
             else
-                txHeader->Hash = Hashing.XXHash64.Calculate(txPageInfoPtr, (ulong)totalSizeWritten, (ulong)txHeader->TransactionId);
-
+            {
+                // if encryption is enabled, we are already validating the tx using
+                // the AEAD method, so no need to do it twice
+                txHeader->Hash = 0;
+            }
+            
             var prepreToWriteToJournal = new CompressedPagesResult
             {
                 Base = txHeaderPtr,
