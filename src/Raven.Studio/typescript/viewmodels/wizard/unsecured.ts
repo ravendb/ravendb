@@ -1,6 +1,7 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import popoverUtils = require("common/popoverUtils");
+import ipEntry = require("models/wizard/ipEntry");
 
 class unsecured extends setupStep {
 
@@ -13,6 +14,16 @@ class unsecured extends setupStep {
 
         return $.when({ redirect: "#welcome" });
     }
+
+    attached() {
+        super.attached();
+
+        if (this.model.unsecureSetup().ips().length === 0) {
+            const initialIp = ipEntry.runningOnDocker ? "" : "127.0.0.1";
+            
+            this.model.unsecureSetup().ips.push(ipEntry.forIp(initialIp));                       
+        }
+    }    
     
     compositionComplete() {
         super.compositionComplete();

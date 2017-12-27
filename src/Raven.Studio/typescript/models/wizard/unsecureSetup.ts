@@ -5,7 +5,7 @@ class unsecureSetup {
     static readonly localNetworks = [ "127.0.0.1", "localhost", "::1" ];
     
     port = ko.observable<string>();
-    ips = ko.observableArray<ipEntry>([ipEntry.forIp("127.0.0.1")]);
+    ips = ko.observableArray<ipEntry>([]);
     unsafeNetworkConfirm = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
