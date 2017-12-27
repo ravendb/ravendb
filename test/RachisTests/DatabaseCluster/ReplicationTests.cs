@@ -715,25 +715,18 @@ namespace RachisTests.DatabaseCluster
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
             var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
-            {
-                [dbName] = DatabaseAccess.Admin
-            });
-            var userCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
-            {
-                [dbName] = DatabaseAccess.Admin
-            });
+            var opCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
 
             using (var store1 = GetDocumentStore(new Options
             {
                 AdminCertificate = adminCert,
-                ClientCertificate = userCert1,
+                ClientCertificate = opCert,
                 ModifyDatabaseName = s => dbName
             }))
             using (var store2 = GetDocumentStore(new Options
             {
                 AdminCertificate = adminCert,
-                ClientCertificate = userCert2,
+                ClientCertificate = opCert,
                 ModifyDatabaseName = s => dbName,
                 CreateDatabase = false
             }))
