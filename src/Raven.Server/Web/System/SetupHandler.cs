@@ -246,7 +246,16 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new BadRequestException($"Failed to extract CN and SAN from certificate {certificate?.FriendlyName}. Maybe password is wrong?", e);
+                    throw new BadRequestException($"Failed to extract the CN property from the certificate {certificate?.FriendlyName}. Maybe the password is wrong?", e);
+                }
+
+                try
+                {
+                    SecretProtection.ValidateKeyUsages("Setup Wizard", certificate);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to load the uploaded certificate. Did you accidently upload a client certificate?", e);
                 }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

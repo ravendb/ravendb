@@ -554,7 +554,7 @@ namespace Raven.Server.ServerWide
                 throw new EncryptionException("Unable to find the private key in the provided certificate from " + source);
         }
 
-        private static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
+        public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
         {
             var supported = false;
             foreach (var extension in loadedCertificate.Extensions)
