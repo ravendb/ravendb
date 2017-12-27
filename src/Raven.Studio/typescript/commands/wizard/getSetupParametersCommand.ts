@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class getSetupParameters extends commandBase {
+class getSetupParametersCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Commercial.SetupParameters> {      
         const url = endpoints.global.setup.setupParameters;
@@ -11,4 +11,4 @@ class getSetupParameters extends commandBase {
     }
 }
 
-export = getSetupParameters;
+export = getSetupParametersCommand;

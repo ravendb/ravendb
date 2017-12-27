@@ -51,7 +51,7 @@
                         </h3>
                     </div>
                     <div class="form-group" data-bind="validationElement: hostname, visible: $root.defineServerUrl">
-                        <label class="control-label">Host name<i class="required"></i></label>
+                        <label class="control-label">Hostname<i class="required"></i></label>
                         <div class="flex-grow">
                             <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
                                 <span data-bind="text: hostname() || 'Select hostname'"></span>
@@ -74,17 +74,16 @@
                     <div data-bind="foreach: ips">
                         <div class="form-group" data-bind="validationElement: ip">
                             <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
-                                <span data-bind="visible: $index() === 0">IP address<i class="required"></i></span>
-                            </label>
-                            
+                                <span data-bind="visible: $index() === 0">IP Address<i class="required"></i></span>
+                            </label>                            
                             <div class="flex-grow input-group" data-bind="validationOptions: { insertMessages: false }, visible: !$parent.isLocal()">
-                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter server IP address" data-bind="textInput: ip ">                               
+                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address" data-bind="textInput: ip ">                               
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
                                     <div class="help-block" data-bind="validationMessage: ip"></div>
                                 </div>
                             </div>
                             <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }, visible: $parent.isLocal()">
-                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter server IP address"
+                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address"
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
@@ -107,7 +106,7 @@
                         <div class="flex-grow">
                             <button class="btn btn-default" data-bind="click: addIpAddress">
                                 <i class="icon-plus"></i>
-                                <span>Add another IP address</span>
+                                <span>Add another IP Address</span>
                             </button>
                         </div>
                     </div>
