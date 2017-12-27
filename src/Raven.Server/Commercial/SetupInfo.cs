@@ -209,17 +209,31 @@ namespace Raven.Server.Commercial
                 [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
             };
         }
+
     }
 
-    public class RegistrationResult
+    public class RegistrationStatus
     {
-        public string Status { get; set; }
+        public string Value { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Status)] = Status
+                [nameof(Value)] = Value
+            };
+        }
+    }
+
+    public class RegistrationResult
+    {
+        public RegistrationStatus Status { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Status)] = Status.ToJson()
             };
         }
     }

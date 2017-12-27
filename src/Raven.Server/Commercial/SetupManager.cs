@@ -608,7 +608,7 @@ namespace Raven.Server.Commercial
 
                         registrationResult = JsonConvert.DeserializeObject<RegistrationResult>(responseString);
 
-                    } while (registrationResult.Status == "PENDING");
+                    } while (registrationResult.Status.Value == "PENDING");
                 }
                 catch (Exception e)
                 {
@@ -760,7 +760,7 @@ namespace Raven.Server.Commercial
                         onProgress(progress);
 
                         i++;
-                    } while (registrationResult.Status == "PENDING");
+                    } while (registrationResult.Status.Value == "PENDING");
                     progress.AddInfo("Got successful response from api.ravendb.net.");
                     onProgress(progress);
                 }
