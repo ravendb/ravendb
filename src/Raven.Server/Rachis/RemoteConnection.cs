@@ -24,13 +24,12 @@ namespace Raven.Server.Rachis
         public string Source => _src;
         public Stream Stream => _stream;
 
-        public RemoteConnection(string dest, Stream stream, [CallerMemberName] string caller = null)
+        public RemoteConnection(string src, Stream stream, long term, [CallerMemberName] string caller = null)
         {
-            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"[? discovering... ? ] > {dest}");
-            _destTag = dest;
+            _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > [? discovering... ? ]");
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
-            RegisterConnection(dest, caller);
+            RegisterConnection("?", term, caller);
         }
 
         public class RemoteConnectionInfo
@@ -39,20 +38,21 @@ namespace Raven.Server.Rachis
             public DateTime StartAt;
             public string Destination;
             public int Number;
+            public long Term;
         }
 
         private RemoteConnectionInfo _info;
         private static int _connectionNumber = 0; 
         public static ConcurrentSet<RemoteConnectionInfo> RemoteConnectionsList = new ConcurrentSet<RemoteConnectionInfo>();
 
-        public RemoteConnection(string dest, string src, Stream stream, [CallerMemberName] string caller = null)
+        public RemoteConnection(string dest, string src, long term, Stream stream, [CallerMemberName] string caller = null)
         {
             _destTag = dest;
             _src = src;
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
-            RegisterConnection(dest, caller);
+            RegisterConnection(dest, term, caller);
         }
 
         public void Send(JsonOperationContext context, RachisHello helloMsg)
@@ -66,7 +66,8 @@ namespace Raven.Server.Rachis
                 [nameof(RachisHello.DebugSourceIdentifier)] = helloMsg.DebugSourceIdentifier,
                 [nameof(RachisHello.DebugDestinationIdentifier)] = helloMsg.DebugDestinationIdentifier,
                 [nameof(RachisHello.InitialMessageType)] = helloMsg.InitialMessageType,
-                [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId
+                [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId,
+                [nameof(RachisHello.SendingThread)] = Thread.CurrentThread.ManagedThreadId
             });
         }
 
@@ -126,7 +127,8 @@ namespace Raven.Server.Rachis
                 [nameof(LogLengthNegotiation.Term)] = lln.Term,
                 [nameof(LogLengthNegotiation.PrevLogIndex)] = lln.PrevLogIndex,
                 [nameof(LogLengthNegotiation.PrevLogTerm)] = lln.PrevLogTerm,
-                [nameof(LogLengthNegotiation.Truncated)] = lln.Truncated
+                [nameof(LogLengthNegotiation.Truncated)] = lln.Truncated,
+                [nameof(LogLengthNegotiation.SendingThread)] = Thread.CurrentThread.ManagedThreadId
             });
         }
 
@@ -139,11 +141,9 @@ namespace Raven.Server.Rachis
             {
                 ["Type"] = nameof(LogLengthNegotiationResponse),
                 [nameof(LogLengthNegotiationResponse.Status)] = lln.Status,
-
                 [nameof(LogLengthNegotiationResponse.Message)] = lln.Message,
                 [nameof(LogLengthNegotiationResponse.CurrentTerm)] = lln.CurrentTerm,
                 [nameof(LogLengthNegotiationResponse.LastLogIndex)] = lln.LastLogIndex,
-
                 [nameof(LogLengthNegotiationResponse.MaxIndex)] = lln.MaxIndex,
                 [nameof(LogLengthNegotiationResponse.MinIndex)] = lln.MinIndex,
                 [nameof(LogLengthNegotiationResponse.MidpointIndex)] = lln.MidpointIndex,
@@ -155,7 +155,10 @@ namespace Raven.Server.Rachis
         public void Send(JsonOperationContext context, RequestVote rv)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"{rv.Source} requests vote in {rv.Term}, trial: {rv.IsTrialElection}, forced: {rv.IsForcedElection}, result: {rv.ElectionResult} with: ({rv.LastLogIndex} / {rv.LastLogTerm})");
+            {
+                _log.Info(
+                    $"{rv.Source} requests vote in {rv.Term}, trial: {rv.IsTrialElection}, forced: {rv.IsForcedElection}, result: {rv.ElectionResult} with: ({rv.LastLogIndex} / {rv.LastLogTerm}).");
+            }
             Send(context, new DynamicJsonValue
             {
                 ["Type"] = nameof(RequestVote),
@@ -165,14 +168,18 @@ namespace Raven.Server.Rachis
                 [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
                 [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
                 [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection,
-                [nameof(RequestVote.ElectionResult)] = rv.ElectionResult
+                [nameof(RequestVote.ElectionResult)] = rv.ElectionResult,
+                [nameof(RequestVote.SendingThread)] = Thread.CurrentThread.ManagedThreadId
             });
         }
 
         public void Send(JsonOperationContext context, AppendEntries ae, List<BlittableJsonReaderObject> items = null)
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"AppendEntries ({ae.EntriesCount}) in {ae.Term}, commit: {ae.LeaderCommit}, leader for: {ae.TimeAsLeader}, ({ae.PrevLogIndex} / {ae.PrevLogTerm}), truncate: {ae.TruncateLogBefore}, force elections: {ae.ForceElections}");
+            {
+                _log.Info(
+                    $"AppendEntries ({ae.EntriesCount}) in {ae.Term}, commit: {ae.LeaderCommit}, leader for: {ae.TimeAsLeader}, ({ae.PrevLogIndex} / {ae.PrevLogTerm}), truncate: {ae.TruncateLogBefore}, force elections: {ae.ForceElections}.");
+            }
 
             var msg = new DynamicJsonValue
             {
@@ -183,8 +190,8 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
                 [nameof(AppendEntries.Term)] = ae.Term,
                 [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
-                [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader
-
+                [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader,
+                [nameof(AppendEntries.SendingThread)] = Thread.CurrentThread.ManagedThreadId
             };
 
             if (ae.ForceElections)
@@ -231,7 +238,7 @@ namespace Raven.Server.Rachis
 
         public void Send(JsonOperationContext context, Exception e)
         {
-            if (_log.IsInfoEnabled == true)
+            if (_log.IsInfoEnabled)
             {
                 _log.Info("Sending an error (and aborting connection)", e);
             }
@@ -366,12 +373,9 @@ namespace Raven.Server.Rachis
 
         public void Send(JsonOperationContext context, AppendEntriesResponse aer)
         {
-            if (_log?.IsInfoEnabled == true)
+            if (_log.IsInfoEnabled)
             {
-                if (aer.Message != null)
-                {
-                    _log.Info($"Replying with success {aer.Success}: {aer.Message}");
-                }
+                _log.Info($"Replying with success {aer.Success}: {aer.Message ?? "(empty)"}");
             }
             var msg = new DynamicJsonValue
             {
@@ -379,7 +383,7 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntriesResponse.Success)] = aer.Success,
                 [nameof(AppendEntriesResponse.Message)] = aer.Message,
                 [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
-                [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex
+                [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
             };
             
             Send(context, msg);
@@ -404,6 +408,13 @@ namespace Raven.Server.Rachis
                 _src = rachisHello.DebugSourceIdentifier ?? "unknown";
                 _destTag = rachisHello.DebugDestinationIdentifier ?? _destTag;
                 _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
+
+                if (RemoteConnectionsList.TryRemove(_info))
+                {
+                    _info.Destination = _destTag;
+                    RemoteConnectionsList.Add(_info);
+                }
+                
                 return rachisHello;
             }
         }
@@ -413,7 +424,9 @@ namespace Raven.Server.Rachis
             return $"Remote connection (cluster) : {_src} > {_destTag}";
         }
 
-        private void RegisterConnection(string dest, string caller)
+        
+        
+        private void RegisterConnection(string dest, long term, string caller)
         {
             var number = Interlocked.Increment(ref _connectionNumber);
             _info = new RemoteConnectionInfo
@@ -421,7 +434,8 @@ namespace Raven.Server.Rachis
                 Caller = caller,
                 Destination = dest,
                 StartAt = DateTime.UtcNow,
-                Number = number
+                Number = number,
+                Term = term
             };
             RemoteConnectionsList.Add(_info);
         }

@@ -61,6 +61,7 @@ namespace Raven.Server.Rachis
         private Thread _thread;
         private RemoteConnection _connection;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
+        private readonly long _term;
 
         public string Tag => _tag;
 
@@ -90,6 +91,7 @@ namespace Raven.Server.Rachis
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
         {
             _engine = engine;
+            _term = _engine.CurrentTerm;
             _leader = leader;
             _wakeLeader = wakeLeader;
             _tag = tag;
@@ -97,9 +99,9 @@ namespace Raven.Server.Rachis
             _certificate = certificate;
             _connection = connection;
             Status = AmbassadorStatus.Started;
-            StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
+            StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_term}";
         }
-
+        
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
         {
             _wakeLeader = wakeLeader;
@@ -125,13 +127,13 @@ namespace Raven.Server.Rachis
                             {
                                 if (_engine.Log.IsInfoEnabled)
                                 {
-                                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Creating new connection to {_tag}");
+                                    _engine.Log.Info($"FollowerAmbassador for {_tag}: Creating new connection to {_tag}");
                                 }
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _connection?.Dispose();
                                     var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
-                                    var con = new RemoteConnection(_tag, _engine.Tag, stream);
+                                    var con = new RemoteConnection(_tag, _engine.Tag, _engine.CurrentTerm, stream);
                                     Interlocked.Exchange(ref _connection, con);
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
@@ -148,7 +150,7 @@ namespace Raven.Server.Rachis
                             StatusMessage = $"Failed to connect with {_tag}.{Environment.NewLine}" + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Failed to connect to remote follower: {_tag} {_url}", e);
+                                _engine.Log.Info($"{ToString()}: Failed to connect to remote follower: {_tag} {_url}", e);
                             }
                             // wait a bit
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
@@ -222,7 +224,7 @@ namespace Raven.Server.Rachis
                                 );
                                 if (_engine.Log.IsInfoEnabled && entries.Count > 0)
                                 {
-                                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending {entries.Count} entries to {_tag}"
+                                    _engine.Log.Info($"FollowerAmbassador for {_tag}: sending {entries.Count} entries to {_tag}"
 #if DEBUG
                                                      + $" [{string.Join(" ,", entries.Select(x => x.ToString()))}]"
 #endif
@@ -238,7 +240,7 @@ namespace Raven.Server.Rachis
                                         aer.Message;
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: failure to append entries to {_tag} because: " + msg);
+                                        _engine.Log.Info($"{ToString()}: failure to append entries to {_tag} because: " + msg);
                                     }
                                     throw new InvalidOperationException(msg);
                                 }
@@ -331,7 +333,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Node {_tag} is disposed with the message '{StatusMessage}'.");
+                    _engine.Log.Info($"{ToString()}: Node {_tag} is finished with the message '{StatusMessage}'.");
                 }
                 _connection?.Dispose();
             }
@@ -355,7 +357,7 @@ namespace Raven.Server.Rachis
                     UpdateLastSend("Send empty snapshot");
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending empty snapshot to {_tag}");
+                        _engine.Log.Info($"{ToString()}: sending empty snapshot to {_tag}");
                     }
                     _connection.Send(context, new InstallSnapshot
                     {
@@ -373,7 +375,7 @@ namespace Raven.Server.Rachis
                     _engine.GetLastCommitIndex(context, out long index, out long term);
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending snapshot to {_tag} with index={index} term={term}");
+                        _engine.Log.Info($"{ToString()}: sending snapshot to {_tag} with index={index} term={term}");
                     }
                     // we make sure that we routinely update LastReplyFromFollower here
                     // so we'll not leave the leader thinking we abandoned it
@@ -403,7 +405,7 @@ namespace Raven.Server.Rachis
 
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:done sending snapshot to {_tag}");
+                    _engine.Log.Info($"{ToString()}: done sending snapshot to {_tag}");
                 }
             }
         }
@@ -607,7 +609,7 @@ namespace Raven.Server.Rachis
                     if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
-                        var msg = $"Follower ambassador {_engine.Tag}: found election term {llr.CurrentTerm} that is higher than ours {engineCurrentTerm}";
+                        var msg = $"{ToString()}: found election term {llr.CurrentTerm} that is higher than ours {engineCurrentTerm}";
                         _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
                         throw new InvalidOperationException(msg);
@@ -617,7 +619,7 @@ namespace Raven.Server.Rachis
                     {
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: {_tag} agreed on term={llr.CurrentTerm} index={llr.LastLogIndex}");
+                            _engine.Log.Info($"{ToString()}: {_tag} agreed on term={llr.CurrentTerm} index={llr.LastLogIndex}");
                         }
                         return llr.LastLogIndex;
                     }
@@ -627,7 +629,7 @@ namespace Raven.Server.Rachis
                         var message = "Failed to get acceptable status from " + _tag + " because " + llr.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: {message}");
+                            _engine.Log.Info($"{ToString()}: {message}");
                         }
                         throw new InvalidOperationException(message);
                     }
@@ -681,7 +683,7 @@ namespace Raven.Server.Rachis
             UpdateLastSend("Hello");
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending Rachis hello to {_tag}");
+                _engine.Log.Info($"{ToString()}: sending Rachis hello to {_tag}");
             }
             _connection.Send(context, new RachisHello
             {
@@ -705,7 +707,7 @@ namespace Raven.Server.Rachis
 
         public override string ToString()
         {
-            return $"Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
+            return $"Follower Ambassador for {_tag} in term {_term}";
         }
 
         public void Dispose()
@@ -713,7 +715,7 @@ namespace Raven.Server.Rachis
             _running.Lower();
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Request to dispose node {_tag}");
+                _engine.Log.Info($"Dispose {ToString()}");
             }
             if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
             {
@@ -723,7 +725,7 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to close, disposing connection and trying");
+                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to close, disposing connection and trying");
                     }
                     // the thread may have create a new connection, so need
                     // to dispose that as well

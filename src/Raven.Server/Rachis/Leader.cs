@@ -69,7 +69,7 @@ namespace Raven.Server.Rachis
             set { Interlocked.Exchange(ref _lowestIndexInEntireCluster, value); }
         }
 
-        public long Term => _engine.CurrentTerm;
+        public long Term;
         public Leader(RachisConsensus engine)
         {
             _engine = engine;
@@ -81,6 +81,8 @@ namespace Raven.Server.Rachis
         public void Start(Dictionary<string, RemoteConnection> connections = null)
         {
             _running.Raise();
+            Term = _engine.CurrentTerm;
+
             ClusterTopology clusterTopology;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -93,7 +95,7 @@ namespace Raven.Server.Rachis
             _thread = new Thread(Run)
             {
                 Name =
-                    $"Consensus Leader - {_engine.Tag} in term {_engine.CurrentTerm}",
+                    $"Consensus Leader - {_engine.Tag} in term {Term}",
                 IsBackground = true
             };
             _thread.Start();
@@ -155,13 +157,23 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Leader {_engine.Tag}: Skipping refreshing ambassadors because we are been disposed of");
+                        _engine.Log.Info($"{ToString()}: Skipping refreshing ambassadors because we are been disposed of");
                     }
                     return;
                 }
+                
+                if (Term != _engine.CurrentTerm)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{ToString()}: We are no longer the actual leader, since the current term is {_engine.CurrentTerm}");
+                    }
+                    return;
+                }
+                
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Leader {_engine.Tag}: Refreshing ambassadors");
+                    _engine.Log.Info($"{ToString()}: Refreshing ambassadors");
                 }
                 var old = new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
                 foreach (var peers in new[] { _voters, _promotables, _nonVoters })
@@ -193,7 +205,7 @@ namespace Raven.Server.Rachis
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for voter {voter.Key} {voter.Value}");
+                        _engine.Log.Info($"{ToString()}: starting ambassador for voter {voter.Key} {voter.Value}");
                     }
                     ambasaddor.Start();
                 }
@@ -215,7 +227,7 @@ namespace Raven.Server.Rachis
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
+                        _engine.Log.Info($"{ToString()}: starting ambassador for promotable {promotable.Key} {promotable.Value}");
                     }
                     ambasaddor.Start();
                 }
@@ -238,7 +250,7 @@ namespace Raven.Server.Rachis
                     _engine.AppendStateDisposable(this, ambasaddor);
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Leader {_engine.Tag}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
+                        _engine.Log.Info($"{ToString()}: starting ambassador for watcher {nonVoter.Key} {nonVoter.Value}");
                     }
                     ambasaddor.Start();
                 }
@@ -315,7 +327,7 @@ namespace Raven.Server.Rachis
                         case 3: // shutdown requested
                             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
                             {
-                                _engine.Log.Info($"Leader {_engine.Tag}: shutting down");
+                                _engine.Log.Info($"{ToString()}: shutting down");
                             }
                             return;
                     }
@@ -400,7 +412,7 @@ namespace Raven.Server.Rachis
 
             if (_engine.Log.IsInfoEnabled && _voters.Count != 0)
             {
-                _engine.Log.Info($"Leader {_engine.Tag}:VoteOfNoConfidence{Environment.NewLine } {sb}");
+                _engine.Log.Info($"{ToString()}:VoteOfNoConfidence{Environment.NewLine } {sb}");
             }
             throw new TimeoutException(
                 "Too long has passed since we got a confirmation from the majority of the cluster that this node is still the leader." +
@@ -686,13 +698,17 @@ namespace Raven.Server.Rachis
                     //We need to wait that refresh ambassador finish
                     if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
                     {
-                        var message = $"Leader {_engine.Tag}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
+                        var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info(message);
                         }
                         throw new TimeoutException(message);
                     }
+                }
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"Start disposing leader {_engine.Tag} of term {Term}.");
                 }
                 _running.Lower();
                 _shutdownRequested.Set();
@@ -742,7 +758,7 @@ namespace Raven.Server.Rachis
                 _noop.Dispose();
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Leader {_engine.Tag}: Dispose");
+                    _engine.Log.Info($"Leader {_engine.Tag} of term {Term} was disposed");
                 }
             }
             finally
@@ -864,7 +880,10 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-       
+        public override string ToString()
+        {
+            return $"Leader {_engine.Tag} in term {Term}";
+        }
 
         private static string GenerateNodeTag(ClusterTopology clusterTopology)
         {

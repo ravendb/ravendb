@@ -380,11 +380,18 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
+            if (ConflictSolverConfig == null && newRecord.ConflictSolverConfig == null)
+            {
+                return;
+            }
+            
             var conflictSolverChanged = ConflictSolverConfig?.ConflictResolutionChanged(newRecord.ConflictSolverConfig) ?? true;
             if (conflictSolverChanged)
             {
                 if (_log.IsInfoEnabled)
+                {
                     _log.Info("Conflict resolution was change.");
+                }
                 ConflictSolverConfig = newRecord.ConflictSolverConfig;
                 ConflictResolver.RunConflictResolversOnce();
             }
@@ -418,18 +425,21 @@ namespace Raven.Server.Documents.Replication
 
         private void DisposeConnections(List<OutgoingReplicationHandler> instancesToDispose)
         {
-            foreach (var instance in instancesToDispose)
+            TaskExecutor.Execute(toDispose =>
             {
-                try
+                Parallel.ForEach((List<OutgoingReplicationHandler>)toDispose, instance =>
                 {
-                    instance?.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Failed to dispose outgoing replication to {instance?.DestinationFormatted}", e);
-                }
-            }
+                    try
+                    {
+                        instance?.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Failed to dispose outgoing replication to {instance?.DestinationFormatted}", e);
+                    }
+                });
+            }, instancesToDispose);
         }
 
         private (List<ExternalReplication> AddedDestinations, List<ExternalReplication> RemovedDestiantions) FindExternalReplicationChanges(
