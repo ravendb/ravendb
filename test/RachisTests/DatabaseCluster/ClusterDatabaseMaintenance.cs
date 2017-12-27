@@ -293,7 +293,6 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                WaitForUserToContinueTheTest((DocumentStore)store);
                 DisposeServerAndWaitForFinishOfDisposal(Servers[2]);
 
                 // the db should move to D & E
