@@ -21,7 +21,6 @@ namespace Raven.Server.ServerWide
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Secrets");
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
-        private const int KeySize = 512; // sector size
 
         public SecretProtection(SecurityConfiguration config)
         {
@@ -36,7 +35,7 @@ namespace Raven.Server.ServerWide
             {
                 if (_config.MasterKeyExec != null)
                 {
-                    debug = _config.CertificateExec + " " + _config.CertificateExecArguments;
+                    debug = _config.MasterKeyExec + " " + _config.MasterKeyExecArguments;
                     return LoadMasterKeyWithExecutable();
                 }
 
@@ -53,7 +52,7 @@ namespace Raven.Server.ServerWide
                 dirpath = Path.GetFullPath(dirpath);
                 var filepath = Path.Combine(dirpath, "secret.key");
                 debug = filepath;
-                var buffer = new byte[KeySize];
+                var buffer = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
                 fixed (byte* pBuf = buffer)
                 {
                     if (Directory.Exists(dirpath) == false)
@@ -83,13 +82,13 @@ namespace Raven.Server.ServerWide
                             Syscall.ThrowLastError(err, $"could not get size of {filepath}");
                         }
 
-                        if (size == KeySize)
+                        if (size == buffer.Length)
                         {
                             byte* pos = pBuf;
                             long amountRead = 0;
-                            while (amountRead < KeySize)
+                            while (amountRead < buffer.Length)
                             {
-                                var read = Syscall.pread(fd, pos, (ulong)(KeySize - amountRead), amountRead);
+                                var read = Syscall.pread(fd, pos, (ulong)(buffer.Length - amountRead), amountRead);
                                 pos += read;
                                 if (read < 0)
                                 {
@@ -100,12 +99,12 @@ namespace Raven.Server.ServerWide
                                     break;
                                 amountRead += read;
                             }
-                            if (amountRead != KeySize)
-                                throw new FileLoadException($"Failed to read the full key size from {filepath}, expected to read {KeySize} but go only {amountRead}");
+                            if (amountRead != buffer.Length)
+                                throw new FileLoadException($"Failed to read the full key size from {filepath}, expected to read {buffer.Length} but go only {amountRead}");
                         }
                         else // we assume that if the size isn't a key size, then it was never valid and regenerate the key
                         {
-                            Sodium.randombytes_buf(pBuf, (UIntPtr)KeySize);
+                            Sodium.randombytes_buf(pBuf, (UIntPtr)buffer.Length);
 
                             if (Syscall.ftruncate(fd, IntPtr.Zero) != 0)
                             {
@@ -119,14 +118,14 @@ namespace Raven.Server.ServerWide
                                 Syscall.ThrowLastError(err, $"Failed to seek to beginning of {filepath}");
                             }
 
-                            var len = KeySize;
+                            var len = buffer.Length;
                             while (len > 0)
                             {
-                                var writeAmount = Syscall.write(fd, pBuf, KeySize);
+                                var writeAmount = Syscall.write(fd, pBuf, (ulong)buffer.Length);
                                 if (writeAmount <= 0) // 0 will be considered as error here
                                 {
                                     var err = Marshal.GetLastWin32Error();
-                                    Syscall.ThrowLastError(err, $"Failed to write {KeySize} bytes into {filepath}, only wrote {len}");
+                                    Syscall.ThrowLastError(err, $"Failed to write {buffer.Length} bytes into {filepath}, only wrote {len}");
                                 }
                                
                                 len -= (int)writeAmount;
@@ -335,7 +334,6 @@ namespace Raven.Server.ServerWide
 
         private byte[] LoadMasterKeyWithExecutable()
         {
-            const int keySize = 512;
 
             var process = new Process
             {
@@ -407,10 +405,11 @@ namespace Raven.Server.ServerWide
 
             var rawData = ms.ToArray();
 
-            if (rawData.Length * 8 != keySize)
+            var expectedKeySize = Sodium.crypto_aead_chacha20poly1305_ABYTES();
+            if (rawData.Length  != expectedKeySize)
             {
                 throw new InvalidOperationException(
-                    $"Got wrong master key after executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the size of the key must be {keySize} bits, but was {rawData.Length * 8} bits.");
+                    $"Got wrong master key after executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the size of the key must be {expectedKeySize * 8} bits, but was {rawData.Length * 8} bits.");
             }
 
             return rawData;
@@ -466,11 +465,12 @@ namespace Raven.Server.ServerWide
             try
             {
                 var key = File.ReadAllBytes(_config.MasterKeyPath);
+                var expectedKeySize = Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
 
-                if (key.Length * 8 != KeySize)
+                if (key.Length  != expectedKeySize )
                 {
                     throw new InvalidOperationException(
-                        $"The size of the key must be {KeySize} bits, but was {key.Length * 8} bits.");
+                        $"The size of the key must be {expectedKeySize * 8} bits, but was {key.Length * 8} bits.");
                 }
                 return key;
             }
