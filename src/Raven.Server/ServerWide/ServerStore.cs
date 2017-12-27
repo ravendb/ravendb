@@ -782,21 +782,13 @@ namespace Raven.Server.ServerWide
             if (record != null && record.Encrypted == false)
                 throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
 
-            var hashLen = Sodium.crypto_generichash_bytes_max();
-            var hash = new byte[hashLen + key.Length];
-            fixed (byte* pHash = hash)
             fixed (byte* pKey = key)
             {
                 try
                 {
-                    if (Sodium.crypto_generichash(pHash, (UIntPtr)hashLen, pKey, (ulong)key.Length, null, UIntPtr.Zero) != 0)
-                        throw new InvalidOperationException("Failed to hash key");
+                    var entropy = Sodium.GenerateRandomBuffer(Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
 
-                    Sparrow.Memory.Copy(pHash + hashLen, pKey, key.Length);
-
-                    var entropy = Sodium.GenerateRandomBuffer(256);
-
-                    var protectedData = Secrets.Protect(hash, entropy);
+                    var protectedData = Secrets.Protect(key, entropy);
 
                     var ms = new MemoryStream();
                     ms.Write(entropy, 0, entropy.Length);
@@ -807,14 +799,13 @@ namespace Raven.Server.ServerWide
                 }
                 finally
                 {
-                    Sodium.ZeroMemory(pHash, hash.Length);
                     Sodium.ZeroMemory(pKey, key.Length);
                 }
             }
         }
 
 
-        public unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
+        public byte[] GetSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -831,33 +822,8 @@ namespace Raven.Server.ServerWide
             var protectedData = new byte[reader.Length - entropy.Length];
             reader.Read(protectedData, 0, protectedData.Length);
 
-            var data = Secrets.Unprotect(protectedData, entropy);
+            return Secrets.Unprotect(protectedData, entropy);
 
-            var hashLen = Sodium.crypto_generichash_bytes_max();
-
-            fixed (byte* pData = data)
-            fixed (byte* pHash = new byte[hashLen])
-            {
-                try
-                {
-                    if (Sodium.crypto_generichash(pHash, (UIntPtr)hashLen, pData + hashLen, (ulong)(data.Length - hashLen), null, UIntPtr.Zero) != 0)
-                        throw new InvalidOperationException($"Unable to compute hash for {name}");
-
-                    if (Sodium.sodium_memcmp(pData, pHash, (UIntPtr)hashLen) != 0)
-                        throw new InvalidOperationException($"Unable to validate hash after decryption for {name}, user store changed?");
-
-                    var buffer = new byte[data.Length - hashLen];
-                    fixed (byte* pBuffer = buffer)
-                    {
-                        Sparrow.Memory.Copy(pBuffer, pData + hashLen, buffer.Length);
-                    }
-                    return buffer;
-                }
-                finally
-                {
-                    Sodium.ZeroMemory(pData, data.Length);
-                }
-            }
         }
 
         public void DeleteSecretKey(TransactionOperationContext context, string name)
