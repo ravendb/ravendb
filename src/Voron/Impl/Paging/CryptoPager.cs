@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Platform.Win32;
@@ -17,10 +18,12 @@ namespace Voron.Impl.Paging
 
     public unsafe class EncryptionBuffer
     {
+        public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
+        public static readonly int HashSizeInt = (int)Sodium.crypto_generichash_bytes();
         public byte* Pointer;
         public int Size;
         public int? OriginalSize;
-        public ulong Checksum;
+        public byte* Hash;
         public NativeMemory.ThreadStats AllocatingThread;
     }
 
@@ -139,8 +142,9 @@ namespace Voron.Impl.Paging
 
             DecryptPage((PageHeader*)buffer.Pointer);
 
-            buffer.Checksum = Hashing.XXHash64.Calculate(buffer.Pointer, (ulong)buffer.Size);
-
+            if(Sodium.crypto_generichash(buffer.Hash, EncryptionBuffer.HashSize, buffer.Pointer, (ulong)buffer.Size, null, UIntPtr.Zero) != 0)
+                ThrowInvalidHash();
+            
             return buffer.Pointer;
 
         }
@@ -172,10 +176,13 @@ namespace Voron.Impl.Paging
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int size)
         {
             var ptr = _encryptionBuffersPool.Get(size, out var thread);
+            var hash = _encryptionBuffersPool.Get(EncryptionBuffer.HashSizeInt, out thread);
+            
             var buffer = new EncryptionBuffer
             {
                 Size = size,
                 Pointer = ptr,
+                Hash = hash,
                 AllocatingThread = thread
             };
             state.LoadedBuffers[pageNumber] = buffer;
@@ -222,10 +229,13 @@ namespace Voron.Impl.Paging
             if (tx.CryptoPagerTransactionState.TryGetValue(this, out var state) == false)
                 return;
 
+            var pageHash = stackalloc byte[EncryptionBuffer.HashSizeInt];
             foreach (var buffer in state.LoadedBuffers)
             {
-                var checksum = Hashing.XXHash64.Calculate(buffer.Value.Pointer, (ulong)buffer.Value.Size);
-                if (checksum == buffer.Value.Checksum)
+                if(Sodium.crypto_generichash(pageHash, EncryptionBuffer.HashSize, buffer.Value.Pointer, (ulong)buffer.Value.Size, null, UIntPtr.Zero) != 0)
+                    ThrowInvalidHash();
+
+                if (Sodium.sodium_memcmp(pageHash, buffer.Value.Hash, EncryptionBuffer.HashSize) == 0)
                     continue; // No modification
 
                 // Encrypt the local buffer, then copy the encrypted value to the pager
@@ -237,6 +247,11 @@ namespace Voron.Impl.Paging
                 Memory.Copy(pagePointer, buffer.Value.Pointer, buffer.Value.Size);
             }
 
+        }
+
+        private static void ThrowInvalidHash([CallerMemberName] string caller = null)
+        {
+            throw new InvalidOperationException($"Unable to compute hash for buffer in " + caller);
         }
 
         private void TxOnDispose(IPagerLevelTransactionState tx)
@@ -262,11 +277,13 @@ namespace Voron.Impl.Paging
                 {
                     // First page of a seperated section, returned with its original size.
                     _encryptionBuffersPool.Return(buffer.Value.Pointer, (int)buffer.Value.OriginalSize, buffer.Value.AllocatingThread);
+                    _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
                     continue;
                 }
 
                 // Normal buffers
                 _encryptionBuffersPool.Return(buffer.Value.Pointer, buffer.Value.Size, buffer.Value.AllocatingThread);
+                _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
             }
         }
 
