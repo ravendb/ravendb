@@ -192,8 +192,8 @@ namespace Raven.Server.Documents.Indexes
         private static unsafe void EncryptStream(StorageEnvironmentOptions options, MemoryStream stream)
         {
             var data = stream.ToArray();
-            var nonce = Sodium.GenerateRandomBuffer(sizeof(long) * 8);
-            var encryptedData = new byte[data.Length + Sodium.crypto_aead_chacha20poly1305_ABYTES()];
+            var nonce = Sodium.GenerateRandomBuffer(Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); // 192-bit
+            var encryptedData = new byte[data.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac 
 
             fixed (byte* pData = data)
             fixed (byte* pEncryptedData = encryptedData)
@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pKey = options.MasterKey)
             {
                 ulong cLen;
-                var rc = Sodium.crypto_aead_chacha20poly1305_encrypt(
+                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
                     pEncryptedData,
                     &cLen,
                     pData,
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Indexes
                     pKey
                 );
 
-                Debug.Assert(cLen <= (ulong)data.Length + (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
+                Debug.Assert(cLen <= (ulong)data.Length + (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to encrypt stream, rc={rc}");

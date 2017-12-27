@@ -216,6 +216,72 @@ namespace Sparrow
             return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
         }
 
+        public static int crypto_aead_xchacha20poly1305_ietf_encrypt(
+            byte* c,
+            ulong* clen,
+            byte* m,
+            ulong mlen,
+            byte* ad,
+            ulong adlen,
+            byte* nsec,
+            byte* npub,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_decrypt(
+            byte* m,
+            ulong* mlen,
+            byte* nsec,
+            byte* c,
+            ulong clen,
+            byte* ad,
+            ulong adlen,
+            byte* npub,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+            byte* c,
+            byte* mac,
+            // ReSharper disable once InconsistentNaming
+            ulong* maclen_p,
+            byte* m,
+            ulong mlen,
+            byte* ad,
+            ulong adlen,
+            byte* nsec,
+            byte* npub,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+        }
+        
+        public static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+            byte* m,
+            byte* nsec,
+            byte* c,
+            ulong clen,
+            byte* mac,
+            byte* ad,
+            ulong adlen,
+            byte* npub,
+            byte* k)
+        {
+            if (Platform.PlatformDetails.RunningOnPosix)
+                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+        }
+
         public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
         {
             if (Platform.PlatformDetails.RunningOnPosix)
@@ -244,7 +310,28 @@ namespace Sparrow
                 ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_noncebytes()
                 : Platform.Win32.WinSodium.crypto_stream_xchacha20_noncebytes());
         }
-        
+
+        public static int crypto_aead_xchacha20poly1305_ietf_keybytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_keybytes()
+                : Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_npubbytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()
+                : Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_abytes()
+        {
+            return (int)(Platform.PlatformDetails.RunningOnPosix
+                ? Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_abytes()
+                : Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_abytes());
+        }
+
         public static int crypto_box_sealbytes()
         {
             return (int)(Platform.PlatformDetails.RunningOnPosix
