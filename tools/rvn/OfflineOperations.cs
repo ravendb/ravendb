@@ -23,7 +23,7 @@ namespace rvn
 
             dstOptions.MasterKey = masterKey;
 
-            var entropy = Sodium.GenerateRandomBuffer(256);
+            var entropy = Sodium.GenerateRandomBuffer(32); // 256-bit
             var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey, entropy);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
@@ -41,7 +41,7 @@ namespace rvn
         public static string PutKey(string destDir)
         {
             var base64Key = RecoverServerStoreKey(destDir);
-            var entropy = Sodium.GenerateRandomBuffer(256);
+            var entropy = Sodium.GenerateRandomBuffer(32); // 256-bit
             var secret = Convert.FromBase64String(base64Key);
             var protect = new SecretProtection(new SecurityConfiguration()).Protect(secret, entropy);
 
@@ -70,7 +70,7 @@ namespace rvn
 
             dstOptions.MasterKey = masterKey;
 
-            var entropy = Sodium.GenerateRandomBuffer(256);
+            var entropy = Sodium.GenerateRandomBuffer(32); // 256-bit
             var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey, entropy);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);

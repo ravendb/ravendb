@@ -195,11 +195,17 @@ namespace Raven.Server.Documents.Indexes
             var nonce = Sodium.GenerateRandomBuffer(Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); // 192-bit
             var encryptedData = new byte[data.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac 
 
+            fixed (byte* ctx = Sodium.Context)
             fixed (byte* pData = data)
             fixed (byte* pEncryptedData = encryptedData)
             fixed (byte* pNonce = nonce)
             fixed (byte* pKey = options.MasterKey)
             {
+                var subKey = stackalloc byte[32];
+                const ulong subKeyId = 17;
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, subKeyId, ctx, pKey) != 0)
+                    throw new InvalidOperationException("Unable to generate derived key");
+
                 ulong cLen;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
                     pEncryptedData,
@@ -210,7 +216,7 @@ namespace Raven.Server.Documents.Indexes
                     0,
                     null,
                     pNonce,
-                    pKey
+                    subKey
                 );
 
                 Debug.Assert(cLen <= (ulong)data.Length + (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
@@ -229,21 +235,27 @@ namespace Raven.Server.Documents.Indexes
         private static unsafe void DecryptStream(StorageEnvironmentOptions options, MemoryStream stream)
         {
             var buffer = stream.ToArray();
-            var nonce = new byte[sizeof(long)];
+            var nonce = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
             var data = new byte[buffer.Length - nonce.Length];
 
             Array.Copy(buffer, 0, data, 0, buffer.Length - nonce.Length);
             Array.Copy(buffer, buffer.Length - nonce.Length, nonce, 0, nonce.Length);
 
-            var decryptedData = new byte[data.Length - Sodium.crypto_aead_chacha20poly1305_ABYTES()];
+            var decryptedData = new byte[data.Length - Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
+            fixed (byte* ctx = Sodium.Context)
             fixed (byte* pData = data)
             fixed (byte* pDecryptedData = decryptedData)
             fixed (byte* pNonce = nonce)
             fixed (byte* pKey = options.MasterKey)
             {
+                var subKey = stackalloc byte[32];
+                ulong subKeyId = 1;
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, subKeyId, ctx, pKey) != 0)
+                    throw new InvalidOperationException("Unable to generate derived key");
+                
                 ulong mLen;
-                var rc = Sodium.crypto_aead_chacha20poly1305_decrypt(
+                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
                     pDecryptedData,
                     &mLen,
                     null,
@@ -252,10 +264,10 @@ namespace Raven.Server.Documents.Indexes
                     null,
                     0,
                     pNonce,
-                    pKey
+                    subKey
                 );
 
-                Debug.Assert(mLen <= (ulong)data.Length - (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
+                Debug.Assert(mLen <= (ulong)data.Length - (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to decrypt stream, rc={rc}");
