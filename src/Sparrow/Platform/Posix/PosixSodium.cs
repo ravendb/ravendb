@@ -162,6 +162,21 @@ namespace Sparrow.Platform.Posix
             return _is32bits ? (_isArm ? Arm.crypto_stream_xchacha20_noncebytes() : X86.crypto_stream_xchacha20_noncebytes()) : _isMac64 ? MacOsxX64.crypto_stream_xchacha20_noncebytes() : X64.crypto_stream_xchacha20_noncebytes();
         }
 
+        public static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes()
+        {
+            return _is32bits ? (_isArm ? Arm.crypto_aead_xchacha20poly1305_ietf_keybytes() : X86.crypto_aead_xchacha20poly1305_ietf_keybytes()) : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_keybytes() : X64.crypto_aead_xchacha20poly1305_ietf_keybytes();
+        }
+
+        public static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes()
+        {
+            return _is32bits ? (_isArm ? Arm.crypto_aead_xchacha20poly1305_ietf_npubbytes() : X86.crypto_aead_xchacha20poly1305_ietf_npubbytes()) : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_npubbytes() : X64.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+        }
+
+        public static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes()
+        {
+            return _is32bits ? (_isArm ? Arm.crypto_aead_xchacha20poly1305_ietf_abytes() : X86.crypto_aead_xchacha20poly1305_ietf_abytes()) : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_abytes() : X64.crypto_aead_xchacha20poly1305_ietf_abytes();
+        }
+
         public static void randombytes_buf(
             byte* buffer,
             UIntPtr size)
@@ -301,6 +316,81 @@ namespace Sparrow.Platform.Posix
                     ? Arm.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k)
                     : X86.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k))
                 : _isMac64 ? MacOsxX64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k) : X64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_encrypt(
+            byte* c,
+            ulong* clen,
+            byte* m,
+            ulong mlen,
+            byte* ad,
+            ulong adlen,
+            byte* nsec,
+            byte* npub,
+            byte* k)
+        {
+            return _is32bits
+                ? (_isArm
+                    ? Arm.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k)
+                    : X86.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k))
+                : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k) : X64.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_decrypt(
+            byte* m,
+            ulong* mlen,
+            byte* nsec,
+            byte* c,
+            ulong clen,
+            byte* ad,
+            ulong adlen,
+            byte* npub,
+            byte* k)
+        {
+            return _is32bits
+                ? (_isArm
+                    ? Arm.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k)
+                    : X86.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k))
+                : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k) : X64.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+            byte* c,
+            byte* mac,
+            // ReSharper disable once InconsistentNaming
+            ulong* maclen_p,
+            byte* m,
+            ulong mlen,
+            byte* ad,
+            ulong adlen,
+            byte* nsec,
+            byte* npub,
+            byte* k)
+        {
+            return _is32bits
+                ? (_isArm
+                    ? Arm.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k)
+                    : X86.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k))
+                : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k) : X64.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+        }
+
+        public static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+            byte* m,
+            byte* nsec,
+            byte* c,
+            ulong clen,
+            byte* mac,
+            byte* ad,
+            ulong adlen,
+            byte* npub,
+            byte* k)
+        {
+            return _is32bits
+                ? (_isArm
+                    ? Arm.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k)
+                    : X86.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k))
+                : _isMac64 ? MacOsxX64.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k) : X64.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+
         }
 
         public static int crypto_box_seal(
@@ -616,6 +706,15 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_stream_xchacha20_noncebytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_kdf_keybytes();
 
             [DllImport(LIB_SODIUM)]
@@ -693,6 +792,57 @@ namespace Sparrow.Platform.Posix
                 byte* nsec,
                 byte* c,
                 ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt(
+                byte* c,
+                ulong* clen,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt(
+                byte* m,
+                ulong* mlen,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+                byte* c,
+                byte* mac,
+                // ReSharper disable once InconsistentNaming
+                ulong* maclen_p,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+                byte* m,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* mac,
                 byte* ad,
                 ulong adlen,
                 byte* npub,
@@ -859,8 +1009,7 @@ namespace Sparrow.Platform.Posix
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_sign_statebytes();
-
-
+            
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_generichash_statebytes();
 
@@ -909,6 +1058,15 @@ namespace Sparrow.Platform.Posix
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_stream_xchacha20_noncebytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
 
             [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_kdf_keybytes();
@@ -988,6 +1146,57 @@ namespace Sparrow.Platform.Posix
                 byte* nsec,
                 byte* c,
                 ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt(
+                byte* c,
+                ulong* clen,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt(
+                byte* m,
+                ulong* mlen,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+                byte* c,
+                byte* mac,
+                // ReSharper disable once InconsistentNaming
+                ulong* maclen_p,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+                byte* m,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* mac,
                 byte* ad,
                 ulong adlen,
                 byte* npub,
@@ -1205,6 +1414,15 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_stream_xchacha20_noncebytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_kdf_keybytes();
 
             [DllImport(LIB_SODIUM)]
@@ -1282,6 +1500,57 @@ namespace Sparrow.Platform.Posix
                 byte* nsec,
                 byte* c,
                 ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt(
+                byte* c,
+                ulong* clen,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt(
+                byte* m,
+                ulong* mlen,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+                byte* c,
+                byte* mac,
+                // ReSharper disable once InconsistentNaming
+                ulong* maclen_p,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+                byte* m,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* mac,
                 byte* ad,
                 ulong adlen,
                 byte* npub,
@@ -1500,6 +1769,15 @@ namespace Sparrow.Platform.Posix
             public static extern UIntPtr crypto_stream_xchacha20_noncebytes();
 
             [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+            [DllImport(LIB_SODIUM)]
+            public static extern UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+            [DllImport(LIB_SODIUM)]
             public static extern UIntPtr crypto_kdf_keybytes();
 
             [DllImport(LIB_SODIUM)]
@@ -1577,6 +1855,57 @@ namespace Sparrow.Platform.Posix
                 byte* nsec,
                 byte* c,
                 ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt(
+                byte* c,
+                ulong* clen,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt(
+                byte* m,
+                ulong* mlen,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* ad,
+                ulong adlen,
+                byte* npub,
+                byte* k);
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+                byte* c,
+                byte* mac,
+                // ReSharper disable once InconsistentNaming
+                ulong* maclen_p,
+                byte* m,
+                ulong mlen,
+                byte* ad,
+                ulong adlen,
+                byte* nsec,
+                byte* npub,
+                byte* k);
+
+
+            [DllImport(LIB_SODIUM)]
+            public static extern int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
+                byte* m,
+                byte* nsec,
+                byte* c,
+                ulong clen,
+                byte* mac,
                 byte* ad,
                 ulong adlen,
                 byte* npub,
