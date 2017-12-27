@@ -20,10 +20,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 context.Write(write,
                     new DynamicJsonValue
                     {
-                        ["Remote-Connections"] = new DynamicJsonArray(RemoteConnection.RemoteConnectionsList.ToList()
+                        ["Remote-Connections"] = new DynamicJsonArray(RemoteConnection.RemoteConnectionsList
                             .Select(connection => new DynamicJsonValue
                             {
                                 [nameof(RemoteConnection.RemoteConnectionInfo.Caller)] = connection.Caller,
+                                [nameof(RemoteConnection.RemoteConnectionInfo.Term)] = connection.Term,
                                 [nameof(RemoteConnection.RemoteConnectionInfo.Destination)] = connection.Destination,
                                 [nameof(RemoteConnection.RemoteConnectionInfo.StartAt)] = connection.StartAt,
                                 ["Duration"] = DateTime.UtcNow - connection.StartAt,

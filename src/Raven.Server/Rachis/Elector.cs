@@ -24,7 +24,7 @@ namespace Raven.Server.Rachis
         {
             _thread = new Thread(HandleVoteRequest)
             {
-                Name = $"{_engine.Tag} elector for candidate {_connection.Source}"
+                Name = $"Elector for candidate {_connection.Source}"
             };
             _thread.Start();
         }
@@ -38,6 +38,13 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
+
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            var election = rv.IsTrialElection ? "Trail" : "Real";
+                            _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                             $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
+                        }
 
                         ClusterTopology clusterTopology;
                         long lastIndex;
@@ -90,7 +97,7 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (rv.Term == _engine.CurrentTerm && rv.ElectionResult == ElectionResult.Lost)
+                        if (rv.ElectionResult != ElectionResult.InProgress)
                         {
                             _connection.Dispose();
                             return;

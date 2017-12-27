@@ -466,6 +466,8 @@ namespace Raven.Server.Rachis
                 throw new ConcurrencyException(
                     $"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
+            var sp = Stopwatch.StartNew();
+            
             _currentLeader = null;
             LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
@@ -527,8 +529,15 @@ namespace Raven.Server.Rachis
                         }
                     }
 
+                    
+                    
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm} with {toDispose.Count} things to dispose.");
+                        }
+
                         Parallel.ForEach(toDispose, d =>
                         {
                             try
@@ -548,6 +557,15 @@ namespace Raven.Server.Rachis
                             }
                         });
                     });
+                    
+                    var elapsed = sp.Elapsed;
+                    if (elapsed > ElectionTimeout / 2)
+                    {
+                        if (Log.IsOperationsEnabled)
+                        {
+                            Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm}. (Election timeout:{ElectionTimeout})");
+                        }
+                    }
                 }
             };
         }
@@ -739,7 +757,7 @@ namespace Raven.Server.Rachis
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, stream);
+                remoteConnection = new RemoteConnection(_tag, stream, CurrentTerm);
                 try
                 {
                     RachisHello initialMessage;
@@ -1313,6 +1331,19 @@ namespace Raven.Server.Rachis
             }
 
             CurrentTerm = term;
+
+            if (CurrentState == RachisState.Leader || CurrentState == RachisState.LeaderElect)
+            {
+                Timeout.DisableTimeout();
+                var candidate = new Candidate(this)
+                {
+                    IsForcedElection = false
+                };
+
+                Candidate = candidate;
+                SetNewStateInTx(context, RachisState.Candidate, null, term, $"Casted a vote as {CurrentState}, so need to step down.");
+                candidate.Start();
+            }
         }
 
         public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(TransactionOperationContext context, long term)

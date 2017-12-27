@@ -474,29 +474,31 @@ namespace Raven.Server.ServerWide
                 if (state.From == RachisState.Passive || state.To == RachisState.Passive ||
                     state.From == RachisState.Candidate || state.To == RachisState.Candidate)
                 {
-                    RefreshOutgoingTasks();
+                    TaskExecutor.Execute(async _ =>
+                    {
+                        await RefreshOutgoingTasksAsync();
+                    }, null);
                 }
 
                 if (state.To == RachisState.LeaderElect)
                 {
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
+                } else if (state.From == RachisState.LeaderElect || state.From == RachisState.Leader)
+                {
+                    _engine.CurrentLeader.OnNodeStatusChange -= OnTopologyChanged;
                 }
+
             }
         }
 
-        public Task RefreshOutgoingTasks()
-        {
-            return RefreshOutgoingTasksAsync();
-        }
-
-        public async Task RefreshOutgoingTasksAsync()
+        private async Task RefreshOutgoingTasksAsync()
         {
             var tasks = new Dictionary<string, Task<DocumentDatabase>>();
             foreach (var db in DatabasesLandlord.DatabasesCache)
             {
                 tasks.Add(db.Key, db.Value);
             }
-            while (tasks.Any())
+            while (tasks.Count != 0)
             {
                 var completedTask = await Task.WhenAny(tasks.Values);
                 var name = tasks.Single(t => t.Value == completedTask).Key;

@@ -25,7 +25,6 @@ namespace RachisTests.DatabaseCluster
 {
     public class ReplicationTests : ReplicationTestBase
     {
-
         [NightlyBuildFact]
         public async Task WaitForCommandToApply()
         {
@@ -220,7 +219,7 @@ namespace RachisTests.DatabaseCluster
             Assert.Equal(5, count);
         }
                 
-        [Fact]        
+        [NightlyBuildFact]        
         public async Task WaitForReplicaitonShouldWaitOnlyForInternalNodes()
         {
             var clusterSize = 5;
