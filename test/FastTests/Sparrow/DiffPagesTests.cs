@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using FastTests.Voron.FixedSize;
+using Raven.Server.Routing;
 using Sparrow;
 using Sparrow.Utils;
 using Xunit;
@@ -28,6 +31,7 @@ namespace FastTests.Sparrow
 
                 diffPages.ComputeDiff(one, two, 4096);
 
+                Assert.True(diffPages.IsDiff);
                 Assert.Equal(0, diffPages.OutputSize);
             }
         }
@@ -77,6 +81,7 @@ namespace FastTests.Sparrow
                 };
 
                 diffPages.ComputeNew(one, 4096);
+                Assert.True(diffPages.IsDiff);
 
                 Assert.Equal(96, diffPages.OutputSize);
             }
@@ -106,6 +111,7 @@ namespace FastTests.Sparrow
                 };
 
                 diffPages.ComputeDiff(one, two, 4096);
+                Assert.True(diffPages.IsDiff);
 
                 Memory.Copy(tri, one, 4096);
                 new DiffApplier
@@ -116,7 +122,122 @@ namespace FastTests.Sparrow
                     DiffSize = diffPages.OutputSize
                 }.Apply(false);
 
-                Assert.Equal(0, Memory.Compare(tri, two, 4096));
+                var result = Memory.Compare(tri, two, 4096, out int position);
+                Assert.Equal(0, result);
+            }
+        }
+
+        public static IEnumerable<object[]> ChangedBytes
+        {
+            get
+            {
+                return new[]
+                {
+                    new object[] { 0 },
+                    new object[] { (4096 * 4 - 1) },
+                    new object[] { 513 },
+                    new object[] { 1023 },
+                    new object[] { 1024 },
+                    new object[] { 1025 },
+                    new object[] { (4096 * 4 - 2) },
+                    new object[] { 1 },
+                    new object[] { 65 },
+                    new object[] { 63 },
+                    new object[] { 64 },
+                };
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(ChangedBytes))]
+        public void CanComputeSmallDifference_AndThenApplyOnBig(int value)
+        {
+            var fst = new byte[4096 * 4];
+            var sec = new byte[4096 * 4];
+            var trd = new byte[4096 * 4];
+
+            new Random().NextBytes(fst);
+            Buffer.BlockCopy(fst, 0, sec, 0, fst.Length);
+
+            sec[value]++;
+
+            fixed (byte* one = fst)
+            fixed (byte* two = sec)
+            fixed (byte* tri = trd)
+            fixed (byte* tmp = new byte[4096])
+            {
+                var diffPages = new DiffPages
+                {
+                    Output = tmp,
+                };
+
+                diffPages.ComputeDiff(one, two, 4096);
+                Assert.True(diffPages.IsDiff);
+
+                Memory.Copy(tri, one, 4096);
+                new DiffApplier
+                {
+                    Destination = tri,
+                    Diff = tmp,
+                    Size = 4096,
+                    DiffSize = diffPages.OutputSize
+                }.Apply(false);
+
+                var result = Memory.Compare(tri, two, 4096, out int position);
+                Assert.Equal(0, result);
+            }
+        }
+
+        [Fact]
+        public void ComputeAndThenApplyRandomized()
+        {
+            const int Size = 4096 * 4;
+
+            var fst = new byte[Size];
+            var sec = new byte[Size];
+            var trd = new byte[Size];
+
+            var rnd = new Random(1337);
+            rnd.NextBytes(fst);
+            Buffer.BlockCopy(fst, 0, sec, 0, fst.Length);
+
+            fixed (byte* one = fst)
+            fixed (byte* two = sec)
+            fixed (byte* tri = trd)
+            fixed (byte* tmp = new byte[Size])
+            {                
+                for (int i = 0; i < 4096; i++)
+                {
+                    // We are going to change one byte at a time and try to reconstruct. 
+                    int idx = rnd.Next(Size);
+                    sec[idx]++;
+
+                    var diffPages = new DiffPages
+                    {
+                        Output = tmp,
+                    };
+
+                    Memory.Set(tri, 0, Size);
+                    Memory.Set(tmp, 0, Size);
+
+                    diffPages.ComputeDiff(one, two, Size);
+                    if (!diffPages.IsDiff)
+                        return;
+
+                    Memory.Copy(tri, one, Size);
+                    new DiffApplier
+                    {
+                        Destination = tri,
+                        Diff = tmp,
+                        Size = Size,
+                        DiffSize = diffPages.OutputSize
+                    }.Apply(false);
+
+                    var result = Memory.Compare(tri, two, Size, out int position);
+                    if ( result != 0 )
+                        Console.WriteLine($"The position at fault is '{position}'");
+                    Assert.Equal(0, result);
+                }
             }
         }
 
