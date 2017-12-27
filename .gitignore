@@ -116,3 +116,4 @@ temp
 /.idea
 .vscode
 /test/Tryouts/Databases/*
+bench/Micro.Benchmark/BenchmarkDotNet.Artifacts/

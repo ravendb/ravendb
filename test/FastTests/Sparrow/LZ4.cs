@@ -17,19 +17,19 @@ namespace FastTests.Sparrow
             {
                 return new[]
                 {
-                     new object[] { 10, 2 },
-                     new object[] { 10, 3 },
-                     new object[] { 10, 4 },
-                     new object[] { 15, 2 },
-                     new object[] { 16, 2 },
-                     new object[] { 40, 2 },
-                     new object[] { 100, 2 },
-                     new object[] { 100, 4 },
-                     new object[] { 1000, 4 },
-                     new object[] { 10000, 4 },
-                     new object[] { 50000, 4 },
-                     new object[] { 100000, 4 },
-                     new object[] { 100000, 7 }
+                    new object[] { 10, 2 },
+                    new object[] { 10, 3 },
+                    new object[] { 10, 4 },
+                    new object[] { 15, 2 },
+                    new object[] { 16, 2 },
+                    new object[] { 40, 2 },
+                    new object[] { 100, 2 },
+                    new object[] { 100, 4 },
+                    new object[] { 1000, 4 },
+                    new object[] { 10000, 4 },
+                    new object[] { 50000, 4 },
+                    new object[] { 100000, 4 },
+                    new object[] { 100000, 7 }
                 };
             }
         }

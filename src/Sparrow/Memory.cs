@@ -173,27 +173,26 @@ UnmanagedCompare:
         /// faster to call .Copy() directly.
         /// </summary>
         
-        private static void BulkCopy(byte* dest, byte* src, long n)
+        private static void BulkCopy(void* dest, void* src, long n)
         {
-            UnmanagedMemory.Copy(dest, src, n);            
+            UnmanagedMemory.Copy((byte*)dest, (byte*)src, n);            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Copy(byte* dest, byte* src, uint n)
+        public static void Copy(void* dest, void* src, uint n)
         {
             Unsafe.CopyBlock(dest, src, n);
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Copy(byte* dest, byte* src, int n)
+        public static void Copy(void* dest, void* src, int n)
         {
             Unsafe.CopyBlock(dest, src, (uint)n);
         }
 
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Copy(byte* dest, byte* src, long n)
+        public static void Copy(void* dest, void* src, long n)
         {
             if (n < uint.MaxValue)
             {
