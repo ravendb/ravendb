@@ -47,7 +47,7 @@ namespace SlowTests.Bugs.Indexing
             Assert.False(indexDefinition.Maps.Contains("(System.String)(System.String)"));
         }
 
-        private abstract class Nullable
+        private class Nullable
         {
             public char? Char { get; set; }
             public string String { get; set; }

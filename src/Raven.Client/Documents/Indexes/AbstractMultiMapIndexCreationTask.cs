@@ -33,15 +33,20 @@ namespace Raven.Client.Documents.Indexes
         protected void AddMapForAll<TBase>(Expression<Func<IEnumerable<TBase>, IEnumerable>> expr)
         {
             // Index the base class.
-            AddMap(expr);
+            if (typeof(TBase).GetTypeInfo().IsAbstract == false &&
+                typeof(TBase).GetTypeInfo().IsInterface == false)
+                AddMap(expr);
 
             // Index child classes.
             var children = typeof(TBase).GetTypeInfo().Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
             var addMapGeneric = GetType().GetMethod("AddMap", BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var child in children)
             {
-                if (child.GetTypeInfo().IsGenericTypeDefinition)
+                if (child.GetTypeInfo().IsGenericTypeDefinition ||
+                    child.GetTypeInfo().IsAbstract ||
+                    child.GetTypeInfo().IsInterface)
                     continue;
+                
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
                 var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
                 var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
