@@ -460,7 +460,7 @@ namespace FastTests
             } while (debug == false || Debugger.IsAttached);
         }
 
-        public static void WaitForUserToContinueTheTest(DocumentStore documentStore, bool debug = true, int port = 8079)
+        public static void WaitForUserToContinueTheTest(IDocumentStore documentStore, bool debug = true, int port = 8079)
         {
             if (debug && Debugger.IsAttached == false)
                 return;

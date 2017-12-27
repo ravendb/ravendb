@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -54,13 +55,38 @@ namespace RachisTests
                     var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
                     var deleteResult = store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
-                    Assert.Empty(deleteResult.PendingDeletes);
+                    await WaitForDatabaseToBeDeleted(store,databaseName,TimeSpan.FromSeconds(30));
                     await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 }
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     Assert.Null(leader.ServerStore.Cluster.ReadDatabase(context, databaseName));
+                }
+            }
+        }
+
+        private async Task<bool> WaitForDatabaseToBeDeleted(IDocumentStore store, string databaseName,TimeSpan timeout)
+        {
+            var pollingInterval = timeout.TotalSeconds<1? timeout:TimeSpan.FromSeconds(1);
+            var sw = Stopwatch.StartNew();
+            while (true)
+            {
+                var delayTask = Task.Delay(pollingInterval);
+                var dbTask = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                var doneTask = await Task.WhenAny(dbTask, delayTask);
+                if (doneTask == delayTask)
+                {
+                    if (sw.Elapsed > timeout)
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+                var dbRecord = dbTask.Result;
+                if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
+                {
+                    return true;
                 }
             }
         }
