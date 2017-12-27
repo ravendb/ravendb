@@ -1,7 +1,6 @@
 import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import nodeInfo = require("models/wizard/nodeInfo");
-
 import serverSetup = require("models/wizard/serverSetup");
 
 class nodes extends setupStep {

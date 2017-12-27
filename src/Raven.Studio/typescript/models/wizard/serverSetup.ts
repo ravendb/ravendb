@@ -79,6 +79,7 @@ class serverSetup {
         }
         
         this.runningOnPosix(params.IsPosix);
+        ipEntry.runningOnDocker = true;
     }
 
     private getPortPart() {

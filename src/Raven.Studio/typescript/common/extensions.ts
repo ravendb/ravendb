@@ -35,7 +35,6 @@ class extensions {
 
         return null;
     }
-
     
     private static validateIpAddressWithoutPort(ipAddress: string) : string {
         if (!ipAddress || ipAddress === 'localhost' || ipAddress === '::1') {
@@ -110,8 +109,8 @@ class extensions {
 
         (ko.validation.rules as any)['validIpAddress'] = {
             validator: (val: string) => !extensions.validateIpAddressWithoutPort(val),
-            message: (params: any, databaseName: KnockoutObservable<string>) => {
-                return extensions.validateIpAddressWithoutPort(databaseName());
+            message: (params: any, ipAddress: KnockoutObservable<string>) => {
+                return extensions.validateIpAddressWithoutPort(ipAddress());
             }
         };
 
@@ -413,7 +412,6 @@ class extensions {
             }
         }
     }
-
 }
 
 export = extensions;

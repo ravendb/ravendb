@@ -1,11 +1,16 @@
 ﻿/// <reference path="../../typings/tsd.d.ts" />
-
 import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 import timeHelpers = require("common/timeHelpers");
 import moment = require("moment");
 
 class genUtils {
 
+    /***  IP Address Methods  ***/
+
+    static isLocalhostIpAddress(ip: string) {
+        return ((ip === 'localhost') || (_.split(ip, '.')[0] === '127') || (ip === '::1'));
+    }
+    
     /***  Date-Time Methods  ***/
 
     static timeSpanAsAgo(input: string, withSuffix: boolean): string {
@@ -356,8 +361,7 @@ class genUtils {
         }
         
         return true;
-    }
-    
+    }   
 } 
 
 export = genUtils;

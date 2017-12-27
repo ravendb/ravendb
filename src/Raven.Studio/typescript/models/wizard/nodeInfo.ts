@@ -1,5 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
 import ipEntry = require("models/wizard/ipEntry");
 
 class nodeInfo {
@@ -95,7 +94,6 @@ class nodeInfo {
         }
         return serverUrl;
     }
-    
 
     toDto(): Raven.Server.Commercial.SetupInfo.NodeInfo {
         return {
