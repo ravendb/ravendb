@@ -972,8 +972,11 @@ namespace Raven.Server.Commercial
         public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
         {
             var sanNames = cert.Extensions["2.5.29.17"];
+            if (sanNames == null)
+                yield break;
+
             // If we have alternative names, find the apropriate url using the node tag
-            foreach (var line in sanNames.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (var line in sanNames?.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string[] parts;
 
