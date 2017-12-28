@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Changes
         private readonly ConcurrentDictionary<int, TaskCompletionSource<object>> _confirmations = new ConcurrentDictionary<int, TaskCompletionSource<object>>();
         
         private readonly AtomicDictionary<DatabaseConnectionState> _counters = new AtomicDictionary<DatabaseConnectionState>(StringComparer.OrdinalIgnoreCase);
+        private int _immediateConnection;
 
         public DatabaseChanges(RequestExecutor requestExecutor, string databaseName, Action onDispose)
         {
@@ -312,7 +313,7 @@ namespace Raven.Client.Documents.Changes
             });
 
             // try to reconnect
-            if (newValue)
+            if (newValue && Volatile.Read(ref _immediateConnection) != 0)
                 counter.Set(counter.OnConnect());
             
             return counter;
@@ -397,6 +398,8 @@ namespace Raven.Client.Documents.Changes
                     {
                         await _client.ConnectAsync(url, _cts.Token).ConfigureAwait(false);
 
+                        Interlocked.Exchange(ref _immediateConnection, 1);
+                        
                         foreach (var counter in _counters)
                         {
                             counter.Value.Set(counter.Value.OnConnect());
@@ -423,7 +426,10 @@ namespace Raven.Client.Documents.Changes
                         return;
 
                     using (_client)
+                    {
+                        Interlocked.Exchange(ref _immediateConnection, 0);
                         _client = CreateClientWebSocket(_requestExecutor);
+                    }
 
                     ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
 
