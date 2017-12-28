@@ -286,9 +286,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return newFields;
             }
 
-            if (valueType == ValueType.Enumerable)
+            int HandleArray(IEnumerable itemsToIndex)
             {
-                var itemsToIndex = (IEnumerable)value;
                 int count = 1;
 
                 if (nestedArray == false)
@@ -312,22 +311,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 return newFields;
             }
 
-            if (valueType == ValueType.DynamicJsonObject)
+            if (valueType == ValueType.Enumerable)
             {
-                var dynamicJson = (DynamicBlittableJson)value;
-
-                foreach (var complexObjectField in GetComplexObjectFields(path, dynamicJson.BlittableJson, storage, indexing, termVector))
-                {
-                    instance.Add(complexObjectField);
-                    newFields++;
-                }
-
-                return newFields;
+                return HandleArray((IEnumerable)value);
             }
 
-            if (valueType == ValueType.BlittableJsonObject)
+            int HandleObject(BlittableJsonReaderObject val)
             {
-                var val = (BlittableJsonReaderObject)value;
+                if (val.TryGetMember("$values", out var values) &&
+                    IsArrayOfTypeValueObject(val))
+                {
+                    return HandleArray((IEnumerable)values);
+                }
 
                 foreach (var complexObjectField in GetComplexObjectFields(path, val, storage, indexing, termVector))
                 {
@@ -336,6 +331,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
 
                 return newFields;
+            }
+
+            if (valueType == ValueType.DynamicJsonObject)
+            {
+                var dynamicJson = (DynamicBlittableJson)value;
+                return HandleObject(dynamicJson.BlittableJson);
+            }
+
+            if (valueType == ValueType.BlittableJsonObject)
+            {
+                return HandleObject((BlittableJsonReaderObject)value);
             }
 
             if (valueType == ValueType.Lucene)
@@ -401,6 +407,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
 
             return newFields;
+        }
+
+        private bool IsArrayOfTypeValueObject(BlittableJsonReaderObject val)
+        {
+            foreach (var propertyName in val.GetPropertyNames())
+            {
+                if (propertyName.Length == 0 || propertyName[0] != '$')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private IEnumerable<AbstractField> GetComplexObjectFields(string path, BlittableJsonReaderObject val, Field.Store storage, Field.Index indexing, Field.TermVector termVector)
