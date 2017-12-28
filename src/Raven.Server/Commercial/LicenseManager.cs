@@ -867,11 +867,17 @@ namespace Raven.Server.Commercial
 
         private void SetAffinity(Process process, int cores)
         {
-            if (ProcessorInfo.ProcessorCount < cores)
-                return;
-
             try
             {
+                var currentlyAssignedCores = NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+                if (cores > ProcessorInfo.ProcessorCount ||
+                    currentlyAssignedCores == ProcessorInfo.ProcessorCount)
+                {
+                    // the number of assigned cores is larger than we have on this machine
+                    // or we already set the assigned cores to the max number of cores on this machine
+                    return;
+                }
+
                 var bitMask = 1L;
                 var processAffinityMask = _serverStore.Configuration.Server.ProcessAffinityMask;
                 if (processAffinityMask == null)
@@ -903,7 +909,7 @@ namespace Raven.Server.Commercial
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
-                if (ProcessorInfo.ProcessorCount > cores)
+                if (ProcessorInfo.ProcessorCount > cores && currentlyAssignedCores != cores)
                 {
                     var notification = PerformanceHint.Create(
                         null,
@@ -950,7 +956,9 @@ namespace Raven.Server.Commercial
             {
                 var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
                 if (memoryInfo.UsableMemory < ramInGb)
-                    return;
+                {
+                    ramInGb = memoryInfo.UsableMemory;
+                }
 
                 var maxWorkingSetInBytes = (long)Size.ConvertToBytes(ramInGb, SizeUnit.Gigabytes);
                 var minWorkingSetInBytes = process.MinWorkingSet.ToInt64();
