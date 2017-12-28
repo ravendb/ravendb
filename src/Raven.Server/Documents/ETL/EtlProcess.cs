@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.ETL
 
                         try
                         {
-                            Database.RachisLogIndexNotifications.WaitForIndexNotification(etag).Wait(CancellationToken);
+                            Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout).Wait(CancellationToken);
                         }
                         catch (OperationCanceledException)
                         {

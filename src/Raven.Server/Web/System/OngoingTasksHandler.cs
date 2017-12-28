@@ -944,7 +944,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name);
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -1021,7 +1021,7 @@ namespace Raven.Server.Web.System
                 try
                 {
                     (index, _) = await ServerStore.DeleteOngoingTask(id, taskName, type, Database.Name);
-                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 finally
                 {
@@ -1101,7 +1101,7 @@ namespace Raven.Server.Web.System
                     foreach (var transformation in _deletingEtl.Transformations)
                     {
                         var (index, _) = await _serverStore.RemoveEtlProcessState(_context, _database.Name, _deletingEtl.Name, transformation);
-                        await _database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                        await _database.RachisLogIndexNotifications.WaitForIndexNotification(index, _serverStore.Engine.OperationTimeout);
                     }
                 }
             }

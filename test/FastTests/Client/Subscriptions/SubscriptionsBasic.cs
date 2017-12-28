@@ -933,7 +933,7 @@ namespace FastTests.Client.Subscriptions
 
                     await index.WaitWithTimeout(_reasonableWaitTime);
 
-                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result).WaitWithTimeout(_reasonableWaitTime);
+                    await database.RachisLogIndexNotifications.WaitForIndexNotification(index.Result, database.ServerStore.Engine.OperationTimeout).WaitWithTimeout(_reasonableWaitTime);
 
                     using (var session = store.OpenSession())
                     {

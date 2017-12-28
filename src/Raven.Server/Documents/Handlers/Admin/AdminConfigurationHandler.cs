@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     record.Client.Etag++; // we don't care _what_ the value is, just that it is changing
 
                     var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index);
-                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index);
+                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Index, ServerStore.Engine.OperationTimeout);
                 }
 
                 NoContentStatus();

@@ -1370,14 +1370,12 @@ namespace Raven.Server.ServerWide
             _notifiedListeners = new AsyncManualResetEvent(token);
         }
 
-        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
+        public async Task WaitForIndexNotification(long index, TimeSpan timeout)
         {
             while (true)
             {
                 // first get the task, then wait on it
-                var waitAsync = timeout.HasValue == false ?
-                    _notifiedListeners.WaitAsync() :
-                    _notifiedListeners.WaitAsync(timeout.Value);
+                var waitAsync = _notifiedListeners.WaitAsync(timeout);
 
                 if (index <= Interlocked.Read(ref LastModifiedIndex))
                     break;
@@ -1387,7 +1385,7 @@ namespace Raven.Server.ServerWide
                     var copy = Interlocked.Read(ref LastModifiedIndex);
                     if (index <= copy)
                         break;
-                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, copy);
+                    ThrowTimeoutException(timeout, index, copy);
                 }
             }
 

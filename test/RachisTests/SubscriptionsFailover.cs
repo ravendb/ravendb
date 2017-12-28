@@ -409,7 +409,7 @@ namespace RachisTests
                 foreach (var s in Servers)// need to wait for it on all servers
                 {
                     documentDatabase = await s.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(defaultDatabase);
-                    await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(res.Item1);
+                    await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(res.Item1, s.ServerStore.Engine.OperationTimeout);
                 }
             }
         }

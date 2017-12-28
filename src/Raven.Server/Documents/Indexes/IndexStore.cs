@@ -393,7 +393,7 @@ namespace Raven.Server.Documents.Indexes
                 try
                 {
                     var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
                     return GetIndex(definition.Name);
 
@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
                 var instance = GetIndex(definition.Name);
 
@@ -603,7 +603,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
                 return true;
             }
@@ -1210,7 +1210,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             }
             finally
             {
@@ -1239,7 +1239,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             }
             finally
             {

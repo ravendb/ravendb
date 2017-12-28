@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Subscriptions
             if (_logger.IsInfoEnabled)
                 _logger.Info($"New Subscription with index {etag} was created");
 
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
             return etag;
         }
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
 
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Subscriptions
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
         public SubscriptionState GetSubscriptionFromServerStore(string name)
@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 _logger.Info($"Subscription with id {name} was deleted");
             }
-            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
         public bool DropSubscriptionConnection(long subscriptionId, SubscriptionException ex)
