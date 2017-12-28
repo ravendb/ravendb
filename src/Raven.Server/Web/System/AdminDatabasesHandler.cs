@@ -1082,8 +1082,8 @@ namespace Raven.Server.Web.System
                 if (string.IsNullOrWhiteSpace(migrationConfigurationJson.ServerUrl))
                     throw new ArgumentException("Url cannot be null or empty");
 
-                var migrator = new Migrator(migrationConfigurationJson, ServerStore, ServerStore.ServerShutdown);
-                await migrator.MigrateDatabases(migrationConfigurationJson.DatabasesNames);
+                var migrator = new Migrator(migrationConfigurationJson, ServerStore);
+                await migrator.MigrateDatabases(migrationConfigurationJson.Databases);
 
                 NoContentStatus();
             }

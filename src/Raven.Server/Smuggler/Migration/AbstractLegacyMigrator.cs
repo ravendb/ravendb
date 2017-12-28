@@ -7,12 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Smuggler;
-using Raven.Server.Documents;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -20,18 +16,8 @@ namespace Raven.Server.Smuggler.Migration
 {
     public abstract class AbstractLegacyMigrator : AbstractMigrator
     {
-        protected AbstractLegacyMigrator(
-            string migrationStateKey, 
-            string serverUrl, 
-            string databaseName, 
-            SmugglerResult result, 
-            Action<IOperationProgress> onProgress, 
-            DocumentDatabase database,
-            HttpClient httpClient,
-            OperationCancelToken cancelToken) 
-            : base(migrationStateKey, serverUrl, databaseName, result, onProgress, database, cancelToken)
+        protected AbstractLegacyMigrator(MigratorOptions options) : base(options)
         {
-            HttpClient = httpClient;
         }
 
         protected LastEtagsInfo GetLastMigrationState()
@@ -73,7 +59,7 @@ namespace Raven.Server.Smuggler.Migration
                                                     $"error: {responseString}");
             }
 
-            var responseStream = await response.Content.ReadAsStreamAsync();
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
             using (var reader = new StreamReader(responseStream, Encoding.UTF8))
             {
                 var jsonStr = reader.ReadToEnd();

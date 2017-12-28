@@ -9,17 +9,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server.Documents;
 using Raven.Server.Json;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -29,21 +25,8 @@ namespace Raven.Server.Smuggler.Migration
 {
     public class Importer : AbstractMigrator
     {
-        private readonly RequestExecutor _requestExecutor;
-
-        public Importer(
-            string migrationStateKey,
-            string serverUrl,
-            string sourceDatabaseName,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            DocumentDatabase database,
-            OperationCancelToken cancelToken)
-            : base(migrationStateKey, serverUrl, sourceDatabaseName, result, onProgress, database, cancelToken)
+        public Importer(MigratorOptions options) : base(options)
         {
-            _requestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(ServerUrl, DatabaseName, Database.ServerStore.Server.Certificate.Certificate, DocumentConventions.Default);
-
-            HttpClient = _requestExecutor.HttpClient;
         }
 
         public override async Task Execute()
@@ -131,7 +114,12 @@ namespace Raven.Server.Smuggler.Migration
         {
             var startDocumentEtag = importInfo?.LastEtag ?? 0;
             var url = $"{ServerUrl}/databases/{DatabaseName}/smuggler/export?operationId={operationId}&startEtag={startDocumentEtag}";
-            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide();
+            var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
+            {
+                OperateOnTypes = OperateOnTypes,
+                RemoveAnalyzers = RemoveAnalyzers
+            };
+
             if (importInfo != null)
                 databaseSmugglerOptionsServerSide.OperateOnTypes |= DatabaseItemType.Tombstones;
 
@@ -166,11 +154,28 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<long> GetOperationId()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            var url = $"{ServerUrl}/databases/{DatabaseName}/operations/next-operation-id";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            if (response.IsSuccessStatusCode == false)
             {
-                var getNextOperationIdRequest = new GetNextOperationIdCommand();
-                await _requestExecutor.ExecuteAsync(getNextOperationIdRequest, context, token: CancelToken.Token);
-                return getNextOperationIdRequest.Result;
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to get operation id from server: {ServerUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            {
+                var operationIdResponse = await context.ReadForMemoryAsync(responseStream, "operation-id");
+                if (operationIdResponse.TryGet("Id", out long id) == false)
+                {
+                    throw new InvalidOperationException($"Failed to get operation id from server: {ServerUrl}, " +
+                                                        $"response: {operationIdResponse}");
+                }
+
+                return id;
             }
         }
 
@@ -201,8 +206,8 @@ namespace Raven.Server.Smuggler.Migration
             }
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
             {
-                var responseStream = await response.Content.ReadAsStreamAsync();
                 var databaseList = await context.ReadForMemoryAsync(responseStream, "databases-list");
 
                 if (databaseList.TryGet(nameof(DatabasesInfo.Databases), out BlittableJsonReaderArray names) == false)
@@ -210,11 +215,6 @@ namespace Raven.Server.Smuggler.Migration
 
                 return names.Select(x => x.ToString()).ToList();
             }
-        }
-
-        public override void Dispose()
-        {
-            _requestExecutor.Dispose();
         }
     }
 

@@ -5,10 +5,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide;
+using Raven.Client.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -22,18 +20,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly MajorVersion _majorVersion;
         private readonly int _buildVersion;
 
-        public Migrator_V3(
-            string migrationStateKey,
-            string serverUrl,
-            string databaseName,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            DocumentDatabase database,
-            HttpClient client,
-            MajorVersion majorVersion,
-            int buildVersion,
-            OperationCancelToken cancelToken)
-            : base(migrationStateKey, serverUrl, databaseName, result, onProgress, database, client, cancelToken)
+        public Migrator_V3(MigratorOptions options, MajorVersion majorVersion, int buildVersion) : base(options)
         {
             _majorVersion = majorVersion;
             _buildVersion = buildVersion;
@@ -42,12 +29,15 @@ namespace Raven.Server.Smuggler.Migration
         public override async Task Execute()
         {
             var state = GetLastMigrationState();
-            const ItemType types = ItemType.Documents | ItemType.Indexes | ItemType.Attachments;
+
+            var operateOnTypes = GenerateOperateOnTypes();
+            if (operateOnTypes == ItemType.None)
+                throw new BadRequestException("No types to import");
 
             var databaseMigrationOptions = new DatabaseMigrationOptions
             {
                 BatchSize = 1024,
-                OperateOnTypes = types,
+                OperateOnTypes = operateOnTypes,
                 ExportDeletions = state != null,
                 StartDocsEtag = state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty,
                 StartDocsDeletionEtag = state?.LastDocDeleteEtag ?? LastEtagsInfo.EtagEmpty,
@@ -83,6 +73,32 @@ namespace Raven.Server.Smuggler.Migration
             await SaveLastState(canGetLastStateByOperationId, operationId);
         }
 
+        private ItemType GenerateOperateOnTypes()
+        {
+            var itemType = ItemType.None;
+            if (OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+            {
+                itemType |= ItemType.Documents;
+            }
+
+            if (OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
+            {
+                itemType |= ItemType.Attachments;
+            }
+
+            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
+            {
+                itemType |= ItemType.Indexes;
+            }
+
+            if (RemoveAnalyzers)
+            {
+                itemType |= ItemType.RemoveAnalyzers;
+            }
+
+            return itemType;
+        }
+
         private async Task<SmugglerResult> MigrateDatabase(string json, bool readLegacyEtag)
         {
             var url = $"{ServerUrl}/databases/{DatabaseName}/studio-tasks/exportDatabase";
@@ -109,7 +125,8 @@ namespace Raven.Server.Smuggler.Migration
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
-                    ReadLegacyEtag = readLegacyEtag
+                    ReadLegacyEtag = readLegacyEtag,
+                    RemoveAnalyzers = RemoveAnalyzers
                 };
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
@@ -204,11 +221,6 @@ namespace Raven.Server.Smuggler.Migration
 
             var responseStream = await response.Content.ReadAsStreamAsync();
             return await context.ReadForMemoryAsync(responseStream, "migration-operation-state");
-        }
-
-        public override void Dispose()
-        {
-            HttpClient.Dispose();
         }
     }
 }

@@ -170,9 +170,10 @@ namespace Raven.Server.Web.System
             var migrator = new Migrator(new SingleDatabaseMigrationConfiguration
             {
                 ServerUrl = serverUrl
-            }, ServerStore, ServerStore.ServerShutdown);
+            }, ServerStore);
 
             var buildInfo = await migrator.GetBuildInfo();
+            migrator.DisposeHttpClient(); // the http client isn't needed anymore
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
