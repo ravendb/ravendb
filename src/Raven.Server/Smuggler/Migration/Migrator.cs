@@ -144,7 +144,7 @@ namespace Raven.Server.Smuggler.Migration
 
                 var defaultOperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Conflicts |
                                             DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
-                                            DatabaseItemType.Identities | DatabaseItemType.CmpXchg;
+                                            DatabaseItemType.Identities | DatabaseItemType.CompareExchange;
 
                 if (_buildMajorVersion != MajorVersion.V4)
                 {

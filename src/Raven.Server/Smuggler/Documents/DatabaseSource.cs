@@ -35,7 +35,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Conflicts,
             DatabaseItemType.Indexes,
             DatabaseItemType.Identities,
-            DatabaseItemType.CmpXchg,
+            DatabaseItemType.CompareExchange,
             DatabaseItemType.None
         };
 

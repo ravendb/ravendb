@@ -147,7 +147,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyAttachmentDeletions:
                     counts = ProcessLegacyAttachmentDeletions(result);
                     break;
-                case DatabaseItemType.CmpXchg:
+                case DatabaseItemType.CompareExchange:
                     counts = ProcessCmpXchg(result);
                     break;
                 default:
@@ -189,7 +189,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Identities:
                     counts = result.Identities;
                     break;
-                case DatabaseItemType.CmpXchg:
+                case DatabaseItemType.CompareExchange:
                     counts = result.CmpXchg;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:

@@ -85,7 +85,7 @@ class migrateDatabaseModel {
             operateOnTypes.push("Identities");
         }
         if (this.includeCompareExchange() && !this.isLegacy()) {
-            operateOnTypes.push("CmpXchg");
+            operateOnTypes.push("CompareExchange");
         }
 
         const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {

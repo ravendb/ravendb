@@ -600,7 +600,7 @@ namespace Raven.Server.Documents
                         var smugglerDestination = new StreamDestination(zipStream, ctx, smugglerSource);
                         var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                         {
-                            OperateOnTypes = DatabaseItemType.CmpXchg | DatabaseItemType.Identities
+                            OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                         };
                         var smuggler = new DatabaseSmuggler(this,
                             smugglerSource,
