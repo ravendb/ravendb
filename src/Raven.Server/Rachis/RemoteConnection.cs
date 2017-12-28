@@ -408,13 +408,8 @@ namespace Raven.Server.Rachis
                 _src = rachisHello.DebugSourceIdentifier ?? "unknown";
                 _destTag = rachisHello.DebugDestinationIdentifier ?? _destTag;
                 _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
+                _info.Destination = _destTag;
 
-                if (RemoteConnectionsList.TryRemove(_info))
-                {
-                    _info.Destination = _destTag;
-                    RemoteConnectionsList.Add(_info);
-                }
-                
                 return rachisHello;
             }
         }

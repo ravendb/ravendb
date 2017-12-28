@@ -480,7 +480,7 @@ namespace Raven.Server.ServerWide
                     }, null);
                 }
 
-                if (state.To == RachisState.LeaderElect)
+                if (state.To == RachisState.LeaderElect  || state.To == RachisState.Leader)
                 {
                     _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
                 } else if (state.From == RachisState.LeaderElect || state.From == RachisState.Leader)

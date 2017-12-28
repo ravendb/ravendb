@@ -166,7 +166,6 @@ namespace Raven.Server.Rachis
                                     if (_engine.Log.IsInfoEnabled)
                                         _engine.Log.Info($"Candidate RequestVote trial vote req/res took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
-                                    // TODO: What if the elector on the other side casted his vote for some else, but that node _lost_ the elections ??? We can't simply became a follower.
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
