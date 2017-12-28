@@ -1,5 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 import ipEntry = require("models/wizard/ipEntry");
+import genUtils = require("common/generalUtils");
 
 class nodeInfo {
     
@@ -8,36 +9,65 @@ class nodeInfo {
     port = ko.observable<string>();
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
-    externalIpAddress = ko.observable<string>();
     
+    externalIpAddress = ko.observable<string>();     
     effectiveIpAddress: KnockoutComputed<string>;
+    
+    ipsContainHostName: KnockoutComputed<boolean>;
+  
+    advancedSettingsCheckBox = ko.observable<boolean>(false);    
+    showAdvancedSettings: KnockoutComputed<boolean>;
+
     validationGroup: KnockoutValidationGroup;
-    
-    showAdvancedSettings = ko.observable<boolean>(false);
-    
+
     private hostnameIsOptional: KnockoutObservable<boolean>;
     
     constructor(hostnameIsOptional: KnockoutObservable<boolean>) {
         this.hostnameIsOptional = hostnameIsOptional;
-        this.initValidation();
         
+        this.initObservables();
+        this.initValidation();
+    }
+
+    private initObservables() {
         this.isLocal = ko.pureComputed(() => {
             return this.nodeTag() === 'A';
         });
         
         this.ips.push(new ipEntry());
         
+        this.ipsContainHostName = ko.pureComputed(() => {            
+            let hostName = false;
+            
+            this.ips().forEach(ipItem => {
+                if (genUtils.isHostname(ipItem.ip())) {
+                    hostName = true;
+                }
+            });
+            
+            return hostName;                       
+        });
+        
+        this.showAdvancedSettings = ko.pureComputed(() => {
+            if (this.ipsContainHostName()){
+                this.advancedSettingsCheckBox(true);
+                return true;
+            }
+
+            return this.advancedSettingsCheckBox();
+        });
+        
         this.effectiveIpAddress = ko.pureComputed(() => {
-           const externalIp = this.externalIpAddress();
-           if (externalIp && this.showAdvancedSettings()) {
-               return externalIp;
-           }
-           
-           if (this.ips().length) {
-               return this.ips()[0].ip();
-           }
-           
-           return "";
+            const externalIp = this.externalIpAddress();
+            if (externalIp && this.showAdvancedSettings()) {
+                return externalIp;
+            }
+
+            if (this.ips().length) {
+                return this.ips()[0].ip();
+            }
+
+            return "";
         });
     }
 
@@ -47,7 +77,11 @@ class nodeInfo {
         });
         
         this.externalIpAddress.extend({
-            validIpAddress: true
+            required: {   
+                onlyIf: () => this.ipsContainHostName() && !this.externalIpAddress(),                
+                message: "This field is required when an address contains Hostname"
+            },
+            validAddressWithoutPort: true           
         });
         
         this.hostname.extend({

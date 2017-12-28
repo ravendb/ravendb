@@ -36,24 +36,38 @@ class extensions {
         return null;
     }
     
-    private static validateIpAddressWithoutPort(ipAddress: string) : string {
-        if (!ipAddress || ipAddress === 'localhost' || ipAddress === '::1') {
+    private static validateNoPort(address: string) : string {
+        if (!address || address === 'localhost' || address === '::1') {  
+            return null;
+        }
+
+        const regexIPv4PortInTheEnd = /:\d{1,5}$/;
+        const regexIPv6PortInTheEnd = /]:\d{1,5}$/;        
+        
+        if (regexIPv4PortInTheEnd.test(address) || regexIPv6PortInTheEnd.test(address)) {
+            return `Please enter IP Address without a port number`;
+        }
+
+        return null;
+    }
+    
+    private static validateAddressAndNoPort(address: string) : string {          
+        if (!address || address === 'localhost' || address === '::1') {
             return null;
         }       
                 
-        if (!_.includes(ipAddress, '.') && !_.includes(ipAddress, ':')) {
+        if (!_.includes(address, '.') && !_.includes(address, ':')) {
             return "Please enter a valid IPv4 or IPv6 address";
-        }        
-       
-        const regexIPv4WithPort = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?):(\d+)$/;
-        const regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-
-        // For now, Show error only if string is a valid IPv4 with port
-        if (regexIPv4WithPort.test(ipAddress)) {
-            return `Please enter ip address without port number`;
+        }   
+        
+        const addressWithPort = extensions.validateNoPort(address);        
+        if (addressWithPort) {
+            return addressWithPort;
         }
-
-        if (!regexIPv4.test(ipAddress)) {          
+                
+        const regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+        if (!regexIPv4.test(address)) {
+            
             // TODO: check if this is a valid IPv6....            
         }
         
@@ -92,7 +106,7 @@ class extensions {
 
     private static configureValidation() {
 
-        //Validate that url is in the following format: http(s)://hostName (e.g. http://localhost)
+        // Validate that url is in the following format: http(s)://hostName (e.g. http://localhost)
         (ko.validation.rules as any)['validUrl'] = {
             validator: (val: string) => !extensions.validateUrl(val),
             message: (params: any, url: KnockoutObservable<string>) => {
@@ -107,10 +121,17 @@ class extensions {
             }
         };
 
-        (ko.validation.rules as any)['validIpAddress'] = {
-            validator: (val: string) => !extensions.validateIpAddressWithoutPort(val),
+        (ko.validation.rules as any)['noPort'] = {
+            validator: (val: string) => !extensions.validateNoPort(val),
+            message: (params: any, address: KnockoutObservable<string>) => {
+                return extensions.validateNoPort(address());
+            }
+        };
+        
+        (ko.validation.rules as any)['validAddressWithoutPort'] = {
+            validator: (val: string) => !extensions.validateAddressAndNoPort(val),
             message: (params: any, ipAddress: KnockoutObservable<string>) => {
-                return extensions.validateIpAddressWithoutPort(ipAddress());
+                return extensions.validateAddressAndNoPort(ipAddress());
             }
         };
 

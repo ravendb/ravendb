@@ -11,7 +11,7 @@ class ipEntry {
    constructor() {
        this.ip.extend({
            required: true,
-           validIpAddress: true,
+           noPort:true, 
            validation: [
                {
                    validator: (ip: string) => (ipEntry.runningOnDocker && !genUtils.isLocalhostIpAddress(ip)) || !ipEntry.runningOnDocker,  
