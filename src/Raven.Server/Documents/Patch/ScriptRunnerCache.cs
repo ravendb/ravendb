@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Patch
         private int CleanTheCache()
         {
             
-            foreach (var pair in _cache.ForceEnumerate().OrderBy(x => x.Value.Value.Runs)
+            foreach (var pair in _cache.ForceEnumerateInThreadSafeManner().OrderBy(x => x.Value.Value.Runs)
                 .Take(_configuration.Patching.MaxNumberOfCachedScripts / 4)
             )
             {

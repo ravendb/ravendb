@@ -198,7 +198,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [NightlyBuildFact]
         public async Task SetMentorToSubscriptionWithFailover()
         {
             const int nodesAmount = 5;

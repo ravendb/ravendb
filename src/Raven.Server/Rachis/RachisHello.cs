@@ -22,5 +22,7 @@
         /// </summary>
         public InitialMessageType InitialMessageType;
 
+        public int SendingThread;
+
     }
 }

@@ -142,13 +142,14 @@ namespace Raven.Server.Documents.Replication
                 using (_tcpClient = task.Result)
                 {
                     var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Engine.TcpConnectionTimeout);
-
                     wrapSsl.Wait(CancellationToken);
 
                     using (_stream = wrapSsl.Result)
                     using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
+                        _streamReadTimeout = _stream.ReadTimeout;
+
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
 
                         WriteHeaderToRemotePeer();
@@ -811,33 +812,34 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
+        private volatile int _streamReadTimeout;
 
         public void Dispose()
         {
             // There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
             if (!_disposed.Raise())
                 return;
+
+            var timeout = TimeSpan.FromMilliseconds(_streamReadTimeout);
             if (_log.IsInfoEnabled)
-                _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");
+                _log.Info($"Disposing OutgoingReplicationHandler ({FromToString}) [Timeout:{timeout}]");
 
             _database.Changes.OnDocumentChange -= OnDocumentChange;
 
             _cts.Cancel();
-
-            try
-            {
-                _tcpClient?.Dispose();
-            }
-            catch (Exception)
-            {
-                // nothing we can do here
-            }
+            
+            DisposeTcpClient();
 
             _connectionDisposed.Set();
 
-            if (_sendingThread != Thread.CurrentThread)
+            if (_sendingThread != null && _sendingThread != Thread.CurrentThread)
             {
-                _sendingThread?.Join();
+                while (_sendingThread.Join(timeout) == false)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");
+                    DisposeTcpClient();
+                }
             }
 
             try
@@ -847,6 +849,18 @@ namespace Raven.Server.Documents.Replication
             catch (ObjectDisposedException)
             {
                 //was already disposed? we don't care, we are disposing
+            }
+        }
+
+        private void DisposeTcpClient()
+        {
+            try
+            {
+                Volatile.Read(ref _tcpClient)?.Dispose();
+            }
+            catch (Exception)
+            {
+                // nothing we can do here
             }
         }
 

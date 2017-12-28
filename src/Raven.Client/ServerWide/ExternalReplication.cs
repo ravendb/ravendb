@@ -78,10 +78,12 @@ namespace Raven.Client.ServerWide
 
         public override bool IsEqualTo(ReplicationNode other)
         {
-            var externalReplication = (ExternalReplication)other;
-            
-            return string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
-                   TaskId == externalReplication.TaskId; 
+            if (other is ExternalReplication externalReplication)
+            {
+                return string.Equals(ConnectionStringName, externalReplication.ConnectionStringName, StringComparison.OrdinalIgnoreCase) &&
+                       TaskId == externalReplication.TaskId;
+            }
+            return false;
         }
 
         public string GetMentorNode()

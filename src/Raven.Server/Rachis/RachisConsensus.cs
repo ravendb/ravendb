@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -466,6 +467,8 @@ namespace Raven.Server.Rachis
                 throw new ConcurrencyException(
                     $"Attempted to switch state to {rachisState} on expected term {expectedTerm} but the real term is {CurrentTerm}");
 
+            var sp = Stopwatch.StartNew();
+            
             _currentLeader = null;
             LastStateChangeReason = stateChangedReason;
             var toDispose = new List<IDisposable>(_disposables);
@@ -527,8 +530,15 @@ namespace Raven.Server.Rachis
                         }
                     }
 
+                    
+                    
                     TaskExecutor.CompleteReplaceAndExecute(ref _stateChanged, () =>
                     {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info($"Initiate disposing the term _prior_ to {expectedTerm} with {toDispose.Count} things to dispose.");
+                        }
+
                         Parallel.ForEach(toDispose, d =>
                         {
                             try
@@ -548,6 +558,15 @@ namespace Raven.Server.Rachis
                             }
                         });
                     });
+                    
+                    var elapsed = sp.Elapsed;
+                    if (elapsed > ElectionTimeout / 2)
+                    {
+                        if (Log.IsOperationsEnabled)
+                        {
+                            Log.Operations($"Took way too much time ({elapsed}) to change the state to {rachisState} in term {expectedTerm}. (Election timeout:{ElectionTimeout})");
+                        }
+                    }
                 }
             };
         }
@@ -739,7 +758,7 @@ namespace Raven.Server.Rachis
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, stream);
+                remoteConnection = new RemoteConnection(_tag, stream, CurrentTerm);
                 try
                 {
                     RachisHello initialMessage;
@@ -1266,7 +1285,7 @@ namespace Raven.Server.Rachis
 
         public void FoundAboutHigherTerm(long term, string reason)
         {
-            if (term == CurrentTerm)
+            if (term <= CurrentTerm)
                 return;
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1274,7 +1293,7 @@ namespace Raven.Server.Rachis
                 using (var tx = context.OpenWriteTransaction())
                 {
                     // we check it here again because now we are under the tx lock, so we can't get into concurrency issues
-                    if (term == CurrentTerm)
+                    if (term <= CurrentTerm)
                         return;
 
                     CastVoteInTerm(context, term, votedFor: null, reason: reason);
@@ -1313,6 +1332,32 @@ namespace Raven.Server.Rachis
             }
 
             CurrentTerm = term;
+
+            // give the other side enough time to become the leader before challenging them
+            Timeout.Defer(votedFor); 
+            
+            var currentlyTheLeader = _currentLeader;
+            if (currentlyTheLeader == null) 
+                return;
+
+            TaskExecutor.Execute(_ =>
+            {
+                try
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term}");
+                    }
+                    currentlyTheLeader.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info($"Failed to shut down leader after voting in term {term} for {votedFor}", e);
+                    }
+                }
+            }, null);
         }
 
         public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(TransactionOperationContext context, long term)

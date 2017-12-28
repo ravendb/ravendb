@@ -51,30 +51,36 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             _running.Lower();
+            DisposeConnectionIfNeeded();
+            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+            {
+                while (_thread.Join(TimeSpan.FromSeconds(1)) == false)
+                {
+                    // the thread may have create a new connection, so need
+                    // to dispose that as well
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info(
+                            $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to finish, after the elections were {_candidate.ElectionResult}");
+                    }
+                    DisposeConnectionIfNeeded();
+                }
+            }
+
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"Dispose CandidateAmbassador for {_tag} after the elections were {_candidate.ElectionResult}");
+            }
+        }
+
+        private void DisposeConnectionIfNeeded()
+        {
             if (_candidate.ElectionResult != ElectionResult.Won)
             {
                 Volatile.Read(ref Connection)?.Dispose();
-
-                if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                {
-                    while (_thread.Join(TimeSpan.FromSeconds(1)) == false)
-                    {
-                        // the thread may have create a new connection, so need
-                        // to dispose that as well
-                        if (_engine.Log.IsInfoEnabled)
-                        {
-                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to close, disposing connection and trying");
-                        }
-                        Volatile.Read(ref Connection)?.Dispose();
-                    }
-                }
-            }
-            if (_engine.Log.IsInfoEnabled)
-            {
-                _engine.Log.Info($"CandidateAmbassador {_tag}: Dispose after the elections were {_candidate.ElectionResult}");
             }
         }
-        
+
         /// <summary>
         /// This method may run for a long while, as we are trying to get agreement 
         /// from a majority of the cluster
@@ -85,6 +91,7 @@ namespace Raven.Server.Rachis
             {
                 while (_candidate.Running && _running)
                 {
+                    long currentElectionTerm = -1;
                     try
                     {
                         Stream stream;
@@ -104,7 +111,7 @@ namespace Raven.Server.Rachis
                             StatusMessage = $"Failed to connect with {_tag}.{Environment.NewLine} " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to connect to remote peer: " + _url, e);
+                                _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to connect to remote peer: " + _url, e);
                             }
                             // wait a bit
                             _candidate.WaitForChangeInState();
@@ -114,7 +121,7 @@ namespace Raven.Server.Rachis
                         StatusMessage = $"Connected to {_tag}";
 
                         Stopwatch sp;
-                        var connection = new RemoteConnection(_tag, _engine.Tag, stream);
+                        var connection = new RemoteConnection(_tag, _engine.Tag, _engine.CurrentTerm, stream);
                         Interlocked.Exchange(ref Connection, connection);//publish the new connection
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
@@ -139,8 +146,7 @@ namespace Raven.Server.Rachis
                             while (_candidate.Running)
                             {
                                 RequestVoteResponse rvr;
-                                var currentElectionTerm = _candidate.ElectionTerm;
-                                var engineCurrentTerm = _engine.CurrentTerm;
+                                currentElectionTerm = _candidate.ElectionTerm;
                                 if (_candidate.IsForcedElection == false ||
                                     _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                 {
@@ -162,12 +168,12 @@ namespace Raven.Server.Rachis
 
                                     if (rvr.Term > currentElectionTerm)
                                     {
-                                        var message = $"Candidate ambassador {_engine.Tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
+                                        var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, message);
+                                        _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, message);
                                         if (_engine.Log.IsInfoEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
+                                            _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                         }
                                         _engine.FoundAboutHigherTerm(rvr.Term, "Higher term found from node " + Tag);
                                         throw new InvalidOperationException(message);
@@ -177,7 +183,7 @@ namespace Raven.Server.Rachis
                                     {
                                         if (_engine.Log.IsInfoEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag}  in {rvr.Term} reason: {rvr.Message}");
+                                            _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response from {_tag} in {rvr.Term} reason: {rvr.Message}");
                                         }
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
@@ -185,8 +191,11 @@ namespace Raven.Server.Rachis
                                         _candidate.WaitForChangeInState();
                                         continue;
                                     }
+                                    if (_engine.Log.IsInfoEnabled)
+                                    {
+                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response for trial elections from {_tag} in {rvr.Term}: {rvr.Message}");
+                                    }
                                     TrialElectionWonAtTerm = rvr.Term;
-
                                     _candidate.WaitForChangeInState();
                                 }
                                 sp = Stopwatch.StartNew();
@@ -206,13 +215,13 @@ namespace Raven.Server.Rachis
 
                                 if (rvr.Term > currentElectionTerm)
                                 {
-                                    var message = $"Candidate ambassador {_engine.Tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
+                                    var message = $"CandidateAmbassador for {_tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: {message}");
+                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                     }
                                     // we need to abort the current elections
-                                    _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, message);
+                                    _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, message);
                                     _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     throw new InvalidOperationException(message);
                                 }
@@ -221,7 +230,7 @@ namespace Raven.Server.Rachis
                                 {
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a negative response from {_tag} in {rvr.Term} reason: {rvr.Message}");
+                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response from {_tag} in {rvr.Term} reason: {rvr.Message}");
                                     }
                                     // we go a negative response here, so we can't proceed
                                     // we'll need to wait until the candidate has done something, like
@@ -231,26 +240,26 @@ namespace Raven.Server.Rachis
                                 }
                                 if (_engine.Log.IsInfoEnabled)
                                 {
-                                    _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Got a positive response from {_tag} in {rvr.Term}: {rvr.Message}");
+                                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response from {_tag} in {rvr.Term}: {rvr.Message}");
                                 }
                                 RealElectionWonAtTerm = rvr.Term;
                                 _candidate.WaitForChangeInState();
                             }
-                            SendElectionResult();
+                            SendElectionResult(currentElectionTerm);
                         }
                     }
                     catch (OperationCanceledException)
                     {
                         Status = AmbassadorStatus.Closed;
                         StatusMessage = "Closed";
-                        SendElectionResult();
+                        SendElectionResult(currentElectionTerm);
                         break;
                     }
                     catch (ObjectDisposedException)
                     {
                         Status = AmbassadorStatus.Closed;
                         StatusMessage = "Closed";
-                        SendElectionResult();
+                        SendElectionResult(currentElectionTerm);
                         break;
                     }
                     catch (AggregateException ae)
@@ -258,7 +267,7 @@ namespace Raven.Server.Rachis
                     {
                         Status = AmbassadorStatus.Closed;
                         StatusMessage = "Closed";
-                        SendElectionResult();
+                        SendElectionResult(currentElectionTerm);
                         break;
                     }
                     catch (Exception e)
@@ -267,12 +276,11 @@ namespace Raven.Server.Rachis
                         StatusMessage = $"Failed to get vote from {_tag}.{Environment.NewLine}" + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
+                            _engine.Log.Info($"CandidateAmbassador for {_tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
                         }
                         Connection?.Dispose();
                         _candidate.WaitForChangeInState();
                     }
-
                 }
             }
             catch (Exception e)
@@ -293,18 +301,18 @@ namespace Raven.Server.Rachis
             }
         }
 
-        private void SendElectionResult()
+        private void SendElectionResult(long currentElectionTerm)
         {
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Send election result message to {_tag} : {_candidate.ElectionResult}");
+                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Send election result '{_candidate.ElectionResult}' at term {RealElectionWonAtTerm}");
                 }
                 Connection.Send(context, new RequestVote
                 {
                     Source = _engine.Tag,
-                    Term = _engine.CurrentTerm,
+                    Term = currentElectionTerm,
                     ElectionResult = _candidate.ElectionResult
                 });
             }

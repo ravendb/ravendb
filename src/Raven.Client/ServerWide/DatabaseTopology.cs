@@ -93,8 +93,12 @@ namespace Raven.Client.ServerWide
 
         public override bool IsEqualTo(ReplicationNode other)
         {
-            return base.IsEqualTo(other) && 
-                   string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase);
+            if (other is InternalReplication internalNode)
+            {
+                return base.IsEqualTo(internalNode) &&
+                       string.Equals(Url, internalNode.Url, StringComparison.OrdinalIgnoreCase);
+            }
+            return false;
         }
         
         public override int GetHashCode()

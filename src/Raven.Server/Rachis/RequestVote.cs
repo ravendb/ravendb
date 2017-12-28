@@ -9,7 +9,7 @@
 
     public class RequestVote
     {
-    
+        public int SendingThread { get; set; }
         public long Term { get; set; }
         public long LastLogIndex { get; set; }
         public long LastLogTerm { get; set; }

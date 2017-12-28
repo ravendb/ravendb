@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes
 
             // This is done this way in order to avoid locking _perIndexStats
             // for fetching .Values
-            var stats = Client.Extensions.EnumerableExtension.ForceEnumerate(_perIndexStats)
+            var stats = Client.Extensions.EnumerableExtension.ForceEnumerateInThreadSafeManner(_perIndexStats)
                     .Select(x => new IndexPerformanceStats
                     {
                         Name = x.Value.Index.Name,
