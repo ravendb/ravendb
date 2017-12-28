@@ -406,11 +406,32 @@ namespace Voron.Impl
 
             Memory.Copy(newPage.Pointer, currentPage.Pointer, pageSize);
 
+            ZeroPageHeaderChecksumToEnsureNoUseOfCryptoReservedSpace(newPage.Pointer);
+            
             TrackWritablePage(newPage);
 
             _pageLocator.SetWritable(num, newPage);
 
             return newPage;
+        }
+
+        [Conditional("DEBUG")]
+        private void ZeroPageHeaderChecksumToEnsureNoUseOfCryptoReservedSpace(byte* page)
+        {
+            if (_env.Options.EncryptionEnabled)
+            {
+                // we don't want to mark all pages as changed by the crypto pager
+                // that check for the full page hash, and it isn't relevant for 
+                // crypto anyway
+                return;
+            } 
+            
+            // in order to ensure that the last 32 bytes of the page are always reserved
+            // for crypto, we'll zero them after copying them from the pager. If using 
+            // encrypted, we'll always re-write it anyway, and this ensures that we'll
+            // get corruption from the system if we try to use it. Note that the normal
+            // pager stuff, like ensuring the checksum, is already done at this point
+            Sodium.ZeroMemory(page + PageHeader.NonceOffset, PageHeader.SizeOf - PageHeader.NonceOffset);
         }
 
         private const int InvalidScratchFile = -1;
