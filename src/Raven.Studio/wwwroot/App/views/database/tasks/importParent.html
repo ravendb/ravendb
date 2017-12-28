@@ -2,7 +2,7 @@
     <div>
         <ul class="nav nav-tabs" data-bind="foreach: router.navigationModel">
             <li data-bind="css: { active: isActive }, visible: nav">
-                <a data-bind="attr: { href: hash }, text: tabName"></a>
+                <a data-bind="attr: { href: dynamicHash }, text: tabName"></a>
             </li>
         </ul>
     </div>
