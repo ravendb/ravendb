@@ -35,7 +35,7 @@
                             </div>
                         </div>
                         
-                        <div data-bind="visible: showAuthenticationMethods">
+                        <div data-bind="visible: isLegacy">
                             <div class="form-group">
                                 <label class="control-label">Authentication method</label>
                                 <div class="flex-grow" data-bind="validationElement: authenticationMethod">
@@ -70,6 +70,54 @@
                         </div>
                     </div>
                 </div>
+                
+                <div data-bind="with: model" style="margin-left: 160px">
+                    <div data-bind="visible: isRavenDb">
+                        <div class="form-group flex-horizontal flex-stretch-items">
+                            <div>
+                                <div class="toggle">
+                                    <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
+                                    <label for="toggle1">Include Documents</label>
+                                </div>
+                                <div class="toggle" data-bind="visible: isLegacy">
+                                    <input id="toggle7" type="checkbox" data-bind="checked: includeLegacyAttachments">
+                                    <label for="toggle7">Include Attachments</label>
+                                </div>
+                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                    <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                    <label for="toggleConflicts">Include Conflicts</label>
+                                </div>
+                                <div class="toggle" data-toggle="tooltip" data-placement="top" data-bind="visible: !isLegacy(), attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
+                                    <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: $root.activeDatabase() && !$root.activeDatabase().hasRevisionsConfiguration()" />
+                                    <label for="toggle6">Include Document Revisions</label>
+                                </div>
+                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                    <input id="toggle3" type="checkbox" data-bind="checked: includeIdentities">
+                                    <label for="toggle3">Include Identities</label>
+                                </div>
+                                <div class="toggle" data-bind="visible: !isLegacy()">
+                                    <input id="toggle4" type="checkbox" data-bind="checked: includeCompareExchange">
+                                    <label for="toggle4">Include Compare Exchange</label>
+                                </div>
+
+                                <div data-bind="validationElement: importDefinitionHasIncludes">
+                                    <div class="help-block" data-bind="validationMessage: importDefinitionHasIncludes"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="toggle">
+                                    <input id="toggle2" type="checkbox" data-bind="checked: includeIndexes">
+                                    <label for="toggle2">Include Indexes</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="toggle5" type="checkbox" data-bind="checked: removeAnalyzers">
+                                    <label for="toggle5">Remove Analyzers</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <hr />
                 <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': spinners.migration() }, disable: spinners.migration">
                     <span class="icon-import"></span> <span>Migrate Database</span>

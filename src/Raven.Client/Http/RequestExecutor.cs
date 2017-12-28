@@ -1101,9 +1101,10 @@ namespace Raven.Client.Http
             _disposeOnceRunner.Dispose();
         }
 
-        private HttpClient CreateClient()
+        public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols)
         {
             var httpMessageHandler = new HttpClientHandler();
+
             if (PlatformDetails.RunningOnMacOsx)
             {
                 var callback = ServerCertificateCustomValidationCallback;
@@ -1122,12 +1123,14 @@ namespace Raven.Client.Http
                     // ServicePointManager.ServerCertificateValidationCallback += OnServerCertificateCustomValidationCallback;
                 }
             }
-            if (Certificate != null)
+
+            if (certificate != null)
             {
-                httpMessageHandler.ClientCertificates.Add(Certificate);
+                httpMessageHandler.ClientCertificates.Add(certificate);
                 try
                 {
-                    httpMessageHandler.SslProtocols = SslProtocols.Tls12;
+                    if (setSslProtocols)
+                        httpMessageHandler.SslProtocols = SslProtocols.Tls12;
                 }
                 catch (PlatformNotSupportedException)
                 {
@@ -1135,9 +1138,15 @@ namespace Raven.Client.Http
                     // ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 }
 
-                ValidateClientKeyUsages(Certificate);
+                ValidateClientKeyUsages(certificate);
             }
 
+            return httpMessageHandler;
+        }
+
+        public HttpClient CreateClient()
+        {
+            var httpMessageHandler = CreateHttpMessageHandler(Certificate, setSslProtocols: true);
             return new HttpClient(httpMessageHandler)
             {
                 Timeout = GlobalHttpClientTimeout

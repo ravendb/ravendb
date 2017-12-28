@@ -1,20 +1,30 @@
 using System.Collections.Generic;
+using Raven.Client.Documents.Smuggler;
 
 namespace Raven.Server.Smuggler.Migration
 {
     public class SingleDatabaseMigrationConfiguration : MigrationConfigurationBase
     {
-        public string DatabaseName { get; set; }
+        public DatabaseMigrationSettings MigrationSettings { get; set; }
     }
 
     public class DatabasesMigrationConfiguration : MigrationConfigurationBase
     {
         public DatabasesMigrationConfiguration()
         {
-            DatabasesNames = new List<string>();
+            Databases = new List<DatabaseMigrationSettings>();
         }
 
-        public List<string> DatabasesNames { get; set; }
+        public List<DatabaseMigrationSettings> Databases { get; set; }
+    }
+
+    public class DatabaseMigrationSettings
+    {
+        public string DatabaseName { get; set; }
+
+        public DatabaseItemType OperateOnTypes { get; set; }
+
+        public bool RemoveAnalyzers { get; set; }
     }
 
     public abstract class MigrationConfigurationBase

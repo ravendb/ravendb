@@ -315,12 +315,15 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (string.IsNullOrWhiteSpace(migrationConfigurationJson.ServerUrl))
                     throw new ArgumentException("Url cannot be null or empty");
 
-                if (string.IsNullOrWhiteSpace(migrationConfigurationJson.DatabaseName))
+                if (migrationConfigurationJson.MigrationSettings == null)
+                    throw new ArgumentException("MigrationSettings cannot be null");
+
+                if (string.IsNullOrWhiteSpace(migrationConfigurationJson.MigrationSettings.DatabaseName))
                     throw new ArgumentException("Database name cannot be null or empty");
 
-                var migrator = new Migrator(migrationConfigurationJson, ServerStore, Database.DatabaseShutdown);
+                var migrator = new Migrator(migrationConfigurationJson, ServerStore);
                 await migrator.UpdateBuildInfoIfNeeded();
-                var operationId = migrator.StartMigratingSingleDatabase(migrationConfigurationJson.DatabaseName, Database);
+                var operationId = migrator.StartMigratingSingleDatabase(migrationConfigurationJson.MigrationSettings, Database);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

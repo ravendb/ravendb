@@ -10,39 +10,34 @@ using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Migration
 {
-    public abstract class AbstractMigrator : IDisposable
+    public abstract class AbstractMigrator
     {
         protected readonly string MigrationStateKey;
         protected readonly string ServerUrl;
         protected readonly string DatabaseName;
+        protected readonly HttpClient HttpClient;
+        protected readonly DatabaseItemType OperateOnTypes;
+        protected readonly bool RemoveAnalyzers;
         protected readonly SmugglerResult Result;
         protected readonly Action<IOperationProgress> OnProgress;
         protected readonly DocumentDatabase Database;
         protected readonly OperationCancelToken CancelToken;
 
-        protected HttpClient HttpClient { get; set; }
-
-        protected AbstractMigrator(
-            string migrationStateKey,
-            string serverUrl,
-            string databaseName,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            DocumentDatabase database,
-            OperationCancelToken cancelToken)
+        protected AbstractMigrator(MigratorOptions options)
         {
-            MigrationStateKey = migrationStateKey;
-            ServerUrl = serverUrl;
-            DatabaseName = databaseName;
-            Result = result;
-            OnProgress = onProgress;
-            Database = database;
-            CancelToken = cancelToken;
+            MigrationStateKey = options.MigrationStateKey;
+            ServerUrl = options.ServerUrl;
+            DatabaseName = options.DatabaseName;
+            HttpClient = options.HttpClient;
+            OperateOnTypes = options.OperateOnTypes;
+            RemoveAnalyzers = options.RemoveAnalyzers;
+            Result = options.Result;
+            OnProgress = options.OnProgress;
+            Database = options.Database;
+            CancelToken = options.CancelToken;
         }
 
         public abstract Task Execute();
-
-        public abstract void Dispose();
 
         protected async Task SaveLastOperationState(BlittableJsonReaderObject blittable)
         {

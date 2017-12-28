@@ -10,7 +10,8 @@ import generalUtils = require("common/generalUtils");
 class migrateDatabase extends viewModelBase {
 
     model = new migrateDatabaseModel();
-    
+    hasRevisionsConfiguration: KnockoutComputed<boolean>;
+
     spinners = {
         versionDetect: ko.observable<boolean>(false),
         migration: ko.observable<boolean>(false)
@@ -26,6 +27,19 @@ class migrateDatabase extends viewModelBase {
         this.model.serverUrl.subscribe(() => {
             this.model.serverMajorVersion(null);
             debouncedDetection();
+        });
+
+        this.hasRevisionsConfiguration = ko.pureComputed(() => {
+            const db = this.activeDatabase();
+            if (!db) {
+                return false;
+            }
+
+            return db.hasRevisionsConfiguration();
+        });
+
+        this.model.revisionsAreConfigured = ko.pureComputed(() => {
+            return this.activeDatabase().hasRevisionsConfiguration();
         });
     }
     
@@ -57,9 +71,11 @@ class migrateDatabase extends viewModelBase {
                 }
             })
             .fail((response: JQueryXHR) => {
-                const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
-                const message = generalUtils.trimMessage(messageAndOptionalException.message);
-                this.model.serverMajorVersion.setError(message);
+                if (url === this.model.serverUrl()) {
+                    const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
+                    const message = generalUtils.trimMessage(messageAndOptionalException.message);
+                    this.model.serverMajorVersion.setError(message);
+                }
             })
             .always(() => this.spinners.versionDetect(false));
     }

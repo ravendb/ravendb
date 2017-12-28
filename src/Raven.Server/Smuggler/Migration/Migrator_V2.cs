@@ -6,10 +6,8 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -22,16 +20,7 @@ namespace Raven.Server.Smuggler.Migration
     {
         private const int AttachmentsPageSize = 1024;
 
-        public Migrator_V2(
-            string migrationStateKey,
-            string serverUrl,
-            string databaseName,
-            SmugglerResult result,
-            Action<IOperationProgress> onProgress,
-            DocumentDatabase database,
-            HttpClient client,
-            OperationCancelToken cancelToken)
-            : base(migrationStateKey, serverUrl, databaseName, result, onProgress, database, client, cancelToken)
+        public Migrator_V2(MigratorOptions options) : base(options)
         {
         }
 
@@ -39,11 +28,24 @@ namespace Raven.Server.Smuggler.Migration
         {
             var state = GetLastMigrationState();
 
-            await MigrateDocuments(state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty);
-            await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty);
-            await SaveLastState();
+            var migratedDocumentsOrAttachments = false;
+            if (OperateOnTypes.HasFlag(DatabaseItemType.Documents))
+            {
+                await MigrateDocuments(state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty);
+                migratedDocumentsOrAttachments = true;
+            }
 
-            await MigrateIndexes();
+            if (OperateOnTypes.HasFlag(DatabaseItemType.LegacyAttachments))
+            {
+                await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty);
+                migratedDocumentsOrAttachments = true;
+            }  
+
+            if (migratedDocumentsOrAttachments)
+                await SaveLastState();
+
+            if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
+                await MigrateIndexes();
         }
 
         private async Task MigrateDocuments(string lastEtag)
@@ -152,10 +154,9 @@ namespace Raven.Server.Smuggler.Migration
             var url = $"{ServerUrl}/databases/{DatabaseName}/static?pageSize={AttachmentsPageSize}&etag={lastEtag}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await HttpClient.SendAsync(request, CancelToken.Token);
-            var responseString = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode == false)
             {
-                
+                var responseString = await response.Content.ReadAsStringAsync();
                 throw new InvalidOperationException($"Failed to get attachments list from server: {ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
@@ -208,7 +209,10 @@ namespace Raven.Server.Smuggler.Migration
             using (var source = new StreamSource(indexesStream, context, Database))
             {
                 var destination = new DatabaseDestination(Database);
-                var options = new DatabaseSmugglerOptionsServerSide();
+                var options = new DatabaseSmugglerOptionsServerSide
+                {
+                    RemoveAnalyzers = RemoveAnalyzers,
+                };
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
                 smuggler.Execute();
@@ -222,11 +226,6 @@ namespace Raven.Server.Smuggler.Migration
                 var operationStateBlittable = GenerateOperationState(context);
                 await SaveLastOperationState(operationStateBlittable);
             }
-        }
-
-        public override void Dispose()
-        {
-            HttpClient.Dispose();
         }
 
         private class ArrayStream : Stream
