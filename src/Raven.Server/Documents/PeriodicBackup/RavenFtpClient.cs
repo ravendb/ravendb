@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (port < 1 || port > 65535)
                 throw new ArgumentException("Port number range: 1-65535");
 
-            url = $"ftp://{uri.Host}:{port}";
+            url = $"{uri.Scheme}://{uri.Host}:{port}";
         }
 
         private FtpWebRequest CreateFtpWebRequest(string url, string method, bool keepAlive)
