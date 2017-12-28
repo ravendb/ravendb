@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Replication
 
         internal string LastAcceptedChangeVector;
 
-        private volatile TcpClient _tcpClient;
+        private TcpClient _tcpClient;
 
         private readonly AsyncManualResetEvent _connectionDisposed = new AsyncManualResetEvent();
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -827,14 +827,8 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnDocumentChange -= OnDocumentChange;
 
             _cts.Cancel();
-            try
-            {
-                _tcpClient?.Dispose();
-            }
-            catch (Exception)
-            {
-                // nothing we can do here
-            }
+            
+            DisposeTcpClient();
 
             _connectionDisposed.Set();
 
@@ -844,6 +838,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");
+                    DisposeTcpClient();
                 }
             }
 
@@ -854,6 +849,18 @@ namespace Raven.Server.Documents.Replication
             catch (ObjectDisposedException)
             {
                 //was already disposed? we don't care, we are disposing
+            }
+        }
+
+        private void DisposeTcpClient()
+        {
+            try
+            {
+                Volatile.Read(ref _tcpClient)?.Dispose();
+            }
+            catch (Exception)
+            {
+                // nothing we can do here
             }
         }
 

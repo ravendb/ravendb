@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -1284,7 +1285,7 @@ namespace Raven.Server.Rachis
 
         public void FoundAboutHigherTerm(long term, string reason)
         {
-            if (term == CurrentTerm)
+            if (term <= CurrentTerm)
                 return;
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1292,7 +1293,7 @@ namespace Raven.Server.Rachis
                 using (var tx = context.OpenWriteTransaction())
                 {
                     // we check it here again because now we are under the tx lock, so we can't get into concurrency issues
-                    if (term == CurrentTerm)
+                    if (term <= CurrentTerm)
                         return;
 
                     CastVoteInTerm(context, term, votedFor: null, reason: reason);
@@ -1332,18 +1333,31 @@ namespace Raven.Server.Rachis
 
             CurrentTerm = term;
 
-            if (CurrentState == RachisState.Leader || CurrentState == RachisState.LeaderElect)
-            {
-                Timeout.DisableTimeout();
-                var candidate = new Candidate(this)
-                {
-                    IsForcedElection = false
-                };
+            // give the other side enough time to become the leader before challenging them
+            Timeout.Defer(votedFor); 
+            
+            var currentlyTheLeader = _currentLeader;
+            if (currentlyTheLeader == null) 
+                return;
 
-                Candidate = candidate;
-                SetNewStateInTx(context, RachisState.Candidate, null, term, $"Casted a vote as {CurrentState}, so need to step down.");
-                candidate.Start();
-            }
+            TaskExecutor.Execute(_ =>
+            {
+                try
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info($"Disposing the leader because we casted a vote for {votedFor} in {term}");
+                    }
+                    currentlyTheLeader.Dispose();
+                }
+                catch (Exception e)
+                {
+                    if (Log.IsInfoEnabled)
+                    {
+                        Log.Info($"Failed to shut down leader after voting in term {term} for {votedFor}", e);
+                    }
+                }
+            }, null);
         }
 
         public (string VotedFor, long LastVotedTerm) GetWhoGotMyVoteIn(TransactionOperationContext context, long term)
