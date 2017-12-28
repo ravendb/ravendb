@@ -232,7 +232,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var destination = new DatabaseDestination(database);
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {
-                OperateOnTypes = DatabaseItemType.CmpXchg | DatabaseItemType.Identities
+                OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, lastFile);
 
@@ -413,7 +413,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide
             {
-                OperateOnTypes = ~(DatabaseItemType.CmpXchg | DatabaseItemType.Identities)
+                OperateOnTypes = ~(DatabaseItemType.CompareExchange | DatabaseItemType.Identities)
             };
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);

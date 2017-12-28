@@ -105,7 +105,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                              DatabaseItemType.Indexes |
                                              DatabaseItemType.Identities |
                                              DatabaseItemType.Conflicts |
-                                             DatabaseItemType.CmpXchg |
+                                             DatabaseItemType.CompareExchange |
                                              DatabaseItemType.RevisionDocuments,
                         };
                     }

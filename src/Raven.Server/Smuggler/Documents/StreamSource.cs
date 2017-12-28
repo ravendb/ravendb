@@ -157,7 +157,7 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Conflicts:
                 case DatabaseItemType.Indexes:
                 case DatabaseItemType.Identities:
-                case DatabaseItemType.CmpXchg:
+                case DatabaseItemType.CompareExchange:
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                     return SkipArray(onSkipped);
@@ -861,8 +861,9 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.Identities), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
 
-            if (type.Equals(nameof(DatabaseItemType.CmpXchg), StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.CmpXchg;
+            if (type.Equals(nameof(DatabaseItemType.CompareExchange), StringComparison.OrdinalIgnoreCase) ||
+                type.Equals("CmpXchg", StringComparison.OrdinalIgnoreCase)) //support the old name
+                return DatabaseItemType.CompareExchange;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

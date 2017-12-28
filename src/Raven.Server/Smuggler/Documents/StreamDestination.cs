@@ -77,7 +77,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IKeyValueActions<BlittableJsonReaderObject> CmpXchg()
         {
-            return new StreamKeyValueActions<BlittableJsonReaderObject>(_writer, nameof(DatabaseItemType.CmpXchg));
+            return new StreamKeyValueActions<BlittableJsonReaderObject>(_writer, nameof(DatabaseItemType.CompareExchange));
         }
 
         public IIndexActions Indexes()

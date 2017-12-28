@@ -40,7 +40,7 @@ class importDatabaseModel {
             operateOnTypes.push("Identities");
         }
         if (this.includeCompareExchange()) {
-            operateOnTypes.push("CmpXchg");
+            operateOnTypes.push("CompareExchange");
         }
         if (this.includeLegacyAttachments()) {
             operateOnTypes.push("LegacyAttachments");

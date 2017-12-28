@@ -45,7 +45,7 @@ class exportDatabaseModel {
             operateOnTypes.push("Identities");
         }
         if (this.includeCompareExchange()) {
-            operateOnTypes.push("CmpXchg");
+            operateOnTypes.push("CompareExchange");
         }
 
         return {
