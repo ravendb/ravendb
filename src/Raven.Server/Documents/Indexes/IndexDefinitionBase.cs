@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -35,6 +36,13 @@ namespace Raven.Server.Documents.Indexes
         public abstract void Persist(TransactionOperationContext context, StorageEnvironmentOptions options);
 
         protected abstract void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+
+        public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("IndexDef");
+
+        public enum SubKeyId
+        {
+            IndexDef
+        }
 
         public static string GetIndexNameSafeForFileSystem(string name)
         {
@@ -195,15 +203,14 @@ namespace Raven.Server.Documents.Indexes
             var nonce = Sodium.GenerateRandomBuffer(Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); // 192-bit
             var encryptedData = new byte[data.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac 
 
-            fixed (byte* ctx = Sodium.Context)
+            fixed (byte* ctx = EncryptionContext)
             fixed (byte* pData = data)
             fixed (byte* pEncryptedData = encryptedData)
             fixed (byte* pNonce = nonce)
             fixed (byte* pKey = options.MasterKey)
             {
                 var subKey = stackalloc byte[32];
-                const ulong subKeyId = 17;
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, subKeyId, ctx, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)SubKeyId.IndexDef, ctx, pKey) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
                 ulong cLen;
@@ -243,15 +250,14 @@ namespace Raven.Server.Documents.Indexes
 
             var decryptedData = new byte[data.Length - Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
-            fixed (byte* ctx = Sodium.Context)
+            fixed (byte* ctx = EncryptionContext)
             fixed (byte* pData = data)
             fixed (byte* pDecryptedData = decryptedData)
             fixed (byte* pNonce = nonce)
             fixed (byte* pKey = options.MasterKey)
             {
                 var subKey = stackalloc byte[32];
-                ulong subKeyId = 1;
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, subKeyId, ctx, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)SubKeyId.IndexDef, ctx, pKey) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
                 
                 ulong mLen;
