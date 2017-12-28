@@ -2,6 +2,7 @@ import setupStep = require("viewmodels/wizard/setupStep");
 import router = require("plugins/router");
 import nodeInfo = require("models/wizard/nodeInfo");
 import serverSetup = require("models/wizard/serverSetup");
+import popoverUtils = require("common/popoverUtils");
 
 class nodes extends setupStep {
 
@@ -97,6 +98,7 @@ class nodes extends setupStep {
         
         if (this.model.nodes().length) {
             this.editedNode(this.model.nodes()[0]);
+            this.initTooltips();
         }
 
         this.setupDisableReasons();
@@ -163,11 +165,13 @@ class nodes extends setupStep {
         this.model.nodes.push(node);
         this.editedNode(node);
         this.updateNodeTags();
+        this.initTooltips();
     }
 
     editNode(node: nodeInfo) {
         node.showAdvancedSettings(!!node.externalIpAddress());
         this.editedNode(node);
+        this.initTooltips();
     }
     
     removeNode(node: nodeInfo) {
@@ -191,6 +195,37 @@ class nodes extends setupStep {
            idx++;
         });
     }    
+
+    private initTooltips() {
+        popoverUtils.longWithHover($("#dns-name-info"),
+            {
+                content:
+                "Select the domain name that will be used to reach the server on this node.<br />" +
+                "Note: It <strong>must</strong> be associated with the chosen IP Address below.",
+                placement: "top"
+            });
+
+        const ipAddressInfo =  "Enter IP Address or Hostname that will be associated with the DNS Name.<br/>" +
+            "For example:<br/>" +
+            "<ul>" +
+            "  <li>10.0.0.84</li>" +
+            "  <li>127.0.0.1</li>" +
+            "  <li>localhost</li>" +
+            "  <li>john-pc</li>" +
+            "</ul>";
+
+        popoverUtils.longWithHover($("#ip-address-info"),
+            {
+                content: ipAddressInfo,
+                placement: "top"
+            });
+
+        popoverUtils.longWithHover($("#ip-address-info-with-warning"),
+            {
+                content: ipAddressInfo + "<strong>Note:</strong> If Hostname is used then an external ip must also be provided.",
+                placement: "top"
+            });
+    }
 }
 
 export = nodes;
