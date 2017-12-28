@@ -339,8 +339,9 @@ namespace Raven.Server.Rachis
 
         private void ThrowInvalidTermChanged(AppendEntriesResponse aer)
         {
-            throw new ConcurrencyException("The current engine term has changed (" + aer.CurrentTerm + " -> " + _engine.CurrentTerm + "), this " +
-                                           "ambassador term is no longer valid");
+            throw new ConcurrencyException($"The current engine term has changed " +
+                                           $"({aer.CurrentTerm:#,#;;0} -> {_engine.CurrentTerm:#,#;;0}), " +
+                                           $"this ambassador term is no longer valid");
         }
 
         private void SendSnapshot(Stream stream)
