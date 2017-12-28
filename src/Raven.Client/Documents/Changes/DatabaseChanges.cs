@@ -309,7 +309,7 @@ namespace Raven.Client.Documents.Changes
                 }
 
                 newValue = true;
-                return new DatabaseConnectionState(this, OnConnect, OnDisconnect);
+                return new DatabaseConnectionState(OnConnect, OnDisconnect);
             });
 
             // try to reconnect

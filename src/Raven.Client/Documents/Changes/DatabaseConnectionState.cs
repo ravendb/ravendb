@@ -7,18 +7,31 @@ namespace Raven.Client.Documents.Changes
 {
     internal class DatabaseConnectionState : IChangesConnectionState
     {
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-
         public event Action<Exception> OnError;
         private readonly Func<Task> _onDisconnect;
-        private readonly IDatabaseChanges _changes;
         public readonly Func<Task> OnConnect;
         private int _value;
         public Exception LastException;
 
+        private readonly TaskCompletionSource<object> _firstSet = new TaskCompletionSource<object>();
         private Task _connected;
 
-        public void Set(Task connection) => _connected = connection;
+        public void Set(Task connection)
+        {
+            if (_firstSet.Task.IsCompleted == false)
+            {
+                connection.ContinueWith(t =>
+                {
+                    if (t.IsFaulted)
+                        _firstSet.TrySetException(t.Exception);
+                    else if (t.IsCanceled)
+                        _firstSet.TrySetCanceled();
+                    else
+                        _firstSet.SetResult(null);
+                });
+            }
+            _connected = connection;
+        }
 
         public void Inc()
         {
@@ -42,7 +55,7 @@ namespace Raven.Client.Documents.Changes
 
         public Task EnsureSubscribedNow()
         {
-            return _connected;
+            return _connected ?? _firstSet.Task;
         }
 
         public void Dispose()
@@ -50,9 +63,8 @@ namespace Raven.Client.Documents.Changes
             Set(Task.FromCanceled(CancellationToken.None));
         }
         
-        public DatabaseConnectionState(IDatabaseChanges changes, Func<Task> onConnect, Func<Task> onDisconnect)
+        public DatabaseConnectionState( Func<Task> onConnect, Func<Task> onDisconnect)
         {
-            _changes = changes;
             OnConnect = onConnect;
             _onDisconnect = onDisconnect;
             _value = 0;
