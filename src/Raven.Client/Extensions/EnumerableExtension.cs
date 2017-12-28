@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -43,7 +44,14 @@ namespace Raven.Client.Extensions
             return result;
         }
 
-        public static IEnumerable<T> ForceEnumerate<T>(this ICollection<T> collection)
+        /// <summary>
+        /// This is used to prevent race condition errors when using linq extension methods on ConcurrentDictionary
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="S"></typeparam>
+        /// <param name="collection"></param>
+        /// <returns></returns>
+        public static IEnumerable<KeyValuePair<T,S>> ForceEnumerateInThreadSafeManner<T,S>(this ConcurrentDictionary<T,S> collection)
         {
             // thanks to: https://stackoverflow.com/questions/47630824/is-c-sharp-linq-orderby-threadsafe-when-used-with-concurrentdictionarytkey-tva#
             foreach (var item in collection)

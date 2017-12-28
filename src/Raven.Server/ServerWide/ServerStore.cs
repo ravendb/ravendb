@@ -1158,7 +1158,7 @@ namespace Raven.Server.ServerWide
                 {
                     var maxTimeDatabaseCanBeIdle = Configuration.Databases.MaxIdleTime.AsTimeSpan;
 
-                    var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed.ForceEnumerate()
+                    var databasesToCleanup = DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner()
                         .Where(x => SystemTime.UtcNow - x.Value > maxTimeDatabaseCanBeIdle)
                         .Select(x => x.Key)
                         .ToArray();
