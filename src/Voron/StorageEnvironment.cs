@@ -65,7 +65,7 @@ namespace Voron
 
         private readonly WriteAheadJournal _journal;
         private readonly SemaphoreSlim _transactionWriter = new SemaphoreSlim(1, 1);
-        private NativeMemory.ThreadStats _currentTransactionHolder;
+        private NativeMemory.ThreadStats _currentWriteTransactionHolder;
         private readonly AsyncManualResetEvent _writeTransactionRunning = new AsyncManualResetEvent();
         internal readonly ThreadHoppingReaderWriterLock FlushInProgressLock = new ThreadHoppingReaderWriterLock();
         private readonly ReaderWriterLockSlim _txCommit = new ReaderWriterLockSlim();
@@ -599,6 +599,8 @@ namespace Voron
                         }
                     }
 
+                    ThrowOnWriteTransactionOpenedByTheSameThread();
+
                     txLockTaken = _transactionWriter.Wait(wait);
 
                     if (txLockTaken == false)
@@ -609,7 +611,7 @@ namespace Voron
 
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
+                    _currentWriteTransactionHolder = NativeMemory.ThreadAllocations.Value;
                     WriteTransactionStarted();
 
                     if (_endOfDiskSpace != null)
@@ -629,16 +631,16 @@ namespace Voron
                 {
                     _cancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                    if (_currentTransactionHolder == null)
-                        _currentTransactionHolder = NativeMemory.ThreadAllocations.Value;
-
                     long txId = flags == TransactionFlags.ReadWrite ? NextWriteTransactionId : CurrentReadTransactionId;
                     tx = new LowLevelTransaction(this, txId, transactionPersistentContext, flags, _freeSpaceHandling,
                         context)
                     {
                         FlushInProgressLockTaken = flushInProgressReadLockTaken,
-                        CurrentTransactionHolder = _currentTransactionHolder
                     };
+
+                    if (flags == TransactionFlags.ReadWrite)
+                        tx.CurrentTransactionHolder = _currentWriteTransactionHolder; 
+
                     ActiveTransactions.Add(tx);
                 }
                 finally
@@ -672,6 +674,18 @@ namespace Voron
             }
         }
 
+        [Conditional("DEBUG")]
+        private void ThrowOnWriteTransactionOpenedByTheSameThread()
+        {
+            var currentWriteTransactionHolder = _currentWriteTransactionHolder;
+            if (currentWriteTransactionHolder != null && 
+                currentWriteTransactionHolder == NativeMemory.ThreadAllocations.Value)
+            {
+                throw new InvalidOperationException($"A write transaction is already opened by thread name: " +
+                                                    $"{currentWriteTransactionHolder.Name}, Id: {currentWriteTransactionHolder.Id}");
+            }
+        }
+
         internal void IncrementUsageOnNewTransaction()
         {
             if (_envDispose.TryAddCount(1) == false)
@@ -696,7 +710,7 @@ namespace Voron
 
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
         {
-            var copy = _currentTransactionHolder;
+            var copy = _currentWriteTransactionHolder;
             if (copy == NativeMemory.ThreadAllocations.Value)
             {
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
@@ -808,7 +822,7 @@ namespace Voron
                 if (tx.AsyncCommit != null)
                     return;
 
-                _currentTransactionHolder = null;
+                _currentWriteTransactionHolder = null;
                 _writeTransactionRunning.Reset();
                 _transactionWriter.Release();
 
