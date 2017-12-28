@@ -161,16 +161,27 @@ namespace Voron.Impl.Paging
 
             for (int i = 1; i < encBuffer.Size / Constants.Storage.PageSize; i++)
             {
-                state.LoadedBuffers[pageNumber + i] = new EncryptionBuffer
+                var buffer = new EncryptionBuffer
                 {
                     Pointer = encBuffer.Pointer + i * Constants.Storage.PageSize,
                     Size = Constants.Storage.PageSize,
-                    OriginalSize = 0
+                    OriginalSize = 0,
                 };
+
+                buffer.Hash = _encryptionBuffersPool.Get(EncryptionBuffer.HashSizeInt, out var thread);
+                buffer.AllocatingThread = thread;
+
+                if (Sodium.crypto_generichash(buffer.Hash, EncryptionBuffer.HashSize, buffer.Pointer, (ulong)buffer.Size, null, UIntPtr.Zero) != 0)
+                    ThrowInvalidHash();
+
+                state.LoadedBuffers[pageNumber + i] = buffer;
             }
 
             encBuffer.OriginalSize = encBuffer.Size;
             encBuffer.Size = Constants.Storage.PageSize;
+
+            if (Sodium.crypto_generichash(encBuffer.Hash, EncryptionBuffer.HashSize, encBuffer.Pointer, (ulong)encBuffer.Size, null, UIntPtr.Zero) != 0)
+                ThrowInvalidHash();
         }
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int size)

@@ -195,7 +195,7 @@ namespace Raven.Server.ServerWide
 
         private static byte[] EncryptProtectedData(byte[] secret, byte[] entropy, byte[] key)
         {
-            var protectedData = new byte[secret.Length + Sodium.crypto_aead_chacha20poly1305_ABYTES()];
+            var protectedData = new byte[secret.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
             fixed (byte* pSecret = secret)
             fixed (byte* pProtectedData = protectedData)
