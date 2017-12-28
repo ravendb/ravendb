@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
             }
             finally
             {

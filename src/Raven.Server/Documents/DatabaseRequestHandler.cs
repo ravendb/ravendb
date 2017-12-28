@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
                 if (dbRecord.Topology.RelevantFor(ServerStore.NodeTag))
                 {
                     var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(Database.Name);
-                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index);
+                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
                 }
                 else
                 {
