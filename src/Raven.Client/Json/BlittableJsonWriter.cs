@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Sparrow;
@@ -50,34 +51,7 @@ namespace Raven.Client.Json
                     }
 
                     _manualBlittableJsonDocumentBuilder.WritePropertyName(prop.Item1);
-                    var value = prop.Item2;
-
-                    if (value == null)
-                    {
-                        _manualBlittableJsonDocumentBuilder.WriteValueNull();
-                        continue;
-                    }
-
-                    var strValue = value as string;
-                    if (strValue != null)
-                        _manualBlittableJsonDocumentBuilder.WriteValue(strValue);
-                    else if (value is long)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((long)value);
-                    else if (value is double)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((double)value);
-                    else if (value is decimal decVal)
-                    {
-                        BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(decVal);
-                        _manualBlittableJsonDocumentBuilder.WriteValue((decimal)value);
-                    }
-                    else if (value is float)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((float)value);
-                    else if (value is bool)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((bool)value);
-                    else if (value is LazyNumberValue)
-                        _manualBlittableJsonDocumentBuilder.WriteValue((LazyNumberValue)value);
-                    else
-                        throw new NotSupportedException($"The value type {value.GetType().FullName} of key {prop.Item1} is not supported in the metadata");
+                    WritePropertyValue(prop.Name, prop.Value);
                 }
 
                 if (_documentInfo.Collection != null)
@@ -101,71 +75,7 @@ namespace Raven.Client.Json
                     _documentInfo.Metadata.GetPropertyByIndex(id, ref propertyDetails);
                     _manualBlittableJsonDocumentBuilder.WritePropertyName(propertyDetails.Name);
 
-                    switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
-                    {
-                        case BlittableJsonToken.StartArray:
-                            _manualBlittableJsonDocumentBuilder.StartWriteArray();
-                            var array = propertyDetails.Value as BlittableJsonReaderArray;
-                            if (array != null)
-                            {
-                                var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                                foreach (BlittableJsonReaderObject entry in array)
-                                {
-                                    _manualBlittableJsonDocumentBuilder.StartWriteObject();
-                                    var propsIndexes = entry.GetPropertiesByInsertionOrder();
-                                    foreach (var index in propsIndexes)
-                                    {
-                                        entry.GetPropertyByIndex(index, ref propDetails);
-                                        _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
-                                        switch (propDetails.Token)
-                                        {
-                                            case BlittableJsonToken.Integer:
-                                                _manualBlittableJsonDocumentBuilder.WriteValue((long)propDetails.Value);
-                                                break;
-                                            case BlittableJsonToken.String:
-                                                _manualBlittableJsonDocumentBuilder.WriteValue(propDetails.Value.ToString());
-                                                break;
-                                            default:
-                                                throw new NotSupportedException($"Found property token of type '{propDetails.Token}' which is not supported.");
-                                        }
-                                    }
-                                    _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
-                                }
-                            }
-                            _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
-                            break;
-                        case BlittableJsonToken.Integer:
-                            _manualBlittableJsonDocumentBuilder.WriteValue((long)propertyDetails.Value);
-                            break;
-                        case BlittableJsonToken.LazyNumber:
-                            if (propertyDetails.Value is LazyNumberValue ldv)
-                            {
-                                _manualBlittableJsonDocumentBuilder.WriteValue(ldv);
-                            }
-                            else if (propertyDetails.Value is double d)
-                            {
-                                _manualBlittableJsonDocumentBuilder.WriteValue(d);
-                            }
-                            else
-                            {
-                                _manualBlittableJsonDocumentBuilder.WriteValue((float)propertyDetails.Value);
-                            }
-                            break;
-                        case BlittableJsonToken.String:
-                            _manualBlittableJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
-                            break;
-                        case BlittableJsonToken.CompressedString:
-                            _manualBlittableJsonDocumentBuilder.WriteValue(propertyDetails.Value.ToString());
-                            break;
-                        case BlittableJsonToken.Boolean:
-                            _manualBlittableJsonDocumentBuilder.WriteValue((bool)propertyDetails.Value);
-                            break;
-                        case BlittableJsonToken.Null:
-                            _manualBlittableJsonDocumentBuilder.WriteValueNull();
-                            break;
-                        default:
-                            throw new NotSupportedException();
-                    }
+                    WritePropertyValue(propertyDetails);
                 }
                 _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
             }
@@ -187,7 +97,114 @@ namespace Raven.Client.Json
             }
         }
 
+        private void WritePropertyValue(BlittableJsonReaderObject.PropertyDetails prop)
+        {
+            switch (prop.Token & BlittableJsonReaderBase.TypesMask)
+            {
+                case BlittableJsonToken.StartArray:
+                    _manualBlittableJsonDocumentBuilder.StartWriteArray();
+                    if (prop.Value is BlittableJsonReaderArray array)
+                    {
+                        var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        foreach (var entry in array)
+                        {
+                            if (entry is BlittableJsonReaderObject bjro)
+                            {
+                                _manualBlittableJsonDocumentBuilder.StartWriteObject();
+                                var propsIndexes = bjro.GetPropertiesByInsertionOrder();
+                                foreach (var index in propsIndexes)
+                                {
+                                    bjro.GetPropertyByIndex(index, ref propDetails);
+                                    _manualBlittableJsonDocumentBuilder.WritePropertyName(propDetails.Name);
+                                    WritePropertyValue(propDetails);
+                                }
+                                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+                            }
+                            else
+                            {
+                                WritePropertyValue(prop.Name, entry);
+                            }
+                        }
+                    }
+                    _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
+                    break;
+                case BlittableJsonToken.Integer:
+                    _manualBlittableJsonDocumentBuilder.WriteValue((long)prop.Value);
+                    break;
+                case BlittableJsonToken.LazyNumber:
+                    if (prop.Value is LazyNumberValue ldv)
+                    {
+                        _manualBlittableJsonDocumentBuilder.WriteValue(ldv);
+                    }
+                    else if (prop.Value is double d)
+                    {
+                        _manualBlittableJsonDocumentBuilder.WriteValue(d);
+                    }
+                    else
+                    {
+                        _manualBlittableJsonDocumentBuilder.WriteValue((float)prop.Value);
+                    }
+                    break;
+                case BlittableJsonToken.String:
+                case BlittableJsonToken.CompressedString:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(prop.Value.ToString());
+                    break;
+                case BlittableJsonToken.Boolean:
+                    _manualBlittableJsonDocumentBuilder.WriteValue((bool)prop.Value);
+                    break;
+                case BlittableJsonToken.Null:
+                    _manualBlittableJsonDocumentBuilder.WriteValueNull();
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
 
+        private void WritePropertyValue(string propName, object value)
+        {
+            switch (value)
+            {
+                case null:
+                    _manualBlittableJsonDocumentBuilder.WriteValueNull();
+                    break;
+                case string strValue:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(strValue);
+                    break;
+                case LazyStringValue lazyStringValue:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(lazyStringValue);
+                    break;
+                case long l:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(l);
+                    break;
+                case double d:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(d);
+                    break;
+                case decimal decVal:
+                    BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(decVal);
+                    _manualBlittableJsonDocumentBuilder.WriteValue(decVal);
+                    break;
+                case float f:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(f);
+                    break;
+                case bool b:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(b);
+                    break;
+                case LazyNumberValue lazyNumber:
+                    _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
+                    break;
+                case IEnumerable enumerable:
+                    _manualBlittableJsonDocumentBuilder.StartWriteArray();
+                    foreach (var entry in enumerable)
+                    {
+                        WritePropertyValue(propName, entry);
+                    }               
+                    _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
+                    break;
+                default:
+                    throw new NotSupportedException($"The value type {value.GetType().FullName} of key {propName} is not supported in the metadata");
+            }
+        }
+        
         public override void WriteEndObject()
         {
             _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
