@@ -6,8 +6,10 @@ class exportDatabaseModel {
     includeConflicts = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
+    includeCompareExchange = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
-    
+    revisionsAreConfigured: KnockoutComputed<boolean>;
+
     exportFileName = ko.observable<string>();
 
     includeExpiredDocuments = ko.observable(false);
@@ -36,11 +38,14 @@ class exportDatabaseModel {
         if (this.includeIndexes()) {
             operateOnTypes.push("Indexes");
         }
+        if (this.includeRevisionDocuments()) {
+            operateOnTypes.push("RevisionDocuments");
+        }
         if (this.includeIdentities()) {
             operateOnTypes.push("Identities");
         }
-        if (this.includeRevisionDocuments()) {
-            operateOnTypes.push("RevisionDocuments");
+        if (this.includeCompareExchange()) {
+            operateOnTypes.push("CmpXchg");
         }
 
         return {
@@ -56,7 +61,8 @@ class exportDatabaseModel {
 
     private initValidation() {
         this.exportDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDocuments() || this.includeIndexes() || this.includeIdentities()  || this.includeRevisionDocuments();
+            return this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
+                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
         });
 
         this.transformScript.extend({
