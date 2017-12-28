@@ -97,14 +97,7 @@ namespace Raven.Server.Documents.Handlers
                         if (string.IsNullOrEmpty(node))
                             continue;
 
-                        var url = clusterTopology.GetUrlFromTag(node);
-                        if (url == null)
-                            throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
-
-                        if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                            throw new InvalidOperationException($"Cannot put secret key for {name} on node {node} with url {url} because it is not using HTTPS");
-
-                        if (string.Equals(node, ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(node, "?") || string.Equals(node, ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase))
                         {
                             var key = Convert.FromBase64String(base64);
 
@@ -115,6 +108,13 @@ namespace Raven.Server.Documents.Handlers
                         }
                         else
                         {
+                            var url = clusterTopology.GetUrlFromTag(node);
+                            if (url == null)
+                                throw new InvalidOperationException($"Node {node} is not a part of the cluster, cannot send secret key.");
+
+                            if (url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
+                                throw new InvalidOperationException($"Cannot put secret key for {name} on node {node} with url {url} because it is not using HTTPS");
+
                             await SendKeyToNodeAsync(name, base64, ctx, ServerStore, node, url).ConfigureAwait(false);
                         }
                     }
