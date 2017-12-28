@@ -12,112 +12,50 @@ namespace Raven.Client.Documents.Changes
         public event Action<Exception> OnError;
         private readonly Func<Task> _onDisconnect;
         private readonly IDatabaseChanges _changes;
-        private readonly Func<Task<bool>> _onConnect;
+        public readonly Func<Task> OnConnect;
         private int _value;
-        private TaskCompletionSource<object> _tcs;
         public Exception LastException;
 
+        private Task _connected;
 
-        private void OnConnectionStatusChanged(object sender, EventArgs eventArgs)
-        {
-            _semaphore.Wait();
-
-            try
-            {
-                if (_tcs.Task.Status == TaskStatus.RanToCompletion)
-                    _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-                if (_changes.Connected)
-#pragma warning disable 4014
-                    Connect();
-#pragma warning restore 4014
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        private async Task Connect()
-        {
-            await _semaphore.WaitAsync().ConfigureAwait(false);
-
-            try
-            {
-                var subscribed = await _onConnect().ConfigureAwait(false);
-                if (subscribed)
-                    _tcs.TrySetResult(null);
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        private async Task Disconnect()
-        {
-            await _semaphore.WaitAsync().ConfigureAwait(false);
-
-            try
-            {
-                if (_tcs.Task.Status == TaskStatus.RanToCompletion)
-                    _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-                await _onDisconnect().ConfigureAwait(false);
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
+        public void Set(Task connection) => _connected = connection;
 
         public void Inc()
         {
-            lock (this)
-            {
-                if (++_value == 1)
-#pragma warning disable 4014
-                    Connect();
-#pragma warning restore 4014
-            }
+            Interlocked.Increment(ref _value);
         }
 
         public void Dec()
         {
-            lock (this)
+            if (Interlocked.Decrement(ref _value) == 0)
             {
-                if (--_value == 0)
-#pragma warning disable 4014
-                    Disconnect();
-#pragma warning restore 4014
+                Set(_onDisconnect());
             }
         }
 
         public void Error(Exception e)
         {
+            Set(Task.FromException(e));
             LastException = e;
             OnError?.Invoke(e);
         }
 
         public Task EnsureSubscribedNow()
         {
-            return _tcs.Task;
+            return _connected;
         }
 
         public void Dispose()
         {
-            _changes.ConnectionStatusChanged -= OnConnectionStatusChanged;
+            Set(Task.FromCanceled(CancellationToken.None));
         }
         
-        public DatabaseConnectionState(IDatabaseChanges changes, Func<Task<bool>> onConnect, Func<Task> onDisconnect)
+        public DatabaseConnectionState(IDatabaseChanges changes, Func<Task> onConnect, Func<Task> onDisconnect)
         {
             _changes = changes;
-            _onConnect = onConnect;
+            OnConnect = onConnect;
             _onDisconnect = onDisconnect;
             _value = 0;
-            _tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            _changes.ConnectionStatusChanged += OnConnectionStatusChanged;
         }
 
         public event Action<DocumentChange> OnDocumentChangeNotification;

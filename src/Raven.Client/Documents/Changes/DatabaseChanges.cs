@@ -282,6 +282,7 @@ namespace Raven.Client.Documents.Changes
 
         private DatabaseConnectionState GetOrAddConnectionState(string name, string watchCommand, string unwatchCommand, string value)
         {
+            bool newValue = false;
             var counter = _counters.GetOrAdd(name, s =>
             {
                 async Task OnDisconnect()
@@ -297,32 +298,23 @@ namespace Raven.Client.Documents.Changes
                         // because connections drops with all subscriptions
                     }
 
-                    DatabaseConnectionState state;
-                    if (_counters.TryRemove(s, out state))
+                    if (_counters.TryRemove(s, out var state))
                         state.Dispose();
                 }
 
-                async Task<bool> OnConnect()
+                async Task OnConnect()
                 {
-                    try
-                    {
-                        if (Connected)
-                        {
-                            await Send(watchCommand, value).ConfigureAwait(false);
-                            return true;
-                        }
-                    }
-                    catch (WebSocketException)
-                    {
-                        // if we are not connected then we will subscribe again after connection be established
-                    }
-
-                    return false;
+                    await Send(watchCommand, value).ConfigureAwait(false);
                 }
 
+                newValue = true;
                 return new DatabaseConnectionState(this, OnConnect, OnDisconnect);
             });
 
+            // try to reconnect
+            if (newValue)
+                counter.Set(counter.OnConnect());
+            
             return counter;
         }
 
@@ -405,6 +397,11 @@ namespace Raven.Client.Documents.Changes
                     {
                         await _client.ConnectAsync(url, _cts.Token).ConfigureAwait(false);
 
+                        foreach (var counter in _counters)
+                        {
+                            counter.Value.Set(counter.Value.OnConnect());
+                        }
+                        
                         ConnectionStatusChanged?.Invoke(this, EventArgs.Empty);
                     }
 
@@ -454,16 +451,14 @@ namespace Raven.Client.Documents.Changes
 
         private async Task ProcessChanges()
         {
-            JsonOperationContext context;
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out context))
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 while (_cts.IsCancellationRequested == false)
                 {
                     var state = new JsonParserState();
 
-                    JsonOperationContext.ManagedPinnedBuffer buffer;
                     using (var stream = new WebSocketStream(_client, _cts.Token))
-                    using (context.GetManagedBuffer(out buffer))
+                    using (context.GetManagedBuffer(out var buffer))
                     using (var parser = new UnmanagedJsonParser(context, state, "changes/receive"))
                     using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", parser, state))
                     using (var peepingTomStream = new PeepingTomStream(stream, context))
