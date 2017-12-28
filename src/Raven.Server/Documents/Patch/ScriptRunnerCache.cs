@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using JetBrains.Annotations;
+using Raven.Client.Extensions;
 using Raven.Server.Config;
 
 namespace Raven.Server.Documents.Patch
@@ -108,11 +109,11 @@ namespace Raven.Server.Documents.Patch
             return lazy.Value;
         }
 
+
         private int CleanTheCache()
         {
-            // it's expensive, but OrderBy is not thread safe..
-            var cacheClone = _cache.ToList();
-            foreach (var pair in cacheClone.OrderBy(x => x.Value.Value.Runs)
+            
+            foreach (var pair in _cache.ForceEnumerate().OrderBy(x => x.Value.Value.Runs)
                 .Take(_configuration.Patching.MaxNumberOfCachedScripts / 4)
             )
             {

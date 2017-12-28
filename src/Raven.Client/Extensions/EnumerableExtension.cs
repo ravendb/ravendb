@@ -42,5 +42,12 @@ namespace Raven.Client.Extensions
 
             return result;
         }
+
+        public static IEnumerable<T> ForceEnumerate<T>(this ICollection<T> collection)
+        {
+            // thanks to: https://stackoverflow.com/questions/47630824/is-c-sharp-linq-orderby-threadsafe-when-used-with-concurrentdictionarytkey-tva#
+            foreach (var item in collection)
+                yield return item;
+        }
     }
 }
