@@ -815,8 +815,7 @@ namespace Raven.Server.ServerWide
             if (readResult == null)
                 return null;
 
-            const int numberOfBits = 256;
-            var entropy = new byte[numberOfBits / 8];
+            var entropy = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
             var reader = readResult.Reader;
             reader.Read(entropy, 0, entropy.Length);
             var protectedData = new byte[reader.Length - entropy.Length];
