@@ -5,7 +5,9 @@ class importDatabaseModel {
     includeConflicts = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeIdentities = ko.observable(true);
+    includeCompareExchange = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
+    includeLegacyAttachments = ko.observable(false);
     revisionsAreConfigured: KnockoutComputed<boolean>;
 
     includeExpiredDocuments = ko.observable(true);
@@ -37,6 +39,12 @@ class importDatabaseModel {
         if (this.includeIdentities()){
             operateOnTypes.push("Identities");
         }
+        if (this.includeCompareExchange()) {
+            operateOnTypes.push("CmpXchg");
+        }
+        if (this.includeLegacyAttachments()) {
+            operateOnTypes.push("LegacyAttachments");
+        }
 
         return {
             IncludeExpired: this.includeExpiredDocuments(),
@@ -48,10 +56,8 @@ class importDatabaseModel {
 
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDocuments()  ||
-                   this.includeIndexes()    ||
-                   this.includeIdentities() ||
-                   (this.includeRevisionDocuments() && this.revisionsAreConfigured());
+            return this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
+                this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments();
         });
 
         this.transformScript.extend({

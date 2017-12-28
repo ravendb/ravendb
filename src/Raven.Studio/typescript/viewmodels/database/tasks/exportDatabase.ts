@@ -127,6 +127,10 @@ class exportDatabase extends viewModelBase {
             return 'curl -o "' + fileName + '.ravendbdump" --data "DownloadOptions=' + encodeURIComponent(json) + '" ' +
                 appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
         });
+
+        this.model.revisionsAreConfigured = ko.pureComputed(() => {
+            return this.activeDatabase().hasRevisionsConfiguration();
+        });
     }
 
     copyCommandToClipboard() {

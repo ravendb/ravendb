@@ -29,11 +29,15 @@
                                 <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions">
                                 <label for="toggle6">Include Revisions</label>
                             </div>
-                           
                             <div class="toggle">
                                 <input id="toggle3" type="checkbox" data-bind="checked: includeIdentities">
                                 <label for="toggle3">Include Identities</label>
                             </div>
+                            <div class="toggle">
+                                <input id="toggle4" type="checkbox" data-bind="checked: includeCompareExchange">
+                                <label for="toggle4">Include Compare Exchange</label>
+                            </div>
+
                             <div data-bind="validationElement: exportDefinitionHasIncludes"> 
                                 <div class="help-block" data-bind="validationMessage: exportDefinitionHasIncludes"></div>
                             </div>
