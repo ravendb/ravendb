@@ -457,7 +457,7 @@ namespace Raven.Server.Documents
                         return;
                     fixed (byte* pKey = MasterKey)
                     {
-                        Sodium.ZeroMemory(pKey, MasterKey.Length);
+                        Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
                     }
                 });
 

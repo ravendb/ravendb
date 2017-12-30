@@ -1,0 +1,459 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ output extension=".cs" #>
+<#
+	string GenerateCall(string ctx, string method, string[] argNames, string type)
+	{
+		return (type == "void" ? "" : "return ") +
+			ctx + "." + method + "(" + string.Join(", ", argNames.Select(x=>x.Trim()) ) + ")";
+	}
+
+	var api = File.ReadAllLines(this.Host.ResolvePath("sodium-api.txt"));
+	var list = new List<(string Method, string Type, string[] ArgNames, string Signature)>();
+	foreach(var p in api)
+	{
+		if(string.IsNullOrWhiteSpace(p))
+			continue;
+		if(p.StartsWith("#"))
+			continue;
+
+		var parts = p.Split('|');
+		var args = parts[2].Trim().Split(',');
+		list.Add( (parts[0].Trim(), parts[1].Trim(), args, parts[3].Trim()) );
+	}
+#>
+using System;
+using System.IO;
+using Sparrow.Platform;
+using System.Runtime.InteropServices;
+
+namespace Sparrow
+{
+    public static unsafe partial class Sodium
+    {
+		#region Public API
+ 
+<#
+		foreach(var method in list)
+		{
+#>
+		public static <#=method.Type #> <#=method.Signature #>
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				<#=GenerateCall("Posix", method.Method, method.ArgNames, method.Type)#>;
+			 }
+             else
+			 {
+			 	<#=GenerateCall("Windows",method.Method, method.ArgNames, method.Type)#>;
+			 }
+		}
+
+<#			
+		}
+#>
+
+		#endregion
+
+		#region Posix
+
+		private class Posix
+		{
+			private static readonly bool _is32bits;
+			private static readonly bool _isArm;
+			private static bool _isMac64;
+
+			static Posix()
+			{
+				if (PlatformDetails.RunningOnPosix == false)
+				{
+					return;
+				}
+
+				_is32bits = PlatformDetails.Is32Bits;
+				_isArm = RuntimeInformation.OSArchitecture == Architecture.Arm;
+				_isMac64 = PlatformDetails.RunningOnMacOsx;
+
+				if (_is32bits)
+				{
+					if (_isMac64)
+					{
+						throw new PlatformNotSupportedException("RavenDB cannot be executed on 32-bit MacOS. Please use Mac OSX El Capitan or higher");
+					}
+					if (_isArm)
+					{
+						Arm.Initialize();
+					}
+					else
+					{
+						X86.Initialize();
+					}
+				}
+				else
+				{
+					if (PlatformDetails.RunningOnMacOsx)
+						MacOsxX64.Initialize();
+					else
+						X64.Initialize();
+				}
+
+				// test for existance of libsodium:
+				try
+				{
+					crypto_sign_publickeybytes();
+				}
+				catch (Exception e)
+				{
+					if (_isMac64)
+						throw new Exception("Make sure libsodium is installed on your Mac OSX. Use `brew install libsodium`", e);
+
+					if (PlatformDetails.RunningOnPosix)
+						throw new Exception("Make sure libsodium is installed on your Linux OS. (install package `libsodium` or `libsodium-18`", e);
+
+					throw new Exception("Make sure libsodium is installed on your Windows OS.", e);
+				}
+			}
+
+<#
+		foreach(var method in list)
+		{
+#>
+			public static <#=method.Type #> <#=method.Signature #>
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						<#=GenerateCall("Arm", method.Method, method.ArgNames, method.Type)#>;
+					}
+					else
+					{
+						<#=GenerateCall("X86", method.Method, method.ArgNames, method.Type)#>;
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						<#=GenerateCall("MacOsxX64",method.Method, method.ArgNames, method.Type)#>;
+					}
+					else
+					{
+						<#=GenerateCall("X64",method.Method, method.ArgNames, method.Type)#>;
+					}
+				 }
+			}
+
+<#			
+		}
+#>
+			#region Mac OSX 64
+			 private static class MacOsxX64
+			{
+				private const string LIB_SODIUM = "libsodium";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try `brew install libsodium` and re-run server.",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+
+<#
+		foreach(var method in list)
+		{
+#>
+				[DllImport(LIB_SODIUM)]
+				public extern static <#=method.Type #> <#=method.Signature #>;
+
+<#			
+		}
+#>
+			}
+			#endregion
+
+			#region X64
+			private static class X64
+			{
+				private const string LIB_SODIUM = "libsodium.x64.so";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing libsodium from https://download.libsodium.org/libsodium/releases",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+
+<#
+		foreach(var method in list)
+		{
+#>
+				[DllImport(LIB_SODIUM)]
+				public extern static <#=method.Type #> <#=method.Signature #>;
+
+<#			
+		}
+#>
+			}
+			#endregion
+
+			#region x86
+
+			private static class X86
+			{
+				private const string LIB_SODIUM = "libsodium.x86.so";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing libsodium from https://download.libsodium.org/libsodium/releases",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+				
+<#
+		foreach(var method in list)
+		{
+#>
+				[DllImport(LIB_SODIUM)]
+				public extern static <#=method.Type #> <#=method.Signature #>;
+
+<#			
+		}
+#>
+			}
+
+			#endregion
+
+			#region Arm
+			private static class Arm
+			{
+				private const string LIB_SODIUM = "libsodium.arm.so";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing package libsodium or libsodium-12 or libsodium-18",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+
+<#
+		foreach(var method in list)
+		{
+#>
+				[DllImport(LIB_SODIUM)]
+				public extern static <#=method.Type #> <#=method.Signature #>;
+
+<#			
+		}
+#>
+			}
+			#endregion
+		}
+
+		#endregion
+		
+		#region Windows
+		private class Windows
+		{
+			private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+
+			private static readonly bool _is32bits;
+
+			static Windows()
+			{
+				if (PlatformDetails.RunningOnPosix)
+				{
+					return;
+				}
+
+				_is32bits = PlatformDetails.Is32Bits;
+				if (_is32bits)
+				{
+					X86.Initialize();
+				}
+				else
+				{
+					X64.Initialize();
+				}
+			}
+
+<#
+		foreach(var method in list)
+		{
+#>
+			public static <#=method.Type #> <#=method.Signature #>
+			{
+				 if(_is32bits)
+				 {
+					<#=GenerateCall("X86", method.Method, method.ArgNames, method.Type)#>;
+				 }
+				 else
+				 {
+			 		<#=GenerateCall("X64",method.Method, method.ArgNames, method.Type)#>;
+				 }
+			}
+
+<#			
+		}
+#>
+
+			#region x86
+
+			private static class X86
+			{
+				private const string LIB_SODIUM = "libsodium.x86.dll";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
+								dllNotFoundEx);
+						}
+
+						throw new DllNotFoundException(
+							$"{LIB_SODIUM} is missing. Also make sure to have {ErrString}",
+							dllNotFoundEx);
+					}
+					catch (Exception e)
+					{
+						throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {ErrString}", e);
+					}
+				}
+
+<#
+		foreach(var method in list)
+		{
+#>
+				[DllImport(LIB_SODIUM)]
+				public extern static <#=method.Type #> <#=method.Signature #>;
+
+<#			
+		}
+#>
+			}
+
+			#endregion
+
+			#region x64
+
+			private class X64
+			{
+				private const string LIB_SODIUM = "libsodium.x64.dll";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
+								dllNotFoundEx);
+						}
+
+						throw new DllNotFoundException(
+							$"{LIB_SODIUM} is missing. Also make sure to have {ErrString}",
+							dllNotFoundEx);
+					}
+					catch (Exception e)
+					{
+						throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {ErrString}", e);
+					}
+				}
+
+<#
+		foreach(var method in list)
+		{
+#>
+				[DllImport(LIB_SODIUM)]
+				public extern static <#=method.Type #> <#=method.Signature #>;
+
+<#			
+		}
+#>
+
+			}
+
+			#endregion
+			#endregion
+		}
+	}
+}

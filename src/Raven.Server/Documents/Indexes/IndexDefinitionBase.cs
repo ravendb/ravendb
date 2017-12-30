@@ -196,8 +196,8 @@ namespace Raven.Server.Documents.Indexes
         private static unsafe void EncryptStream(StorageEnvironmentOptions options, MemoryStream stream)
         {
             var data = stream.ToArray();
-            var nonce = Sodium.GenerateRandomBuffer(Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); // 192-bit
-            var encryptedData = new byte[data.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac 
+            var nonce = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); // 192-bit
+            var encryptedData = new byte[data.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()]; // data length + 128-bit mac 
 
             fixed (byte* ctx = EncryptionContext)
             fixed (byte* pData = data)
@@ -238,13 +238,13 @@ namespace Raven.Server.Documents.Indexes
         private static unsafe void DecryptStream(StorageEnvironmentOptions options, MemoryStream stream)
         {
             var buffer = stream.ToArray();
-            var nonce = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
+            var nonce = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
             var data = new byte[buffer.Length - nonce.Length];
 
             Array.Copy(buffer, 0, data, 0, buffer.Length - nonce.Length);
             Array.Copy(buffer, buffer.Length - nonce.Length, nonce, 0, nonce.Length);
 
-            var decryptedData = new byte[data.Length - Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+            var decryptedData = new byte[data.Length - (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
             fixed (byte* ctx = EncryptionContext)
             fixed (byte* pData = data)

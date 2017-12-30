@@ -48,7 +48,7 @@ namespace Voron.Recovery
         }
 
 
-        private readonly byte[] _streamHashState = new byte[Sodium.crypto_generichash_statebytes()];
+        private readonly byte[] _streamHashState = new byte[(int)Sodium.crypto_generichash_statebytes()];
         private readonly byte[] _streamHashResult = new byte[(int)Sodium.crypto_generichash_bytes()];
         private readonly List<(IntPtr Ptr, int Size)> _attachmentChunks = new List<(IntPtr Ptr, int Size)>();
 

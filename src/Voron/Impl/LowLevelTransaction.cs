@@ -431,7 +431,7 @@ namespace Voron.Impl
             // encrypted, we'll always re-write it anyway, and this ensures that we'll
             // get corruption from the system if we try to use it. Note that the normal
             // pager stuff, like ensuring the checksum, is already done at this point
-            Sodium.ZeroMemory(page + PageHeader.NonceOffset, PageHeader.SizeOf - PageHeader.NonceOffset);
+            Sodium.sodium_memzero(page + PageHeader.NonceOffset, (UIntPtr)(PageHeader.SizeOf - PageHeader.NonceOffset));
         }
 
         private const int InvalidScratchFile = -1;

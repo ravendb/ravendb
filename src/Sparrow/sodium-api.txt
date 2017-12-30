@@ -1,0 +1,115 @@
+﻿
+# format
+#
+# method name | return value | args (comma separted) | signature
+
+
+crypto_kdf_keybytes | UIntPtr | | crypto_kdf_keybytes()
+
+sodium_init | int | | sodium_init()
+
+crypto_generichash_bytes | UIntPtr | | crypto_generichash_bytes()
+
+crypto_sign_statebytes | UIntPtr | | crypto_sign_statebytes()
+
+crypto_generichash_keybytes | UIntPtr | | crypto_generichash_keybytes()
+
+crypto_sign_init | int | state | crypto_sign_init(void* /* crypto_sign_state  */ state)
+
+crypto_sign_update | int | state, m, mlen | crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen)
+
+crypto_sign_final_create | int | state, sig, siglen_p, sk | crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk)
+
+crypto_generichash_init | int | state, key, keylen, outlen | crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen)
+
+crypto_generichash_update | int | state, @in, inlen | crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen)
+
+crypto_generichash_final | int | state, @out, outlen | crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen)
+
+crypto_kx_keypair | int | pk, sk | crypto_kx_keypair(byte* pk, byte* sk)
+
+randombytes_buf | void | buffer, size | randombytes_buf(byte* buffer, UIntPtr size)
+
+crypto_kdf_keygen | void | masterkey | crypto_kdf_keygen(byte* masterkey)
+
+crypto_kdf_derive_from_key | int | subkey, subkeylen, subkeyid, ctx, key | crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key)
+
+crypto_stream_xchacha20_xor_ic | int | c,m,mlen, n, ic, k | crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k)
+
+crypto_aead_chacha20poly1305_encrypt_detached | int | c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k |  crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+
+crypto_aead_chacha20poly1305_encrypt | int | c, clen, m, mlen, ad, adlen, nsec, npub, k | crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+
+crypto_aead_chacha20poly1305_decrypt_detached | int | m, nsec, c, clen, mac, ad, adlen, npub, k |crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+
+crypto_aead_chacha20poly1305_decrypt | int | m, mlen, nsec, c, clen, ad, adlen, npub, k  | crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+
+crypto_aead_xchacha20poly1305_ietf_encrypt | int | c, clen, m, mlen, ad, adlen, nsec, npub, k | crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+
+crypto_aead_xchacha20poly1305_ietf_decrypt | int | m, mlen, nsec, c, clen, ad, adlen, npub, k | crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+
+crypto_aead_xchacha20poly1305_ietf_encrypt_detached | int | c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k | crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+
+crypto_aead_xchacha20poly1305_ietf_decrypt_detached | int| m, nsec, c, clen, mac, ad, adlen, npub, k | crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+
+crypto_box_seal | int | c, m, mlen, pk |crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
+
+crypto_box_seal_open | int | m, c, clen, pk, sk | crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk)
+
+crypto_stream_xchacha20_keybytes | UIntPtr | | crypto_stream_xchacha20_keybytes()
+
+crypto_stream_xchacha20_noncebytes | UIntPtr | | crypto_stream_xchacha20_noncebytes()
+
+crypto_aead_xchacha20poly1305_ietf_keybytes | UIntPtr | | crypto_aead_xchacha20poly1305_ietf_keybytes()
+
+crypto_aead_xchacha20poly1305_ietf_npubbytes | UIntPtr | | crypto_aead_xchacha20poly1305_ietf_npubbytes()
+
+crypto_aead_xchacha20poly1305_ietf_abytes | UIntPtr | | crypto_aead_xchacha20poly1305_ietf_abytes()
+
+crypto_box_sealbytes | UIntPtr | | crypto_box_sealbytes()
+
+crypto_box_secretkeybytes | UIntPtr | | crypto_box_secretkeybytes()
+
+crypto_kx_secretkeybytes | UIntPtr | | crypto_kx_secretkeybytes()
+
+crypto_kx_publickeybytes | UIntPtr | | crypto_kx_publickeybytes()
+
+crypto_generichash_bytes_max | UIntPtr | | crypto_generichash_bytes_max()
+
+crypto_box_publickeybytes | UIntPtr | | crypto_box_publickeybytes()
+
+crypto_box_keypair | int | pk, sk | crypto_box_keypair(byte* pk, byte* sk)
+
+crypto_generichash | int | @out, outlen, @in, inlen, key, keylen | crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen)
+
+sodium_memcmp | int | b, vh, verifiedHashLength | sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength)
+
+crypto_box_macbytes | UIntPtr | | crypto_box_macbytes()
+
+crypto_box_noncebytes | UIntPtr | | crypto_box_noncebytes()
+
+crypto_aead_chacha20poly1305_ABYTES | UIntPtr | | crypto_aead_chacha20poly1305_ABYTES()
+
+crypto_kx_client_session_keys | int | rx, tx, client_pk, client_sk, server_pk | crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
+
+crypto_kx_server_session_keys | int | rx, tx, server_pk, server_sk, client_pk | crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk)
+
+crypto_box_easy | int | c, m, mlen, n, pk, sk  | crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk)
+
+crypto_box_open_easy | int | m, c, clen, n, pk, sk  | crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk)
+
+crypto_sign_detached | int | sig, siglen, m, mlen, sk | crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk)
+
+crypto_sign_verify_detached | int | sig, m, mlen, pk | crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk)
+
+crypto_sign_bytes | UIntPtr | | crypto_sign_bytes()
+
+crypto_sign_publickeybytes | UIntPtr | | crypto_sign_publickeybytes()
+
+crypto_sign_secretkeybytes | UIntPtr | | crypto_sign_secretkeybytes()
+
+crypto_sign_keypair | int | pk, sk | crypto_sign_keypair(byte* pk, byte* sk)
+
+sodium_memzero | void | pnt, len |  sodium_memzero(byte* pnt, UIntPtr len)
+
+crypto_generichash_statebytes | UIntPtr | | crypto_generichash_statebytes()

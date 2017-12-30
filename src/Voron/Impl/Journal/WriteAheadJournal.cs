@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
@@ -1478,6 +1479,8 @@ namespace Voron.Impl.Journal
             return prepreToWriteToJournal;
         }
 
+        internal static readonly byte[] Context = Encoding.UTF8.GetBytes("TX & ACID");
+
         private void EncryptTransaction(byte* fullTxBuffer)
         {
             var txHeader = (TransactionHeader*)fullTxBuffer;
@@ -1486,7 +1489,7 @@ namespace Voron.Impl.Journal
             ulong macLen = 16;
             var subKey = stackalloc byte[32];
             fixed (byte* mk = _env.Options.MasterKey)
-            fixed (byte* ctx = Sodium.Context)
+            fixed (byte* ctx = Context)
             {
                 var num = txHeader->TransactionId;
                 if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
@@ -1608,7 +1611,7 @@ namespace Voron.Impl.Journal
 
             var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
-            Sodium.ZeroMemory(pagePointer, compressionBufferSize);
+            Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
         }
 
         private bool ShouldReduceSizeOfCompressionPager()

@@ -1115,7 +1115,7 @@ namespace Voron
                 try
                 {
                     if (_env.Options.EncryptionEnabled)
-                        Sodium.ZeroMemory(_tmp.TempPagePointer, _tmp.PageSize);
+                        Sodium.sodium_memzero(_tmp.TempPagePointer, (UIntPtr)_tmp.PageSize);
                     _env._tempPagesPool.Enqueue(_tmp);
                 }
                 catch (Exception)

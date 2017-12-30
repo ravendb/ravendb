@@ -1,581 +1,4040 @@
-using System;
-using System.Text;
+﻿using System;
+using System.IO;
+using Sparrow.Platform;
+using System.Runtime.InteropServices;
 
 namespace Sparrow
 {
-    public static unsafe class Sodium
+    public static unsafe partial class Sodium
     {
-        private static int crypto_kdf_keybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                    ? Platform.Posix.PosixSodium.crypto_kdf_keybytes()
-                    : Platform.Win32.WinSodium.crypto_kdf_keybytes());
-        }
+		#region Public API
+ 
+		public static UIntPtr crypto_kdf_keybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kdf_keybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_kdf_keybytes();
+			 }
+		}
 
-        public static int crypto_generichash_statebytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_statebytes()
-                : Platform.Win32.WinSodium.crypto_generichash_statebytes());
-        }
+		public static int sodium_init()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.sodium_init();
+			 }
+             else
+			 {
+			 	return Windows.sodium_init();
+			 }
+		}
 
-        public static UIntPtr crypto_generichash_bytes()
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_bytes()
-                : Platform.Win32.WinSodium.crypto_generichash_bytes();
-        }
+		public static UIntPtr crypto_generichash_bytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_bytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_bytes();
+			 }
+		}
 
-        public static int crypto_sign_statebytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_statebytes()
-                : Platform.Win32.WinSodium.crypto_sign_statebytes());
-        }
+		public static UIntPtr crypto_sign_statebytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_statebytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_statebytes();
+			 }
+		}
 
-        public static int crypto_generichash_keybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_keybytes()
-                : Platform.Win32.WinSodium.crypto_generichash_keybytes());
-        }
+		public static UIntPtr crypto_generichash_keybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_keybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_keybytes();
+			 }
+		}
 
-        public static int crypto_sign_init(void* /* crypto_sign_state  */ state)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_init(state)
-                : Platform.Win32.WinSodium.crypto_sign_init(state);
-        }
+		public static int crypto_sign_init(void* /* crypto_sign_state  */ state)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_init(state);
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_init(state);
+			 }
+		}
 
-        public static int crypto_sign_update(void* /* crypto_generichash_state */ state,
-            byte* m,
-            ulong mlen)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_update(state, m, mlen)
-                : Platform.Win32.WinSodium.crypto_sign_update(state, m, mlen);
-        }
+		public static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_update(state, m, mlen);
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_update(state, m, mlen);
+			 }
+		}
 
-        public static int crypto_sign_final_create(void* /* crypto_generichash_state */ state,
-            byte* sig,
-            ulong* siglen_p,
-            byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_final_create(state, sig, siglen_p, sk)
-                : Platform.Win32.WinSodium.crypto_sign_final_create(state, sig, siglen_p, sk);
+		public static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_final_create(state, sig, siglen_p, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_final_create(state, sig, siglen_p, sk);
+			 }
+		}
 
-        }
+		public static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_init(state, key, keylen, outlen);
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_init(state, key, keylen, outlen);
+			 }
+		}
 
-        public static int crypto_generichash_init(void* /* crypto_generichash_state */ state,
-            byte* key,
-            UIntPtr keylen,
-            UIntPtr outlen)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_init(state, key, keylen, outlen)
-                : Platform.Win32.WinSodium.crypto_generichash_init(state, key, keylen, outlen);
-        }
+		public static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_update(state, @in, inlen);
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_update(state, @in, inlen);
+			 }
+		}
 
-        public static int crypto_generichash_update(
-            void* /* crypto_generichash_state */ state,
-            byte* @in,
-            ulong inlen)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_update(state, @in, inlen)
-                : Platform.Win32.WinSodium.crypto_generichash_update(state, @in, inlen);
-        }
+		public static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_final(state, @out, outlen);
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_final(state, @out, outlen);
+			 }
+		}
 
-        public static int crypto_generichash_final(
-            void* /* crypto_generichash_state */ state,
-            byte* @out,
-            UIntPtr outlen)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_final(state, @out, outlen)
-                : Platform.Win32.WinSodium.crypto_generichash_final(state, @out, outlen);
-        }
+		public static int crypto_kx_keypair(byte* pk, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kx_keypair(pk, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_kx_keypair(pk, sk);
+			 }
+		}
 
-        public static int crypto_kx_keypair(byte* pk, byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_kx_keypair(pk, sk)
-                : Platform.Win32.WinSodium.crypto_kx_keypair(pk, sk);
+		public static void randombytes_buf(byte* buffer, UIntPtr size)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				Posix.randombytes_buf(buffer, size);
+			 }
+             else
+			 {
+			 	Windows.randombytes_buf(buffer, size);
+			 }
+		}
 
-        }
+		public static void crypto_kdf_keygen(byte* masterkey)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				Posix.crypto_kdf_keygen(masterkey);
+			 }
+             else
+			 {
+			 	Windows.crypto_kdf_keygen(masterkey);
+			 }
+		}
 
-        public static void randombytes_buf(byte* buffer, UIntPtr size)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                Platform.Posix.PosixSodium.randombytes_buf(buffer, size);
-            else
-                Platform.Win32.WinSodium.randombytes_buf(buffer, size);
-        }
+		public static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+			 }
+             else
+			 {
+			 	return Windows.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+			 }
+		}
 
-        private static void crypto_kdf_keygen(
-            byte* masterkey)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-            {
-                Platform.Posix.PosixSodium.crypto_kdf_keygen(masterkey);
-                return;
-            }
-            Platform.Win32.WinSodium.crypto_kdf_keygen(masterkey);
-        }
+		public static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+			 }
+		}
 
-        public static int crypto_kdf_derive_from_key(
-            byte* subkey,
-            UIntPtr subkeylen,
-            ulong subkeyid,
-            byte* ctx,
-            byte* key)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
-            return Platform.Win32.WinSodium.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
-        }
+		public static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+		}
 
-        public static int crypto_stream_xchacha20_xor_ic(
-            byte* c,
-            byte* m,
-            ulong mlen,
-            byte* n,
-            ulong ic,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
-            return Platform.Win32.WinSodium.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
-        }
+		public static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+		}
 
-        public static int crypto_aead_chacha20poly1305_encrypt_detached(
-            byte* c,
-            byte* mac,
-            // ReSharper disable once InconsistentNaming
-            ulong* maclen_p,
-            byte* m,
-            ulong mlen,
-            byte* ad,
-            ulong adlen,
-            byte* nsec,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-        }
+		public static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+			 }
+		}
 
-        public static int crypto_aead_chacha20poly1305_encrypt(
-            byte* c,
-            ulong* clen,
-            byte* m,
-            ulong mlen,
-            byte* ad,
-            ulong adlen,
-            byte* nsec,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-        }
+		public static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+			 }
+		}
+
+		public static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+		}
+
+		public static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+			 }
+		}
+
+		public static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+			 }
+		}
+
+		public static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+			 }
+		}
+
+		public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_seal(c, m, mlen, pk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_seal(c, m, mlen, pk);
+			 }
+		}
+
+		public static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_seal_open(m, c, clen, pk, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_seal_open(m, c, clen, pk, sk);
+			 }
+		}
+
+		public static UIntPtr crypto_stream_xchacha20_keybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_stream_xchacha20_keybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_stream_xchacha20_keybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_stream_xchacha20_noncebytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_stream_xchacha20_noncebytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_stream_xchacha20_noncebytes();
+			 }
+		}
+
+		public static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_keybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_keybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+			 }
+		}
+
+		public static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_xchacha20poly1305_ietf_abytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_xchacha20poly1305_ietf_abytes();
+			 }
+		}
+
+		public static UIntPtr crypto_box_sealbytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_sealbytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_sealbytes();
+			 }
+		}
+
+		public static UIntPtr crypto_box_secretkeybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_secretkeybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_secretkeybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_kx_secretkeybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kx_secretkeybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_kx_secretkeybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_kx_publickeybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kx_publickeybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_kx_publickeybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_generichash_bytes_max()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_bytes_max();
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_bytes_max();
+			 }
+		}
+
+		public static UIntPtr crypto_box_publickeybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_publickeybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_publickeybytes();
+			 }
+		}
+
+		public static int crypto_box_keypair(byte* pk, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_keypair(pk, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_keypair(pk, sk);
+			 }
+		}
+
+		public static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+			 }
+		}
+
+		public static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.sodium_memcmp(b, vh, verifiedHashLength);
+			 }
+             else
+			 {
+			 	return Windows.sodium_memcmp(b, vh, verifiedHashLength);
+			 }
+		}
+
+		public static UIntPtr crypto_box_macbytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_macbytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_macbytes();
+			 }
+		}
+
+		public static UIntPtr crypto_box_noncebytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_noncebytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_noncebytes();
+			 }
+		}
+
+		public static UIntPtr crypto_aead_chacha20poly1305_ABYTES()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_aead_chacha20poly1305_ABYTES();
+			 }
+             else
+			 {
+			 	return Windows.crypto_aead_chacha20poly1305_ABYTES();
+			 }
+		}
+
+		public static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+			 }
+		}
+
+		public static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+			 }
+		}
+
+		public static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_easy(c, m, mlen, n, pk, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_easy(c, m, mlen, n, pk, sk);
+			 }
+		}
+
+		public static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_box_open_easy(m, c, clen, n, pk, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_box_open_easy(m, c, clen, n, pk, sk);
+			 }
+		}
+
+		public static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_detached(sig, siglen, m, mlen, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_detached(sig, siglen, m, mlen, sk);
+			 }
+		}
+
+		public static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_verify_detached(sig, m, mlen, pk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_verify_detached(sig, m, mlen, pk);
+			 }
+		}
+
+		public static UIntPtr crypto_sign_bytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_bytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_bytes();
+			 }
+		}
+
+		public static UIntPtr crypto_sign_publickeybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_publickeybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_publickeybytes();
+			 }
+		}
+
+		public static UIntPtr crypto_sign_secretkeybytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_secretkeybytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_secretkeybytes();
+			 }
+		}
+
+		public static int crypto_sign_keypair(byte* pk, byte* sk)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_sign_keypair(pk, sk);
+			 }
+             else
+			 {
+			 	return Windows.crypto_sign_keypair(pk, sk);
+			 }
+		}
+
+		public static void sodium_memzero(byte* pnt, UIntPtr len)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				Posix.sodium_memzero(pnt, len);
+			 }
+             else
+			 {
+			 	Windows.sodium_memzero(pnt, len);
+			 }
+		}
+
+		public static UIntPtr crypto_generichash_statebytes()
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.crypto_generichash_statebytes();
+			 }
+             else
+			 {
+			 	return Windows.crypto_generichash_statebytes();
+			 }
+		}
 
 
-        public static int crypto_aead_chacha20poly1305_decrypt_detached(
-            byte* m,
-            byte* nsec,
-            byte* c,
-            ulong clen,
-            byte* mac,
-            byte* ad,
-            ulong adlen,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-        }
+		#endregion
 
-        public static int crypto_aead_chacha20poly1305_decrypt(
-            byte* m,
-            ulong* mlen,
-            byte* nsec,
-            byte* c,
-            ulong clen,
-            byte* ad,
-            ulong adlen,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-        }
+		#region Posix
 
-        public static int crypto_aead_xchacha20poly1305_ietf_encrypt(
-            byte* c,
-            ulong* clen,
-            byte* m,
-            ulong mlen,
-            byte* ad,
-            ulong adlen,
-            byte* nsec,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-        }
+		private class Posix
+		{
+			private static readonly bool _is32bits;
+			private static readonly bool _isArm;
+			private static bool _isMac64;
 
-        public static int crypto_aead_xchacha20poly1305_ietf_decrypt(
-            byte* m,
-            ulong* mlen,
-            byte* nsec,
-            byte* c,
-            ulong clen,
-            byte* ad,
-            ulong adlen,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-        }
+			static Posix()
+			{
+				if (PlatformDetails.RunningOnPosix == false)
+				{
+					return;
+				}
 
-        public static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
-            byte* c,
-            byte* mac,
-            // ReSharper disable once InconsistentNaming
-            ulong* maclen_p,
-            byte* m,
-            ulong mlen,
-            byte* ad,
-            ulong adlen,
-            byte* nsec,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-        }
-        
-        public static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
-            byte* m,
-            byte* nsec,
-            byte* c,
-            ulong clen,
-            byte* mac,
-            byte* ad,
-            ulong adlen,
-            byte* npub,
-            byte* k)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-            return Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-        }
+				_is32bits = PlatformDetails.Is32Bits;
+				_isArm = RuntimeInformation.OSArchitecture == Architecture.Arm;
+				_isMac64 = PlatformDetails.RunningOnMacOsx;
 
-        public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_box_seal(c, m, mlen, pk);
-            return Platform.Win32.WinSodium.crypto_box_seal(c, m, mlen, pk);
-        }
+				if (_is32bits)
+				{
+					if (_isMac64)
+					{
+						throw new PlatformNotSupportedException("RavenDB cannot be executed on 32-bit MacOS. Please use Mac OSX El Capitan or higher");
+					}
+					if (_isArm)
+					{
+						Arm.Initialize();
+					}
+					else
+					{
+						X86.Initialize();
+					}
+				}
+				else
+				{
+					if (PlatformDetails.RunningOnMacOsx)
+						MacOsxX64.Initialize();
+					else
+						X64.Initialize();
+				}
 
-        public static int crypto_box_seal_open(byte* m, byte* c,
-            ulong clen, byte* pk, byte* sk)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_box_seal_open(m, c, clen, pk, sk);
-            return Platform.Win32.WinSodium.crypto_box_seal_open(m, c, clen, pk, sk);
-        }
+				// test for existance of libsodium:
+				try
+				{
+					crypto_sign_publickeybytes();
+				}
+				catch (Exception e)
+				{
+					if (_isMac64)
+						throw new Exception("Make sure libsodium is installed on your Mac OSX. Use `brew install libsodium`", e);
 
-        public static int crypto_stream_xchacha20_keybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_keybytes()
-                : Platform.Win32.WinSodium.crypto_stream_xchacha20_keybytes());
-        }
+					if (PlatformDetails.RunningOnPosix)
+						throw new Exception("Make sure libsodium is installed on your Linux OS. (install package `libsodium` or `libsodium-18`", e);
 
-        public static int crypto_stream_xchacha20_noncebytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_stream_xchacha20_noncebytes()
-                : Platform.Win32.WinSodium.crypto_stream_xchacha20_noncebytes());
-        }
+					throw new Exception("Make sure libsodium is installed on your Windows OS.", e);
+				}
+			}
 
-        public static int crypto_aead_xchacha20poly1305_ietf_keybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_keybytes()
-                : Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
-        }
+			public static UIntPtr crypto_kdf_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kdf_keybytes();
+					}
+					else
+					{
+						return X86.crypto_kdf_keybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kdf_keybytes();
+					}
+					else
+					{
+						return X64.crypto_kdf_keybytes();
+					}
+				 }
+			}
 
-        public static int crypto_aead_xchacha20poly1305_ietf_npubbytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()
-                : Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
-        }
+			public static int sodium_init()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.sodium_init();
+					}
+					else
+					{
+						return X86.sodium_init();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.sodium_init();
+					}
+					else
+					{
+						return X64.sodium_init();
+					}
+				 }
+			}
 
-        public static int crypto_aead_xchacha20poly1305_ietf_abytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_aead_xchacha20poly1305_ietf_abytes()
-                : Platform.Win32.WinSodium.crypto_aead_xchacha20poly1305_ietf_abytes());
-        }
+			public static UIntPtr crypto_generichash_bytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_bytes();
+					}
+					else
+					{
+						return X86.crypto_generichash_bytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_bytes();
+					}
+					else
+					{
+						return X64.crypto_generichash_bytes();
+					}
+				 }
+			}
 
-        public static int crypto_box_sealbytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_sealbytes()
-                : Platform.Win32.WinSodium.crypto_box_sealbytes());
-        }
+			public static UIntPtr crypto_sign_statebytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_statebytes();
+					}
+					else
+					{
+						return X86.crypto_sign_statebytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_statebytes();
+					}
+					else
+					{
+						return X64.crypto_sign_statebytes();
+					}
+				 }
+			}
 
-        public static int crypto_box_secretkeybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_secretkeybytes()
-                : Platform.Win32.WinSodium.crypto_box_secretkeybytes());
-        }
+			public static UIntPtr crypto_generichash_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_keybytes();
+					}
+					else
+					{
+						return X86.crypto_generichash_keybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_keybytes();
+					}
+					else
+					{
+						return X64.crypto_generichash_keybytes();
+					}
+				 }
+			}
 
-        public static int crypto_kx_publickeybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_kx_publickeybytes()
-                : Platform.Win32.WinSodium.crypto_kx_publickeybytes());
-        }
+			public static int crypto_sign_init(void* /* crypto_sign_state  */ state)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_init(state);
+					}
+					else
+					{
+						return X86.crypto_sign_init(state);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_init(state);
+					}
+					else
+					{
+						return X64.crypto_sign_init(state);
+					}
+				 }
+			}
 
-        public static int crypto_kx_secretkeybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_kx_secretkeybytes()
-                : Platform.Win32.WinSodium.crypto_kx_secretkeybytes());
-        }
+			public static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_update(state, m, mlen);
+					}
+					else
+					{
+						return X86.crypto_sign_update(state, m, mlen);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_update(state, m, mlen);
+					}
+					else
+					{
+						return X64.crypto_sign_update(state, m, mlen);
+					}
+				 }
+			}
 
-        public static int crypto_box_publickeybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_publickeybytes()
-                : Platform.Win32.WinSodium.crypto_box_publickeybytes());
-        }
+			public static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_final_create(state, sig, siglen_p, sk);
+					}
+					else
+					{
+						return X86.crypto_sign_final_create(state, sig, siglen_p, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_final_create(state, sig, siglen_p, sk);
+					}
+					else
+					{
+						return X64.crypto_sign_final_create(state, sig, siglen_p, sk);
+					}
+				 }
+			}
 
-        public static int crypto_generichash_bytes_max()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_generichash_bytes_max()
-                : Platform.Win32.WinSodium.crypto_generichash_bytes_max());
-        }
+			public static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_init(state, key, keylen, outlen);
+					}
+					else
+					{
+						return X86.crypto_generichash_init(state, key, keylen, outlen);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_init(state, key, keylen, outlen);
+					}
+					else
+					{
+						return X64.crypto_generichash_init(state, key, keylen, outlen);
+					}
+				 }
+			}
 
-        public static byte[] GenerateMasterKey()
-        {
-            var masterKey = new byte[crypto_kdf_keybytes()];
-            fixed (byte* mk = masterKey)
-            {
-                crypto_kdf_keygen(mk);
-                return masterKey;
-            }
-        }
+			public static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_update(state, @in, inlen);
+					}
+					else
+					{
+						return X86.crypto_generichash_update(state, @in, inlen);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_update(state, @in, inlen);
+					}
+					else
+					{
+						return X64.crypto_generichash_update(state, @in, inlen);
+					}
+				 }
+			}
 
-        public static readonly byte[] Context = Encoding.UTF8.GetBytes("Raven DB");
-        
-        public static byte[] GenerateRandomBuffer(int numberOfBytes)
-        {
-            var buffer = new byte[numberOfBytes];
-            fixed (byte* p = buffer)
-            {
-                randombytes_buf(p, (UIntPtr)buffer.Length);
-            }
-            return buffer;
-        }
+			public static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_final(state, @out, outlen);
+					}
+					else
+					{
+						return X86.crypto_generichash_final(state, @out, outlen);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_final(state, @out, outlen);
+					}
+					else
+					{
+						return X64.crypto_generichash_final(state, @out, outlen);
+					}
+				 }
+			}
 
-        public static int crypto_box_keypair(byte* pk, byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix 
-                ? Platform.Posix.PosixSodium.crypto_box_keypair(pk, sk) 
-                : Platform.Win32.WinSodium.crypto_box_keypair(pk, sk);
-        }
+			public static int crypto_kx_keypair(byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kx_keypair(pk, sk);
+					}
+					else
+					{
+						return X86.crypto_kx_keypair(pk, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kx_keypair(pk, sk);
+					}
+					else
+					{
+						return X64.crypto_kx_keypair(pk, sk);
+					}
+				 }
+			}
 
-        public static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in,
-            ulong inlen, byte* key, UIntPtr keylen)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
-            return Platform.Win32.WinSodium.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
-        }
+			public static void randombytes_buf(byte* buffer, UIntPtr size)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						Arm.randombytes_buf(buffer, size);
+					}
+					else
+					{
+						X86.randombytes_buf(buffer, size);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						MacOsxX64.randombytes_buf(buffer, size);
+					}
+					else
+					{
+						X64.randombytes_buf(buffer, size);
+					}
+				 }
+			}
 
-        public static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                return Platform.Posix.PosixSodium.sodium_memcmp(b, vh, verifiedHashLength);
-            return Platform.Win32.WinSodium.sodium_memcmp(b, vh, verifiedHashLength);
-        }
+			public static void crypto_kdf_keygen(byte* masterkey)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						Arm.crypto_kdf_keygen(masterkey);
+					}
+					else
+					{
+						X86.crypto_kdf_keygen(masterkey);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						MacOsxX64.crypto_kdf_keygen(masterkey);
+					}
+					else
+					{
+						X64.crypto_kdf_keygen(masterkey);
+					}
+				 }
+			}
 
-        public static int crypto_box_macbytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_macbytes()
-                : Platform.Win32.WinSodium.crypto_box_macbytes());
-        }
+			public static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+					}
+					else
+					{
+						return X86.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+					}
+					else
+					{
+						return X64.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+					}
+				 }
+			}
 
-        public static int crypto_box_noncebytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_noncebytes()
-                : Platform.Win32.WinSodium.crypto_box_noncebytes());
-        }
+			public static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+					}
+					else
+					{
+						return X86.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+					}
+					else
+					{
+						return X64.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+					}
+				 }
+			}
 
-        public static int crypto_aead_chacha20poly1305_ABYTES()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_aead_chacha20poly1305_abytes()
-                : Platform.Win32.WinSodium.crypto_aead_chacha20poly1305_abytes());
-        }
+			public static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+			}
 
-        public static int crypto_kx_client_session_keys(
-            byte* rx,
-            byte* tx,
-            byte* client_pk,
-            byte* client_sk,
-            byte* server_pk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk)
-                : Platform.Win32.WinSodium.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
-        }
+			public static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+					}
+				 }
+			}
+
+			public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_seal(c, m, mlen, pk);
+					}
+					else
+					{
+						return X86.crypto_box_seal(c, m, mlen, pk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_seal(c, m, mlen, pk);
+					}
+					else
+					{
+						return X64.crypto_box_seal(c, m, mlen, pk);
+					}
+				 }
+			}
+
+			public static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_seal_open(m, c, clen, pk, sk);
+					}
+					else
+					{
+						return X86.crypto_box_seal_open(m, c, clen, pk, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_seal_open(m, c, clen, pk, sk);
+					}
+					else
+					{
+						return X64.crypto_box_seal_open(m, c, clen, pk, sk);
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_stream_xchacha20_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_stream_xchacha20_keybytes();
+					}
+					else
+					{
+						return X86.crypto_stream_xchacha20_keybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_stream_xchacha20_keybytes();
+					}
+					else
+					{
+						return X64.crypto_stream_xchacha20_keybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_stream_xchacha20_noncebytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_stream_xchacha20_noncebytes();
+					}
+					else
+					{
+						return X86.crypto_stream_xchacha20_noncebytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_stream_xchacha20_noncebytes();
+					}
+					else
+					{
+						return X64.crypto_stream_xchacha20_noncebytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_keybytes();
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_keybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_keybytes();
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_keybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_xchacha20poly1305_ietf_abytes();
+					}
+					else
+					{
+						return X86.crypto_aead_xchacha20poly1305_ietf_abytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_xchacha20poly1305_ietf_abytes();
+					}
+					else
+					{
+						return X64.crypto_aead_xchacha20poly1305_ietf_abytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_box_sealbytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_sealbytes();
+					}
+					else
+					{
+						return X86.crypto_box_sealbytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_sealbytes();
+					}
+					else
+					{
+						return X64.crypto_box_sealbytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_box_secretkeybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_secretkeybytes();
+					}
+					else
+					{
+						return X86.crypto_box_secretkeybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_secretkeybytes();
+					}
+					else
+					{
+						return X64.crypto_box_secretkeybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_kx_secretkeybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kx_secretkeybytes();
+					}
+					else
+					{
+						return X86.crypto_kx_secretkeybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kx_secretkeybytes();
+					}
+					else
+					{
+						return X64.crypto_kx_secretkeybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_kx_publickeybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kx_publickeybytes();
+					}
+					else
+					{
+						return X86.crypto_kx_publickeybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kx_publickeybytes();
+					}
+					else
+					{
+						return X64.crypto_kx_publickeybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_generichash_bytes_max()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_bytes_max();
+					}
+					else
+					{
+						return X86.crypto_generichash_bytes_max();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_bytes_max();
+					}
+					else
+					{
+						return X64.crypto_generichash_bytes_max();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_box_publickeybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_publickeybytes();
+					}
+					else
+					{
+						return X86.crypto_box_publickeybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_publickeybytes();
+					}
+					else
+					{
+						return X64.crypto_box_publickeybytes();
+					}
+				 }
+			}
+
+			public static int crypto_box_keypair(byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_keypair(pk, sk);
+					}
+					else
+					{
+						return X86.crypto_box_keypair(pk, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_keypair(pk, sk);
+					}
+					else
+					{
+						return X64.crypto_box_keypair(pk, sk);
+					}
+				 }
+			}
+
+			public static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+					}
+					else
+					{
+						return X86.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+					}
+					else
+					{
+						return X64.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+					}
+				 }
+			}
+
+			public static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.sodium_memcmp(b, vh, verifiedHashLength);
+					}
+					else
+					{
+						return X86.sodium_memcmp(b, vh, verifiedHashLength);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.sodium_memcmp(b, vh, verifiedHashLength);
+					}
+					else
+					{
+						return X64.sodium_memcmp(b, vh, verifiedHashLength);
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_box_macbytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_macbytes();
+					}
+					else
+					{
+						return X86.crypto_box_macbytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_macbytes();
+					}
+					else
+					{
+						return X64.crypto_box_macbytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_box_noncebytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_noncebytes();
+					}
+					else
+					{
+						return X86.crypto_box_noncebytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_noncebytes();
+					}
+					else
+					{
+						return X64.crypto_box_noncebytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_aead_chacha20poly1305_ABYTES()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_aead_chacha20poly1305_ABYTES();
+					}
+					else
+					{
+						return X86.crypto_aead_chacha20poly1305_ABYTES();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_aead_chacha20poly1305_ABYTES();
+					}
+					else
+					{
+						return X64.crypto_aead_chacha20poly1305_ABYTES();
+					}
+				 }
+			}
+
+			public static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+					}
+					else
+					{
+						return X86.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+					}
+					else
+					{
+						return X64.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+					}
+				 }
+			}
+
+			public static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+					}
+					else
+					{
+						return X86.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+					}
+					else
+					{
+						return X64.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+					}
+				 }
+			}
+
+			public static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_easy(c, m, mlen, n, pk, sk);
+					}
+					else
+					{
+						return X86.crypto_box_easy(c, m, mlen, n, pk, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_easy(c, m, mlen, n, pk, sk);
+					}
+					else
+					{
+						return X64.crypto_box_easy(c, m, mlen, n, pk, sk);
+					}
+				 }
+			}
+
+			public static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_box_open_easy(m, c, clen, n, pk, sk);
+					}
+					else
+					{
+						return X86.crypto_box_open_easy(m, c, clen, n, pk, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_box_open_easy(m, c, clen, n, pk, sk);
+					}
+					else
+					{
+						return X64.crypto_box_open_easy(m, c, clen, n, pk, sk);
+					}
+				 }
+			}
+
+			public static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_detached(sig, siglen, m, mlen, sk);
+					}
+					else
+					{
+						return X86.crypto_sign_detached(sig, siglen, m, mlen, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_detached(sig, siglen, m, mlen, sk);
+					}
+					else
+					{
+						return X64.crypto_sign_detached(sig, siglen, m, mlen, sk);
+					}
+				 }
+			}
+
+			public static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_verify_detached(sig, m, mlen, pk);
+					}
+					else
+					{
+						return X86.crypto_sign_verify_detached(sig, m, mlen, pk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_verify_detached(sig, m, mlen, pk);
+					}
+					else
+					{
+						return X64.crypto_sign_verify_detached(sig, m, mlen, pk);
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_sign_bytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_bytes();
+					}
+					else
+					{
+						return X86.crypto_sign_bytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_bytes();
+					}
+					else
+					{
+						return X64.crypto_sign_bytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_sign_publickeybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_publickeybytes();
+					}
+					else
+					{
+						return X86.crypto_sign_publickeybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_publickeybytes();
+					}
+					else
+					{
+						return X64.crypto_sign_publickeybytes();
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_sign_secretkeybytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_secretkeybytes();
+					}
+					else
+					{
+						return X86.crypto_sign_secretkeybytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_secretkeybytes();
+					}
+					else
+					{
+						return X64.crypto_sign_secretkeybytes();
+					}
+				 }
+			}
+
+			public static int crypto_sign_keypair(byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_sign_keypair(pk, sk);
+					}
+					else
+					{
+						return X86.crypto_sign_keypair(pk, sk);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_sign_keypair(pk, sk);
+					}
+					else
+					{
+						return X64.crypto_sign_keypair(pk, sk);
+					}
+				 }
+			}
+
+			public static void sodium_memzero(byte* pnt, UIntPtr len)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						Arm.sodium_memzero(pnt, len);
+					}
+					else
+					{
+						X86.sodium_memzero(pnt, len);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						MacOsxX64.sodium_memzero(pnt, len);
+					}
+					else
+					{
+						X64.sodium_memzero(pnt, len);
+					}
+				 }
+			}
+
+			public static UIntPtr crypto_generichash_statebytes()
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.crypto_generichash_statebytes();
+					}
+					else
+					{
+						return X86.crypto_generichash_statebytes();
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.crypto_generichash_statebytes();
+					}
+					else
+					{
+						return X64.crypto_generichash_statebytes();
+					}
+				 }
+			}
+
+			#region Mac OSX 64
+			 private static class MacOsxX64
+			{
+				private const string LIB_SODIUM = "libsodium";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try `brew install libsodium` and re-run server.",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kdf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_init();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_init(void* /* crypto_sign_state  */ state);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void randombytes_buf(byte* buffer, UIntPtr size);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_kdf_keygen(byte* masterkey);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_sealbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes_max();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_macbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void sodium_memzero(byte* pnt, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_statebytes();
+
+			}
+			#endregion
+
+			#region X64
+			private static class X64
+			{
+				private const string LIB_SODIUM = "libsodium.x64.so";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing libsodium from https://download.libsodium.org/libsodium/releases",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kdf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_init();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_init(void* /* crypto_sign_state  */ state);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void randombytes_buf(byte* buffer, UIntPtr size);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_kdf_keygen(byte* masterkey);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_sealbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes_max();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_macbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void sodium_memzero(byte* pnt, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_statebytes();
+
+			}
+			#endregion
+
+			#region x86
+
+			private static class X86
+			{
+				private const string LIB_SODIUM = "libsodium.x86.so";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing libsodium from https://download.libsodium.org/libsodium/releases",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+				
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kdf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_init();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_init(void* /* crypto_sign_state  */ state);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void randombytes_buf(byte* buffer, UIntPtr size);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_kdf_keygen(byte* masterkey);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_sealbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes_max();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_macbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void sodium_memzero(byte* pnt, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_statebytes();
+
+			}
+
+			#endregion
+
+			#region Arm
+			private static class Arm
+			{
+				private const string LIB_SODIUM = "libsodium.arm.so";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} probably contains the wrong version or not usable on the current platform. Try installing package libsodium or libsodium-12 or libsodium-18",
+								dllNotFoundEx);
+
+						}
+					}
+				}
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kdf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_init();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_init(void* /* crypto_sign_state  */ state);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void randombytes_buf(byte* buffer, UIntPtr size);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_kdf_keygen(byte* masterkey);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_sealbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes_max();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_macbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void sodium_memzero(byte* pnt, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_statebytes();
+
+			}
+			#endregion
+		}
+
+		#endregion
+		
+		#region Windows
+		private class Windows
+		{
+			private const string ErrString = "'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads";
+
+			private static readonly bool _is32bits;
+
+			static Windows()
+			{
+				if (PlatformDetails.RunningOnPosix)
+				{
+					return;
+				}
+
+				_is32bits = PlatformDetails.Is32Bits;
+				if (_is32bits)
+				{
+					X86.Initialize();
+				}
+				else
+				{
+					X64.Initialize();
+				}
+			}
+
+			public static UIntPtr crypto_kdf_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kdf_keybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_kdf_keybytes();
+				 }
+			}
+
+			public static int sodium_init()
+			{
+				 if(_is32bits)
+				 {
+					return X86.sodium_init();
+				 }
+				 else
+				 {
+			 		return X64.sodium_init();
+				 }
+			}
+
+			public static UIntPtr crypto_generichash_bytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_bytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_bytes();
+				 }
+			}
+
+			public static UIntPtr crypto_sign_statebytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_statebytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_statebytes();
+				 }
+			}
+
+			public static UIntPtr crypto_generichash_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_keybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_keybytes();
+				 }
+			}
+
+			public static int crypto_sign_init(void* /* crypto_sign_state  */ state)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_init(state);
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_init(state);
+				 }
+			}
+
+			public static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_update(state, m, mlen);
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_update(state, m, mlen);
+				 }
+			}
+
+			public static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_final_create(state, sig, siglen_p, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_final_create(state, sig, siglen_p, sk);
+				 }
+			}
+
+			public static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_init(state, key, keylen, outlen);
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_init(state, key, keylen, outlen);
+				 }
+			}
+
+			public static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_update(state, @in, inlen);
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_update(state, @in, inlen);
+				 }
+			}
+
+			public static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_final(state, @out, outlen);
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_final(state, @out, outlen);
+				 }
+			}
+
+			public static int crypto_kx_keypair(byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kx_keypair(pk, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_kx_keypair(pk, sk);
+				 }
+			}
+
+			public static void randombytes_buf(byte* buffer, UIntPtr size)
+			{
+				 if(_is32bits)
+				 {
+					X86.randombytes_buf(buffer, size);
+				 }
+				 else
+				 {
+			 		X64.randombytes_buf(buffer, size);
+				 }
+			}
+
+			public static void crypto_kdf_keygen(byte* masterkey)
+			{
+				 if(_is32bits)
+				 {
+					X86.crypto_kdf_keygen(masterkey);
+				 }
+				 else
+				 {
+			 		X64.crypto_kdf_keygen(masterkey);
+				 }
+			}
+
+			public static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+				 }
+				 else
+				 {
+			 		return X64.crypto_kdf_derive_from_key(subkey, subkeylen, subkeyid, ctx, key);
+				 }
+			}
+
+			public static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
+				 }
+			}
+
+			public static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
+				 }
+			}
+
+			public static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
+				 }
+			}
+
+			public static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_seal(c, m, mlen, pk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_seal(c, m, mlen, pk);
+				 }
+			}
+
+			public static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_seal_open(m, c, clen, pk, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_seal_open(m, c, clen, pk, sk);
+				 }
+			}
+
+			public static UIntPtr crypto_stream_xchacha20_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_stream_xchacha20_keybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_stream_xchacha20_keybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_stream_xchacha20_noncebytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_stream_xchacha20_noncebytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_stream_xchacha20_noncebytes();
+				 }
+			}
+
+			public static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_keybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_keybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+				 }
+			}
+
+			public static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_xchacha20poly1305_ietf_abytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_xchacha20poly1305_ietf_abytes();
+				 }
+			}
+
+			public static UIntPtr crypto_box_sealbytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_sealbytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_sealbytes();
+				 }
+			}
+
+			public static UIntPtr crypto_box_secretkeybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_secretkeybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_secretkeybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_kx_secretkeybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kx_secretkeybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_kx_secretkeybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_kx_publickeybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kx_publickeybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_kx_publickeybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_generichash_bytes_max()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_bytes_max();
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_bytes_max();
+				 }
+			}
+
+			public static UIntPtr crypto_box_publickeybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_publickeybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_publickeybytes();
+				 }
+			}
+
+			public static int crypto_box_keypair(byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_keypair(pk, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_keypair(pk, sk);
+				 }
+			}
+
+			public static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash(@out, outlen, @in, inlen, key, keylen);
+				 }
+			}
+
+			public static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength)
+			{
+				 if(_is32bits)
+				 {
+					return X86.sodium_memcmp(b, vh, verifiedHashLength);
+				 }
+				 else
+				 {
+			 		return X64.sodium_memcmp(b, vh, verifiedHashLength);
+				 }
+			}
+
+			public static UIntPtr crypto_box_macbytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_macbytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_macbytes();
+				 }
+			}
+
+			public static UIntPtr crypto_box_noncebytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_noncebytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_noncebytes();
+				 }
+			}
+
+			public static UIntPtr crypto_aead_chacha20poly1305_ABYTES()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_aead_chacha20poly1305_ABYTES();
+				 }
+				 else
+				 {
+			 		return X64.crypto_aead_chacha20poly1305_ABYTES();
+				 }
+			}
+
+			public static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_kx_client_session_keys(rx, tx, client_pk, client_sk, server_pk);
+				 }
+			}
+
+			public static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
+				 }
+			}
+
+			public static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_easy(c, m, mlen, n, pk, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_easy(c, m, mlen, n, pk, sk);
+				 }
+			}
+
+			public static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_box_open_easy(m, c, clen, n, pk, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_box_open_easy(m, c, clen, n, pk, sk);
+				 }
+			}
+
+			public static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_detached(sig, siglen, m, mlen, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_detached(sig, siglen, m, mlen, sk);
+				 }
+			}
+
+			public static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_verify_detached(sig, m, mlen, pk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_verify_detached(sig, m, mlen, pk);
+				 }
+			}
+
+			public static UIntPtr crypto_sign_bytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_bytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_bytes();
+				 }
+			}
+
+			public static UIntPtr crypto_sign_publickeybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_publickeybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_publickeybytes();
+				 }
+			}
+
+			public static UIntPtr crypto_sign_secretkeybytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_secretkeybytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_secretkeybytes();
+				 }
+			}
+
+			public static int crypto_sign_keypair(byte* pk, byte* sk)
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_sign_keypair(pk, sk);
+				 }
+				 else
+				 {
+			 		return X64.crypto_sign_keypair(pk, sk);
+				 }
+			}
+
+			public static void sodium_memzero(byte* pnt, UIntPtr len)
+			{
+				 if(_is32bits)
+				 {
+					X86.sodium_memzero(pnt, len);
+				 }
+				 else
+				 {
+			 		X64.sodium_memzero(pnt, len);
+				 }
+			}
+
+			public static UIntPtr crypto_generichash_statebytes()
+			{
+				 if(_is32bits)
+				 {
+					return X86.crypto_generichash_statebytes();
+				 }
+				 else
+				 {
+			 		return X64.crypto_generichash_statebytes();
+				 }
+			}
 
 
-        public static int crypto_kx_server_session_keys(
-            byte* rx,
-            byte* tx,
-            byte* server_pk,
-            byte* server_sk,
-            byte* client_pk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk)
-                : Platform.Win32.WinSodium.crypto_kx_server_session_keys(rx, tx, server_pk, server_sk, client_pk);
-        }
+			#region x86
 
-        public static int crypto_box_easy(
-            byte* c,
-            byte* m,
-            ulong mlen,
-            byte* n,
-            byte* pk,
-            byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_easy(c, m, mlen, n, pk, sk)
-                : Platform.Win32.WinSodium.crypto_box_easy(c, m, mlen, n, pk, sk);
+			private static class X86
+			{
+				private const string LIB_SODIUM = "libsodium.x86.dll";
 
-        }
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
+								dllNotFoundEx);
+						}
 
-        public static int crypto_box_open_easy(
-            byte* m,
-            byte* c,
-            ulong clen,
-            byte* n,
-            byte* pk,
-            byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_box_open_easy(m, c, clen, n, pk, sk)
-                : Platform.Win32.WinSodium.crypto_box_open_easy(m, c, clen, n, pk, sk);
-        }
+						throw new DllNotFoundException(
+							$"{LIB_SODIUM} is missing. Also make sure to have {ErrString}",
+							dllNotFoundEx);
+					}
+					catch (Exception e)
+					{
+						throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {ErrString}", e);
+					}
+				}
 
-        public static int crypto_sign_detached(
-            byte* sig,
-            ulong* siglen,
-            byte* m,
-            ulong mlen,
-            byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_detached(sig, siglen, m, mlen, sk)
-                : Platform.Win32.WinSodium.crypto_sign_detached(sig, siglen, m, mlen, sk);
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kdf_keybytes();
 
-        public static int crypto_sign_verify_detached(
-            byte* sig,
-            byte* m,
-            ulong mlen,
-            byte* pk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_verify_detached(sig, m, mlen, pk)
-                : Platform.Win32.WinSodium.crypto_sign_verify_detached(sig, m, mlen, pk);
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_init();
 
-        public static int crypto_sign_bytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_bytes()
-                : Platform.Win32.WinSodium.crypto_sign_bytes());
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes();
 
-        public static int crypto_sign_keypair(byte* pk, byte* sk)
-        {
-            return Platform.PlatformDetails.RunningOnPosix 
-                ? Platform.Posix.PosixSodium.crypto_sign_keypair(pk, sk) 
-                : Platform.Win32.WinSodium.crypto_sign_keypair(pk, sk);
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_statebytes();
 
-        public static int crypto_sign_publickeybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_publickeybytes()
-                : Platform.Win32.WinSodium.crypto_sign_publickeybytes());
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_keybytes();
 
-        public static int crypto_sign_secretkeybytes()
-        {
-            return (int)(Platform.PlatformDetails.RunningOnPosix
-                ? Platform.Posix.PosixSodium.crypto_sign_secretkeybytes()
-                : Platform.Win32.WinSodium.crypto_sign_secretkeybytes());
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_init(void* /* crypto_sign_state  */ state);
 
-        public static void ZeroMemory(byte* ptr, long size)
-        {
-            if (Platform.PlatformDetails.RunningOnPosix)
-                Platform.Posix.PosixSodium.sodium_memzero(ptr, (UIntPtr)size);
-            else
-                Platform.Win32.WinSodium.sodium_memzero(ptr, (UIntPtr)size);
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen);
 
-        public static void ZeroBuffer(byte[] buffer)
-        {
-            var size = buffer.Length;
-            fixed (byte* ptr = buffer)
-            {
-                if (Platform.PlatformDetails.RunningOnPosix)
-                    Platform.Posix.PosixSodium.sodium_memzero(ptr, (UIntPtr)size);
-                else
-                    Platform.Win32.WinSodium.sodium_memzero(ptr, (UIntPtr)size);
-            }
-        }
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk);
 
-        public static void CloneKey(out byte[] dst, byte[] src)
-        {
-            if (src == null)
-            {
-                dst = null;
-                return;
-            }
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen);
 
-            dst = new byte[src.Length];
-            fixed (byte* pSrc = src)
-            fixed (byte* pDst = dst)
-            {
-                Memory.Copy(pDst, pSrc, src.Length);
-            }
-        }
-    }
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void randombytes_buf(byte* buffer, UIntPtr size);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_kdf_keygen(byte* masterkey);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_sealbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes_max();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_macbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void sodium_memzero(byte* pnt, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_statebytes();
+
+			}
+
+			#endregion
+
+			#region x64
+
+			private class X64
+			{
+				private const string LIB_SODIUM = "libsodium.x64.dll";
+
+				public static void Initialize()
+				{
+					try
+					{
+						var rc = sodium_init();
+						if (rc != 0)
+							throw new InvalidOperationException("Unable to initialize sodium, error code: " + rc);
+					}
+					catch (DllNotFoundException dllNotFoundEx)
+					{
+						// make sure the lib file is not there (this exception might pop when incorrect libsodium lib is does exists)
+						if (File.Exists(LIB_SODIUM))
+						{
+							throw new IncorrectDllException(
+								$"{LIB_SODIUM} version might be invalid or not usable on current platform. Initialization error could also be caused by missing {ErrString}",
+								dllNotFoundEx);
+						}
+
+						throw new DllNotFoundException(
+							$"{LIB_SODIUM} is missing. Also make sure to have {ErrString}",
+							dllNotFoundEx);
+					}
+					catch (Exception e)
+					{
+						throw new IncorrectDllException($"Error occured while trying to init {LIB_SODIUM}. Make sure existence of {ErrString}", e);
+					}
+				}
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kdf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_init();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_init(void* /* crypto_sign_state  */ state);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_update(void* /* crypto_generichash_state */ state, byte* m, ulong mlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_final_create(void* /* crypto_generichash_state */ state, byte* sig, ulong* siglen_p, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_init(void* /* crypto_generichash_state */ state, byte* key, UIntPtr keylen, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_update(void* /* crypto_generichash_state */ state, byte* @in, ulong inlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash_final(void* /* crypto_generichash_state */ state, byte* @out, UIntPtr outlen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void randombytes_buf(byte* buffer, UIntPtr size);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void crypto_kdf_keygen(byte* masterkey);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kdf_derive_from_key(byte* subkey, UIntPtr subkeylen, ulong subkeyid, byte* ctx, byte* key);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_aead_xchacha20poly1305_ietf_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal(byte* c, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_seal_open(byte* m, byte* c, ulong clen, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_stream_xchacha20_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_xchacha20poly1305_ietf_abytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_sealbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_kx_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_bytes_max();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_generichash(byte* @out, UIntPtr outlen, byte* @in, ulong inlen, byte* key, UIntPtr keylen);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_memcmp(byte* b, byte* vh, UIntPtr verifiedHashLength);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_macbytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_box_noncebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_kx_server_session_keys(byte* rx, byte* tx, byte* server_pk, byte* server_sk, byte* client_pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_easy(byte* c, byte* m, ulong mlen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_box_open_easy(byte* m, byte* c, ulong clen, byte* n, byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_detached(byte* sig, ulong* siglen, byte* m, ulong mlen, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_verify_detached(byte* sig, byte* m, ulong mlen, byte* pk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_bytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_publickeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_sign_secretkeybytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int crypto_sign_keypair(byte* pk, byte* sk);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static void sodium_memzero(byte* pnt, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static UIntPtr crypto_generichash_statebytes();
+
+
+			}
+
+			#endregion
+			#endregion
+		}
+	}
 }

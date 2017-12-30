@@ -15,7 +15,7 @@ namespace Raven.Server.Documents
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer cryptoState))
             {
-                if(cryptoState.Length < Sodium.crypto_generichash_statebytes())
+                if(cryptoState.Length < (int)Sodium.crypto_generichash_statebytes())
                     throw new InvalidOperationException("BUG: shouldn't happen, the size of a generic hash state was too large!");
 
                 InitComputeHash(cryptoState);

@@ -65,7 +65,7 @@ namespace Voron.Impl
                 return;
 
             size = Bits.NextPowerOf2(size);
-            Sodium.ZeroMemory(ptr, size);
+            Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
             if (size > Constants.Size.Megabyte * 16)
             {

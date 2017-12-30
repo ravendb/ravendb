@@ -25,7 +25,7 @@ namespace FastTests.Sparrow
         {
             using (var options = StorageEnvironmentOptions.ForPath(DataDir))
             {
-                options.MasterKey = Sodium.GenerateMasterKey();
+                options.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
                 using (var innerPager = LinuxTestUtils.GetNewPager(options, DataDir, "Raven.Voron"))
                 {

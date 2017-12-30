@@ -47,12 +47,12 @@ namespace Raven.Server.Documents.Handlers
                 Sodium.randombytes_buf(pKey, (UIntPtr)key.Length);
 
                 var base64 = Convert.ToBase64String(key);
-                Sodium.ZeroMemory(pKey, key.Length);
+                Sodium.sodium_memzero(pKey, (UIntPtr)key.Length);
                 fixed (char* pBase64 = base64)
                     using (var writer = new StreamWriter(ResponseBodyStream()))
                     {
                         writer.Write(base64);
-                        Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
+                        Sodium.sodium_memzero((byte*)pBase64, (UIntPtr)(base64.Length * sizeof(char)));
                     }
             }
             return Task.CompletedTask;
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 finally
                 {
-                    Sodium.ZeroMemory(pKey, key.Length);
+                    Sodium.sodium_memzero(pKey, (UIntPtr)key.Length);
                 }
         }
     }

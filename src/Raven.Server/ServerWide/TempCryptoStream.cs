@@ -50,8 +50,8 @@ namespace Raven.Server.ServerWide
             _startPosition = stream.Position;
             _internalBuffer = new byte[4096];
 
-            _key = new byte[Sodium.crypto_stream_xchacha20_keybytes()];
-            _nonce = new byte[Sodium.crypto_stream_xchacha20_noncebytes()];
+            _key = new byte[(int)Sodium.crypto_stream_xchacha20_keybytes()];
+            _nonce = new byte[(int)Sodium.crypto_stream_xchacha20_noncebytes()];
 
             fixed (byte* pKey = _key)
             fixed (byte* pNonce = _nonce)

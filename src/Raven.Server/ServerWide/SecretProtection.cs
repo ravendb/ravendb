@@ -57,7 +57,7 @@ namespace Raven.Server.ServerWide
                 dirpath = Path.GetFullPath(dirpath);
                 var filepath = Path.Combine(dirpath, "secret.key");
                 debug = filepath;
-                var buffer = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+                var buffer = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
                 fixed (byte* pBuf = buffer)
                 {
                     if (Directory.Exists(dirpath) == false)
@@ -166,12 +166,12 @@ namespace Raven.Server.ServerWide
 
         public byte[] Protect(byte[] secret, byte[] entropy)
         {
-            if (entropy.Length < Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+            if (entropy.Length < (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
                 throw new InvalidOperationException($"The provided entropy is too small. Should be at least {Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()} bytes but was {entropy.Length} bytes");
 
             if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
             {
-                var tempKey = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];
+                var tempKey = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];
                 fixed (byte* pTempKey = tempKey)
                 {
                     Sodium.randombytes_buf(pTempKey, (UIntPtr)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
@@ -181,7 +181,7 @@ namespace Raven.Server.ServerWide
                     //DPAPI doesn't do AEAD, so we encrypt the data as usual, then encrypt the temp key we use with DPAPI
                     var protectedKey = ProtectedData.Protect(tempKey, entropy, DataProtectionScope.CurrentUser);
                     
-                    Sodium.ZeroMemory(pTempKey, tempKey.Length);
+                    Sodium.sodium_memzero(pTempKey, (UIntPtr)tempKey.Length);
                     
                     var ms = new MemoryStream();
                     var bw = new BinaryWriter(ms);
@@ -199,7 +199,7 @@ namespace Raven.Server.ServerWide
 
         private static byte[] EncryptProtectedData(byte[] secret, byte[] entropy, byte[] key)
         {
-            var protectedData = new byte[secret.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
             fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
@@ -235,7 +235,7 @@ namespace Raven.Server.ServerWide
 
         public byte[] Unprotect(byte[] secret, byte[] entropy)
         {
-            if (entropy.Length < Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+            if (entropy.Length < (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
                 throw new InvalidOperationException($"The provided entropy is too small. Should be at least {Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()} bytes but was {entropy.Length} bytes");
 
             if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
@@ -263,7 +263,7 @@ namespace Raven.Server.ServerWide
 
         private static byte[] DecryptProtectedData(byte[] secret, byte[] entropy, byte[] key)
         {
-            var unprotectedData = new byte[secret.Length - Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+            var unprotectedData = new byte[secret.Length - (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
             fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
@@ -470,7 +470,7 @@ namespace Raven.Server.ServerWide
 
             var rawData = ms.ToArray();
 
-            var expectedKeySize = Sodium.crypto_aead_chacha20poly1305_ABYTES();
+            var expectedKeySize = (int)Sodium.crypto_aead_chacha20poly1305_ABYTES();
             if (rawData.Length  != expectedKeySize)
             {
                 throw new InvalidOperationException(
@@ -530,7 +530,7 @@ namespace Raven.Server.ServerWide
             try
             {
                 var key = File.ReadAllBytes(_config.MasterKeyPath);
-                var expectedKeySize = Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
 
                 if (key.Length  != expectedKeySize )
                 {

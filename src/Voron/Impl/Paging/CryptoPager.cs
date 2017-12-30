@@ -29,10 +29,12 @@ namespace Voron.Impl.Paging
 
     public sealed unsafe class CryptoPager : AbstractPager
     {
+        private static readonly byte[] Context = Encodings.Utf8.GetBytes("Raven DB!");
+
+            
         public AbstractPager Inner { get; }
         private readonly EncryptionBuffersPool _encryptionBuffersPool;
         private readonly byte[] _masterKey;
-        private readonly byte[] _context;
         private const ulong MacLen = 16;
 
         public override long TotalAllocationSize => Inner.TotalAllocationSize;
@@ -46,7 +48,6 @@ namespace Voron.Impl.Paging
             Inner = inner;
             _encryptionBuffersPool = new EncryptionBuffersPool();
             _masterKey = inner.Options.MasterKey;
-            _context = Sodium.Context;
 
             UniquePhysicalDriveId = Inner.UniquePhysicalDriveId;
             FileName = inner.FileName;
@@ -303,7 +304,7 @@ namespace Voron.Impl.Paging
             var num = page->PageNumber;
             var destination = (byte*)page;
             var subKey = stackalloc byte[32];
-            fixed (byte* ctx = _context)
+            fixed (byte* ctx = Context)
             fixed (byte* mk = _masterKey)
             {
                 if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
@@ -343,7 +344,7 @@ namespace Voron.Impl.Paging
 
             var destination = (byte*)page;
             var subKey = stackalloc byte[32];
-            fixed (byte* ctx = _context)
+            fixed (byte* ctx = Context)
             fixed (byte* mk = _masterKey)
             {
                 if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)

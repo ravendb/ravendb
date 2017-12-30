@@ -951,7 +951,7 @@ namespace Voron
             {
                 fixed (byte* key = copy)
                 {
-                    Sodium.ZeroMemory(key, copy.Length);
+                    Sodium.sodium_memzero(key, (UIntPtr)copy.Length);
                     MasterKey = null;
                 }
             }

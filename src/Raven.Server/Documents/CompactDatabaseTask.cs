@@ -51,7 +51,7 @@ namespace Raven.Server.Documents
                 src.CompressTxAboveSizeInBytes = configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                 src.TimeToSyncAfterFlashInSec = (int)configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 src.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                Sodium.CloneKey(out src.MasterKey, documentDatabase.MasterKey);
+                src.MasterKey = documentDatabase.MasterKey.ToArray(); // clone 
 
                 var basePath = configuration.Core.DataDirectory.FullPath;
                 IOExtensions.DeleteDirectory(basePath + "-Compacting");
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
                         dst.ForceUsing32BitsPager = configuration.Storage.ForceUsing32BitsPager;
                         dst.TimeToSyncAfterFlashInSec = (int)configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                         dst.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                        Sodium.CloneKey(out dst.MasterKey, documentDatabase.MasterKey);
+                        dst.MasterKey = documentDatabase.MasterKey.ToArray(); // clone
 
                         _token.ThrowIfCancellationRequested();
                         StorageCompaction.Execute(src, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dst, progressReport =>

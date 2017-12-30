@@ -102,7 +102,7 @@ namespace Voron.Impl.Journal
             
             var lazyTxBufferSize = _lazyTransactionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             var pagePointer = _lazyTransactionPager.AcquirePagePointer(tx, 0);
-            Sodium.ZeroMemory(pagePointer, lazyTxBufferSize);
+            Sodium.sodium_memzero(pagePointer, (UIntPtr)lazyTxBufferSize);
         }
 
         public void Dispose()

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents
 
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
-            var cryptoGenerichashStatebytes = Sodium.crypto_generichash_statebytes();
+            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
             byte* state = stackalloc byte[cryptoGenerichashStatebytes];
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents
 
             var size = Sodium.crypto_generichash_bytes();
             Debug.Assert((int)size == 32);
-            var cryptoGenerichashStatebytes = Sodium.crypto_generichash_statebytes();
+            var cryptoGenerichashStatebytes = (int)Sodium.crypto_generichash_statebytes();
             byte* state = stackalloc byte[cryptoGenerichashStatebytes];
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ThrowFailToInitHash();

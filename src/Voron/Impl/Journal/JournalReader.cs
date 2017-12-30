@@ -191,7 +191,7 @@ namespace Voron.Impl.Journal
                 return;
             var recoveryBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             var pagePointer = _recoveryPager.AcquirePagePointer(tx, 0);
-            Sodium.ZeroMemory(pagePointer, recoveryBufferSize);
+            Sodium.sodium_memzero(pagePointer, (UIntPtr)recoveryBufferSize);
         }
 
         public void SetStartPage(long value)
@@ -210,7 +210,7 @@ namespace Voron.Impl.Journal
 
             var subKey = stackalloc byte[32];
             fixed (byte* mk = options.MasterKey)
-            fixed (byte* ctx = Sodium.Context)
+            fixed (byte* ctx = WriteAheadJournal.Context)
             {
                 if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");

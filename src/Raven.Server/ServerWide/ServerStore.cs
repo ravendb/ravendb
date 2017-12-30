@@ -725,8 +725,8 @@ namespace Raven.Server.ServerWide
                 }
                 finally
                 {
-                    Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
-                    Sodium.ZeroMemory(pKey, key.Length);
+                    Sodium.sodium_memzero((byte*)pBase64, (UIntPtr)(base64.Length * sizeof(char)));
+                    Sodium.sodium_memzero(pKey, (UIntPtr)key.Length);
                 }
             }
         }
@@ -744,7 +744,7 @@ namespace Raven.Server.ServerWide
 
             byte[] key;
             if (cloneKey)
-                Sodium.CloneKey(out key, secretKey);
+                key = secretKey.ToArray(); // clone
             else
                 key = secretKey;
 
@@ -766,10 +766,10 @@ namespace Raven.Server.ServerWide
                 fixed (byte* pExistingKey = existingKey)
                 {
                     bool areEqual = Sodium.sodium_memcmp(pKey, pExistingKey, (UIntPtr)key.Length) == 0;
-                    Sodium.ZeroMemory(pExistingKey, key.Length);
+                    Sodium.sodium_memzero(pExistingKey, (UIntPtr)key.Length);
                     if (areEqual)
                     {
-                        Sodium.ZeroMemory(pKey, key.Length);
+                        Sodium.sodium_memzero(pKey, (UIntPtr) key.Length);
                         return;
                     }
                 }
@@ -788,7 +788,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    var entropy = Sodium.GenerateRandomBuffer(Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
+                    var entropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
 
                     var protectedData = Secrets.Protect(key, entropy);
 
@@ -801,7 +801,7 @@ namespace Raven.Server.ServerWide
                 }
                 finally
                 {
-                    Sodium.ZeroMemory(pKey, key.Length);
+                    Sodium.sodium_memzero(pKey, (UIntPtr)key.Length);
                 }
             }
         }
@@ -817,7 +817,7 @@ namespace Raven.Server.ServerWide
             if (readResult == null)
                 return null;
 
-            var entropy = new byte[Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
+            var entropy = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
             var reader = readResult.Reader;
             reader.Read(entropy, 0, entropy.Length);
             var protectedData = new byte[reader.Length - entropy.Length];
