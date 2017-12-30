@@ -467,6 +467,9 @@ namespace Raven.Server.Documents.Patch
                 if (args.Length != 1)
                     throw new InvalidOperationException("load(id | ids) must be called with a single string argument");
 
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return args[0];
+
                 if (args[0].IsArray())
                 {
                     var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
