@@ -6,6 +6,7 @@ using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -38,11 +39,6 @@ namespace Raven.Server.Documents.Indexes
         protected abstract void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer);
 
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("IndexDef");
-
-        public enum SubKeyId
-        {
-            IndexDef
-        }
 
         public static string GetIndexNameSafeForFileSystem(string name)
         {
@@ -210,7 +206,7 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pKey = options.MasterKey)
             {
                 var subKey = stackalloc byte[32];
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)SubKeyId.IndexDef, ctx, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)SodiumSubKeyId.IndexDef, ctx, pKey) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
                 ulong cLen;
@@ -257,7 +253,7 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pKey = options.MasterKey)
             {
                 var subKey = stackalloc byte[32];
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)SubKeyId.IndexDef, ctx, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)SodiumSubKeyId.IndexDef, ctx, pKey) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
                 
                 ulong mLen;

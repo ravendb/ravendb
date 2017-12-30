@@ -4,6 +4,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using Org.BouncyCastle.Asn1.Crmf;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
@@ -19,6 +21,8 @@ namespace Raven.Server.ServerWide
 {
     public unsafe class SecretProtection
     {
+        public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Secrets!");
+        
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Secrets");
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
@@ -197,11 +201,16 @@ namespace Raven.Server.ServerWide
         {
             var protectedData = new byte[secret.Length + Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
+            fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
             fixed (byte* pProtectedData = protectedData)
             fixed (byte* pEntropy = entropy)
             fixed (byte* pKey = key)
             {
+                var actualKey = stackalloc byte[key.Length];
+                if(Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
+                    throw new InvalidOperationException("Could not derive key for secret encryption");
+                
                 ulong cLen;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
                     pProtectedData,
@@ -212,7 +221,7 @@ namespace Raven.Server.ServerWide
                     0,
                     null,
                     pEntropy,
-                    pKey
+                    actualKey
                 );
 
                 Debug.Assert(cLen == (ulong)secret.Length + (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
@@ -256,11 +265,17 @@ namespace Raven.Server.ServerWide
         {
             var unprotectedData = new byte[secret.Length - Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
 
+            fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
             fixed (byte* pUnprotectedData = unprotectedData)
             fixed (byte* pEntropy = entropy)
             fixed (byte* pKey = key)
             {
+                
+                var actualKey = stackalloc byte[key.Length];
+                if(Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
+                    throw new InvalidOperationException("Could not derive key for secret decryption");
+            
                 ulong mLen;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
                     pUnprotectedData,
@@ -271,7 +286,7 @@ namespace Raven.Server.ServerWide
                     null,
                     0,
                     pEntropy,
-                    pKey
+                    actualKey
                 );
 
                 Debug.Assert(mLen == (ulong)secret.Length - (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
