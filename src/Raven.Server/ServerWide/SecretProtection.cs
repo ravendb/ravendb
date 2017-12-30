@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
+using Lextm.SharpSnmpLib.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Org.BouncyCastle.Asn1.Crmf;
 using Org.BouncyCastle.Pkcs;
@@ -574,14 +576,23 @@ namespace Raven.Server.ServerWide
             var supported = false;
             foreach (var extension in loadedCertificate.Extensions)
             {
-                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
+                if (!(extension is X509EnhancedKeyUsageExtension e)) //Enhanced Key Usage extension
                     continue;
 
-                var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+                var clientCert = false;
+                var serverCert = false;
 
-                // There is a difference in the ASN string between Linux and Windows, see RavenDB-8489
-                supported = (extensionString.Contains("Client Authentication") && extensionString.Contains("Server Authentication"))
-                            || (extensionString.Contains("1.3.6.1.5.5.7.3.2") && extensionString.Contains("1.3.6.1.5.5.7.3.1"));
+                foreach (var usage in e.EnhancedKeyUsages)
+                {
+                    if (usage.Value == "1.3.6.1.5.5.7.3.2")
+                        clientCert = true;
+                    if (usage.Value == "1.3.6.1.5.5.7.3.1")
+                        serverCert = true;
+                }
+
+                supported = clientCert && serverCert;
+                if (supported)
+                    break;
             }
 
             if (supported == false)

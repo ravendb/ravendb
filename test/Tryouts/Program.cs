@@ -11,6 +11,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide;
 using System.Threading;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
+using Raven.Server.ServerWide;
 using SlowTests.Voron.Issues;
 using Voron;
 using Voron.Data.Tables;
@@ -40,7 +42,8 @@ namespace Tryouts
         }
         static unsafe void Main(string[] args)
         {
-            new RavenDB_9916().Should_not_corrupt_state_deleting_from_nested_page_left_side();
+            var cert = new X509Certificate2(@"C:\Users\ayende\Downloads\server.pfx");
+            SecretProtection.ValidateKeyUsages("a", cert);
         }
 
         private static void ResetBench()
