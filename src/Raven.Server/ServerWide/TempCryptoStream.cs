@@ -56,8 +56,8 @@ namespace Raven.Server.ServerWide
             fixed (byte* pKey = _key)
             fixed (byte* pNonce = _nonce)
             {
-                Sodium.randombytes_buf(pKey, (UIntPtr)Sodium.crypto_stream_xchacha20_keybytes());
-                Sodium.randombytes_buf(pNonce, (UIntPtr)Sodium.crypto_stream_xchacha20_noncebytes());
+                Sodium.randombytes_buf(pKey, Sodium.crypto_stream_xchacha20_keybytes());
+                Sodium.randombytes_buf(pNonce, Sodium.crypto_stream_xchacha20_noncebytes());
             }
         }
 
