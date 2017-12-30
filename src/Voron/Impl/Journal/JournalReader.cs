@@ -218,15 +218,15 @@ namespace Voron.Impl.Journal
 
             var size = txHeader->CompressedSize != -1 ? txHeader->CompressedSize : txHeader->UncompressedSize;
 
-            var rc = Sodium.crypto_aead_chacha20poly1305_decrypt_detached(
+            var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
                 page + TransactionHeader.SizeOf,
                 null,
                 page + TransactionHeader.SizeOf,
                 (ulong)size,
-                page + TransactionHeader.SizeOf - macLen,
+                page + TransactionHeader.MacOffset,
                 page,
-                TransactionHeader.SizeOf - macLen - sizeof(long),
-                page + TransactionHeader.SizeOf - macLen - sizeof(long),
+                (ulong)(TransactionHeader.SizeOf - TransactionHeader.NonceOffset),
+                page + TransactionHeader.NonceOffset,
                 subKey
             );
 

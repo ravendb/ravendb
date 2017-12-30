@@ -1496,26 +1496,25 @@ namespace Voron.Impl.Journal
                     throw new InvalidOperationException("Unable to generate derived key");
             }
 
-            var npub = fullTxBuffer + TransactionHeader.SizeOf - macLen - sizeof(long);
-            if (*(long*)npub == 0)
-                Sodium.randombytes_buf(npub, (UIntPtr)sizeof(long));
-            else
-                (*(long*)npub)++;
+            var npub = fullTxBuffer + TransactionHeader.NonceOffset;
+            Sodium.randombytes_buf(npub, (UIntPtr)TransactionHeader.NonceSize);
 
             var size = txHeader->CompressedSize != -1 ? txHeader->CompressedSize : txHeader->UncompressedSize;
 
-            var rc = Sodium.crypto_aead_chacha20poly1305_encrypt_detached(
+            var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
                 fullTxBuffer + TransactionHeader.SizeOf,
                 fullTxBuffer + TransactionHeader.SizeOf - macLen,
                 &macLen,
                 fullTxBuffer + TransactionHeader.SizeOf,
                 (ulong)size,
                 fullTxBuffer,
-                TransactionHeader.SizeOf - macLen - sizeof(long),
+                (ulong)(TransactionHeader.SizeOf - TransactionHeader.NonceOffset),
                 null,
                 npub,
                 subKey
             );
+            
+            Debug.Assert(macLen == 16);
 
             if (rc != 0)
                 throw new InvalidOperationException("Failed to call crypto_aead_xchacha20poly1305_ietf_encrypt, rc = " + rc);

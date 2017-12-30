@@ -228,7 +228,7 @@ namespace Raven.Server.Documents
             options.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.AddToInitLog = _addToInitLog;
-            options.MasterKey = DocumentDatabase.MasterKey.ToArray();
+            options.MasterKey = DocumentDatabase.MasterKey?.ToArray();
 
             try
             {

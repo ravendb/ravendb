@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Indexes
                 options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                options.MasterKey = documentDatabase.MasterKey.ToArray();//clone
+                options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
 
                 environment = new StorageEnvironment(options);
 
@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Indexes
             options.ForceUsing32BitsPager = documentDatabase.Configuration.Storage.ForceUsing32BitsPager;
             options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-            options.MasterKey = documentDatabase.MasterKey.ToArray();//clone
+            options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
             return options;
         }
 
@@ -2616,7 +2616,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
                     srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                    srcOptions.MasterKey = DocumentDatabase.MasterKey.ToArray();//clone
+                    srcOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
 
                     compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
 
@@ -2631,7 +2631,7 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                         compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                        srcOptions.MasterKey = DocumentDatabase.MasterKey.ToArray();//clone
+                        srcOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
 
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {

@@ -31,6 +31,9 @@ namespace Voron.Impl.Journal
     public unsafe struct TransactionHeader
     {
         public const int SizeOf = 192;
+        public static int NonceOffset = (int)Marshal.OffsetOf<TransactionHeader>(nameof(Nonce));
+        public static int MacOffset = (int)Marshal.OffsetOf<TransactionHeader>(nameof(Mac));
+        public const int NonceSize = 24;
 
         [FieldOffset(0)]
         public ulong HeaderMarker;
@@ -71,11 +74,11 @@ namespace Voron.Impl.Journal
         [FieldOffset(128)]
         public long TimeStampTicksUtc; // DateTime.UtcNow.Ticks when the tx happened
 
-        [FieldOffset(136)]
-        public fixed byte Reserved[32];
+        [FieldOffset(120)]
+        public fixed byte Reserved[16];
 
-        [FieldOffset(168)]
-        public fixed byte Nonce[8];
+        [FieldOffset(152)]
+        public fixed byte Nonce[24];
 
         [FieldOffset(176)]
         public fixed byte Mac[16];

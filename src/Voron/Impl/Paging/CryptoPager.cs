@@ -313,20 +313,23 @@ namespace Voron.Impl.Paging
                 var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;
 
                 var npub = (byte*)page + PageHeader.NonceOffset;
-                if (*(long*)npub == 0)
-                    Sodium.randombytes_buf(npub, (UIntPtr)sizeof(long));
-                else
-                    *(long*)npub = *(long*)npub + 1;
+                // here we generate 128(!) bits of random data, but xchacha20poly1305 needs
+                // 192 bits, we go to backward from the radnom nonce to  get more bits that
+                // are not really random for the algorithm.
+                Sodium.randombytes_buf(npub, (UIntPtr)(PageHeader.MacOffset - PageHeader.NonceOffset));
 
                 ulong macLen = MacLen;
-                var rc = Sodium.crypto_aead_chacha20poly1305_encrypt_detached(
+                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
                     destination + PageHeader.SizeOf,
                     destination + PageHeader.MacOffset,
                     &macLen,
                     (byte*)page + PageHeader.SizeOf,
                     dataSize - PageHeader.SizeOf,
                     (byte*)page,
-                    (ulong)PageHeader.NonceOffset,
+                    // got back a bit to allow for 192 bits nonce, even if the first
+                    // 8 bytes aren't really random, the last 128 bits are securely
+                    // radnom
+                    (ulong)PageHeader.NonceOffset - sizeof(long),
                     null,
                     npub,
                     subKey
@@ -351,7 +354,7 @@ namespace Voron.Impl.Paging
                     throw new InvalidOperationException("Unable to generate derived key");
 
                 var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;
-                var rc = Sodium.crypto_aead_chacha20poly1305_decrypt_detached(
+                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
                     destination + PageHeader.SizeOf,
                     null,
                     (byte*)page + PageHeader.SizeOf,
@@ -359,7 +362,9 @@ namespace Voron.Impl.Paging
                     (byte*)page + PageHeader.MacOffset,
                     (byte*)page,
                     (ulong)PageHeader.NonceOffset,
-                    (byte*)page + PageHeader.NonceOffset,
+                    // we need to go 8 bytes before the nonce to get where
+                    // the full nonce (fixed 8 bytes + random 16 bytes).
+                    (byte*)page + PageHeader.NonceOffset - sizeof(long),
                     subKey
                 );
                 if (rc != 0)
