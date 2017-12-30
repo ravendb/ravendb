@@ -203,7 +203,6 @@ namespace Voron.Impl.Journal
         {
             var txHeader = (TransactionHeader*)page;
             var num = txHeader->TransactionId;
-            ulong macLen = 16;
 
             if ((txHeader->Flags & TransactionPersistenceModeFlags.Encrypted) != TransactionPersistenceModeFlags.Encrypted)
                 throw new InvalidOperationException($"Unable to decrypt transaction {num}, not encrypted");
