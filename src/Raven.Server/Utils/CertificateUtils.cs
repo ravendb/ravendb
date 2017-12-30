@@ -117,7 +117,7 @@ namespace Raven.Server.Utils
             int yearsUntilExpiration,
             out byte[] certBytes)
         {
-            const int keyStrength = 2048;
+            const int keyStrength = 4096;
 
             // Generating Random Numbers
             var random = GetSeededSecureRandom();
@@ -146,7 +146,7 @@ namespace Raven.Server.Utils
             }
 
             // Serial Number
-            BigInteger serialNumber = BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(Int64.MaxValue), random);
+            var serialNumber = new BigInteger(20, random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
@@ -236,15 +236,7 @@ namespace Raven.Server.Utils
 
         public static SecureRandom GetSeededSecureRandom()
         {
-            var buffer = new byte[32];
-            using (var cryptoRandom = RandomNumberGenerator.Create())
-            {
-                cryptoRandom.GetBytes(buffer);
-            }
-            var randomGenerator = new VmpcRandomGenerator();
-            randomGenerator.AddSeedMaterial(buffer);
-            SecureRandom random = new SecureRandom(randomGenerator);
-            return random;
+            return new SecureRandom(new CryptoApiRandomGenerator());
         }
     }
 }
