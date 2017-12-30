@@ -326,12 +326,12 @@ namespace Voron.Impl.Paging
                     (byte*)page + PageHeader.SizeOf,
                     dataSize - PageHeader.SizeOf,
                     (byte*)page,
+                    (ulong)PageHeader.NonceOffset,
+                    null,
                     // got back a bit to allow for 192 bits nonce, even if the first
                     // 8 bytes aren't really random, the last 128 bits are securely
                     // radnom
-                    (ulong)PageHeader.NonceOffset - sizeof(long),
-                    null,
-                    npub,
+                    (byte*)page + PageHeader.NonceOffset - sizeof(long),
                     subKey
                 );
                 Debug.Assert(macLen == MacLen);
