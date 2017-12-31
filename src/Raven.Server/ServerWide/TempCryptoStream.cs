@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using Raven.Server.Utils;
 using Sparrow;
@@ -9,6 +10,8 @@ namespace Raven.Server.ServerWide
     {
         private readonly string _file;
         private readonly FileStream _stream;
+        private readonly MemoryStream _authenticationTags = new MemoryStream();
+        private readonly MemoryStream _nonces = new MemoryStream();
         private readonly long _startPosition;
 
         public override bool CanRead => true;
@@ -32,7 +35,6 @@ namespace Raven.Server.ServerWide
         }
 
         private readonly byte[] _key;
-        private readonly byte[] _nonce;
         private readonly byte[] _internalBuffer;    // Temp buffer for one block only
         private int _bufferIndex;    // The position in the block buffer.
         private int _bufferValidIndex;
@@ -50,14 +52,11 @@ namespace Raven.Server.ServerWide
             _startPosition = stream.Position;
             _internalBuffer = new byte[4096];
 
-            _key = new byte[(int)Sodium.crypto_stream_xchacha20_keybytes()];
-            _nonce = new byte[(int)Sodium.crypto_stream_xchacha20_noncebytes()];
+            _key = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];
 
             fixed (byte* pKey = _key)
-            fixed (byte* pNonce = _nonce)
             {
-                Sodium.randombytes_buf(pKey, Sodium.crypto_stream_xchacha20_keybytes());
-                Sodium.randombytes_buf(pNonce, Sodium.crypto_stream_xchacha20_noncebytes());
+                Sodium.randombytes_buf(pKey, Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
             }
         }
 
@@ -114,19 +113,52 @@ namespace Raven.Server.ServerWide
         {
             if (_bufferValidIndex == 0)
                 return;
+            
+            if (_bufferValidIndex != _internalBuffer.Length)
+            {
+                if (_stream.Length != _stream.Position)
+                {
+                    throw new InvalidOperationException("Writing less than a block size is only allowed at the end of the stream");
+                }
+            }
 
-            fixed (byte* n = _nonce)
             fixed (byte* k = _key)
             {
                 _stream.Seek(_startPosition + _blockNumber * _internalBuffer.Length, SeekOrigin.Begin);
+                EnsureDetachedStreamsLength();
 
-                var rc = Sodium.crypto_stream_xchacha20_xor_ic(pInternalBuffer, pInternalBuffer, (ulong)_bufferValidIndex, n, (ulong)_blockNumber, k);
-                if (rc != 0)
-                    throw new InvalidOperationException($"crypto_stream_xchacha20_xor failed in EncryptToStream(). rc={rc}, _bufferIndex={_bufferIndex}, _blockNumber={_blockNumber}");
+                fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
+                fixed (byte* pNonces = _nonces.GetBuffer())
+                {
+                    var mac = pAuthTags + _blockNumber* (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                    var nonce = pNonces + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+                    Sodium.randombytes_buf(nonce, Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
+                    ulong macLen = 0;
+                    var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt_detached(pInternalBuffer, mac, &macLen , pInternalBuffer, (ulong)_bufferValidIndex, null,0, null, nonce, k);
+                    if (rc != 0)
+                        throw new InvalidOperationException(
+                            $"crypto_stream_xchacha20_xor failed in EncryptToStream(). rc={rc}, _bufferIndex={_bufferIndex}, _blockNumber={_blockNumber}");
+                    Debug.Assert(macLen == (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
+                }
 
                 _stream.Write(_internalBuffer, 0, _bufferValidIndex);
                 _bufferIndex = 0;
                 _bufferValidIndex = 0;
+            }
+        }
+
+        private void EnsureDetachedStreamsLength()
+        {
+            var requiredLength = _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes() + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+            if (_authenticationTags.Length < requiredLength)
+            {
+                _authenticationTags.SetLength(requiredLength);
+            }
+            
+            requiredLength = _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes() + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+            if (_nonces.Length < requiredLength)
+            {
+                _nonces.SetLength(requiredLength);
             }
         }
 
@@ -140,7 +172,6 @@ namespace Raven.Server.ServerWide
             fixed (byte* pInternalBuffer = _internalBuffer)
             fixed (byte* pInputBuffer = buffer)
             fixed (byte* k = _key)
-            fixed (byte* n = _nonce)
             {
                 if (_bufferIndex >= _bufferValidIndex)
                 {
@@ -161,10 +192,21 @@ namespace Raven.Server.ServerWide
                     }
 
                     _bufferValidIndex = totalRead;
+                    
+                    EnsureDetachedStreamsLength();
+                    
+                    fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
+                    fixed (byte* pNonces = _nonces.GetBuffer())
+                    {
+                        var mac = pAuthTags + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                        var nonce = pNonces + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
 
-                    var rc = Sodium.crypto_stream_xchacha20_xor_ic(pInternalBuffer, pInternalBuffer, (ulong)_bufferValidIndex, n, (ulong)_blockNumber, k);
-                    if (rc != 0)
-                        throw new InvalidOperationException($"crypto_stream_xchacha20_xor failed during Read(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, _blockNumber={_blockNumber}");
+
+                        var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(pInternalBuffer, null, pInternalBuffer, (ulong)_bufferValidIndex, mac, null, 0, nonce, k);
+                        if (rc != 0)
+                            throw new InvalidOperationException(
+                                $"crypto_stream_xchacha20_xor failed during Read(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, _blockNumber={_blockNumber}");
+                    }
                 }
 
                 var toRead = Math.Min(count, _bufferValidIndex - _bufferIndex);
@@ -202,7 +244,6 @@ namespace Raven.Server.ServerWide
 
             fixed (byte* pInternalBuffer = _internalBuffer)
             fixed (byte* k = _key)
-            fixed (byte* n = _nonce)
             {
                 var count = _internalBuffer.Length;
                 _bufferValidIndex = 0;
@@ -214,10 +255,20 @@ namespace Raven.Server.ServerWide
                     count -= read;
                     _bufferValidIndex += read;
                 }
+                EnsureDetachedStreamsLength();
+                    
+                fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
+                fixed (byte* pNonces = _nonces.GetBuffer())
+                {
+                    var mac = pAuthTags + blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                    var nonce = pNonces + blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
 
-                var rc = Sodium.crypto_stream_xchacha20_xor_ic(pInternalBuffer, pInternalBuffer, (ulong)_bufferValidIndex, n, (ulong)blockNumber, k);
-                if (rc != 0)
-                    throw new InvalidOperationException($"crypto_stream_xchacha20_xor failed during Seek(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, blockNumber={blockNumber}");
+                    var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(pInternalBuffer, null, pInternalBuffer, (ulong)_bufferValidIndex, mac, null, 0, nonce, k);
+                    if (rc != 0)
+                        throw new InvalidOperationException(
+                            $"crypto_stream_xchacha20_xor failed during Seek(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, blockNumber={blockNumber}");
+                }
+
                 _blockNumber = blockNumber;
                 _bufferIndex = positionInsideBlock;
             }
