@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -63,11 +64,15 @@ namespace Sparrow.LowMemory
                     hddDrivesWithPageFile.Add(currentDriveLetter);
                 }
 
-                if (ssdDriveCount > 0 && hddDrivesWithPageFile.Count == 0)
+                if (ssdDriveCount > 0 && hddDrivesWithPageFile.Count == 0 ||
+                    hddDrivesWithPageFile.Count == 0)
                 {
-                    //the system has ssd drives and has no hdd drives with a page file on them
+                    // the system has ssd drives and has no hdd drives with a page file on them
+                    // or no hdd drive with page file at all
                     return null;
-                }
+                }                
+
+                Debug.Assert(hddDrivesWithPageFile.Count > 0); // RavenDB-
 
                 var message = $"A page file was found on HDD drive{(hddDrivesWithPageFile.Count > 1 ? "s" : string.Empty)}: " +
                               $"{string.Join(", ", hddDrivesWithPageFile)} while there is {ssdDriveCount} " +
