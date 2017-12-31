@@ -6,10 +6,16 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
@@ -22,6 +28,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Authentication
@@ -52,6 +59,68 @@ namespace SlowTests.Authentication
             }
             return clientCertificate;
         }
+
+        [Fact]
+        public async Task CanUseEncryption()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            var buffer = new byte[32];
+            using (var rand = RandomNumberGenerator.Create())
+            {
+                rand.GetBytes(buffer);
+            }
+            var base64Key = Convert.ToBase64String(buffer);
+
+            Server.ServerStore.PutSecretKey(base64Key, dbName, true);
+
+            using (var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbName,
+                ModifyDatabaseRecord = record => record.Encrypted = true
+
+            }))
+            {
+                store.Maintenance.Send(new CreateSampleDataOperation());
+
+                WaitForIndexing(store);
+
+                var file = Path.GetTempFileName();
+                await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+
+                using (var commands = store.Commands())
+                {
+                    var result = commands.Query(new IndexQuery
+                    {
+                        Query = "FROM @all_docs",
+                        WaitForNonStaleResults = true
+                    });
+                    WaitForIndexing(store);
+
+
+                    Assert.True(result.Results.Length > 1000);
+
+                    QueryResult queryResult = store.Commands().Query(new IndexQuery
+                    {
+                        Query = "FROM INDEX 'Orders/ByCompany'"
+                    });
+                    QueryResult queryResult2 = store.Commands().Query(new IndexQuery
+                    {
+                        Query = "FROM INDEX 'Orders/Totals'"
+                    });
+                    QueryResult queryResult3 = store.Commands().Query(new IndexQuery
+                    {
+                        Query = "FROM INDEX 'Product/Search'"
+                    });
+
+                }
+            }
+        }
+        
 
         [Fact]
         public void CanGetDocWithValidPermission()
