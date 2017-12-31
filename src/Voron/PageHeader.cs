@@ -32,14 +32,11 @@ namespace Voron.Data
         [FieldOffset(22)]
         public fixed byte Reserved1[9];
 
-        [FieldOffset(32)]
+        [FieldOffset(32)] // used only if we aren't using crypto
         public ulong Checksum;
 
-        [FieldOffset(32)]
-        public ulong Nonce;
-
-        [FieldOffset(40)]
-        public fixed byte Reserved2[8];
+        [FieldOffset(32)]// used only when using crypto
+        public fixed byte Nonce[16];
 
         [FieldOffset(48)]
         public fixed byte Mac[16];
