@@ -294,7 +294,7 @@ namespace Raven.Server
                 restoreDatabaseName = value;
                 requiresRestoreAction.Add("restore-database-name");
             });
-            optionSet.Add("restore-filesystem-name", OptionCategory.RestoreFileSystem, "The {0:name} of the new filesystem. If not specified, it will be extracted from backup.", value =>
+            optionSet.Add("restore-filesystem-name=", OptionCategory.RestoreFileSystem, "The {0:name} of the new filesystem. If not specified, it will be extracted from backup.", value =>
             {
                 restoreFilesystemName = value;
                 requiresRestoreAction.Add("restore-filesystem-name");
@@ -526,8 +526,9 @@ namespace Raven.Server
             long operationId;
             using (var filesStore = new FilesStore
                                     {
-                                        Url = uri.AbsoluteUri
-                                    }.Initialize())
+                                        Url = uri.AbsoluteUri,
+                                        DefaultFileSystem = restoreFilesystemName
+            }.Initialize())
             {
                 operationId = AsyncHelpers.RunSync(() => filesStore.AsyncFilesCommands.Admin.StartRestore(new FilesystemRestoreRequest
                                                                                {
