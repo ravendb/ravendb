@@ -87,6 +87,11 @@ namespace Voron.Data.BTrees
 
                 if (sibling.IsCompressed)
                     return null;
+
+                if (sibling.PageSize != page.PageSize)
+                    // if the current page is compressed (but already opened), we need to 
+                    // avoid merging it with the right (uncompressed) page
+                    return null;
                 
                 Debug.Assert(page.IsCompressed == false);
 
