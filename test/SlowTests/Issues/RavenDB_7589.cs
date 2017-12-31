@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -18,9 +19,26 @@ namespace SlowTests.Issues
 {
     public class RavenDB_7589 : RavenTestBase
     {
+        private int _numberOfDatabasesRemoved;
+
         [Fact]
         public async Task CanImportIdentities()
         {
+            DoNotReuseServer();
+
+            var mre = new ManualResetEventSlim();
+
+            Server.ServerStore.Cluster.DatabaseChanged += (sender, tuple) =>
+            {
+                if (tuple.Type != nameof(RemoveNodeFromDatabaseCommand))
+                    return;
+
+                var value = Interlocked.Increment(ref _numberOfDatabasesRemoved);
+
+                if (value == 3)
+                    mre.Set();
+            };
+
             var path = NewDataPath(forceCreateDir: true);
             var exportFile1 = Path.Combine(path, "export1.ravendbdump");
             var exportFile2 = Path.Combine(path, "export2.ravendbdump");
@@ -123,10 +141,6 @@ namespace SlowTests.Issues
                 Assert.Equal(3, identities["companies|"]);
                 Assert.Equal(2, identities["addresses|"]);
             }
-
-            var mre = new ManualResetEventSlim();
-
-            Server.ServerStore.Cluster.DatabaseChanged += (sender, tuple) => mre.Set();
 
             Assert.True(mre.Wait(TimeSpan.FromSeconds(10)));
 
