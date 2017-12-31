@@ -17,6 +17,7 @@ namespace Raven.Server.Commercial
         public License License { get; set; }
         public string Email { get; set; }
         public string Domain { get; set; }
+        public string RootDomain { get; set; }
         public bool ModifyLocalServer { get; set; }
         public string Certificate { get; set; }
         public string Password { get; set; }
@@ -30,6 +31,7 @@ namespace Raven.Server.Commercial
                 [nameof(License)] = License.ToJson(),
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
+                [nameof(Domain)] = RootDomain,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
                 [nameof(RegisterClientCert)] = RegisterClientCert,
                 [nameof(Certificate)] = Certificate,
@@ -120,6 +122,7 @@ namespace Raven.Server.Commercial
     {
         public License License { get; set; }
         public string Domain { get; set; }
+        public string RootDomain { get; set; }
         public List<RegistrationNodeInfo> SubDomains { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -128,6 +131,7 @@ namespace Raven.Server.Commercial
             {
                 [nameof(License)] = License.ToJson(),
                 [nameof(Domain)] = Domain,
+                [nameof(RootDomain)] = RootDomain,
                 [nameof(SubDomains)] = SubDomains.Select(o => o.ToJson()).ToArray()
             };
         }
@@ -183,14 +187,16 @@ namespace Raven.Server.Commercial
     
     public class UserDomainsWithIps
     {
-        public string Email { get; set; }
+        public string[] Emails { get; set; }
+        public string[] RootDomains { get; set; }
         public Dictionary<string, List<SubDomainAndIps>> Domains { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Email)] = Email,
+                [nameof(Emails)] = Emails,
+                [nameof(RootDomains)] = RootDomains,
                 [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
             };
         }
@@ -198,14 +204,16 @@ namespace Raven.Server.Commercial
 
     public class UserDomainsResult
     {
-        public string Email { get; set; }
+        public string[] Emails { get; set; }
+        public string[] RootDomains { get; set; }
         public Dictionary<string, List<string>> Domains { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Email)] = Email,
+                [nameof(Emails)] = Emails,
+                [nameof(RootDomains)] = RootDomains,
                 [nameof(Domains)] = DynamicJsonValue.Convert(Domains)
             };
         }

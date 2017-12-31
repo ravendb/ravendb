@@ -41,6 +41,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CertificateExecTimeout { get; set; }
 
+        [Description("The E-mail address associated with the Let's Encrypt certificate. Used for renewal requests.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Security.Certificate.LetsEncrypt.Email", ConfigurationEntryScope.ServerWideOnly)]
+        public string CertificateLetsEncryptEmail { get; set; }
+
         [Description("The path of the (512-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.MasterKey.Path", ConfigurationEntryScope.ServerWideOnly)]
