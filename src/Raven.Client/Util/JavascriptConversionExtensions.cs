@@ -108,8 +108,24 @@ namespace Raven.Client.Util
                 switch (methodName)
                 {
                     case "Any":
-                        newName = "some";
-                        break;
+                    {
+                        if (methodCallExpression.Arguments.Count > 1)
+                        {
+                            newName = "some";
+                            break;
+                        }
+
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
+                        {
+                            {
+                                writer.Write(".length > 0");
+                                return;
+                            }
+                        }
+                    }
                     case "All":
                         newName = "every";
                         break;
@@ -134,51 +150,51 @@ namespace Raven.Client.Util
                         newName = "concat";
                         break;
                     case "ToDictionary":
+                    {
+                        context.PreventDefault();
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
                         {
-                            context.PreventDefault();
-                            var writer = context.GetWriter();
-                            using (writer.Operation(methodCallExpression))
+                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                            writer.Write(".reduce(function(_obj, _cur) {");
+                            writer.Write("_obj[");
+                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                            writer.Write("(_cur)] = ");
+
+                            if (methodCallExpression.Arguments.Count > 2)
                             {
-                                context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                                writer.Write(".reduce(function(_obj, _cur) {");
-                                writer.Write("_obj[");
-                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                                writer.Write("(_cur)] = ");
-
-                                if (methodCallExpression.Arguments.Count > 2)
-                                {
-                                    context.Visitor.Visit(methodCallExpression.Arguments[2]);
-                                    writer.Write("(_cur);");
-                                }
-                                else
-                                {
-                                    writer.Write("_cur;");
-                                }
-
-                                writer.Write("return _obj;");
-                                writer.Write("}, {})");
+                                context.Visitor.Visit(methodCallExpression.Arguments[2]);
+                                writer.Write("(_cur);");
                             }
-                            return;
+                            else
+                            {
+                                writer.Write("_cur;");
+                            }
+
+                            writer.Write("return _obj;");
+                            writer.Write("}, {})");
                         }
+                        return;
+                    }
                     case "FirstOrDefault":
                     case "First":
+                    {
+                        context.PreventDefault();
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        var writer = context.GetWriter();
+                        using (writer.Operation(methodCallExpression))
                         {
-                            context.PreventDefault();
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            var writer = context.GetWriter();
-                            using (writer.Operation(methodCallExpression))
+                            if (methodCallExpression.Arguments.Count > 1)
                             {
-                                if (methodCallExpression.Arguments.Count > 1)
-                                {
-                                    writer.Write(".find");
-                                    context.Visitor.Visit(methodCallExpression.Arguments[1]);
-                                    return;
-                                }
-                                
-                                writer.Write("[0]");
+                                writer.Write(".find");
+                                context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 return;
                             }
+                            
+                            writer.Write("[0]");
+                            return;
                         }
+                    }
                     case "Last":
                     case "LastOrDefault":
                     {
