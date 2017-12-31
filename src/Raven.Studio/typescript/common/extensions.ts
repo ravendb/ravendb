@@ -2,6 +2,7 @@
 
 import virtualGrid = require("widgets/virtualGrid/virtualGrid");
 import listView = require("widgets/listView/listView");
+import genUtils = require("common/generalUtils");
 
 class extensions {
     static install() {
@@ -64,9 +65,8 @@ class extensions {
         if (addressWithPort) {
             return addressWithPort;
         }
-                
-        const regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-        if (!regexIPv4.test(address)) {
+          
+        if (!genUtils.regexIPv4.test(address)) {
             
             // TODO: check if this is a valid IPv6....            
         }

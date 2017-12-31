@@ -47,10 +47,15 @@ class nodeInfo {
             
             return hostName;                       
         });
+
+        this.ipsContainHostName.subscribe(val => {
+            if (val) {
+                this.advancedSettingsCheckBox(true);
+            }
+        });
         
         this.showAdvancedSettings = ko.pureComputed(() => {
             if (this.ipsContainHostName()){
-                this.advancedSettingsCheckBox(true);
                 return true;
             }
 
@@ -81,7 +86,11 @@ class nodeInfo {
                 onlyIf: () => this.ipsContainHostName() && !this.externalIpAddress(),                
                 message: "This field is required when an address contains Hostname"
             },
-            validAddressWithoutPort: true           
+            validAddressWithoutPort: true,
+            validation: [{
+                validator: (val: string) => !genUtils.isHostname(val),
+                message: "Please enter IP Address, not Hostname"
+            }]
         });
         
         this.hostname.extend({

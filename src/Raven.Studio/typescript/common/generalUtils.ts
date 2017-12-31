@@ -10,13 +10,14 @@ class genUtils {
     static isLocalhostIpAddress(ip: string) : boolean {
         return ((ip === 'localhost') || (_.split(ip, '.')[0] === '127') || (ip === '::1'));
     }
+
+    static regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     
     // Check whether address is IP Address (i.e. 10.0.0.80) or hostname (i.e. john-pc)
     static isHostname(address: string) : boolean {       
         
         // IPv4 logic 
-        const regexIPv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-        return address && !regexIPv4.test(address);
+        return address && !genUtils.regexIPv4.test(address);
 
         // TODO: IPv6 logic  
     }
