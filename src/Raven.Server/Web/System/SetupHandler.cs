@@ -112,16 +112,13 @@ namespace Raven.Server.Web.System
                 var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
 
                 var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
-
-                try
+                HttpResponseMessage response;
                 {
                     string error = null;
                     object result = null;
                     string responseString = null;
                     
-                    try
-                    {
-                        var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+                var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -129,17 +126,13 @@ namespace Raven.Server.Web.System
                         if (response.IsSuccessStatusCode == false)
                         {
                             error = responseString;
-                        }
                         else
                         {
                             result = JsonConvert.DeserializeObject<JObject>(responseString);
                         }
                     }
-                    catch (Exception e)
-                    {
-                        result = responseString;
+                    throw new InvalidOperationException("Unable to contact api.ravendb.net", e);
                         error = e.ToString();
-                    }
 
                     if (error != null)
                     {
@@ -165,7 +158,8 @@ namespace Raven.Server.Web.System
                     {
                         UserDomainsWithIps = new UserDomainsWithIps
                         {
-                            Email = results.Email,
+                        Emails = results.Emails,
+                        RootDomains = results.RootDomains,
                             Domains = new Dictionary<string, List<SubDomainAndIps>>()
                         }
                     };
@@ -180,7 +174,7 @@ namespace Raven.Server.Web.System
                                 list.Add(new SubDomainAndIps
                                 {
                                     SubDomain = subDomain,
-                                    Ips = Dns.GetHostAddresses(subDomain + "." + SetupManager.RavenDbDomain).Select(ip => ip.ToString()).ToList(),
+                                    // The ip list will be populated on the next call (/setup/populate-ips), when we know which root domain the user selected
                                 });
                             }
                             catch (Exception)
@@ -209,6 +203,42 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/setup/populate-ips", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public Task PopulateIps()
+        {
+            AssertOnlyInSetupMode();
+            var rootDomain = GetQueryStringValueAndAssertIfSingleAndNotEmpty("rootDomain");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var userDomainsWithIpsJson = context.ReadForMemory(RequestBodyStream(), "setup-secured"))
+            {
+                var userDomainsWithIps = JsonDeserializationServer.UserDomainsWithIps(userDomainsWithIpsJson);
+                
+                foreach (var domain in userDomainsWithIps.Domains)
+                {
+                    foreach (var subDomain in domain.Value)
+                    {
+                        try
+                        {
+                            subDomain.Ips = Dns.GetHostAddresses(subDomain + "." + rootDomain).Select(ip => ip.ToString()).ToList();
+                        }
+                        catch (Exception)
+                        {
+                            continue;
+                        }
+                    }
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var blittable = EntityToBlittable.ConvertEntityToBlittable(userDomainsWithIps, DocumentConventions.Default, context);
+                    context.Write(writer, blittable);
+                }
+            }
+            
+            return Task.CompletedTask;
+        }
+		
         [RavenAction("/setup/parameters", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupParameters()
         {

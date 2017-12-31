@@ -375,11 +375,6 @@ namespace Raven.Server
 
         private async Task<CertificateHolder> RefreshLetsEncryptCertificate(CertificateHolder existing)
         {
-            var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
-
-            var substring = hosts[0].Substring(0, hosts[0].Length - SetupManager.RavenDbDomain.Length - 1);
-            var domainEnd = substring.LastIndexOf('.');
-
             var license = ServerStore.LoadLicense();
 
             HttpResponseMessage response;
@@ -403,6 +398,29 @@ namespace Raven.Server
 
             var userDomainsResult = JsonConvert.DeserializeObject<UserDomainsResult>(await response.Content.ReadAsStringAsync());
 
+            string usedRootDomain = null;
+            foreach (var rd in userDomainsResult.RootDomains)
+            {
+                if (Configuration.Core.PublicServerUrl.ToString().Contains(rd))
+                {
+                    usedRootDomain = rd;
+                    break;
+                }
+            }
+
+            if (usedRootDomain == null)
+                throw new InvalidOperationException($"You license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
+                                                $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl}." +
+                                                "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate.");
+            
+            if (userDomainsResult.Emails.Contains(Configuration.Security.CertificateLetsEncryptEmail, StringComparer.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"You license is associated with the following emails: {string.Join(",", userDomainsResult.Emails)} " +
+                                                    $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}." +
+                                                    "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate.");
+
+            var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
+            var substring = hosts[0].Substring(0, hosts[0].Length - usedRootDomain.Length - 1);
+            var domainEnd = substring.LastIndexOf('.');
             var domain = substring.Substring(domainEnd + 1);
 
             if (userDomainsResult.Domains.Any(userDomain => string.Equals(userDomain.Key, domain, StringComparison.OrdinalIgnoreCase)) == false)
@@ -411,16 +429,17 @@ namespace Raven.Server
             var setupInfo = new SetupInfo
             {
                 Domain = domain,
+                RootDomain = usedRootDomain,
                 ModifyLocalServer = false, // N/A here
                 RegisterClientCert = false, // N/A here
                 Password = null,
                 Certificate = null,
                 License = license,
-                Email = userDomainsResult.Email,
+                Email = Configuration.Security.CertificateLetsEncryptEmail,
                 NodeSetupInfos = new Dictionary<string, SetupInfo.NodeInfo>()
             };
 
-            var fullDomainPortion = domain + "." + SetupManager.RavenDbDomain;
+            var fullDomainPortion = domain + "." + usedRootDomain;
 
             foreach (var host in hosts) // we just need the keys here
             {

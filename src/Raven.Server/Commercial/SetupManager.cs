@@ -48,12 +48,11 @@ namespace Raven.Server.Commercial
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         public const string LocalNodeTag = "A";
-        public const string RavenDbDomain = "dbs.local.ravendb.net";
         public const string GoogleDnsApi = "https://dns.google.com";
 
-        public static string BuildHostName(string subdomain, string domain)
+        public static string BuildHostName(string nodeTag, string userDomain, string rootDomain)
         {
-            return $"{subdomain.ToLower()}.{domain.ToLower()}.{RavenDbDomain}";
+            return $"{nodeTag}.{userDomain}.{rootDomain}".ToLower();
         }
 
         public static async Task<string> LetsEncryptAgreement(string email, ServerStore serverStore)
@@ -134,7 +133,7 @@ namespace Raven.Server.Commercial
             var challengeResult = await InitialLetsEncryptChallenge(setupInfo,acmeClient, token);
 
             if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}.");
+                Logger.Operations($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
 
 
             try
@@ -145,11 +144,11 @@ namespace Raven.Server.Commercial
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}", e);
+                throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
             }
 
             if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}");
+                Logger.Operations($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
 
             var cert = await CompleteAuthorizationAndGetCertificate(() =>
                 {
@@ -212,7 +211,7 @@ namespace Raven.Server.Commercial
                         ? "Successfully received challenge(s) information from Let's Encrypt."
                         : "Using cached Let's Encrypt certificate.");
 
-                    progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}.");
+                    progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
 
                     onProgress(progress);
 
@@ -222,11 +221,11 @@ namespace Raven.Server.Commercial
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}", e);
+                        throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
                     }
 
                     progress.Processed++;
-                    progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{RavenDbDomain}");
+                    progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
                     progress.AddInfo("Completing Let's Encrypt challenge(s)...");
                     onProgress(progress);
 
@@ -404,7 +403,7 @@ namespace Raven.Server.Commercial
                 var hosts = new List<string>();
                 foreach (var tag in setupInfo.NodeSetupInfos)
                 {
-                    hosts.Add(BuildHostName(tag.Key, setupInfo.Domain));
+                    hosts.Add(BuildHostName(tag.Key, setupInfo.Domain, setupInfo.RootDomain));
                 }
 
                 hosts.Sort(); // ensure stable sorting 
@@ -415,7 +414,7 @@ namespace Raven.Server.Commercial
                 var challenges = new Dictionary<string, string>();
                 foreach (var tag in setupInfo.NodeSetupInfos)
                 {
-                    challenges[tag.Key] = await client.GetDnsChallenge(BuildHostName(tag.Key, setupInfo.Domain), token);
+                    challenges[tag.Key] = await client.GetDnsChallenge(BuildHostName(tag.Key, setupInfo.Domain, setupInfo.RootDomain), token);
                 }
 
                 return (challenges, null);
@@ -444,6 +443,7 @@ namespace Raven.Server.Commercial
                 {
                     License = setupInfo.License,
                     Domain = setupInfo.Domain,
+                    RootDomain = setupInfo.RootDomain,
                     SubDomains = new List<RegistrationNodeInfo>()
                 };
 
@@ -535,6 +535,7 @@ namespace Raven.Server.Commercial
                 {
                     License = setupInfo.License,
                     Domain = setupInfo.Domain,
+                    RootDomain = setupInfo.RootDomain,
                     SubDomains = new List<RegistrationNodeInfo>()
                 };
 
@@ -558,7 +559,7 @@ namespace Raven.Server.Commercial
                         // the DNS records.
                         try
                         {
-                            var existing = Dns.GetHostAddresses(BuildHostName(node.Key, setupInfo.Domain))
+                            var existing = Dns.GetHostAddresses(BuildHostName(node.Key, setupInfo.Domain, setupInfo.RootDomain))
                                 .Select(ip => ip.ToString())
                                 .ToList();
                             if (node.Value.Addresses.All(existing.Contains))
@@ -766,7 +767,7 @@ namespace Raven.Server.Commercial
                     throw new ArgumentException($"At least one of the nodes must have the node tag '{LocalNodeTag}'.");
                 if (IsValidEmail(setupInfo.Email) == false)
                     throw new ArgumentException("Invalid email address.");
-                if (IsValidDomain(setupInfo.Domain) == false)
+                if (IsValidDomain(setupInfo.Domain + "." + setupInfo.RootDomain) == false)
                     throw new ArgumentException("Invalid domain name.");
             }
 
@@ -993,6 +994,7 @@ namespace Raven.Server.Commercial
                         }
 
                         jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString();
+                        jsonObj[RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = setupInfo.Email;
                         var certificateFileName = $"cluster.server.certificate.{name}.pfx";
 
                         if (setupInfo.ModifyLocalServer)
@@ -1062,7 +1064,7 @@ namespace Raven.Server.Commercial
 
                         progress.AddInfo("Adding readme file to zip archive.");
                         onProgress(progress);
-                        var currentHostName = setupMode == SetupMode.LetsEncrypt ? BuildHostName("A", setupInfo.Domain) : new Uri(publicServerUrl).Host;
+                        var currentHostName = setupMode == SetupMode.LetsEncrypt ? BuildHostName("A", setupInfo.Domain, setupInfo.RootDomain) : new Uri(publicServerUrl).Host;
                         string readmeString = CreateReadmeText(setupInfo, publicServerUrl, clientCertificateName, currentHostName);
                         progress.Readme = readmeString;
                         try
