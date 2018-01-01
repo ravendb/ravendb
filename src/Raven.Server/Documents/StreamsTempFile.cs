@@ -11,7 +11,7 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _database;
         private readonly FileStream _file;
         private bool _reading;
-
+        private Stream _previousInstance;
         public StreamsTempFile(string tempFile, DocumentDatabase database)
         {
             _tempFile = tempFile;
@@ -25,9 +25,16 @@ namespace Raven.Server.Documents
             if (_reading)
                 throw new NotSupportedException("The temp file was already moved to reading mode");
 
-            return _database.DocumentsStorage.Environment.Options.EncryptionEnabled
-                ? (Stream)new TempCryptoStream(_file)
-                : new InnerPartStream(_file, this);
+            _previousInstance?.Flush();
+            if (_database.DocumentsStorage.Environment.Options.EncryptionEnabled)
+            {
+                _previousInstance = new TempCryptoStream(_file);
+            }
+            else
+            {
+                _previousInstance = new InnerPartStream(_file, this);
+            }
+            return _previousInstance;
         }
 
         public void Reset()

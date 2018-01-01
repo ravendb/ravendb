@@ -763,6 +763,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             var stream = attachment.Stream;
             var hash = AsyncHelpers.RunSync(() => AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, decodedStream, stream, CancellationToken.None));
+            attachment.Stream.Flush();
             var lazyHash = context.GetLazyString(hash);
             attachment.Base64HashDispose = Slice.External(context.Allocator, lazyHash, out attachment.Base64Hash);
             var tag = $"{DummyDocumentPrefix}{key}{RecordSeperator}d{RecordSeperator}{key}{RecordSeperator}{hash}{RecordSeperator}";
@@ -825,6 +826,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 size -= read.bytesRead;
             }
+            attachment.Stream.Flush();
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)

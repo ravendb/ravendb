@@ -117,6 +117,7 @@ namespace Raven.Server.Documents.Handlers
                     Stream = command.AttachmentStreamsTempFile.StartNewStream()
                 };
                 attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, bodyStream, attachmentStream.Stream, Database.DatabaseShutdown);
+                attachmentStream.Stream.Flush();
                 command.AttachmentStreams.Enqueue(attachmentStream);
             }
         }

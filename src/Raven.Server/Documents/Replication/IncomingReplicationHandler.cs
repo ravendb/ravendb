@@ -763,7 +763,7 @@ namespace Raven.Server.Documents.Replication
                 var streamLength = *(long*)ReadExactly(sizeof(long));
                 attachment.Stream = _attachmentStreamsTempFile.StartNewStream();
                 ReadExactly(streamLength, attachment.Stream);
-
+                attachment.Stream.Flush();
                 _replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
             }
         }

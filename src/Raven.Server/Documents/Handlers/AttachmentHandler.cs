@@ -168,6 +168,7 @@ namespace Raven.Server.Documents.Handlers
                         Hash = hash,
                         ContentType = contentType
                     };
+                    stream.Flush();
                     await Database.TxMerger.Enqueue(cmd);
                     cmd.ExceptionDispatchInfo?.Throw();
                     result = cmd.Result;

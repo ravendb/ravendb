@@ -36,8 +36,9 @@ namespace Raven.Server.ServerWide
         private readonly byte[] _internalBuffer;    // Temp buffer for one block only
         private int _bufferIndex;    // The position in the block buffer.
         private int _bufferValidIndex;
+        private bool _needToWrite = false;
         private long _blockNumber;
-        private long _maxLength = -1;
+        private long _maxLength;
 
         public TempCryptoStream(string file) : this(new FileStream(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
         {
@@ -73,6 +74,7 @@ namespace Raven.Server.ServerWide
                 {
                     var bytesToCopy = _internalBuffer.Length - _bufferIndex;
                     Sparrow.Memory.Copy(pInternalBuffer + _bufferIndex, pInputBuffer + offset, bytesToCopy);
+                    _needToWrite = true;
                     count -= bytesToCopy;
                     offset += bytesToCopy;
                     _bufferIndex += bytesToCopy;
@@ -80,9 +82,9 @@ namespace Raven.Server.ServerWide
 
                     EncryptToStream(pInternalBuffer);
 
-                    var positionOfWrite = _blockNumber * _internalBuffer.Length + _bufferIndex;
+                    var positionOfWrite = (_blockNumber +1) * _internalBuffer.Length + _bufferIndex;
 
-                    if (positionOfWrite > _maxLength)
+                    if (positionOfWrite >= _maxLength)
                     {
                         _blockNumber++;
                     }
@@ -95,8 +97,10 @@ namespace Raven.Server.ServerWide
                 // small write or the remains of a big one
                 if (count > 0)
                 {
+                    _needToWrite = true;
                     Sparrow.Memory.Copy(pInternalBuffer + _bufferIndex, pInputBuffer + offset, count);
                     _bufferIndex += count;
+                    _maxLength = Math.Max(_maxLength,  _blockNumber * _internalBuffer.Length + _bufferIndex);
                     _bufferValidIndex = Math.Max(_bufferValidIndex, _bufferIndex);
                 }
             }
@@ -105,12 +109,17 @@ namespace Raven.Server.ServerWide
 
         public override void Flush()
         {
+            // First, let's write what we already have in the internal buffer.
+            fixed (byte* pInternalBuffer = _internalBuffer)
+            {
+                EncryptToStream(pInternalBuffer);
+            }
             // intentionally not flushing to the inner stream, no need to force a temp file to go to disk
         }
 
         private void EncryptToStream(byte* pInternalBuffer)
         {
-            if (_bufferValidIndex == 0)
+            if (_bufferValidIndex == 0  || _needToWrite == false)
                 return;
             
             if (_bufferValidIndex != _internalBuffer.Length)
@@ -144,6 +153,7 @@ namespace Raven.Server.ServerWide
                 _maxLength = Math.Max(_stream.Position - _startPosition, _maxLength);
                 _bufferIndex = 0;
                 _bufferValidIndex = 0;
+                _needToWrite = false;
             }
         }
 
@@ -171,6 +181,7 @@ namespace Raven.Server.ServerWide
 
             if (_bufferIndex >= _bufferValidIndex)
             {
+                _blockNumber++;
                 if (ReadIntoBuffer() == 0)
                     return 0;
             }
@@ -193,8 +204,9 @@ namespace Raven.Server.ServerWide
             var positionOfRead = _blockNumber * _internalBuffer.Length + _bufferIndex;
             while (totalRead < _internalBuffer.Length)
             {
-                var amountToRead = Math.Min(_internalBuffer.Length - totalRead, (int)(_maxLength - positionOfRead));
+                var amountToRead = Math.Min(_internalBuffer.Length - totalRead, Math.Max(0, (int)(_maxLength - positionOfRead)));
                 var currentRead = _stream.Read(_internalBuffer, totalRead, amountToRead);
+                positionOfRead += currentRead;
                 if (currentRead == 0)
                 {
                     if (totalRead == 0)
@@ -248,7 +260,7 @@ namespace Raven.Server.ServerWide
 
             // Seek to start of requested block and read into the internal buffer
             var pos = _stream.Seek(_startPosition + offset - positionInsideBlock, SeekOrigin.Begin);
-
+            _blockNumber = blockNumber;
             ReadIntoBuffer();
             
             return pos;
