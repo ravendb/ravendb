@@ -262,7 +262,8 @@ namespace Raven.Server.ServerWide
             var pos = _stream.Seek(_startPosition + offset - positionInsideBlock, SeekOrigin.Begin);
             _blockNumber = blockNumber;
             ReadIntoBuffer();
-            
+            _bufferIndex = positionInsideBlock;
+
             return pos;
         }
 

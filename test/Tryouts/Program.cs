@@ -19,6 +19,7 @@ using Voron.Data.Tables;
 using Sparrow.Binary;
 using Voron.Data.Fixed;
 using SlowTests.Authentication;
+using FastTests.Sparrow;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -43,7 +44,7 @@ namespace Tryouts
         }
         static unsafe void Main(string[] args)
         {
-            new AuthenticationBasicTests().CanUseEncryption().Wait();
+            new EncryptionTests().WriteSeekAndReadInTempCryptoStream(seed: 734782540);
         }
 
         private static void ResetBench()
