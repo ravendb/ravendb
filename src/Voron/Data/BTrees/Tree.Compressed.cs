@@ -78,8 +78,6 @@ namespace Voron.Data.BTrees
                 decompressedPage = DecompressFromBuffer(usage, ref input);
             }
 
-            Debug.Assert(decompressedPage.NumberOfEntries > 0);
-
             try
             {
                 if (p.NumberOfEntries == 0)
