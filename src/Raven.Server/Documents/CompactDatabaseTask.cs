@@ -52,6 +52,7 @@ namespace Raven.Server.Documents
                 src.TimeToSyncAfterFlashInSec = (int)configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 src.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                 src.MasterKey = documentDatabase.MasterKey?.ToArray(); // clone 
+                src.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
                 var basePath = configuration.Core.DataDirectory.FullPath;
                 IOExtensions.DeleteDirectory(basePath + "-Compacting");
@@ -69,6 +70,7 @@ namespace Raven.Server.Documents
                         dst.TimeToSyncAfterFlashInSec = (int)configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                         dst.NumOfConcurrentSyncsPerPhysDrive = configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                         dst.MasterKey = documentDatabase.MasterKey?.ToArray(); // clone
+                        dst.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
                         _token.ThrowIfCancellationRequested();
                         StorageCompaction.Execute(src, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dst, progressReport =>

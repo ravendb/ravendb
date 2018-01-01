@@ -155,6 +155,7 @@ namespace Voron.Platform.Posix
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
+            base.ReleaseAllocationInfo(baseAddress, size);
             var ptr = new IntPtr(baseAddress);
             var result = Syscall.munmap(ptr, (UIntPtr)size);
             if (result == -1)

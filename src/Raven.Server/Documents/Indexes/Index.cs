@@ -270,7 +270,8 @@ namespace Raven.Server.Documents.Indexes
                 options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                 options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
-
+                options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
+                
                 environment = new StorageEnvironment(options);
 
                 IndexType type;
@@ -405,6 +406,7 @@ namespace Raven.Server.Documents.Indexes
             options.TimeToSyncAfterFlashInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
             options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
+            options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             return options;
         }
 
@@ -2617,7 +2619,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                     srcOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
-
+                    srcOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError; 
                     compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
 
 
@@ -2631,8 +2633,9 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
                         compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                         compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                        srcOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
-
+                        compactOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
+                        compactOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
+                        
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {
                             result.Progress.TreeProgress = progressReport.TreeProgress;

@@ -2,10 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
@@ -40,13 +44,85 @@ namespace Voron.Impl.Paging
 
             lock (_pagerStateModificationLocker)
             {
+                newState.AddRef();
+
+                if (LockMemory)
+                {
+                    try
+                    {
+                        foreach (var info in newState.AllocationInfos)
+                        {
+                            if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) != 0)
+                            {
+                                if (DoNotConsiderMemoryLockFailureAsCatastrophicError)
+                                    continue; // okay, can skip this, then
+
+                                if (TryHandleFailureToLockMemory(newState, info))
+                                    break;
+                            }
+                        }
+                    }
+                    catch 
+                    {
+                        // need to restore the sate to the way it way, so we'll dispose the pager state
+                        newState.Release();
+                        throw;
+                    }
+                }
+                
                 _debugInfo = GetSourceName();
                 var oldState = _pagerState;
-                newState.AddRef();
                 _pagerState = newState;
                 PagerStateChanged?.Invoke(newState);
                 oldState?.Release();
             }
+        }
+
+        private bool TryHandleFailureToLockMemory(PagerState newState, PagerState.AllocationInfo info)
+        {
+            var currentProcess = Process.GetCurrentProcess();
+            var sum = Bits.NextPowerOf2(newState.AllocationInfos.Sum(x => x.Size) * 2);
+
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                // let's increase the max size of memory we can lock, on Windows, that is available for all users
+                var nextSize = Bits.NextPowerOf2(currentProcess.MaxWorkingSet.ToInt64() + sum);
+                if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
+                {
+                    nextSize = int.MaxValue;
+                }
+
+                try
+                {
+                    currentProcess.MaxWorkingSet = new IntPtr(nextSize);
+                }
+                catch (Exception e)
+                {
+                    throw new InsufficientMemoryException($"Failed to increase the working set size so we can lock {info.Size:#,#;;0} for {FileName}, with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.",
+                        e);
+                }
+
+                // now we can try again, after we raised the limit, we only do so once, though
+                if (Sodium.sodium_mlock(info.BaseAddress, (UIntPtr)info.Size) == 0)
+                    return false;
+            }
+
+            var msg =
+                $"Unable to lock memory for {FileName} with size {info.Size:#,#;;0}), with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.{Environment.NewLine}";
+            if (PlatformDetails.RunningOnPosix)
+            {
+                msg +=
+                    $"The admin may configure higher limits using: 'sudo prlimit --pid {currentProcess.Id} --memlock={sum}' to increase the limit. (It's recommended to do that as part of the startup script){Environment.NewLine}";
+            }
+            else
+            {
+                msg +=
+                    $"Already tried to raised the limit of the process working set to {currentProcess.MaxWorkingSet.ToInt64():#,#;;0}, but still got a failure.{Environment.NewLine}";
+            }
+
+            msg += "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
+
+            throw new InsufficientMemoryException(msg);
         }
 
         internal PagerState GetPagerStateAndAddRefAtomically()
@@ -226,6 +302,19 @@ namespace Voron.Impl.Paging
         protected readonly DisposeOnce<SingleAttempt> DisposeOnceRunner;
         public bool Disposed => DisposeOnceRunner.Disposed;
 
+        /// <summary>
+        /// This determine whatever we'll attempt to lock the memory
+        /// so it will not go to the swap / core dumps
+        /// </summary>
+        public bool LockMemory;
+        
+        /// <summary>
+        /// Control whatever we should treat memory lock errors as catastrophic errors
+        /// or not. By default, we consider them catastrophic and fail immediately to
+        /// avoid leaking any data. 
+        /// </summary>
+        public bool DoNotConsiderMemoryLockFailureAsCatastrophicError;
+
         protected abstract void DisposeInternal();
 
         public virtual void Dispose()
@@ -311,7 +400,18 @@ namespace Voron.Impl.Paging
                 GetSourceName());
         }
 
-        public abstract void ReleaseAllocationInfo(byte* baseAddress, long size);
+        public virtual void ReleaseAllocationInfo(byte* baseAddress, long size)
+        {
+            if (LockMemory == false) 
+                return;
+            
+            // intentionally skipping verification of the result, nothing that we
+            // can do about this here, and we are going to free the memory anyway
+            // that at any rate, we don't care about the memory zeroing, since
+            // we are already zeroing the memory ourselves (the pager is likely
+            // to be part of a long term held instance).
+            Sodium.sodium_munlock(baseAddress, (UIntPtr)size);
+        }
 
         // NodeMaxSize - RequiredSpaceForNewNode for 4Kb page is 2038, so we drop this by a bit
         public const int MaxKeySize = 2038 - RequiredSpaceForNewNode;

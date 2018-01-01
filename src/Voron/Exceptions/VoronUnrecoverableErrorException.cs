@@ -49,6 +49,20 @@ namespace Voron.Exceptions
                 throw;
             }
         }
+        
+        public static void Raise(StorageEnvironmentOptions options, string message, Exception inner)
+        {
+            try
+            {
+                throw new VoronUnrecoverableErrorException(message, inner);
+            }
+            catch (Exception e)
+            {
+                options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                throw;
+            }
+        }
+
 
         public static void Raise(string message, Exception inner)
         {

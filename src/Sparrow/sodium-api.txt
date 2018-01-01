@@ -132,5 +132,7 @@ crypto_generichash_statebytes | UIntPtr | | crypto_generichash_statebytes()
 
 # crypto_secretstream_xchacha20poly1305_pull | int | state, m, mlen_p, tag_p, c, clen, ad, adlen | crypto_secretstream_xchacha20poly1305_pull(byte *state, byte *m, ulong* mlen_p, byte *tag_p,byte* c, ulong clen,byte*ad, ulong adlen)
 
+sodium_munlock | int | addr, len | sodium_munlock(byte* addr, UIntPtr len)
 
+sodium_mlock | int | addr, len | sodium_mlock(byte* addr, UIntPtr len)
 

@@ -291,9 +291,11 @@ namespace Raven.Server.ServerWide
                     Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
                     Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
 
+                    options.DoNotConsiderMemoryLockFailureAsCatastrophicError = Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     try
                     {
                         options.MasterKey = Secrets.Unprotect(secret, entropy);
+                        
                     }
                     catch (Exception e)
                     {

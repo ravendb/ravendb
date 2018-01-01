@@ -609,6 +609,30 @@ namespace Sparrow
 			 }
 		}
 
+		public static int sodium_munlock(byte* addr, UIntPtr len)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.sodium_munlock(addr, len);
+			 }
+             else
+			 {
+			 	return Windows.sodium_munlock(addr, len);
+			 }
+		}
+
+		public static int sodium_mlock(byte* addr, UIntPtr len)
+		{
+			 if(PlatformDetails.RunningOnPosix)
+			 {
+				return Posix.sodium_mlock(addr, len);
+			 }
+             else
+			 {
+			 	return Windows.sodium_mlock(addr, len);
+			 }
+		}
+
 
 		#endregion
 
@@ -1971,6 +1995,58 @@ namespace Sparrow
 				 }
 			}
 
+			public static int sodium_munlock(byte* addr, UIntPtr len)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.sodium_munlock(addr, len);
+					}
+					else
+					{
+						return X86.sodium_munlock(addr, len);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.sodium_munlock(addr, len);
+					}
+					else
+					{
+						return X64.sodium_munlock(addr, len);
+					}
+				 }
+			}
+
+			public static int sodium_mlock(byte* addr, UIntPtr len)
+			{
+				 if(_is32bits)
+				 {
+					if(_isArm)
+					{
+						return Arm.sodium_mlock(addr, len);
+					}
+					else
+					{
+						return X86.sodium_mlock(addr, len);
+					}
+				 }
+				 else
+				 {
+			 		if(_isMac64)
+					{
+						return MacOsxX64.sodium_mlock(addr, len);
+					}
+					else
+					{
+						return X64.sodium_mlock(addr, len);
+					}
+				 }
+			}
+
 			#region Mac OSX 64
 			 private static class MacOsxX64
 			{
@@ -2146,6 +2222,12 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_munlock(byte* addr, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_mlock(byte* addr, UIntPtr len);
 
 			}
 			#endregion
@@ -2325,6 +2407,12 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_munlock(byte* addr, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_mlock(byte* addr, UIntPtr len);
 
 			}
 			#endregion
@@ -2506,6 +2594,12 @@ namespace Sparrow
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
 
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_munlock(byte* addr, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_mlock(byte* addr, UIntPtr len);
+
 			}
 
 			#endregion
@@ -2685,6 +2779,12 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_munlock(byte* addr, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_mlock(byte* addr, UIntPtr len);
 
 			}
 			#endregion
@@ -3317,6 +3417,30 @@ namespace Sparrow
 				 }
 			}
 
+			public static int sodium_munlock(byte* addr, UIntPtr len)
+			{
+				 if(_is32bits)
+				 {
+					return X86.sodium_munlock(addr, len);
+				 }
+				 else
+				 {
+			 		return X64.sodium_munlock(addr, len);
+				 }
+			}
+
+			public static int sodium_mlock(byte* addr, UIntPtr len)
+			{
+				 if(_is32bits)
+				 {
+					return X86.sodium_mlock(addr, len);
+				 }
+				 else
+				 {
+			 		return X64.sodium_mlock(addr, len);
+				 }
+			}
+
 
 			#region x86
 
@@ -3501,6 +3625,12 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_munlock(byte* addr, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_mlock(byte* addr, UIntPtr len);
 
 			}
 
@@ -3689,6 +3819,12 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_generichash_statebytes();
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_munlock(byte* addr, UIntPtr len);
+
+				[DllImport(LIB_SODIUM)]
+				public extern static int sodium_mlock(byte* addr, UIntPtr len);
 
 
 		    }

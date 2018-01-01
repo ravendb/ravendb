@@ -570,11 +570,6 @@ namespace Voron.Impl.Paging
             return _fileInfo.Name;
         }
 
-        public override void ReleaseAllocationInfo(byte* baseAddress, long size)
-        {
-            // this isn't actually ever called here, we don't have a global 
-            // memory map, only per transaction
-        }
 
         public override void TryPrefetchingWholeFile()
         {

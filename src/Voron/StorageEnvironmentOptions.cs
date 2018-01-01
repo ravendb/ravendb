@@ -17,6 +17,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
+using Voron.Util;
 using Voron.Util.Settings;
 
 namespace Voron
@@ -608,8 +609,17 @@ namespace Voron
                 if (File.Exists(scratchFile.FullPath))
                     File.Delete(scratchFile.FullPath);
 
-                return GetMemoryMapPagerInternal(this, initialSize, scratchFile, deleteOnClose: true);
+                var pager = GetMemoryMapPagerInternal(this, initialSize, scratchFile, deleteOnClose: true);
+                if (EncryptionEnabled)
+                {
+                    // even though we don't care need encryption here, we still need to ensure that this
+                    // isn't paged to disk
+                    pager.LockMemory = true;
+                    pager.DoNotConsiderMemoryLockFailureAsCatastrophicError = DoNotConsiderMemoryLockFailureAsCatastrophicError;
+                }
+                return pager;
             }
+
 
             private AbstractPager GetMemoryMapPager(StorageEnvironmentOptions options, long? initialSize, VoronPathSetting file,
                 bool deleteOnClose = false,
@@ -976,6 +986,8 @@ namespace Voron
         public abstract AbstractPager OpenPager(VoronPathSetting filename);
 
         public bool EncryptionEnabled => MasterKey != null;
+
+        public bool DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
         public static bool RunningOnPosix
             => RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||

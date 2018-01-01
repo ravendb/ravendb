@@ -404,6 +404,7 @@ namespace Voron.Platform.Win32
 
         public override void ReleaseAllocationInfo(byte* baseAddress, long size)
         {
+            base.ReleaseAllocationInfo(baseAddress, size);
             if (Win32MemoryMapNativeMethods.UnmapViewOfFile(baseAddress) == false)
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to UnMapView of file " + FileName);
             NativeMemory.UnregisterFileMapping(_fileInfo.FullName, new IntPtr(baseAddress), size);
