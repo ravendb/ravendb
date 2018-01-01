@@ -100,13 +100,13 @@
                                     <div class="help-block" data-bind="validationMessage: ip"></div>
                                 </div>
                             </div>
-                            <button class="btn btn-danger" data-bind="visible: $parent.ips().length > 1, click: $parent.removeIp.bind($parent)"><i class="icon-trash"></i></button>
+                            <button class="btn btn-danger" data-bind="visible: $parent.ips().length > 1, click: $root.removeIpFromNode.bind($root, $parent, $data)"><i class="icon-trash"></i></button>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="control-label"></label>
                         <div class="flex-grow">
-                            <button class="btn btn-default" data-bind="click: addIpAddress">
+                            <button class="btn btn-default" data-bind="click: $root.addIpAddressFromNode.bind($root, $data)">
                                 <i class="icon-plus"></i>
                                 <span>Add another IP Address</span>
                             </button>
@@ -154,7 +154,7 @@
             <div>
                 <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
                     <input id="agree" type="checkbox" data-bind="checked: confirmation">
-                    <label for="agree">I accept <a target="_blank" data-bind="attr: { href: model.agreementUrl }">Let's Encrypt Subscriber Agreement.</a></label>
+                    <label for="agree">I accept <a target="_blank" data-bind="attr: { href: model.agreementUrl }">Let's Encrypt Subscriber Agreement</a></label>
                 </div>
                 <div data-bind="validationElement: confirmation">
                     <div class="help-block" data-bind="validationMessage: confirmation"></div>

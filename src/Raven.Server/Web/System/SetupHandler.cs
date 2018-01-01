@@ -112,13 +112,15 @@ namespace Raven.Server.Web.System
                 var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
 
                 var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
-                HttpResponseMessage response;
+                try
                 {
                     string error = null;
                     object result = null;
                     string responseString = null;
-                    
-                var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+
+                    try
+                    {
+                        var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -126,13 +128,17 @@ namespace Raven.Server.Web.System
                         if (response.IsSuccessStatusCode == false)
                         {
                             error = responseString;
+                        }
                         else
                         {
                             result = JsonConvert.DeserializeObject<JObject>(responseString);
                         }
                     }
-                    throw new InvalidOperationException("Unable to contact api.ravendb.net", e);
+                    catch (Exception e)
+                    {
+                        result = responseString;
                         error = e.ToString();
+                    }
 
                     if (error != null)
                     {
@@ -220,7 +226,7 @@ namespace Raven.Server.Web.System
                     {
                         try
                         {
-                            subDomain.Ips = Dns.GetHostAddresses(subDomain + "." + rootDomain).Select(ip => ip.ToString()).ToList();
+                            subDomain.Ips = Dns.GetHostAddresses(subDomain.SubDomain + "." + rootDomain).Select(ip => ip.ToString()).ToList();
                         }
                         catch (Exception)
                         {
