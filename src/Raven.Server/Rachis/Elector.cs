@@ -92,8 +92,11 @@ namespace Raven.Server.Rachis
                         if (rv.Term == _engine.CurrentTerm && rv.ElectionResult == ElectionResult.Won)
                         {
                             _electionWon = true;
-                            var follower = new Follower(_engine, _connection);
-                            follower.TryAcceptConnection();
+                            if (Follower.CheckIfValidLeader(_engine, _connection,out var negotiation))
+                            {
+                                var follower = new Follower(_engine, _connection);
+                                follower.AcceptConnection(negotiation);
+                            }
                             return;
                         }
 

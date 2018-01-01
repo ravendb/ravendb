@@ -1013,6 +1013,11 @@ namespace Raven.Server
                 return true;
             }
 
+            if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Ping)
+            {
+                return true;
+            }
+            
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
                 // check for the term          

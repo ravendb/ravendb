@@ -134,6 +134,9 @@ namespace Raven.Client.Documents
             {
                 tcpClient = new TcpClient();
             }
+            
+            tcpClient.NoDelay = true;            
+            tcpClient.LingerState = new LingerOption(true, 0);
 
             if (timeout.HasValue)
                 SetTimeouts(tcpClient, timeout.Value);

@@ -411,7 +411,7 @@ namespace Raven.Server.ServerWide
                 EntityToBlittable.ConvertEntityToBlittable(new DatabaseRecord(), DocumentConventions.Default, ctx);
             }
 
-            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, _frequencyToCheckForIdleDatabases);
             _notificationsStorage.Initialize(_env, ContextPool);
             _operationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
@@ -462,11 +462,13 @@ namespace Raven.Server.ServerWide
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
+            var msg = $"State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}";
             if (Engine.Log.IsInfoEnabled)
             {
-                Engine.Log.Info($"State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}");
+                Engine.Log.Info(msg);
             }
-
+            Engine.InMemoryDebug.StateChangeTracking.LimitedSizeEnqueue(msg, 10);
+            
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -484,12 +486,9 @@ namespace Raven.Server.ServerWide
 
                 if (state.To == RachisState.LeaderElect  || state.To == RachisState.Leader)
                 {
-                    _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
-                } else if (state.From == RachisState.LeaderElect || state.From == RachisState.Leader)
-                {
                     _engine.CurrentLeader.OnNodeStatusChange -= OnTopologyChanged;
-                }
-
+                    _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
+                } 
             }
         }
 
@@ -1202,7 +1201,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    _timer.Change(_frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+                    _timer.Change(_frequencyToCheckForIdleDatabases, _frequencyToCheckForIdleDatabases);
                 }
                 catch (ObjectDisposedException)
                 {

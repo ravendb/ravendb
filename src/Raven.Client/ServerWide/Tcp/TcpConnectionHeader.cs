@@ -11,7 +11,8 @@ namespace Raven.Client.ServerWide.Tcp
             Subscription,
             Replication,
             Cluster,
-            Heartbeats
+            Heartbeats,
+            Ping
         }
 
         public string DatabaseName { get; set; }
@@ -34,6 +35,7 @@ namespace Raven.Client.ServerWide.Tcp
         {
             switch (operationType)
             {
+                case OperationTypes.Ping:
                 case OperationTypes.None:
                     return -1;
                 case OperationTypes.Drop:
