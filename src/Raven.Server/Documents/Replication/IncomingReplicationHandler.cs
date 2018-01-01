@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
-                using (_connectionOptions.ConnectionProcessingInProgress("Replication"))
+                using (_connectionOptionsDisposable = _connectionOptions.ConnectionProcessingInProgress("Replication"))
                 using (_stream)
                 using (var interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                 {
@@ -277,19 +277,37 @@ namespace Raven.Server.Documents.Replication
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
                             // saving the change vector and the last received document etag
-                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
-                            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
+                            long lastEtag ;
+                            string lastChangeVector;
+                            using (documentsContext.OpenReadTransaction())
+                            {
+                                lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
+                                lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                            }
+                            var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
+                            if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
                             {
                                 if (_log.IsInfoEnabled)
                                 {
                                     _log.Info(
-                                        $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
-                                        "nevertheless we create an additional task.");
+                                        $"Try to update the current database change vector ({lastChangeVector}) with {changeVector} in status {status}" +
+                                        $"with etag: {_lastDocumentEtag} (new) > {lastEtag} (old)");
                                 }
-                            }
-                            else
-                            {
-                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask();
+                                
+                                var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId, _replicationFromAnotherSource);
+                                if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
+                                {
+                                    if (_log.IsInfoEnabled)
+                                    {
+                                        _log.Info(
+                                            $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
+                                            "nevertheless we create an additional task.");
+                                    }
+                                }
+                                else
+                                {
+                                    _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask();
+                                }
                             }
                         }
                         break;
@@ -569,6 +587,7 @@ namespace Raven.Server.Documents.Replication
         private long _lastDocumentEtag;
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
+        private IDisposable _connectionOptionsDisposable;
 
         private struct ReplicationItem : IDisposable
         {
@@ -792,6 +811,13 @@ namespace Raven.Server.Documents.Replication
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
             _cts.Cancel();
+            try
+            {
+                _connectionOptionsDisposable?.Dispose();
+            }
+            catch (Exception)
+            {
+            }
             try
             {
                 _stream.Dispose();

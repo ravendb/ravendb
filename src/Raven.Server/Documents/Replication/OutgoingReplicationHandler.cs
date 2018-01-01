@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -361,7 +362,10 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info($"Operation canceled on replication thread ({FromToString}). " +
                               $"This is not necessary due to an issue. Stopped the thread.");
-                Failed?.Invoke(this, e);
+                if (_cts.IsCancellationRequested == false)
+                {
+                    Failed?.Invoke(this, e);
+                }
             }
 
             void HandleIOException(IOException e)
@@ -568,14 +572,14 @@ namespace Raven.Server.Documents.Replication
                 _trigger = trigger;
             }
 
-            public bool InitAndValidate()
+            public bool InitAndValidate(long lastReceivedEtag)
             {
                 if (Guid.TryParse(_replicationBatchReply.DatabaseId, out Guid dbGuid) == false)
                     return false;
 
                 _dbId = dbGuid.ToBase64Unpadded();
 
-                return _replicationBatchReply.CurrentEtag > 0;
+                return _replicationBatchReply.CurrentEtag > lastReceivedEtag;
             }
 
             public override int Execute(DocumentsOperationContext context)
@@ -583,6 +587,14 @@ namespace Raven.Server.Documents.Replication
                 if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
                     context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
+                if(context.LastReplicationEtagFrom == null)
+                    context.LastReplicationEtagFrom = new Dictionary<string, long>();
+
+                if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
+                {
+                    context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
+                }
+                
                 var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
                     context.LastDatabaseChangeVector);
 
@@ -593,7 +605,7 @@ namespace Raven.Server.Documents.Replication
                 if (result.IsValid)
                 {
                     context.LastDatabaseChangeVector = result.ChangeVector;
-
+                    
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                     {
                         try
@@ -618,7 +630,7 @@ namespace Raven.Server.Documents.Replication
             if (_external == false)
             {
                 var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
-                if (update.InitAndValidate())
+                if (update.InitAndValidate(_lastDestinationEtag))
                 {
                     // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
                     // is purely advisory. We just want to have the information up to date at some point, and we won't 
@@ -626,7 +638,7 @@ namespace Raven.Server.Documents.Replication
                     _database.TxMerger.Enqueue(update).AsTask().IgnoreUnobservedExceptions();
                 }
             }
-
+            _lastDestinationEtag = replicationBatchReply.CurrentEtag;
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             {
@@ -643,6 +655,8 @@ namespace Raven.Server.Documents.Replication
                 }
             }
         }
+
+        private long _lastDestinationEtag;
 
         public string FromToString => $"from {_database.Name} at {_parent._server.NodeTag} to {Destination.FromString()}";
 
@@ -827,9 +841,9 @@ namespace Raven.Server.Documents.Replication
             _database.Changes.OnDocumentChange -= OnDocumentChange;
 
             _cts.Cancel();
-            
-            DisposeTcpClient();
 
+            DisposeTcpClient();
+            
             _connectionDisposed.Set();
 
             if (_sendingThread != null && _sendingThread != Thread.CurrentThread)
@@ -841,7 +855,7 @@ namespace Raven.Server.Documents.Replication
                     DisposeTcpClient();
                 }
             }
-
+            
             try
             {
                 _cts.Dispose();

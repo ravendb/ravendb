@@ -7,6 +7,7 @@ namespace Raven.Server.ServerWide.Maintenance
     [Flags]
     public enum DatabaseStatus
     {
+        None = 0,
         Loaded = 1,
         Loading = 2,
         Faulted = 4,

@@ -242,25 +242,28 @@ namespace Raven.Server.ServerWide.Maintenance
             var hasLivingNodes = false;
             foreach (var member in topology.Members)
             {
+                var status = None;
                 if (current.TryGetValue(member, out var nodeStats) &&
                     nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
-                    nodeStats.Report.TryGetValue(dbName, out var dbStats) &&
-                    dbStats.Status == Loaded)
+                    nodeStats.Report.TryGetValue(dbName, out var dbStats))
                 {
-                    hasLivingNodes = true;
-
-                    if (topology.PromotablesStatus.TryGetValue(member, out var _))
+                    status = dbStats.Status;
+                    if (status == Loaded || status == Unloaded)
                     {
-                        topology.DemotionReasons.Remove(member);
-                        topology.PromotablesStatus.Remove(member);
-                        return $"Node {member} is online";
+                        hasLivingNodes = true;
+
+                        if (topology.PromotablesStatus.TryGetValue(member, out var _))
+                        {
+                            topology.DemotionReasons.Remove(member);
+                            topology.PromotablesStatus.Remove(member);
+                            return $"Node {member} is online";
+                        }
+                        continue;
                     }
-
-                    continue;
                 }
-
+                
                 if (TryMoveToRehab(dbName, topology, current, member))
-                    return $"Node {member} is currently not responding and moved to rehab";
+                    return $"Node {member} is currently not responding (with status: {status}) and moved to rehab";
 
                 // node distribution is off and the node is down
                 if (topology.DynamicNodesDistribution == false && (
@@ -269,7 +272,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     topology.DemotionReasons[member] = "Not responding";
                     topology.PromotablesStatus[member] = DatabasePromotionStatus.NotResponding;
-                    return $"Node {member} is currently not responding";
+                    return $"Node {member} is currently not responding with the status '{status}'";
                 }
             }
 
