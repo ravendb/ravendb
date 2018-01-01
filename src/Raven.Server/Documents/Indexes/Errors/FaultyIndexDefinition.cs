@@ -7,9 +7,13 @@ namespace Raven.Server.Documents.Indexes.Errors
 {
     public class FaultyIndexDefinition : IndexDefinitionBase<IndexField>
     {
-        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, IndexField[] mapFields)
+        private readonly IndexDefinition _indexDefinition;
+
+        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority, 
+            IndexField[] mapFields, IndexDefinition indexDefinition)
             : base(name, collections, lockMode, priority, mapFields)
         {
+            _indexDefinition = indexDefinition;
         }
 
         protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
@@ -24,7 +28,11 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            var definition = _indexDefinition.Clone();
+            definition.Name = Name;
+            definition.LockMode = LockMode;
+            definition.Priority = Priority;
+            return definition;
         }
 
         protected override int ComputeRestOfHash(int hashCode)

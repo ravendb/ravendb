@@ -1736,7 +1736,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IndexDefinition GetIndexDefinition()
         {
-            return Definition.ConvertToIndexDefinition(this);
+            return Definition.GetOrCreateIndexDefinitionInternal();
         }
 
         public virtual async Task StreamQuery(HttpResponse response, IStreamDocumentQueryResultWriter writer,
