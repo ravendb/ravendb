@@ -139,7 +139,7 @@ namespace Raven.Server.Rachis
 
     public class RachisTimings
     {
-        public readonly List<RachisLogEntry> Timings = new List<RachisLogEntry>();
+        public readonly ConcurrentBag<RachisLogEntry> Timings = new ConcurrentBag<RachisLogEntry>();
     }
     
     public class RachisLogRecorder
@@ -147,7 +147,7 @@ namespace Raven.Server.Rachis
         private readonly ConcurrentQueue<RachisTimings> _queue;
         private readonly Stopwatch _sp = Stopwatch.StartNew();
         private RachisTimings _current;
-        private List<RachisLogEntry> Timings => _current.Timings;
+        private ConcurrentBag<RachisLogEntry> Timings => _current.Timings;
         
         public RachisLogRecorder(ConcurrentQueue<RachisTimings> queue)
         {
@@ -207,24 +207,14 @@ namespace Raven.Server.Rachis
                 var key = tuple.Key;
                 DynamicJsonArray inner;
                 timingTracking[key] = inner = new DynamicJsonArray();
-                using (var queue = tuple.Value.GetEnumerator())
+                foreach (var queue in tuple.Value)
                 {
-                    while (queue.MoveNext())
-                    {
-                        inner.Add(new DynamicJsonArray(queue.Current.Timings.OrderBy(x => x.At)));
-                    }  
+                    inner.Add(new DynamicJsonArray(queue.Timings.OrderBy(x => x.At)));
                 }
             }
             
-            var stateTracking = new DynamicJsonArray();            
-            using (var queue = StateChangeTracking.GetEnumerator())
-            {
-                while (queue.MoveNext())
-                {
-                    stateTracking.Add(queue.Current);
-                } 
-            }
-            
+            var stateTracking = new DynamicJsonArray(StateChangeTracking);
+           
             return new DynamicJsonValue
             {
                 [nameof(TimingTracking)] = timingTracking,

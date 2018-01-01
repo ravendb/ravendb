@@ -46,6 +46,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         {
             return new ClusterTopologyChanged
             {
+                Severity = NotificationSeverity.Info,
+                Title = "Cluster topology was changed",
                 Topology = clusterTopology,
                 Leader = leaderTag,
                 NodeTag = nodeTag,

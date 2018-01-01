@@ -49,7 +49,7 @@ namespace Raven.Server.Rachis
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
-                    _debugRecorder.Record("Reading entries");
+                    _debugRecorder.Record("Wait for entries");
                     var appendEntries = _connection.Read<AppendEntries>(context);
 
                     if (appendEntries.Term != _engine.CurrentTerm)
@@ -67,8 +67,8 @@ namespace Raven.Server.Rachis
 
                         return;
                     }
-                    _debugRecorder.Record($"Got {appendEntries.EntriesCount} entries");
-
+                    
+                    _debugRecorder.Record("Got entries");
                     _engine.Timeout.Defer(_connection.Source);
                     var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
@@ -190,10 +190,10 @@ namespace Raven.Server.Rachis
                         LastLogIndex = lastLogIndex,
                         Success = true
                     });
-
                     _engine.Timeout.Defer(_connection.Source);
-
                     _engine.ReportLeaderTime(appendEntries.TimeAsLeader);
+
+                    _debugRecorder.Record("Cycle done");
                     _debugRecorder.Start();
                 }
             }
@@ -693,6 +693,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
+                        _debugRecorder.Record($"Sending error: {e}");
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
                             _connection.Send(context, e);

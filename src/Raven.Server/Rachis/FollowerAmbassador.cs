@@ -50,7 +50,6 @@ namespace Raven.Server.Rachis
                 if (_statusMessage == value)
                     return;
                 _statusMessage = value;
-                _leader?.NotifyAboutNodeStatusChange();
             }
         }
         public AmbassadorStatus Status;
@@ -243,7 +242,7 @@ namespace Raven.Server.Rachis
 #endif
                                     );
                                 }
-                                _debugRecorder.Record($"Start sending {entries.Count} entries");
+                                _debugRecorder.Record("Sending entries");
                                 _connection.Send(context, appendEntries, entries);
                                 _debugRecorder.Record("Waiting for response");
                                 var aer = _connection.Read<AppendEntriesResponse>(context);
