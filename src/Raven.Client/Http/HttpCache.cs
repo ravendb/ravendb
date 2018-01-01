@@ -154,11 +154,13 @@ namespace Raven.Client.Http
                 Cache = this,
                 Generation = Generation
             };
+            HttpCacheItem old = null;
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
-                oldItem.ReleaseRef();
+                old = oldItem;
                 return httpCacheItem;
             });
+            old?.ReleaseRef();
         }
 
         public int Generation;
