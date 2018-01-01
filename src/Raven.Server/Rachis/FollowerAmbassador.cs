@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -74,6 +75,9 @@ namespace Raven.Server.Rachis
         public string LastSendMsg => _lastSentMsg;
         public bool ForceElectionsNow { get; set; }
         public string Url => _url;
+        
+        private readonly string _debugName;
+        private readonly RachisLogRecorder _debugRecorder;
 
         private void UpdateLastSend(string msg)
         {
@@ -100,6 +104,9 @@ namespace Raven.Server.Rachis
             _connection = connection;
             Status = AmbassadorStatus.Started;
             StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_term}";
+            
+            _debugName = $"Follower Ambassador for {_tag} in term {_term}";
+            _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
         }
         
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -119,6 +126,7 @@ namespace Raven.Server.Rachis
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
                 {
+                    _debugRecorder.Start();
                     try
                     {
                         try
@@ -159,6 +167,7 @@ namespace Raven.Server.Rachis
                         finally
                         {
                             needNewConnection = true;
+                            _debugRecorder.Record("Connection obtatined");
                         }
 
                         Status = AmbassadorStatus.Connected;
@@ -176,8 +185,11 @@ namespace Raven.Server.Rachis
                         }
 
                         var matchIndex = InitialNegotiationWithFollower();
+                        _debugRecorder.Record("start negotiation with follower");
                         UpdateLastMatchFromFollower(matchIndex);
                         SendSnapshot(_connection.Stream);
+                        _debugRecorder.Record("Send snapshot");
+
                         var entries = new List<BlittableJsonReaderObject>();
                         while (_leader.Running && _running)
                         {
@@ -222,6 +234,7 @@ namespace Raven.Server.Rachis
                                         ? "Append Entries"
                                         : "Heartbeat"
                                 );
+
                                 if (_engine.Log.IsInfoEnabled && entries.Count > 0)
                                 {
                                     _engine.Log.Info($"FollowerAmbassador for {_tag}: sending {entries.Count} entries to {_tag}"
@@ -230,8 +243,11 @@ namespace Raven.Server.Rachis
 #endif
                                     );
                                 }
+                                _debugRecorder.Record($"Start sending {entries.Count} entries");
                                 _connection.Send(context, appendEntries, entries);
+                                _debugRecorder.Record("Waiting for response");
                                 var aer = _connection.Read<AppendEntriesResponse>(context);
+                                _debugRecorder.Record("Response was recieved");
                                 if (aer.Success == false)
                                 {
                                     // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -264,6 +280,8 @@ namespace Raven.Server.Rachis
                             // either we have new entries to send, or we waited for long enough 
                             // to send another heartbeat
                             task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
+                            _debugRecorder.Record("Cycle done");
+                            _debugRecorder.Start();
                         }
                     }
                     catch (OperationCanceledException)
@@ -300,6 +318,7 @@ namespace Raven.Server.Rachis
                             StatusMessage = "Disconnected due to :" + StatusMessage;
                         }
                         Status = AmbassadorStatus.Disconnected;
+                        _debugRecorder.Record(StatusMessage);
                     }
                 }
             }
@@ -734,6 +753,7 @@ namespace Raven.Server.Rachis
                     Volatile.Read(ref _connection)?.Dispose();
                 }
             }
+            _engine.InMemoryDebug.RemoveRecorder(_debugName);
         }
     }
 }

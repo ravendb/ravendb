@@ -177,8 +177,11 @@ namespace Raven.Server.Rachis
         {
             if (_log.IsInfoEnabled)
             {
-                _log.Info(
-                    $"AppendEntries ({ae.EntriesCount}) in {ae.Term}, commit: {ae.LeaderCommit}, leader for: {ae.TimeAsLeader}, ({ae.PrevLogIndex} / {ae.PrevLogTerm}), truncate: {ae.TruncateLogBefore}, force elections: {ae.ForceElections}.");
+                if (ae.EntriesCount > 0)
+                {
+                    _log.Info(
+                        $"AppendEntries ({ae.EntriesCount}) in {ae.Term}, commit: {ae.LeaderCommit}, leader for: {ae.TimeAsLeader}, ({ae.PrevLogIndex} / {ae.PrevLogTerm}), truncate: {ae.TruncateLogBefore}, force elections: {ae.ForceElections}.");
+                }
             }
 
             var msg = new DynamicJsonValue
@@ -375,7 +378,10 @@ namespace Raven.Server.Rachis
         {
             if (_log.IsInfoEnabled)
             {
-                _log.Info($"Replying with success {aer.Success}: {aer.Message ?? "(empty)"}");
+                if (aer.Message != null)
+                {
+                    _log.Info($"Replying with success {aer.Success}: {aer.Message }");
+                }
             }
             var msg = new DynamicJsonValue
             {

@@ -16,16 +16,16 @@ namespace Raven.Server.Rachis
     public class Follower : IDisposable
     {
         private readonly RachisConsensus _engine;
-        private readonly long _term;
-        private readonly string _leaderTag;
+        private long _term;
         private readonly RemoteConnection _connection;
         private Thread _thread;
+
+        private string _debugName;
+        private RachisLogRecorder _debugRecorder;
 
         public Follower(RachisConsensus engine, RemoteConnection remoteConnection)
         {
             _engine = engine;
-            _term = _engine.CurrentTerm;
-            _leaderTag = _engine.LeaderTag;
             _connection = remoteConnection;
         }
 
@@ -42,12 +42,14 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"{ToString()}: Entering steady state");
             }
+            
             while (true)
             {
                 entries.Clear();
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
+                    _debugRecorder.Record("Reading entries");
                     var appendEntries = _connection.Read<AppendEntries>(context);
 
                     if (appendEntries.Term != _engine.CurrentTerm)
@@ -65,7 +67,7 @@ namespace Raven.Server.Rachis
 
                         return;
                     }
-
+                    _debugRecorder.Record($"Got {appendEntries.EntriesCount} entries");
 
                     _engine.Timeout.Defer(_connection.Source);
                     var sp = Stopwatch.StartNew();
@@ -181,7 +183,7 @@ namespace Raven.Server.Rachis
                         _engine.SwitchToCandidateState("Was asked to do so by my leader", forced: true);
                         return;
                     }
-
+                    _debugRecorder.Record("Processing entries is completed");
                     _connection.Send(context, new AppendEntriesResponse
                     {
                         CurrentTerm = _engine.CurrentTerm,
@@ -192,44 +194,47 @@ namespace Raven.Server.Rachis
                     _engine.Timeout.Defer(_connection.Source);
 
                     _engine.ReportLeaderTime(appendEntries.TimeAsLeader);
-
+                    _debugRecorder.Start();
                 }
             }
         }
 
-        private LogLengthNegotiation CheckIfValidLeader()
+        public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
         {
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            negotiation = null;
+            using (engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var logLength = _connection.Read<LogLengthNegotiation>(context);
+                var logLength = connection.Read<LogLengthNegotiation>(context);
 
-                if (logLength.Term < _engine.CurrentTerm)
+                if (logLength.Term < engine.CurrentTerm)
                 {
-                    var msg = $"The incoming term {logLength.Term} is smaller than current term {_engine.CurrentTerm} and is therefor rejected (From thread: {logLength.SendingThread})";
-                    if (_engine.Log.IsInfoEnabled)
+                    var msg = $"The incoming term {logLength.Term} is smaller than current term {engine.CurrentTerm} and is therefor rejected (From thread: {logLength.SendingThread})";
+                    if (engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info(msg);
+                        engine.Log.Info(msg);
                     }
-                    _connection.Send(context, new LogLengthNegotiationResponse
+                    connection.Send(context, new LogLengthNegotiationResponse
                     {
                         Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
                         Message = msg,
-                        CurrentTerm = _engine.CurrentTerm
+                        CurrentTerm = engine.CurrentTerm
                     });
-                    _connection.Dispose();
-                    return null;
+                    connection.Dispose();
+                    return false;
                 }
-                if (_engine.Log.IsInfoEnabled)
+                if (engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"The incoming term { logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
+                    engine.Log.Info($"The incoming term { logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
                 }
-                _engine.Timeout.Defer(_connection.Source);
-                return logLength;
+                engine.Timeout.Defer(connection.Source);
+                negotiation = logLength;
             }
+            return true;
         }
 
         private void NegotiateWithLeader(TransactionOperationContext context, LogLengthNegotiation negotiation)
         {
+            _debugRecorder.Start();
             // only the leader can send append entries, so if we accepted it, it's the leader
             if (_engine.Log.IsInfoEnabled)
             {
@@ -252,7 +257,6 @@ namespace Raven.Server.Rachis
             {
                 _engine.FoundAboutHigherTerm(negotiation.Term, "Leader has higher term, updating...");
             }
-
             long prevTerm;
             using (context.OpenReadTransaction())
             {
@@ -284,7 +288,7 @@ namespace Raven.Server.Rachis
                     LastLogIndex = negotiation.PrevLogIndex
                 });
             }
-
+            _debugRecorder.Record("Matching Negotiation is over, wating for snapshot");
             _engine.Timeout.Defer(_connection.Source);
 
             // at this point, the leader will send us a snapshot message
@@ -292,7 +296,7 @@ namespace Raven.Server.Rachis
             // the reason we send this is to simplify the # of states in the protocol
 
             var snapshot = _connection.ReadInstallSnapshot(context);
-
+            _debugRecorder.Record("Snapshot received");
             using (context.OpenWriteTransaction())
             {
                 var lastCommitIndex = _engine.GetLastCommitIndex(context);
@@ -355,6 +359,7 @@ namespace Raven.Server.Rachis
 
                 context.Transaction.Commit();
             }
+            _debugRecorder.Record("Snapshot installed");
             //Here we send the LastIncludedIndex as our matched index even for the case where our lastCommitIndex is greater
             //So we could validate that the entries sent by the leader are indeed the same as the ones we have.
             _connection.Send(context, new InstallSnapshotResponse
@@ -637,20 +642,21 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public void TryAcceptConnection()
+        
+        
+        public void AcceptConnection(LogLengthNegotiation negotiation)
         {
-            var negotiation = CheckIfValidLeader();
-            if (negotiation == null)
-            {
-                _connection.Dispose();
-                return; // did not accept connection
-            }
             // if leader / candidate, this remove them from play and revert to follower mode
             _engine.SetNewState(RachisState.Follower, this, _engine.CurrentTerm,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
             _engine.LeaderTag = _connection.Source;
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
-
+            
+            _term = _engine.CurrentTerm;
+            _debugName = $"Follower in term {_term}";
+            _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
+            _debugRecorder.Start();
+            
             _thread = new Thread(Run)
             {
                 Name = $"Follower thread from {_connection} in term {negotiation.Term}",
@@ -714,9 +720,11 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"{ToString()}: Disposing");
             }
-            if (_thread != null &&
-                _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+            
+            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
                 _thread.Join();
+            
+            _engine.InMemoryDebug.RemoveRecorder(_debugName);
         }
     }
 }

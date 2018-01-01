@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -120,12 +121,126 @@ namespace Raven.Server.Rachis
         }
     }
 
+    public class RachisLogEntry : IDynamicJsonValueConvertible
+    {
+        public DateTime At = DateTime.UtcNow;
+        public string Message;
+        public long Ticks;
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Message)] = Message,
+                [nameof(Ticks)] = Ticks
+            };
+        }
+    }
+
+    public class RachisTimings
+    {
+        public readonly List<RachisLogEntry> Timings = new List<RachisLogEntry>();
+    }
+    
+    public class RachisLogRecorder
+    {
+        private readonly ConcurrentQueue<RachisTimings> _queue;
+        private readonly Stopwatch _sp = Stopwatch.StartNew();
+        private RachisTimings _current;
+        private List<RachisLogEntry> Timings => _current.Timings;
+        
+        public RachisLogRecorder(ConcurrentQueue<RachisTimings> queue)
+        {
+            _queue = queue;
+        }
+
+        public void Start()
+        {
+            _current = new RachisTimings();
+            _queue.LimitedSizeEnqueue(_current, 5);
+            Timings.Add(new RachisLogEntry
+            {
+                Message = "Start",
+                Ticks = 0
+            });
+            _sp.Restart();
+        }
+        
+        public void Record(string message)
+        {
+            Timings.Add(new RachisLogEntry
+            {
+                Message = message,
+                Ticks = _sp.ElapsedMilliseconds
+            });
+        }
+    }
+
+    public class RachisDebug
+    {
+        public readonly ConcurrentDictionary<string, ConcurrentQueue<RachisTimings>> TimingTracking = new ConcurrentDictionary<string, ConcurrentQueue<RachisTimings>>();
+        public readonly ConcurrentQueue<string> StateChangeTracking = new ConcurrentQueue<string>();
+
+        public RachisLogRecorder GetNewRecorder(string name)
+        {
+            var queue = new ConcurrentQueue<RachisTimings>();
+            if (TimingTracking.TryAdd(name, queue) == false)
+            {
+                throw new ArgumentException($"Recorder with the name '{name}' already exists");
+            }
+            return new RachisLogRecorder(queue);
+        }
+        
+        public void RemoveRecorder(string name)
+        {
+            if (TimingTracking.Remove(name, out var q))
+            {
+                q.Clear();
+            }
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            var timingTracking = new DynamicJsonValue();
+            foreach (var tuple in TimingTracking.ForceEnumerateInThreadSafeManner().OrderBy(x => x.Key))
+            {
+                var key = tuple.Key;
+                DynamicJsonArray inner;
+                timingTracking[key] = inner = new DynamicJsonArray();
+                using (var queue = tuple.Value.GetEnumerator())
+                {
+                    while (queue.MoveNext())
+                    {
+                        inner.Add(new DynamicJsonArray(queue.Current.Timings.OrderBy(x => x.At)));
+                    }  
+                }
+            }
+            
+            var stateTracking = new DynamicJsonArray();            
+            using (var queue = StateChangeTracking.GetEnumerator())
+            {
+                while (queue.MoveNext())
+                {
+                    stateTracking.Add(queue.Current);
+                } 
+            }
+            
+            return new DynamicJsonValue
+            {
+                [nameof(TimingTracking)] = timingTracking,
+                [nameof(StateChangeTracking)] = stateTracking
+            };
+        }
+    }
+    
     public abstract class RachisConsensus : IDisposable
     {
         internal abstract RachisStateMachine GetStateMachine();
 
         public const string InitialTag = "?";
 
+        public readonly RachisDebug InMemoryDebug = new RachisDebug();
+        
         public RachisState CurrentState { get; private set; }
 
         public string LastStateChangeReason
@@ -497,7 +612,7 @@ namespace Raven.Server.Rachis
                 Reason = stateChangedReason,
                 When = DateTime.UtcNow
             };
-
+            
             PrevStates.LimitedSizeEnqueue(transition, 5);
 
             CurrentState = rachisState;
@@ -808,8 +923,11 @@ namespace Raven.Server.Rachis
                             elector.Run();
                             break;
                         case InitialMessageType.AppendEntries:
-                            var follower = new Follower(this, remoteConnection);
-                            follower.TryAcceptConnection();
+                            if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
+                            {
+                                var follower = new Follower(this, remoteConnection);
+                                follower.AcceptConnection(negotiation);
+                            }
                             break;
                         default:
                             throw new ArgumentOutOfRangeException("Unknown initial message value: " +

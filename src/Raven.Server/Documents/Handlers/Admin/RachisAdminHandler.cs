@@ -219,6 +219,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     {
                         ["Topology"] = topology.ToSortedJson(),
                         ["Leader"] = ServerStore.LeaderTag,
+                        ["LeaderShipDuration"] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
                         ["CurrentState"] = ServerStore.CurrentRachisState,
                         ["NodeTag"] = nodeTag,
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
