@@ -30,6 +30,13 @@
     <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="Sodium.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Sodium.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.4.0" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.4.0" />
