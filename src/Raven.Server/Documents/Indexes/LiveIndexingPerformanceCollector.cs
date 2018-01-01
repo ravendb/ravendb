@@ -101,8 +101,9 @@ namespace Raven.Server.Documents.Indexes
                     itemsToSend.Add(stat);
 
                 var latestStats = index.GetLatestIndexingStat();
-
-                if (latestStats.Completed == false && itemsToSend.Contains(latestStats) == false)
+                if (latestStats != null &&
+                    latestStats.Completed == false && 
+                    itemsToSend.Contains(latestStats) == false)
                     itemsToSend.Add(latestStats);
 
                 if (itemsToSend.Count > 0)
