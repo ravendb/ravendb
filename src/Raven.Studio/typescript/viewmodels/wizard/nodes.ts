@@ -169,7 +169,6 @@ class nodes extends setupStep {
     }
 
     editNode(node: nodeInfo) {
-        node.showAdvancedSettings(!!node.externalIpAddress());
         this.editedNode(node);
         this.initTooltips();
     }
