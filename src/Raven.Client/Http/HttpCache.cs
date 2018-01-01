@@ -139,7 +139,13 @@ namespace Raven.Client.Http
                 old = oldItem;
                 return httpCacheItem;
             });
-
+            //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
+            //where it started been disposed right after we checked it and before we managed to insert the new cache item.
+            if (_disposing)
+            {
+                //We might have double release here but we have a protection for that.
+                httpCacheItem.ReleaseRef();
+            }
             old?.ReleaseRef();
         }
 
@@ -160,10 +166,18 @@ namespace Raven.Client.Http
                 old = oldItem;
                 return httpCacheItem;
             });
+            //We need to check if the cache is been disposed after the item was added otherwise we will run into another race condition
+            //where it started been disposed right after we checked it and before we managed to insert the new cache item.
+            if (_disposing)
+            {
+                //We might have double release here but we have a protection for that.
+                httpCacheItem.ReleaseRef();
+            }
             old?.ReleaseRef();
         }
 
         public int Generation;
+        private volatile bool _disposing;
 
         private void FreeSpace()
         {
@@ -300,6 +314,7 @@ namespace Raven.Client.Http
 
         public void Dispose()
         {
+            _disposing = true;
             foreach (var item in _items)
             {
                 item.Value.Dispose();
