@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -401,7 +402,7 @@ namespace Raven.Server
             string usedRootDomain = null;
             foreach (var rd in userDomainsResult.RootDomains)
             {
-                if (Configuration.Core.PublicServerUrl.ToString().Contains(rd))
+                if (Configuration.Core.PublicServerUrl.ToString().IndexOf(rd, StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     usedRootDomain = rd;
                     break;
@@ -409,14 +410,14 @@ namespace Raven.Server
             }
 
             if (usedRootDomain == null)
-                throw new InvalidOperationException($"You license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
+                throw new InvalidOperationException($"Your license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
                                                 $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl}." +
-                                                "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate.");
+                                                "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
             
             if (userDomainsResult.Emails.Contains(Configuration.Security.CertificateLetsEncryptEmail, StringComparer.OrdinalIgnoreCase) == false)
-                throw new InvalidOperationException($"You license is associated with the following emails: {string.Join(",", userDomainsResult.Emails)} " +
+                throw new InvalidOperationException($"Your license is associated with the following emails: {string.Join(",", userDomainsResult.Emails)} " +
                                                     $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}." +
-                                                    "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate.");
+                                                    "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
             var hosts = SetupManager.GetCertificateAlternativeNames(existing.Certificate).ToArray();
             var substring = hosts[0].Substring(0, hosts[0].Length - usedRootDomain.Length - 1);

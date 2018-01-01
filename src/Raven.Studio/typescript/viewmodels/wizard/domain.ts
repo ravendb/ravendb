@@ -4,6 +4,7 @@ import claimDomainCommand = require("commands/wizard/claimDomainCommand");
 import nodeInfo = require("models/wizard/nodeInfo");
 import ipEntry = require("models/wizard/ipEntry");
 import loadAgreementCommand = require("commands/wizard/loadAgreementCommand");
+import getIpsInfoCommand = require("commands/wizard/getIpsInfoCommand");
 
 class domain extends setupStep {
 
@@ -26,12 +27,22 @@ class domain extends setupStep {
 
         const domainModel = this.model.domain();
         const userInfo = this.model.userDomains();
+        
         if (userInfo) {
-            domainModel.userEmail(userInfo.Email);
-            domainModel.availableDomains(Object.keys(userInfo.Domains));
+            domainModel.availableDomains(Object.keys(userInfo.Domains));            
+            domainModel.availableRootDomains(userInfo.RootDomains);
+            domainModel.availableEmails(userInfo.Emails);
 
             if (domainModel.availableDomains().length === 1) {
                 domainModel.domain(domainModel.availableDomains()[0]);
+            }
+
+            if (domainModel.availableRootDomains().length === 1) {
+                domainModel.rootDomain(domainModel.availableRootDomains()[0]);
+            }
+
+            if (domainModel.availableEmails().length === 1) {
+                domainModel.userEmail(domainModel.availableEmails()[0]);
             }
         }
     }
@@ -42,16 +53,24 @@ class domain extends setupStep {
     
     save() {
         this.spinners.save(true);
-        
         const domainModel = this.model.domain();
+      
         this.afterAsyncValidationCompleted(domainModel.validationGroup, () => {
             if (this.isValid(domainModel.validationGroup)) {
-                $.when<any>(this.claimDomainIfNeeded(), this.loadAgreementIfNeeded())
-                    .done(() => {
-                        this.tryPopulateNodesInfo();
-                        router.navigate("#nodes");
-                    })
-                    .always(() => this.spinners.save(false));
+
+                // Get the ips info for the selected rootDomain
+                new getIpsInfoCommand(domainModel.rootDomain(), this.model.userDomains())
+                    .execute()
+                    .done((result: Raven.Server.Commercial.UserDomainsWithIps) => {
+                        this.model.userDomains(result);
+                        
+                        $.when<any>(this.claimDomainIfNeeded(), this.loadAgreementIfNeeded())
+                            .done(() => {
+                                this.tryPopulateNodesInfo();
+                                router.navigate("#nodes");
+                            })
+                            .always(() => this.spinners.save(false));
+                    });               
             } else {
                 this.spinners.save(false);
             }
@@ -120,6 +139,32 @@ class domain extends setupStep {
                 return availableDomains;
             }           
         });    
+    }
+
+    createRootDomainNameAutocompleter(rootDomainText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = rootDomainText();
+            const availableRootDomains = this.model.domain().availableRootDomains();
+
+            if (key) {
+                return availableRootDomains.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return availableRootDomains;
+            }
+        });
+    }
+
+    createUserEmailAutocompleter(userEmailText: KnockoutObservable<string>) {
+        return ko.pureComputed(() => {
+            const key = userEmailText();
+            const availableUserEmails = this.model.domain().availableEmails();
+
+            if (key) {
+                return availableUserEmails.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return availableUserEmails;
+            }
+        });
     }
 }
 

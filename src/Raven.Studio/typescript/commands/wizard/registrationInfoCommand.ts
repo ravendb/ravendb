@@ -23,6 +23,8 @@ class registrationInfoCommand extends commandBase {
             });
         
         return task;
+        
+        
     }
     
     private static tryExtractError(payload: string) {

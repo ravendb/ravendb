@@ -98,6 +98,7 @@ class serverSetup {
             License: this.license().toDto(),
             Email: this.domain().userEmail(),
             Domain: this.domain().domain(),
+            RootDomain: this.domain().rootDomain(),
             ModifyLocalServer: true,
             RegisterClientCert: this.registerClientCertificate(), 
             NodeSetupInfos: nodesInfo,

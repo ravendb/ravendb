@@ -3,6 +3,7 @@ import router = require("plugins/router");
 import nodeInfo = require("models/wizard/nodeInfo");
 import serverSetup = require("models/wizard/serverSetup");
 import popoverUtils = require("common/popoverUtils");
+import ipEntry = require("models/wizard/ipEntry");
 
 class nodes extends setupStep {
 
@@ -27,7 +28,7 @@ class nodes extends setupStep {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("removeNode", "editNode");
+        this.bindToCurrentInstance("removeNode", "editNode", "addIpAddressFromNode", "removeIpFromNode");
 
         this.confirmation.extend({
             validation: [
@@ -224,6 +225,16 @@ class nodes extends setupStep {
                 content: ipAddressInfo + "<strong>Note:</strong> If Hostname is used then an external ip must also be provided.",
                 placement: "top"
             });
+    }
+
+    addIpAddressFromNode(node: nodeInfo) {
+        node.addIpAddress();
+        this.initTooltips();
+    }
+
+    removeIpFromNode(node: nodeInfo, ipEntry: ipEntry) {
+        node.removeIp(ipEntry);
+        this.initTooltips();
     }
 }
 

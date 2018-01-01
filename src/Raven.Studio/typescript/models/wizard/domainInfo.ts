@@ -1,15 +1,17 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
-
 import generalUtils = require("common/generalUtils");
 import checkDomainAvailabilityCommand = require("commands/wizard/checkDomainAvailabilityCommand");
 
 class domainInfo {
     private licenseProvider: () => Raven.Server.Commercial.License;
     
-    domain = ko.observable<string>();
-    userEmail = ko.observable<string>();
+    domain = ko.observable<string>();     // i.e. "a chosen name" - Create new -or- Select from list
+    rootDomain = ko.observable<string>(); // i.e. ".dbs.local.ravendb.net" - Select from dropdown only    
+    userEmail = ko.observable<string>();  // Select from dropdown only
     
     availableDomains = ko.observableArray<string>([]);
+    availableRootDomains = ko.observableArray<string>([]);
+    availableEmails = ko.observableArray<string>([]);
     
     fullDomain: KnockoutComputed<string>;
     validationGroup: KnockoutValidationGroup;
@@ -20,7 +22,7 @@ class domainInfo {
         this.initValidation();
         this.licenseProvider = licenseProvider;
         
-        this.fullDomain = ko.pureComputed(() => this.domain() + ".dbs.local.ravendb.net");
+        this.fullDomain = ko.pureComputed(() => this.domain() + '.' + this.rootDomain());
     }
     
     private initValidation() {
@@ -42,6 +44,10 @@ class domainInfo {
                 validator: generalUtils.debounceAndFunnel(checkDomain)
             }
         });
+
+        this.rootDomain.extend({
+            required: true            
+        });
         
         this.userEmail.extend({
             required: true,
@@ -50,6 +56,7 @@ class domainInfo {
         
         this.validationGroup = ko.validatedObservable({
             domain: this.domain,
+            rootDomain: this.rootDomain, 
             userEmail: this.userEmail
         });
     }

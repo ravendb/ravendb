@@ -159,11 +159,17 @@ namespace Raven.Server.Commercial
         public string SubDomain { get; set; }
         public List<string> Ips { get; set; }
 
+        public SubDomainAndIps()
+        {
+            Ips = new List<string>();
+        }
+        
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [SubDomain] = Ips.ToArray()
+                [nameof(SubDomain)] = SubDomain,
+                [nameof(Ips)] = new DynamicJsonArray(Ips)
             };
         }
     }
