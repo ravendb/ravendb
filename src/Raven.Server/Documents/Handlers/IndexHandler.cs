@@ -338,14 +338,19 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            var index = Database.IndexStore.ResetIndex(name);
+            IndexDefinition indexDefinition;
+            lock (Database)
+            {
+                var index = Database.IndexStore.ResetIndex(name);
+                indexDefinition = index.GetIndexDefinition();
+            }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Index");
-                writer.WriteIndexDefinition(context, index.GetIndexDefinition());
+                writer.WriteIndexDefinition(context, indexDefinition);
                 writer.WriteEndObject();
             }
 
