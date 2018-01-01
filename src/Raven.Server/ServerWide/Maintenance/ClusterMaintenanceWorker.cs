@@ -92,17 +92,37 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (_token.IsCancellationRequested)
                     yield break;
 
-                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
-                {
-                    continue; // Database does not exists in this server
-                }
-
                 var report = new DatabaseStatusReport
                 {
                     Name = dbName,
                     NodeName = _server.NodeTag
                 };
+                
+                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
+                {
 
+                    var recorod = _server.Cluster.ReadDatabase(ctx, dbName);
+                    if (recorod == null || recorod.Topology.RelevantFor(_server.NodeTag) == false)
+                    {
+                        continue; // Database does not exists in this server
+                    }
+                    report.Status = DatabaseStatus.Unloaded;
+                    yield return (dbName, report);
+                    continue;
+                }
+
+                if (dbTask.IsFaulted)
+                {
+                    var extractSingleInnerException = dbTask.Exception.ExtractSingleInnerException();
+                    if (Equals(extractSingleInnerException.Data[DatabasesLandlord.DoNotRemove], true))
+                    {
+                        report.Status = DatabaseStatus.Unloaded;
+                        yield return (dbName, report);
+                        continue;
+                    }
+                }
+                
+                
                 if (dbTask.IsCanceled || dbTask.IsFaulted)
                 {
                     report.Status = DatabaseStatus.Faulted;

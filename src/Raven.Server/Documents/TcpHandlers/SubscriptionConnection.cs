@@ -65,9 +65,10 @@ namespace Raven.Server.Documents.TcpHandlers
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
-        public SubscriptionConnection(TcpConnectionOptions connectionOptions)
+        public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable)
         {
             TcpConnection = connectionOptions;
+            _tcpConnectionDisposable = tcpConnectionDisposable;
             ClientUri = connectionOptions.TcpClient.Client.RemoteEndPoint.ToString();
             _logger = LoggingSource.Instance.GetLogger<SubscriptionConnection>(connectionOptions.DocumentDatabase.Name);
             CancellationTokenSource =
@@ -204,8 +205,8 @@ namespace Raven.Server.Documents.TcpHandlers
             Task.Run(async () =>
             {
                 using (tcpConnectionOptions)
-                using (var connection = new SubscriptionConnection(tcpConnectionOptions))
-                using (tcpConnectionOptions.ConnectionProcessingInProgress("Subscription"))
+                using (var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription"))
+                using (var connection = new SubscriptionConnection(tcpConnectionOptions, tcpConnectionDisposable))
                 {
                     try
                     {
@@ -432,6 +433,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private long _startEtag;
         private SubscriptionPatchDocument _filterAndProjectionScript;
         private SubscriptionDocumentsFetcher _documentsFetcher;
+        private readonly IDisposable _tcpConnectionDisposable;
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -779,6 +781,16 @@ namespace Raven.Server.Documents.TcpHandlers
             if (_isDisposed)
                 return;
             _isDisposed = true;
+
+            try
+            {
+                _tcpConnectionDisposable?.Dispose();
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+            
             Stats.Dispose();
             try
             {
