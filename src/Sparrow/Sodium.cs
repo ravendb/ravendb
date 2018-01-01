@@ -3691,10 +3691,10 @@ namespace Sparrow
 				public extern static UIntPtr crypto_generichash_statebytes();
 
 
-			}
+		    }
 
 			#endregion
-			#endregion
 		}
+		#endregion
 	}
 }

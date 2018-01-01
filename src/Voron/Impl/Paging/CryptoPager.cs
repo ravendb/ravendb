@@ -172,8 +172,9 @@ namespace Voron.Impl.Paging
                 buffer.Hash = _encryptionBuffersPool.Get(EncryptionBuffer.HashSizeInt, out var thread);
                 buffer.AllocatingThread = thread;
 
-                if (Sodium.crypto_generichash(buffer.Hash, EncryptionBuffer.HashSize, buffer.Pointer, (ulong)buffer.Size, null, UIntPtr.Zero) != 0)
-                    ThrowInvalidHash();
+                // here we _intentionally_ copy the old hash from the large page, so when we commit
+                // the tx, the pager will realize that we need to write this page
+                Memory.Copy(buffer.Hash, encBuffer.Hash, EncryptionBuffer.HashSizeInt);
 
                 state.LoadedBuffers[pageNumber + i] = buffer;
             }
@@ -181,8 +182,9 @@ namespace Voron.Impl.Paging
             encBuffer.OriginalSize = encBuffer.Size;
             encBuffer.Size = Constants.Storage.PageSize;
 
-            if (Sodium.crypto_generichash(encBuffer.Hash, EncryptionBuffer.HashSize, encBuffer.Pointer, (ulong)encBuffer.Size, null, UIntPtr.Zero) != 0)
-                ThrowInvalidHash();
+            // here we _intentionally_ don't modify the hash of the page, even though its size was 
+            // changed, because we need the pager to recognize that it was modified on tx commit
+            // encBuffer.Hash = remains the same
         }
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int size)
