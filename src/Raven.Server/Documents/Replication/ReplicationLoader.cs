@@ -663,11 +663,7 @@ namespace Raven.Server.Documents.Replication
 
         public DatabaseRecord LoadDatabaseRecord()
         {
-            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return _server.Cluster.ReadDatabase(context, Database.Name);
-            }
+            return _server.LoadDatabaseRecord(Database.Name, out _);
         }
 
         private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
