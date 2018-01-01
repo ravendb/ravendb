@@ -55,17 +55,6 @@ namespace Raven.Server.Documents.Indexes
             return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
         }
 
-        public IndexDefinition ConvertToIndexDefinition(Index index)
-        {
-            var indexDefinition = GetOrCreateIndexDefinitionInternal() ?? new IndexDefinition();
-            indexDefinition.Name = index.Name;
-            indexDefinition.Type = index.Type;
-            indexDefinition.LockMode = LockMode;
-            indexDefinition.Priority = Priority;
-
-            return indexDefinition;
-        }
-
         public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();

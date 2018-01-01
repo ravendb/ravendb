@@ -230,7 +230,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
-                    var fakeIndex = new FaultyInMemoryIndex(exception, indexName, configuration);
+                    var fakeIndex = new FaultyInMemoryIndex(exception, indexName, configuration, definition);
                     _indexes.Add(fakeIndex);
                 }
             }
@@ -817,7 +817,7 @@ namespace Raven.Server.Documents.Indexes
                     index = AutoMapReduceIndex.CreateNew((AutoMapReduceIndexDefinition)definitionBase, _documentDatabase);
                 else
                 {
-                    var staticIndexDefinition = index.Definition.ConvertToIndexDefinition(index);
+                    var staticIndexDefinition = index.Definition.GetOrCreateIndexDefinitionInternal();
                     switch (staticIndexDefinition.Type)
                     {
                         case IndexType.Map:
@@ -903,7 +903,7 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
-                    OpenIndex(path, indexPath, exceptions, name);
+                    OpenIndex(path, indexPath, exceptions, name, definition);
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -917,14 +917,14 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
-                    OpenIndex(path, indexPath, exceptions, name);
+                    OpenIndex(path, indexPath, exceptions, name, null/*auto index cannot be faulty*/);
             }
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);
         }
 
-        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name)
+        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition definition)
         {
             Index index = null;
 
@@ -953,7 +953,7 @@ namespace Raven.Server.Documents.Indexes
                     return;
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = new FaultyInMemoryIndex(e, name, configuration);
+                var fakeIndex = new FaultyInMemoryIndex(e, name, configuration, definition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
 
@@ -1112,10 +1112,14 @@ namespace Raven.Server.Documents.Indexes
                         var oldIndexDefinition = oldIndex.GetIndexDefinition();
                         var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
 
-                        if (newIndex.Definition.LockMode == IndexLockMode.Unlock && newIndexDefinition.LockMode.HasValue == false && oldIndexDefinition.LockMode.HasValue)
+                        if (newIndex.Definition.LockMode == IndexLockMode.Unlock && 
+                            newIndexDefinition.LockMode.HasValue == false && 
+                            oldIndexDefinition.LockMode.HasValue)
                             newIndex.SetLock(oldIndexDefinition.LockMode.Value);
 
-                        if (newIndex.Definition.Priority == IndexPriority.Normal && newIndexDefinition.Priority.HasValue == false && oldIndexDefinition.Priority.HasValue)
+                        if (newIndex.Definition.Priority == IndexPriority.Normal && 
+                            newIndexDefinition.Priority.HasValue == false && 
+                            oldIndexDefinition.Priority.HasValue)
                             newIndex.SetPriority(oldIndexDefinition.Priority.Value);
                     }
                 }

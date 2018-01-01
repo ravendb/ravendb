@@ -23,9 +23,9 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly Exception _e;
 
-        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration)
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinition definition)
             : base(IndexType.Faulty, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" },
-                   IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0]))
+                   IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
         {
             _e = e;
             State = IndexState.Error;

@@ -21,9 +21,15 @@ namespace Raven.Server.Documents.Indexes.Auto
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name}>"))}]";
+            var indexDefinition = new IndexDefinition
+            {
+                Name = Name,
+                Type = IndexType.AutoMap,
+                LockMode = LockMode,
+                Priority = Priority,
+            };
 
-            var indexDefinition = new IndexDefinition();
+            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name}>"))}]";
             indexDefinition.Maps.Add(map);
 
             foreach (var kvp in IndexFields)

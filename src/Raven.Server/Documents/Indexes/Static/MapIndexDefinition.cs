@@ -82,7 +82,12 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            return IndexDefinition.Clone();
+            var definition = IndexDefinition.Clone();
+            definition.Name = Name;
+            definition.Type = IndexType.Map;
+            definition.LockMode = LockMode;
+            definition.Priority = Priority;
+            return definition;
         }
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
