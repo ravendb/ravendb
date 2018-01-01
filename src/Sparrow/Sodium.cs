@@ -201,54 +201,6 @@ namespace Sparrow
 			 }
 		}
 
-		public static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
-		{
-			 if(PlatformDetails.RunningOnPosix)
-			 {
-				return Posix.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-			 }
-             else
-			 {
-			 	return Windows.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-			 }
-		}
-
-		public static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
-		{
-			 if(PlatformDetails.RunningOnPosix)
-			 {
-				return Posix.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-			 }
-             else
-			 {
-			 	return Windows.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-			 }
-		}
-
-		public static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
-		{
-			 if(PlatformDetails.RunningOnPosix)
-			 {
-				return Posix.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-			 }
-             else
-			 {
-			 	return Windows.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-			 }
-		}
-
-		public static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
-		{
-			 if(PlatformDetails.RunningOnPosix)
-			 {
-				return Posix.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-			 }
-             else
-			 {
-			 	return Windows.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-			 }
-		}
-
 		public static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
 		{
 			 if(PlatformDetails.RunningOnPosix)
@@ -510,18 +462,6 @@ namespace Sparrow
              else
 			 {
 			 	return Windows.crypto_box_noncebytes();
-			 }
-		}
-
-		public static UIntPtr crypto_aead_chacha20poly1305_ABYTES()
-		{
-			 if(PlatformDetails.RunningOnPosix)
-			 {
-				return Posix.crypto_aead_chacha20poly1305_ABYTES();
-			 }
-             else
-			 {
-			 	return Windows.crypto_aead_chacha20poly1305_ABYTES();
 			 }
 		}
 
@@ -1147,110 +1087,6 @@ namespace Sparrow
 				 }
 			}
 
-			public static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					if(_isArm)
-					{
-						return Arm.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-					}
-					else
-					{
-						return X86.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-					}
-				 }
-				 else
-				 {
-			 		if(_isMac64)
-					{
-						return MacOsxX64.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-					}
-					else
-					{
-						return X64.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-					}
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					if(_isArm)
-					{
-						return Arm.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-					}
-					else
-					{
-						return X86.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-					}
-				 }
-				 else
-				 {
-			 		if(_isMac64)
-					{
-						return MacOsxX64.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-					}
-					else
-					{
-						return X64.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-					}
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					if(_isArm)
-					{
-						return Arm.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-					}
-					else
-					{
-						return X86.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-					}
-				 }
-				 else
-				 {
-			 		if(_isMac64)
-					{
-						return MacOsxX64.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-					}
-					else
-					{
-						return X64.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-					}
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					if(_isArm)
-					{
-						return Arm.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-					}
-					else
-					{
-						return X86.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-					}
-				 }
-				 else
-				 {
-			 		if(_isMac64)
-					{
-						return MacOsxX64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-					}
-					else
-					{
-						return X64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-					}
-				 }
-			}
-
 			public static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
 			{
 				 if(_is32bits)
@@ -1823,32 +1659,6 @@ namespace Sparrow
 				 }
 			}
 
-			public static UIntPtr crypto_aead_chacha20poly1305_ABYTES()
-			{
-				 if(_is32bits)
-				 {
-					if(_isArm)
-					{
-						return Arm.crypto_aead_chacha20poly1305_ABYTES();
-					}
-					else
-					{
-						return X86.crypto_aead_chacha20poly1305_ABYTES();
-					}
-				 }
-				 else
-				 {
-			 		if(_isMac64)
-					{
-						return MacOsxX64.crypto_aead_chacha20poly1305_ABYTES();
-					}
-					else
-					{
-						return X64.crypto_aead_chacha20poly1305_ABYTES();
-					}
-				 }
-			}
-
 			public static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
 			{
 				 if(_is32bits)
@@ -2236,18 +2046,6 @@ namespace Sparrow
 				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
 
 				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
 
 				[DllImport(LIB_SODIUM)]
@@ -2312,9 +2110,6 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_box_noncebytes();
-
-				[DllImport(LIB_SODIUM)]
-				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
@@ -2430,18 +2225,6 @@ namespace Sparrow
 				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
 
 				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
 
 				[DllImport(LIB_SODIUM)]
@@ -2506,9 +2289,6 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_box_noncebytes();
-
-				[DllImport(LIB_SODIUM)]
-				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
@@ -2625,18 +2405,6 @@ namespace Sparrow
 				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
 
 				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
 
 				[DllImport(LIB_SODIUM)]
@@ -2701,9 +2469,6 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_box_noncebytes();
-
-				[DllImport(LIB_SODIUM)]
-				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
@@ -2820,18 +2585,6 @@ namespace Sparrow
 				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
 
 				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
 
 				[DllImport(LIB_SODIUM)]
@@ -2896,9 +2649,6 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_box_noncebytes();
-
-				[DllImport(LIB_SODIUM)]
-				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
@@ -3156,54 +2906,6 @@ namespace Sparrow
 				 else
 				 {
 			 		return X64.crypto_stream_xchacha20_xor_ic(c, m, mlen, n, ic, k);
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					return X86.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-				 }
-				 else
-				 {
-			 		return X64.crypto_aead_chacha20poly1305_encrypt_detached(c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k);
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					return X86.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-				 }
-				 else
-				 {
-			 		return X64.crypto_aead_chacha20poly1305_encrypt(c, clen, m, mlen, ad, adlen, nsec, npub, k);
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					return X86.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-				 }
-				 else
-				 {
-			 		return X64.crypto_aead_chacha20poly1305_decrypt_detached(m, nsec, c, clen, mac, ad, adlen, npub, k);
-				 }
-			}
-
-			public static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
-			{
-				 if(_is32bits)
-				 {
-					return X86.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
-				 }
-				 else
-				 {
-			 		return X64.crypto_aead_chacha20poly1305_decrypt(m, mlen, nsec, c, clen, ad, adlen, npub, k);
 				 }
 			}
 
@@ -3471,18 +3173,6 @@ namespace Sparrow
 				 }
 			}
 
-			public static UIntPtr crypto_aead_chacha20poly1305_ABYTES()
-			{
-				 if(_is32bits)
-				 {
-					return X86.crypto_aead_chacha20poly1305_ABYTES();
-				 }
-				 else
-				 {
-			 		return X64.crypto_aead_chacha20poly1305_ABYTES();
-				 }
-			}
-
 			public static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
 			{
 				 if(_is32bits)
@@ -3711,18 +3401,6 @@ namespace Sparrow
 				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
 
 				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
 
 				[DllImport(LIB_SODIUM)]
@@ -3787,9 +3465,6 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_box_noncebytes();
-
-				[DllImport(LIB_SODIUM)]
-				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);
@@ -3914,18 +3589,6 @@ namespace Sparrow
 				public extern static int crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k);
 
 				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
-				public extern static int crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k);
-
-				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k);
 
 				[DllImport(LIB_SODIUM)]
@@ -3990,9 +3653,6 @@ namespace Sparrow
 
 				[DllImport(LIB_SODIUM)]
 				public extern static UIntPtr crypto_box_noncebytes();
-
-				[DllImport(LIB_SODIUM)]
-				public extern static UIntPtr crypto_aead_chacha20poly1305_ABYTES();
 
 				[DllImport(LIB_SODIUM)]
 				public extern static int crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk);

@@ -36,13 +36,13 @@ crypto_kdf_derive_from_key | int | subkey, subkeylen, subkeyid, ctx, key | crypt
 
 crypto_stream_xchacha20_xor_ic | int | c,m,mlen, n, ic, k | crypto_stream_xchacha20_xor_ic(byte* c, byte* m, ulong mlen, byte* n, ulong ic, byte* k)
 
-crypto_aead_chacha20poly1305_encrypt_detached | int | c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k |  crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+# crypto_aead_chacha20poly1305_encrypt_detached | int | c, mac, maclen_p, m, mlen, ad, adlen, nsec, npub, k |  crypto_aead_chacha20poly1305_encrypt_detached(byte* c, byte* mac, ulong* maclen_p, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
 
-crypto_aead_chacha20poly1305_encrypt | int | c, clen, m, mlen, ad, adlen, nsec, npub, k | crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
+# crypto_aead_chacha20poly1305_encrypt | int | c, clen, m, mlen, ad, adlen, nsec, npub, k | crypto_aead_chacha20poly1305_encrypt(byte* c, ulong* clen,  byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
 
-crypto_aead_chacha20poly1305_decrypt_detached | int | m, nsec, c, clen, mac, ad, adlen, npub, k |crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
+# crypto_aead_chacha20poly1305_decrypt_detached | int | m, nsec, c, clen, mac, ad, adlen, npub, k |crypto_aead_chacha20poly1305_decrypt_detached(byte* m, byte* nsec, byte* c, ulong clen, byte* mac, byte* ad, ulong adlen, byte* npub, byte* k)
 
-crypto_aead_chacha20poly1305_decrypt | int | m, mlen, nsec, c, clen, ad, adlen, npub, k  | crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
+# crypto_aead_chacha20poly1305_decrypt | int | m, mlen, nsec, c, clen, ad, adlen, npub, k  | crypto_aead_chacha20poly1305_decrypt(byte* m, ulong* mlen, byte* nsec, byte* c, ulong clen, byte* ad, ulong adlen, byte* npub, byte* k)
 
 crypto_aead_xchacha20poly1305_ietf_encrypt | int | c, clen, m, mlen, ad, adlen, nsec, npub, k | crypto_aead_xchacha20poly1305_ietf_encrypt(byte* c, ulong* clen, byte* m, ulong mlen, byte* ad, ulong adlen, byte* nsec, byte* npub, byte* k)
 
@@ -88,7 +88,7 @@ crypto_box_macbytes | UIntPtr | | crypto_box_macbytes()
 
 crypto_box_noncebytes | UIntPtr | | crypto_box_noncebytes()
 
-crypto_aead_chacha20poly1305_ABYTES | UIntPtr | | crypto_aead_chacha20poly1305_ABYTES()
+# crypto_aead_chacha20poly1305_ABYTES | UIntPtr | | crypto_aead_chacha20poly1305_ABYTES()
 
 crypto_kx_client_session_keys | int | rx, tx, client_pk, client_sk, server_pk | crypto_kx_client_session_keys(byte* rx, byte* tx, byte* client_pk, byte* client_sk, byte* server_pk)
 

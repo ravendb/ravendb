@@ -18,6 +18,7 @@ using Voron;
 using Voron.Data.Tables;
 using Sparrow.Binary;
 using Voron.Data.Fixed;
+using SlowTests.Authentication;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -42,8 +43,7 @@ namespace Tryouts
         }
         static unsafe void Main(string[] args)
         {
-            var cert = new X509Certificate2(@"C:\Users\ayende\Downloads\server.pfx");
-            SecretProtection.ValidateKeyUsages("a", cert);
+            new AuthenticationBasicTests().CanUseEncryption().Wait();
         }
 
         private static void ResetBench()

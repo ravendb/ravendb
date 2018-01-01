@@ -226,7 +226,7 @@ namespace Raven.Server.ServerWide
                     actualKey
                 );
 
-                Debug.Assert(cLen == (ulong)secret.Length + (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
+                Debug.Assert(cLen == (ulong)secret.Length + (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to protect secret, rc={rc}");
@@ -291,7 +291,7 @@ namespace Raven.Server.ServerWide
                     actualKey
                 );
 
-                Debug.Assert(mLen == (ulong)secret.Length - (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
+                Debug.Assert(mLen == (ulong)secret.Length - (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to unprotect secret, rc={rc}");
@@ -472,7 +472,7 @@ namespace Raven.Server.ServerWide
 
             var rawData = ms.ToArray();
 
-            var expectedKeySize = (int)Sodium.crypto_aead_chacha20poly1305_ABYTES();
+            var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
             if (rawData.Length  != expectedKeySize)
             {
                 throw new InvalidOperationException(

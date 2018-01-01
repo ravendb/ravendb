@@ -22,9 +22,7 @@ namespace Raven.Server.ServerWide
         {
             get
             {
-                if (_blockNumber - 1 == _maxBlockWrittenToStream)
-                    return _blockNumber * _internalBuffer.Length + _bufferValidIndex;
-                return _stream.Length;
+                return _maxLength;
             }
         }
 
@@ -39,7 +37,7 @@ namespace Raven.Server.ServerWide
         private int _bufferIndex;    // The position in the block buffer.
         private int _bufferValidIndex;
         private long _blockNumber;
-        private long _maxBlockWrittenToStream = -1;
+        private long _maxLength = -1;
 
         public TempCryptoStream(string file) : this(new FileStream(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
         {
@@ -82,9 +80,10 @@ namespace Raven.Server.ServerWide
 
                     EncryptToStream(pInternalBuffer);
 
-                    if (_blockNumber > _maxBlockWrittenToStream)
+                    var positionOfWrite = _blockNumber * _internalBuffer.Length + _bufferIndex;
+
+                    if (positionOfWrite > _maxLength)
                     {
-                        _maxBlockWrittenToStream = _blockNumber;
                         _blockNumber++;
                     }
                     else
@@ -142,6 +141,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 _stream.Write(_internalBuffer, 0, _bufferValidIndex);
+                _maxLength = Math.Max(_stream.Position - _startPosition, _maxLength);
                 _bufferIndex = 0;
                 _bufferValidIndex = 0;
             }
@@ -169,55 +169,62 @@ namespace Raven.Server.ServerWide
             if (count < 0 || offset + count > buffer.Length)
                 throw new ArgumentOutOfRangeException(nameof(count));
 
-            fixed (byte* pInternalBuffer = _internalBuffer)
-            fixed (byte* pInputBuffer = buffer)
-            fixed (byte* k = _key)
+            if (_bufferIndex >= _bufferValidIndex)
             {
-                if (_bufferIndex >= _bufferValidIndex)
+                if (ReadIntoBuffer() == 0)
+                    return 0;
+            }
+            
+            var toRead = Math.Min(count, _bufferValidIndex - _bufferIndex);
+
+            Buffer.BlockCopy(_internalBuffer, _bufferIndex, buffer, offset, toRead);
+            _bufferIndex += toRead;
+            if (_bufferValidIndex == _internalBuffer.Length && _bufferValidIndex == _bufferIndex + toRead)
+                _blockNumber++;
+
+            return toRead;
+        }
+
+        private int ReadIntoBuffer()
+        {
+            _bufferIndex = 0;
+            var totalRead = 0;
+
+            var positionOfRead = _blockNumber * _internalBuffer.Length + _bufferIndex;
+            while (totalRead < _internalBuffer.Length)
+            {
+                var amountToRead = Math.Min(_internalBuffer.Length - totalRead, (int)(_maxLength - positionOfRead));
+                var currentRead = _stream.Read(_internalBuffer, totalRead, amountToRead);
+                if (currentRead == 0)
                 {
-                    _bufferIndex = 0;
-                    var totalRead = 0;
-
-                    while (totalRead < _internalBuffer.Length)
-                    {
-                        var currentRead = _stream.Read(_internalBuffer, totalRead, _internalBuffer.Length - totalRead);
-                        if (currentRead == 0)
-                        {
-                            if (totalRead == 0)
-                                return 0; // done
-                            break; // still have some stuff in the buffer to return
-                        }
-
-                        totalRead += currentRead;
-                    }
-
-                    _bufferValidIndex = totalRead;
-                    
-                    EnsureDetachedStreamsLength();
-                    
-                    fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
-                    fixed (byte* pNonces = _nonces.GetBuffer())
-                    {
-                        var mac = pAuthTags + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
-                        var nonce = pNonces + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
-
-
-                        var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(pInternalBuffer, null, pInternalBuffer, (ulong)_bufferValidIndex, mac, null, 0, nonce, k);
-                        if (rc != 0)
-                            throw new InvalidOperationException(
-                                $"crypto_stream_xchacha20_xor failed during Read(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, _blockNumber={_blockNumber}");
-                    }
+                    if (totalRead == 0)
+                        return 0; // done
+                    break; // still have some stuff in the buffer to return
                 }
 
-                var toRead = Math.Min(count, _bufferValidIndex - _bufferIndex);
-                Sparrow.Memory.Copy(pInputBuffer + offset, pInternalBuffer + _bufferIndex, toRead);
-                _bufferIndex += toRead;
-
-                if (_bufferValidIndex == _internalBuffer.Length && _bufferValidIndex == _bufferIndex)
-                    _blockNumber++;
-
-                return toRead;
+                totalRead += currentRead;
             }
+
+            _bufferValidIndex = totalRead;
+
+            EnsureDetachedStreamsLength();
+
+            fixed (byte* pInternalBuffer = _internalBuffer)
+            fixed (byte* k = _key)
+            fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
+            fixed (byte* pNonces = _nonces.GetBuffer())
+            {
+                var mac = pAuthTags + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                var nonce = pNonces + _blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+
+
+                var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(pInternalBuffer, null, pInternalBuffer, (ulong)_bufferValidIndex, mac, null, 0, nonce, k);
+                if (rc != 0)
+                    throw new InvalidOperationException(
+                        $"crypto_stream_xchacha20_xor failed during Read(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, _blockNumber={_blockNumber}");
+            }
+
+            return _bufferValidIndex;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -240,39 +247,11 @@ namespace Raven.Server.ServerWide
             }
 
             // Seek to start of requested block and read into the internal buffer
-            _stream.Seek(_startPosition + offset - positionInsideBlock, SeekOrigin.Begin);
+            var pos = _stream.Seek(_startPosition + offset - positionInsideBlock, SeekOrigin.Begin);
 
-            fixed (byte* pInternalBuffer = _internalBuffer)
-            fixed (byte* k = _key)
-            {
-                var count = _internalBuffer.Length;
-                _bufferValidIndex = 0;
-                while (count > 0)
-                {
-                    var read = _stream.Read(_internalBuffer, _bufferValidIndex, count);
-                    if (read == 0)
-                        break;
-                    count -= read;
-                    _bufferValidIndex += read;
-                }
-                EnsureDetachedStreamsLength();
-                    
-                fixed (byte* pAuthTags = _authenticationTags.GetBuffer())
-                fixed (byte* pNonces = _nonces.GetBuffer())
-                {
-                    var mac = pAuthTags + blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
-                    var nonce = pNonces + blockNumber * (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
-
-                    var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt_detached(pInternalBuffer, null, pInternalBuffer, (ulong)_bufferValidIndex, mac, null, 0, nonce, k);
-                    if (rc != 0)
-                        throw new InvalidOperationException(
-                            $"crypto_stream_xchacha20_xor failed during Seek(). rc={rc}, _bufferValidIndex={_bufferValidIndex}, blockNumber={blockNumber}");
-                }
-
-                _blockNumber = blockNumber;
-                _bufferIndex = positionInsideBlock;
-            }
-            return offset;
+            ReadIntoBuffer();
+            
+            return pos;
         }
 
         public override void SetLength(long value)
