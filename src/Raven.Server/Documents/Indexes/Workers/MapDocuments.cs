@@ -95,14 +95,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     var current = docsEnumerator.Current;
 
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info(
-                                            $"Executing map for '{_index.Name}'. Processing document: {current.Id}.");
-
+                                    count++;
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Data.Size);
+                                    if (_logger.IsInfoEnabled && count % 100 > 0)
+                                        _logger.Info($"Executing map for '{_index.Name}'. Proccessed count: {count}.");
 
-                                    count++;
                                     lastEtag = current.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: false);
 
@@ -121,12 +119,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                         collectionStats.RecordMapError();
                                         if (_logger.IsInfoEnabled)
-                                            _logger.Info(
-                                                $"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.",
-                                                e);
+                                            _logger.Info($"Failed to execute mapping function on '{current.Id}' for '{_index.Name}'.", e);
 
-                                        collectionStats.AddMapError(current.Id,
-                                            $"Failed to execute mapping function on {current.Id}. Exception: {e}");
+                                        collectionStats.AddMapError(current.Id, $"Failed to execute mapping function on {current.Id}. " +
+                                                                                $"Exception: {e}");
                                     }
 
                                     if (CanContinueBatch(databaseContext, indexContext, collectionStats, lastEtag, lastCollectionEtag, count) == false)
@@ -144,6 +140,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     if (MaybeRenewTransaction(databaseContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                         break;
                                 }
+
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info($"Done executing map for '{_index.Name}'. Proccessed count: {count}.");
                             }
                         }
                     }
