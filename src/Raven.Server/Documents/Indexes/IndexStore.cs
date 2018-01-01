@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
@@ -40,13 +38,6 @@ namespace Raven.Server.Documents.Indexes
         private readonly ServerStore _serverStore;
 
         private readonly CollectionOfIndexes _indexes = new CollectionOfIndexes();
-
-        /// <summary>
-        /// The current lock, used to make sure indexes have a unique names
-        /// </summary>
-        private readonly object _locker = new object();
-
-        private readonly SemaphoreSlim _indexLocker = new SemaphoreSlim(1, 1);
 
         private bool _initialized;
 
@@ -343,20 +334,11 @@ namespace Raven.Server.Documents.Indexes
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
-            lock (_locker)
-            {
-                if (_initialized)
-                    throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
+            InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
 
-                InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
+            _initialized = true;
 
-                _initialized = true;
-            }
-
-            return Task.Run(() =>
-            {
-                OpenIndexes(record);
-            });
+            return Task.Run(() => { OpenIndexes(record); });
         }
 
         public Index GetIndex(string name)
@@ -378,35 +360,22 @@ namespace Raven.Server.Documents.Indexes
 
             var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
-            await _indexLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
+            if (definition.Type == IndexType.MapReduce)
+                MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
+
+            var command = new PutIndexCommand(definition, _documentDatabase.Name);
 
             try
             {
-                lock (_locker)
-                {
-                    if (definition.Type == IndexType.MapReduce)
-                        MapReduceIndex.ValidateReduceResultsCollectionName(definition, instance, _documentDatabase);
-                }
+                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
-                var command = new PutIndexCommand(definition, _documentDatabase.Name);
-
-                try
-                {
-                    var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-                    await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-                    return GetIndex(definition.Name);
-
-                }
-                catch (TimeoutException toe)
-                {
-                    throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down." +
-                                                     $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
-                }
+                return GetIndex(definition.Name);
             }
-            finally
+            catch (TimeoutException toe)
             {
-                _indexLocker.Release();
+                throw new IndexCreationException($"Failed to create static index: {definition.Name}, the cluster is probably down. " +
+                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
         }
 
@@ -417,8 +386,6 @@ namespace Raven.Server.Documents.Indexes
 
             if (definition is MapIndexDefinition)
                 return await CreateIndex(((MapIndexDefinition)definition).IndexDefinition);
-
-            await _indexLocker.WaitAsync(_documentDatabase.DatabaseShutdown);
 
             try
             {
@@ -436,12 +403,8 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down." + 
-                                                     $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
-            }
-            finally
-            {
-                _indexLocker.Release();
+                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down. " + 
+                                                     $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
         }
 
@@ -581,103 +544,79 @@ namespace Raven.Server.Documents.Indexes
 
         public Index ResetIndex(string name)
         {
-            lock (_locker)
-            {
-                var index = GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
+            var index = GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
 
-                return ResetIndexInternal(index);
-            }
+            return ResetIndexInternal(index);
         }
 
         public async Task<bool> TryDeleteIndexIfExists(string name)
         {
-            await _indexLocker.WaitAsync();
+            var index = GetIndex(name);
+            if (index == null)
+                return false;
 
-            try
-            {
-                var index = GetIndex(name);
-                if (index == null)
-                    return false;
+            var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
+            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
-
-                return true;
-            }
-            finally
-            {
-                _indexLocker.Release();
-            }
+            return true;
         }
 
         public async Task DeleteIndex(string name)
         {
-            await _indexLocker.WaitAsync();
+            var index = GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
 
-            try
-            {
-                var index = GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
+            var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
-                var (newEtag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
-
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
-            }
-            finally
-            {
-                _indexLocker.Release();
-            }
+            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
 
         private void DeleteIndexInternal(Index index)
         {
-            lock (_locker)
+            _indexes.TryRemoveByName(index.Name, index);
+
+            try
             {
-                _indexes.TryRemoveByName(index.Name, index);
-
-                try
-                {
-                    index.Dispose();
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Could not dispose index '{index.Name}'.", e);
-                }
-
-                _documentDatabase.Changes.RaiseNotifications(new IndexChange
-                {
-                    Name = index.Name,
-                    Type = IndexChangeTypes.IndexRemoved
-                });
-
-                if (index.Configuration.RunInMemory)
-                    return;
-
-                var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
-
-                var indexPath = index.Configuration.StoragePath.Combine(name);
-
-                var indexTempPath = index.Configuration.TempPath?.Combine(name);
-
-                try
-                {
-                    IOExtensions.DeleteDirectory(indexPath.FullPath);
-                }
-                catch (Exception e)
-                {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Failed to delete the index {name} directory", e);
-                    throw;
-                }
-
-                if (indexTempPath != null)
-                    IOExtensions.DeleteDirectory(indexTempPath.FullPath);
+                index.Dispose();
             }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Could not dispose index '{index.Name}'.", e);
+            }
+
+            _documentDatabase.Changes.RaiseNotifications(new IndexChange
+            {
+                Name = index.Name,
+                Type = IndexChangeTypes.IndexRemoved
+            });
+
+            if (index.Configuration.RunInMemory)
+                return;
+
+            var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
+
+            var indexPath = index.Configuration.StoragePath.Combine(name);
+
+            var indexTempPath = index.Configuration.TempPath?.Combine(name);
+
+            try
+            {
+                IOExtensions.DeleteDirectory(indexPath.FullPath);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete the index {name} directory", e);
+                throw;
+            }
+
+            if (indexTempPath != null)
+                IOExtensions.DeleteDirectory(indexTempPath.FullPath);
         }
 
         public IndexRunningStatus Status
@@ -837,13 +776,13 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, the cluster is probably down." +
-                                                 $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
+                throw new IndexCreationException($"Failed to reset index: {index.Name}, the cluster is probably down. " +
+                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
             catch (Exception e)
             {
-                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation." +
-                                                 $" Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
+                throw new IndexCreationException($"Failed to reset index: {index.Name}, unexpected error during index creation. " +
+                                                 $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", e);
             }
         }
 
@@ -851,12 +790,9 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
-
-            lock (_locker)
-            {
-                // apply renames
-                OpenIndexesFromRecord(_documentDatabase.Configuration.Indexing.StoragePath, record);
-            }
+            
+            // apply renames
+            OpenIndexesFromRecord(_documentDatabase.Configuration.Indexing.StoragePath, record);
         }
 
         private void OpenIndexesFromRecord(PathSetting path, DatabaseRecord record)
@@ -1093,162 +1029,131 @@ namespace Raven.Server.Documents.Indexes
 
         public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
-            bool lockTaken = false;
-            Monitor.TryEnter(_locker, 16, ref lockTaken);
-            try
-            {
-                if (lockTaken == false)
-                    return false;
-
-                if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
-                    return true;
-
-                if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
-                {
-                    oldIndexName = oldIndex.Name;
-
-                    if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
-                    {
-                        var oldIndexDefinition = oldIndex.GetIndexDefinition();
-                        var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
-
-                        if (newIndex.Definition.LockMode == IndexLockMode.Unlock && 
-                            newIndexDefinition.LockMode.HasValue == false && 
-                            oldIndexDefinition.LockMode.HasValue)
-                            newIndex.SetLock(oldIndexDefinition.LockMode.Value);
-
-                        if (newIndex.Definition.Priority == IndexPriority.Normal && 
-                            newIndexDefinition.Priority.HasValue == false && 
-                            oldIndexDefinition.Priority.HasValue)
-                            newIndex.SetPriority(oldIndexDefinition.Priority.Value);
-                    }
-                }
-
-                _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
-                newIndex.Rename(oldIndexName);
-                newIndex.ResetIsSideBySideAfterReplacement();
-
-                if (oldIndex != null)
-                {
-                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
-                    {
-                        try
-                        {
-                            using (oldIndex.DrainRunningQueries())
-                                DeleteIndexInternal(oldIndex);
-
-                            break;
-                        }
-                        catch (TimeoutException)
-                        {
-                        }
-                    }
-                }
-
-                if (newIndex.Configuration.RunInMemory == false)
-                {
-                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
-                    {
-                        try
-                        {
-                            using (newIndex.DrainRunningQueries())
-                            {
-                                var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
-                                var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
-
-                                newIndex.ShutdownEnvironment();
-                                
-                                IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                    newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
-
-                                newIndex.RestartEnvironment();
-                                
-                                if (newIndex.Configuration.TempPath != null)
-                                {
-                                    IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                                        newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
-                                }
-                            }
-                            break;
-                        }
-                        catch (TimeoutException)
-                        {
-                        }
-                    }
-                }
-
-                _documentDatabase.Changes.RaiseNotifications(
-                    new IndexChange
-                    {
-                        Name = oldIndexName,
-                        Type = IndexChangeTypes.SideBySideReplace
-                    });
-
+            if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
                 return true;
-            }
-            finally
+
+            if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
             {
-                if (lockTaken)
-                    Monitor.Exit(_locker);
+                oldIndexName = oldIndex.Name;
+
+                if (oldIndex.Type.IsStatic() && newIndex.Type.IsStatic())
+                {
+                    var oldIndexDefinition = oldIndex.GetIndexDefinition();
+                    var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
+
+                    if (newIndex.Definition.LockMode == IndexLockMode.Unlock && 
+                        newIndexDefinition.LockMode.HasValue == false && 
+                        oldIndexDefinition.LockMode.HasValue)
+                        newIndex.SetLock(oldIndexDefinition.LockMode.Value);
+
+                    if (newIndex.Definition.Priority == IndexPriority.Normal && 
+                        newIndexDefinition.Priority.HasValue == false && 
+                        oldIndexDefinition.Priority.HasValue)
+                        newIndex.SetPriority(oldIndexDefinition.Priority.Value);
+                }
             }
+
+            _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
+            newIndex.Rename(oldIndexName);
+            newIndex.ResetIsSideBySideAfterReplacement();
+
+            if (oldIndex != null)
+            {
+                while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        using (oldIndex.DrainRunningQueries())
+                            DeleteIndexInternal(oldIndex);
+
+                        break;
+                    }
+                    catch (TimeoutException)
+                    {
+                    }
+                }
+            }
+
+            if (newIndex.Configuration.RunInMemory == false)
+            {
+                while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        using (newIndex.DrainRunningQueries())
+                        {
+                            var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                            var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+
+                            newIndex.ShutdownEnvironment();
+                                
+                            IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                            newIndex.RestartEnvironment();
+                                
+                            if (newIndex.Configuration.TempPath != null)
+                            {
+                                IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                    newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                            }
+                        }
+                        break;
+                    }
+                    catch (TimeoutException)
+                    {
+                    }
+                }
+            }
+
+            _documentDatabase.Changes.RaiseNotifications(
+                new IndexChange
+                {
+                    Name = oldIndexName,
+                    Type = IndexChangeTypes.SideBySideReplace
+                });
+
+            return true;
         }
 
         public async Task SetLock(string name, IndexLockMode mode)
         {
-            await _indexLocker.WaitAsync();
+            var index = GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
 
-            try
+            var faultyInMemoryIndex = index as FaultyInMemoryIndex;
+            if (faultyInMemoryIndex != null)
             {
-                var index = GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                var faultyInMemoryIndex = index as FaultyInMemoryIndex;
-                if (faultyInMemoryIndex != null)
-                {
-                    faultyInMemoryIndex.SetLock(mode); // this will throw proper exception
-                    return;
-                }
-
-                var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
-
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+                faultyInMemoryIndex.SetLock(mode); // this will throw proper exception
+                return;
             }
-            finally
-            {
-                _indexLocker.Release();
-            }
+
+            var command = new SetIndexLockCommand(name, mode, _documentDatabase.Name);
+
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+
+            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
         public async Task SetPriority(string name, IndexPriority priority)
         {
-            await _indexLocker.WaitAsync();
+            var index = GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
 
-            try
+            var faultyInMemoryIndex = index as FaultyInMemoryIndex;
+            if (faultyInMemoryIndex != null)
             {
-                var index = GetIndex(name);
-                if (index == null)
-                    IndexDoesNotExistException.ThrowFor(name);
-
-                var faultyInMemoryIndex = index as FaultyInMemoryIndex;
-                if (faultyInMemoryIndex != null)
-                {
-                    faultyInMemoryIndex.SetPriority(priority); // this will throw proper exception
-                    return;
-                }
-
-                var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name);
-
-                var (etag, _) = await _serverStore.SendToLeaderAsync(command);
-
-                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+                faultyInMemoryIndex.SetPriority(priority); // this will throw proper exception
+                return;
             }
-            finally
-            {
-                _indexLocker.Release();
-            }
+
+            var command = new SetIndexPriorityCommand(name, priority, _documentDatabase.Name);
+
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+
+            await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
         }
 
         public IndexMergeResults ProposeIndexMergeSuggestions()
