@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var dest = GetStringQueryString("url", false) ?? GetStringQueryString("node", false);
             var topology = ServerStore.GetClusterTopology();
-            var tasks = new List<Task<(string url, string res)>>();
+            var tasks = new List<Task<PingResult>>();
             if (string.IsNullOrEmpty(dest))
             {
                 foreach (var node in topology.AllNodes)
@@ -77,33 +77,54 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                write.WriteStartObject();
+                write.WriteStartArray();
                 while (tasks.Count > 0)
                 {
                     var task = await Task.WhenAny(tasks);
                     tasks.Remove(task);
-                    var res = task.Result;
-                    write.WritePropertyName(res.url);
-                    write.WriteString(res.res);
+                    context.Write(write, task.Result.ToJson());
                     if (tasks.Count > 0)
                     {
                         write.WriteComma();
                     }
                     write.Flush();
                 }
-                write.WriteEndObject();
+                write.WriteEndArray();
                 write.Flush();
             }
         }
 
-        private async Task<(string url, string res)> PingOnce(string url)
+        private class PingResult : IDynamicJsonValueConvertible
+        {
+            public string Url;
+            public long TcpInfoTime;
+            public long SendTime;
+            public long RecieveTime;
+            public string Error;
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Url)] = Url,
+                    [nameof(TcpInfoTime)] = TcpInfoTime,
+                    [nameof(SendTime)] = SendTime,
+                    [nameof(RecieveTime)] = RecieveTime,
+                    [nameof(Error)] = Error
+                };
+            }
+        }
+        
+        private async Task<PingResult> PingOnce(string url)
         {
             var sp = Stopwatch.StartNew();
+            var result = new PingResult
+            {
+                Url = url
+            };
             try
             {
-                var sb = new StringBuilder();
                 var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate);
-                sb.Append(sp.ElapsedMilliseconds); // Received tcp info
+                result.TcpInfoTime = sp.ElapsedMilliseconds;
                 using (var tcpClient = await TcpUtils.ConnectAsync(info.Url, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
                 using (var stream = await TcpUtils
                     .WrapStreamWithSslAsync(tcpClient, info, ServerStore.Engine.ClusterCertificate, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
@@ -119,21 +140,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     using (var msgJson = context.ReadObject(msg, "message"))
                     {
-                        sb.Append(", ").Append(sp.ElapsedMilliseconds); // Send ping
+                        result.SendTime = sp.ElapsedMilliseconds;
                         context.Write(writer, msgJson);
                     }
                     using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
                     {
                         var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        sb.Append(", ").Append(sp.ElapsedMilliseconds); // got pong
+                        result.RecieveTime = sp.ElapsedMilliseconds;
                     }
                 }
-                return (url, sb.ToString());
             }
             catch (Exception e)
             {
-                return (url, e.ToString());
+                result.Error = e.ToString();
             }
+            return result;
         }
     }
 }

@@ -411,7 +411,7 @@ namespace Raven.Server.ServerWide
                 EntityToBlittable.ConvertEntityToBlittable(new DatabaseRecord(), DocumentConventions.Default, ctx);
             }
 
-            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, _frequencyToCheckForIdleDatabases);
+            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
             _notificationsStorage.Initialize(_env, ContextPool);
             _operationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
@@ -440,11 +440,6 @@ namespace Raven.Server.ServerWide
             _engine.TopologyChanged += OnTopologyChanged;
             _engine.StateChanged += OnStateChanged;
 
-            if (IsLeader())
-            {
-                _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
-            }
-
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -462,7 +457,7 @@ namespace Raven.Server.ServerWide
 
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
-            var msg = $"State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}";
+            var msg = $"{DateTime.UtcNow}, State changed: {state.From} -> {state.To} in term {state.CurrentTerm}, because {state.Reason}";
             if (Engine.Log.IsInfoEnabled)
             {
                 Engine.Log.Info(msg);
@@ -483,12 +478,6 @@ namespace Raven.Server.ServerWide
                         await RefreshOutgoingTasksAsync();
                     }, null);
                 }
-
-                if (state.To == RachisState.LeaderElect  || state.To == RachisState.Leader)
-                {
-                    _engine.CurrentLeader.OnNodeStatusChange -= OnTopologyChanged;
-                    _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
-                } 
             }
         }
 
@@ -1201,7 +1190,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    _timer.Change(_frequencyToCheckForIdleDatabases, _frequencyToCheckForIdleDatabases);
+                    _timer.Change(_frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
                 }
                 catch (ObjectDisposedException)
                 {

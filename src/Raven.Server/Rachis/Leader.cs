@@ -663,30 +663,6 @@ namespace Raven.Server.Rachis
             ErrorsList.Reduce(25);
         }
 
-        public void NotifyAboutNodeStatusChange()
-        {
-            ClusterTopology clusterTopology;
-            try
-            {
-                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    clusterTopology = _engine.GetTopology(context);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                return;
-            }
-            catch (ObjectDisposedException)
-            {
-                return;
-            }
-            OnNodeStatusChange?.Invoke(this, clusterTopology);
-        }
-
-        public event EventHandler<ClusterTopology> OnNodeStatusChange;
-
         public void Dispose()
         {
             bool lockTaken = false;
@@ -853,7 +829,7 @@ namespace Raven.Server.Rachis
 
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
-
+ 
                 if (modification == TopologyModification.Remove)
                 {
                     _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context,nodeTag);
