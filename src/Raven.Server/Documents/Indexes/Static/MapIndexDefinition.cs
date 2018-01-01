@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
-            writer.WritePropertyName((nameof(MapFields)));
+            writer.WritePropertyName(nameof(MapFields));
             writer.WriteStartArray();
             var first = true;
             foreach (var field in MapFields.Values.Select(x => x.As<IndexField>()))
@@ -66,8 +66,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 writer.WriteStartObject();
 
-                writer.WritePropertyName((nameof(field.Name)));
-                writer.WriteString((field.Name));
+                writer.WritePropertyName(nameof(field.Name));
+                writer.WriteString(field.Name);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(field.Indexing));
