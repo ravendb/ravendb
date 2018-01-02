@@ -79,7 +79,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo("Starting validation.");
                 onProgress(progress);
 
-                ValidateSetupInfo(SetupMode.Secured, setupInfo, serverStore);
+                await ValidateSetupInfo(SetupMode.Secured, setupInfo, serverStore);
 
                 try
                 {
@@ -206,7 +206,7 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
                 try
                 {
-                    ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
+                    await ValidateSetupInfo(SetupMode.LetsEncrypt, setupInfo, serverStore);
                 }
                 catch (Exception e)
                 {
@@ -806,12 +806,12 @@ namespace Raven.Server.Commercial
 
             // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to 
             foreach (var hostnameOrIp in localNode.Addresses)
-            foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
-                localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+                foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
 
             var requestedEndpoints = localIps.ToArray();
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
-            
+
             var ipProperties = IPGlobalProperties.GetIPGlobalProperties();
             var activeTcpListeners = ipProperties.GetActiveTcpListeners();
 
@@ -872,7 +872,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static void ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
+        public static async Task ValidateSetupInfo(SetupMode setupMode, SetupInfo setupInfo, ServerStore serverStore)
         {
             if (SetupParameters.Get(serverStore).IsDocker)
             {
@@ -904,7 +904,7 @@ namespace Raven.Server.Commercial
                     setupInfo.NodeSetupInfos[node.Key].Port = 443;
             }
 
-            AssertLocalNodeCanListenToEndpoints(setupInfo, serverStore);
+            await AssertLocalNodeCanListenToEndpoints(setupInfo, serverStore);
         }
 
         public static bool IsValidEmail(string email)

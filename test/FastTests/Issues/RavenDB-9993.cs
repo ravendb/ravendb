@@ -4,25 +4,27 @@ using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_9993: RavenTestBase
-    {        
+    public class RavenDB_9993 : RavenTestBase
+    {
         private class Purchase
         {
+#pragma warning disable 649,169
             public int? Quantity;
             public int QuantityInvoiced;
+#pragma warning restore 649,169
         }
-                        
+
         [Fact]
         public void CanHaveArrayInMetadata()
-        {             
+        {
             using (var store = GetDocumentStore())
-            {             
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Purchase(), "purchases/181972");
                     session.SaveChanges();
                 }
-                
+
                 store.Operations.Send(new PatchOperation("purchases/181972", null, new PatchRequest
                 {
                     Script = @"this[""@metadata""][""Object-Relations""] = [""ArticleSorts/108361/-/S20-070"",
@@ -37,11 +39,11 @@ namespace FastTests.Issues
                         ""locations/1"",
                         ""Currencies/Base/2""]"
                 }));
-                
+
                 using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<Purchase>("purchases/181972");
-                    session.SaveChanges();                    
+                    session.SaveChanges();
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
                     Assert.True(metadata.TryGetValue("Object-Relations", out object arr));
@@ -60,28 +62,28 @@ namespace FastTests.Issues
                         "locations/1",
                         "Currencies/Base/2"
                     };
-                    
+
                     Assert.Equal(expected, arr);
 
-                }                              
+                }
             }
         }
-                        
+
         [Fact]
         public void CanAddArrayToMetadataViaClient()
-        {             
+        {
             using (var store = GetDocumentStore())
-            {             
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Purchase(), "purchases/181972");
                     session.SaveChanges();
                 }
-                                
+
                 using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<Purchase>("purchases/181972");
-                    session.SaveChanges();                   
+                    session.SaveChanges();
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
                     var obj = new[]
@@ -100,19 +102,19 @@ namespace FastTests.Issues
                     };
 
                     metadata.TryAdd("Object-Relations", obj);
-                    
+
                     session.SaveChanges();
-                    
+
                     Assert.True(metadata.TryGetValue("Object-Relations", out object arr));
-                                        
+
                     Assert.Equal(obj, arr);
-                    
+
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var loaded = session.Load<Purchase>("purchases/181972");
-                    session.SaveChanges();                   
+                    session.SaveChanges();
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
                     var obj = new List<string>
@@ -130,14 +132,14 @@ namespace FastTests.Issues
                         "Currencies/Base/2"
                     };
                     metadata.TryAdd("Object-Relations2", obj);
-                    
+
                     session.SaveChanges();
-                    
+
                     Assert.True(metadata.TryGetValue("Object-Relations2", out object arr));
-                                        
+
                     Assert.Equal(obj, arr);
-                }          
-                
+                }
+
             }
         }
     }
