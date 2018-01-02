@@ -44,7 +44,7 @@ namespace Tryouts
         }
         static unsafe void Main(string[] args)
         {
-            new EncryptionTests().WriteSeekAndReadInTempCryptoStream(seed: 734782540);
+            new AuthenticationBasicTests().CanUseEncryption().Wait();
         }
 
         private static void ResetBench()

@@ -59,7 +59,7 @@ namespace Raven.Server.ServerWide
                 dirpath = Path.GetFullPath(dirpath);
                 var filepath = Path.Combine(dirpath, "secret.key");
                 debug = filepath;
-                var buffer = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+                var buffer = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];
                 fixed (byte* pBuf = buffer)
                 {
                     if (Directory.Exists(dirpath) == false)
@@ -225,11 +225,9 @@ namespace Raven.Server.ServerWide
                     pEntropy,
                     actualKey
                 );
-
-                Debug.Assert(cLen == (ulong)secret.Length + (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
-
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to protect secret, rc={rc}");
+                Debug.Assert(cLen == (ulong)secret.Length + (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
             }
 
             return protectedData;
@@ -291,10 +289,10 @@ namespace Raven.Server.ServerWide
                     actualKey
                 );
 
-                Debug.Assert(mLen == (ulong)secret.Length - (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
-
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to unprotect secret, rc={rc}");
+
+                Debug.Assert(mLen == (ulong)secret.Length - (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
             }
 
             return unprotectedData;
@@ -472,7 +470,7 @@ namespace Raven.Server.ServerWide
 
             var rawData = ms.ToArray();
 
-            var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+            var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
             if (rawData.Length  != expectedKeySize)
             {
                 throw new InvalidOperationException(
@@ -532,7 +530,17 @@ namespace Raven.Server.ServerWide
             try
             {
                 var key = File.ReadAllBytes(_config.MasterKeyPath);
-                var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+
+                // we require that the key will exists (so admin will generate proper permissions)
+                // but if the size is zero, we'll generate a radnom key and save it to the specified
+                // file
+
+                if(key.Length == 0)
+                {
+                    key = Sodium.GenerateRandomBuffer(expectedKeySize);
+                    File.WriteAllBytes(_config.MasterKeyPath, key);
+                }
 
                 if (key.Length  != expectedKeySize )
                 {

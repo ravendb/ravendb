@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -73,6 +74,17 @@ namespace SlowTests.Authentication
                 rand.GetBytes(buffer);
             }
             var base64Key = Convert.ToBase64String(buffer);
+
+            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+            try
+            {
+                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // so we fall back to a file
+                Server.ServerStore.Configuration.Security.MasterKeyPath = Path.GetTempFileName();
+            }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
 
