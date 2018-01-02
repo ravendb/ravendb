@@ -117,8 +117,6 @@ namespace Raven.Server.Utils
             int yearsUntilExpiration,
             out byte[] certBytes)
         {
-            const int keyStrength = 4096;
-
             // Generating Random Numbers
             var random = GetSeededSecureRandom();
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", key.PrivateKey, random);
@@ -161,11 +159,8 @@ namespace Raven.Server.Utils
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
 
-            // Subject Public Key
-            var keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
-            var keyPairGenerator = new RsaKeyPairGenerator();
-            keyPairGenerator.Init(keyGenerationParameters);
-            var subjectKeyPair = keyPairGenerator.GenerateKeyPair();
+
+            var subjectKeyPair = GetRsaKey();
 
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
@@ -191,15 +186,13 @@ namespace Raven.Server.Utils
             out (AsymmetricKeyParameter PrivateKey, AsymmetricKeyParameter PublicKey) ca,
             out X509Name name)
         {
-            const int keyStrength = 2048;
-
             var random = GetSeededSecureRandom();
 
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
 
             // Serial Number
-            BigInteger serialNumber = BigIntegers.CreateRandomInRange(BigInteger.One, BigInteger.ValueOf(Int64.MaxValue), random);
+            BigInteger serialNumber = new BigInteger(20, random);
             certificateGenerator.SetSerialNumber(serialNumber);
 
             // Issuer and Subject Name
@@ -215,11 +208,10 @@ namespace Raven.Server.Utils
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
 
-            // Subject Public Key
-            var keyGenerationParameters = new KeyGenerationParameters(random, keyStrength);
-            var keyPairGenerator = new RsaKeyPairGenerator();
-            keyPairGenerator.Init(keyGenerationParameters);
-            var subjectKeyPair = keyPairGenerator.GenerateKeyPair();
+            var subjectKeyPair = new AsymmetricCipherKeyPair(
+                PublicKeyFactory.CreateKey(caKeyPair.Value.Public),
+                PrivateKeyFactory.CreateKey(caKeyPair.Value.Private)
+                );
 
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
@@ -232,6 +224,29 @@ namespace Raven.Server.Utils
 
             ca = (issuerKeyPair.Private, issuerKeyPair.Public);
             name = certificate.SubjectDN;
+        }
+
+        // generating this can take a while, so we cache that at the process level, to significantly speed up the tests
+        private static Lazy<(byte[] Private, byte[] Public)> 
+            caKeyPair = new Lazy<(byte[] Private, byte[] Public)>(GenerateKey);
+
+        private static (byte[] Private, byte[] Public) GenerateKey()
+        {
+            AsymmetricCipherKeyPair kp = GetRsaKey();
+
+            var privateKeyInfo = PrivateKeyInfoFactory.CreatePrivateKeyInfo(kp.Private);
+            var publicKeyInfo = SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(kp.Public);
+
+            return (privateKeyInfo.ToAsn1Object().GetDerEncoded(), publicKeyInfo.ToAsn1Object().GetDerEncoded());
+        }
+
+        private static AsymmetricCipherKeyPair GetRsaKey()
+        {
+            var keyGenerationParameters = new KeyGenerationParameters(GetSeededSecureRandom(), 4096);
+            var keyPairGenerator = new RsaKeyPairGenerator();
+            keyPairGenerator.Init(keyGenerationParameters);
+            var kp = keyPairGenerator.GenerateKeyPair();
+            return kp;
         }
 
         public static SecureRandom GetSeededSecureRandom()
