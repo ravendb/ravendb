@@ -76,28 +76,28 @@
                         <div class="form-group flex-horizontal flex-stretch-items">
                             <div>
                                 <div class="toggle">
-                                    <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
-                                    <label for="toggle1">Include Documents</label>
+                                    <input id="migrate_documents" type="checkbox" data-bind="checked: includeDocuments">
+                                    <label for="migrate_documents">Include Documents</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: isLegacy">
-                                    <input id="toggle7" type="checkbox" data-bind="checked: includeLegacyAttachments">
-                                    <label for="toggle7">Include Attachments</label>
+                                    <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
+                                    <label for="migrate_legacy_attachments">Include Attachments</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts">
-                                    <label for="toggleConflicts">Include Conflicts</label>
+                                    <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
+                                    <label for="migrate_conflicts">Include Conflicts</label>
                                 </div>
                                 <div class="toggle" data-toggle="tooltip" data-placement="top" data-bind="visible: !isLegacy(), attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
-                                    <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: $root.activeDatabase() && !$root.activeDatabase().hasRevisionsConfiguration()" />
-                                    <label for="toggle6">Include Document Revisions</label>
+                                    <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: $root.activeDatabase() && !$root.activeDatabase().hasRevisionsConfiguration()" />
+                                    <label for="migrate_revisions">Include Document Revisions</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="toggle3" type="checkbox" data-bind="checked: includeIdentities">
-                                    <label for="toggle3">Include Identities</label>
+                                    <input id="migrate_identities" type="checkbox" data-bind="checked: includeIdentities">
+                                    <label for="migrate_identities">Include Identities</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
-                                    <input id="toggle4" type="checkbox" data-bind="checked: includeCompareExchange">
-                                    <label for="toggle4">Include Compare Exchange</label>
+                                    <input id="migrate_cmp_xch" type="checkbox" data-bind="checked: includeCompareExchange">
+                                    <label for="migrate_cmp_xch">Include Compare Exchange</label>
                                 </div>
 
                                 <div data-bind="validationElement: importDefinitionHasIncludes">
@@ -106,12 +106,12 @@
                             </div>
                             <div>
                                 <div class="toggle">
-                                    <input id="toggle2" type="checkbox" data-bind="checked: includeIndexes">
-                                    <label for="toggle2">Include Indexes</label>
+                                    <input id="migrate_indexes" type="checkbox" data-bind="checked: includeIndexes">
+                                    <label for="migrate_indexes">Include Indexes</label>
                                 </div>
                                 <div class="toggle">
-                                    <input id="toggle5" type="checkbox" data-bind="checked: removeAnalyzers">
-                                    <label for="toggle5">Remove Analyzers</label>
+                                    <input id="migrate_remove_analyzers" type="checkbox" data-bind="checked: removeAnalyzers">
+                                    <label for="migrate_remove_analyzers">Remove Analyzers</label>
                                 </div>
                             </div>
                         </div>
