@@ -50,7 +50,7 @@ namespace Raven.Server.Documents
             var result = IoMetricsHandler.GetIoMetricsResponse(_documentDatabase);
 
             _basePath = result.Environments[0].Path;
-            result.Environments[0].Path += "\\Documents";
+            result.Environments[0].Path = Path.Combine(_basePath, "Documents");
 
             foreach (var environment in result.Environments)
             {
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents
 
                 if (currentEnvironment.Path == _basePath)
                 {
-                    currentEnvironment.Path += "\\Documents";
+                    currentEnvironment.Path = Path.Combine(_basePath, "Documents");
                 }
 
                 // 5. Prepare response, add recent items.  Note: History items are not added since studio does not display them anyway
