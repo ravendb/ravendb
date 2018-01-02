@@ -2838,7 +2838,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                                  "MinWithSelector : u.Details.map(function(d){return d.Number;}).reduce(function(a, b) { return Math.min(a, b);}), " +
                                  "Reverse : u.Roles.slice().reverse(), " +
                                  "IndexOf : u.Roles.indexOf(\"3\"), " +
-                                 "Concat : u.Roles.concat([\"a\", \"b\", \"c\"]), " +
+                                 "Concat : u.Roles.concat($p0), " +
                                  "Distinct : u.Roles.filter((value, index) => u.Roles.indexOf(value) == index), " +
                                  "ElementAt : u.Details.map(function(x){return x.Number;})[2] }"
                                 , query.ToString());
@@ -3553,7 +3553,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
 
                         Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return ([\"id2\"]).length===0||[\"id2\"].indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(function(x){return $p2.length===0||$p3.indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                                      , projection.ToString());
 
                         var result = projection.ToList();
@@ -3608,7 +3608,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
 
                         Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return [\"id2\"].length===0||[\"id2\"].indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(function(x){return $p2.length===0||$p3.indexOf(x.TargetId)>=0;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
 
                         var result = projection.ToList();
@@ -3658,7 +3658,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
 
                         Assert.Equal("from Documents as d where (id() in ($p0)) and (d.Deleted = $p1) " +
                                      "select { Id : id(d), Deleted : d.Deleted, " +
-                                     "Values : d.SubDocuments.filter(function(x){return \"id2\"==null||x.TargetId===\"id2\";}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
+                                     "Values : d.SubDocuments.filter(function(x){return $p2==null||x.TargetId===$p3;}).map(function(x){return {TargetId:x.TargetId,TargetValue:x.TargetValue};}) }"
                             , projection.ToString());
 
                         var result = projection.ToList();
