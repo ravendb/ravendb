@@ -596,6 +596,41 @@ namespace Raven.Client.Util
                 }
             }
         }
+        
+        public class WrappedConstantSupport<T> : JavascriptConversionExtension
+        {
+            public IAbstractDocumentQuery<T> DocumentQuery { private get; set; }
+            public List<string> ProjectionParameters { get; set; }
+            
+            private static bool IsWrapedConstatntExpression(Expression expression)
+            {            
+                while (expression is MemberExpression memberExpression)
+                {
+                    expression = memberExpression.Expression;
+                }
+
+                return expression is ConstantExpression;
+            }
+            
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is MemberExpression memberExpression) ||
+                    IsWrapedConstatntExpression(memberExpression) == false)                   
+                    return;
+                
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
+                var parameter = DocumentQuery.ProjectionParameter(value);
+                ProjectionParameters?.Add(parameter);
+                
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                using (writer.Operation(memberExpression))
+                {
+                    writer.Write(parameter);
+                }
+            }
+        }
               
         public class JsonPropertyAttributeSupport : JavascriptConversionExtension
         {

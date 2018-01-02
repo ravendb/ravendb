@@ -68,6 +68,8 @@ namespace Raven.Client.Documents.Linq
             "INCLUDE",
             "UPDATE"
         };
+        private List<string> _projectionParameters { get; set; }
+
 
         private readonly LinqPathProvider _linqPathProvider;
         /// <summary>
@@ -1896,14 +1898,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var js = TranslateSelectBodyToJs(expression);
             _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
-
+            
+            var paramBuilder = new StringBuilder();
+            paramBuilder.Append(_fromAlias);
+            
             if (_loadTokens != null)
             {
                 //need to add loaded documents 
-                var paramBuilder = new StringBuilder();
-                paramBuilder.Append(_fromAlias);
-
-                for (int i = 0; i < _loadTokens.Count; i++)
+                for (var i = 0; i < _loadTokens.Count; i++)
                 {
                     var alias = _loadTokens[i].Alias.EndsWith("[]")
                         ? _loadTokens[i].Alias.Substring(0, _loadTokens[i].Alias.Length - 2)
@@ -1911,13 +1913,17 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     paramBuilder.Append(", ").Append(alias);
                 }
-                _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
             }
-            else
+            
+            if (_projectionParameters != null)
             {
-                _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), _fromAlias);
+                for (var i = 0; i < _projectionParameters.Count; i++)
+                {
+                    paramBuilder.Append(", ").Append(_projectionParameters[i]);
+                }
             }
-
+            
+            _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
             _jsSelectBody = $"output({_declareToken.Parameters})";
         }
 
@@ -1926,7 +1932,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (_insideWhere > 0)
                 throw new NotSupportedException("Queries with a LET clause before a WHERE clause are not supported. " +
                                                 "WHERE clauses should appear before any LET clauses.");
-
             var name = GetSelectPath(expression.Members[1]);
             var parameter = expression?.Arguments[0] as ParameterExpression;
 
@@ -1935,9 +1940,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AddFromAlias(parameter?.Name);
             }
 
+            if (_projectionParameters == null)
+            {
+                _projectionParameters = new List<string>();
+            }
+
             if (IsRaw(expression, name))
                 return;
-
+            
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
                 new JavascriptCompilationOptions(
@@ -1955,6 +1965,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.NullableSupport(),
+                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters},
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
@@ -1996,7 +2007,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             string arg;
             if (loadSupport.Arg is ConstantExpression constantExpression && constantExpression.Type == typeof(string))
             {
-                arg = _documentQuery.LoadParameter(constantExpression.Value);
+                arg = _documentQuery.ProjectionParameter(constantExpression.Value);
             }
             else if (loadSupport.Arg is MemberExpression)
             {
@@ -2191,10 +2202,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.IdentityPropertySupport
-                    {
-                        AliasesToIdProperty = _aliasesToIdPropery
-                    },
+                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters},
+                    new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)

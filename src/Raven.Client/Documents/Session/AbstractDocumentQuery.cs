@@ -1650,7 +1650,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             }
         }
 
-        public string LoadParameter(object id)
+        public string ProjectionParameter(object id)
         {
             return "$" + AddQueryParameter(id);
         }
