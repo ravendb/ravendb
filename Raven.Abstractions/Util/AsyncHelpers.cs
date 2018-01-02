@@ -19,34 +19,36 @@ namespace Raven.Abstractions.Util
     {
         public static void RunSync(Func<Task> task)
         {
+            var sw = Stopwatch.StartNew();
             var oldContext = SynchronizationContext.Current;
             try
             {
-                using (var synch = new ExclusiveSynchronizationContext())
+                var synch = new ExclusiveSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(synch);
+                synch.Post(async _ =>
                 {
-                    SynchronizationContext.SetSynchronizationContext(synch);
-                    synch.Post(async _ =>
+                    try
                     {
-                        try
-                        {
-                            await task().ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            synch.InnerException = e;
-                            throw;
-                        }
-                        finally
-                        {
-                            synch.EndMessageLoop();
-                        }
-                    }, null);
-                    synch.BeginMessageLoop();
-                }
+                        await task().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
+                        sw.Stop();
+                        synch.EndMessageLoop();
+                    }
+                }, null);
+                synch.BeginMessageLoop();
             }
             catch (AggregateException ex)
             {
                 var exception = ex.ExtractSingleInnerException();
+                if (exception is OperationCanceledException)
+                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
                 ExceptionDispatchInfo.Capture(exception).Throw();
             }
             finally
@@ -58,39 +60,37 @@ namespace Raven.Abstractions.Util
         public static T RunSync<T>(Func<Task<T>> task)
         {
             var result = default(T);
-            Stopwatch sp = Stopwatch.StartNew();
+            var sw = Stopwatch.StartNew();
             var oldContext = SynchronizationContext.Current;
             try
             {
-                using (var synch = new ExclusiveSynchronizationContext())
-                {
-                    SynchronizationContext.SetSynchronizationContext(synch);
+                var synch = new ExclusiveSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(synch);
 
-                    synch.Post(async _ =>
+                synch.Post(async _ =>
+                {
+                    try
                     {
-                        try
-                        {
-                            result = await task().ConfigureAwait(false);
-                        }
-                        catch (Exception e)
-                        {
-                            synch.InnerException = e;
-                            throw;
-                        }
-                        finally
-                        {
-                            sp.Stop();
-                            synch.EndMessageLoop();
-                        }
-                    }, null);
-                    synch.BeginMessageLoop();
-                }
+                        result = await task().ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        synch.InnerException = e;
+                        throw;
+                    }
+                    finally
+                    {
+                        sw.Stop();
+                        synch.EndMessageLoop();
+                    }
+                }, null);
+                synch.BeginMessageLoop();
             }
             catch (AggregateException ex)
             {
                 var exception = ex.ExtractSingleInnerException();
                 if (exception is OperationCanceledException)
-                    throw new TimeoutException("Operation timed out after: " + sp.Elapsed, ex);
+                    throw new TimeoutException("Operation timed out after: " + sw.Elapsed, ex);
                 ExceptionDispatchInfo.Capture(exception).Throw();
             }
             finally
@@ -101,7 +101,7 @@ namespace Raven.Abstractions.Util
             return result;
         }
 
-        private class ExclusiveSynchronizationContext : SynchronizationContext, IDisposable
+        private class ExclusiveSynchronizationContext : SynchronizationContext
         {
             private readonly AutoResetEvent workItemsWaiting = new AutoResetEvent(false);
             private readonly Queue<Tuple<SendOrPostCallback, object>> items = new Queue<Tuple<SendOrPostCallback, object>>();
@@ -158,11 +158,6 @@ namespace Raven.Abstractions.Util
             public override SynchronizationContext CreateCopy()
             {
                 return this;
-            }
-
-            public void Dispose()
-            {
-                this.workItemsWaiting.Dispose();
             }
         }
     }
