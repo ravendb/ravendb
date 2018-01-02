@@ -82,7 +82,7 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.7">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Data.SqlClient" Version="4.1.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.4.2" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.4.0" />
   </ItemGroup>
   <ItemGroup>
