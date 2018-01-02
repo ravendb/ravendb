@@ -218,7 +218,14 @@ class indexes extends viewModelBase {
     }
 
     private putIndexIntoGroups(i: index): void {
-        this.putIndexIntoGroupNamed(i, i.getGroupName());
+        const targetGroupName = i.getGroupName();
+        
+        // group name might change so clear all items in different groups 
+        // i.e. Faulty Index has group 'Other' but after refresh it goes to valid group 
+        
+        this.removeIndexesFromAllGroups(this.findIndexesByName(i.name), targetGroupName);
+        
+        this.putIndexIntoGroupNamed(i, targetGroupName);
     }
 
     private putIndexIntoGroupNamed(i: index, groupName: string): void {
@@ -306,10 +313,12 @@ class indexes extends viewModelBase {
         }
     }
 
-    private removeIndexesFromAllGroups(indexes: index[]) {
-        this.indexGroups().forEach(g => {
-            g.indexes.removeAll(indexes);
-        });
+    private removeIndexesFromAllGroups(indexes: index[], skipGroup: string = null) {
+        this.indexGroups()
+           .filter(x => skipGroup ? x.entityName !== skipGroup : true)
+           .forEach(g => {
+                g.indexes.removeAll(indexes);
+            });
 
         // Remove any empty groups.
         this.indexGroups.remove((item: indexGroup) => item.indexes().length === 0);
