@@ -714,6 +714,8 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(ls.ToString());
                 if(o is LazyCompressedStringValue lcs)
                     return new JsValue(lcs.ToString());
+                if (o is LazyNumberValue lnv)
+                    return new JsValue(lnv.ToString());
                 if (o is JsValue js)
                     return js;
                 throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
