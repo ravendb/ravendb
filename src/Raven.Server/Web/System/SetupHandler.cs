@@ -51,12 +51,28 @@ namespace Raven.Server.Web.System
             {
                 var payload = await reader.ReadToEndAsync();
                 var content = new StringContent(payload, Encoding.UTF8, "application/json");
-                var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
 
-                HttpContext.Response.StatusCode = (int)response.StatusCode;
-                using (var responseStream = await response.Content.ReadAsStreamAsync())
+                try
                 {
-                    await responseStream.CopyToAsync(ResponseBodyStream());
+                    var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
+
+                    HttpContext.Response.StatusCode = (int)response.StatusCode;
+                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    
+                    if (response.IsSuccessStatusCode == false)
+                    {
+                        responseString = SetupHandler.GeneralDomainRegistrationServiceError + responseString;
+                    }
+
+                    using (var streamWriter = new StreamWriter(ResponseBodyStream()))
+                    {
+                        streamWriter.Write(responseString);
+                        streamWriter.Flush();
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(SetupHandler.GeneralDomainRegistrationServiceError, e);
                 }
             }
         }
@@ -72,62 +88,71 @@ namespace Raven.Server.Web.System
                 var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
 
                 var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
-                var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
-                HttpContext.Response.StatusCode = (int)response.StatusCode;
-
-                if (response.IsSuccessStatusCode == false)
+                try
                 {
-                    using (var responseStream = await response.Content.ReadAsStreamAsync())
+                    var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+
+                    HttpContext.Response.StatusCode = (int)response.StatusCode;
+                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                    if (response.IsSuccessStatusCode == false)
                     {
-                        await responseStream.CopyToAsync(ResponseBodyStream());
-                    }
-
-                    return;
-                }
-
-                var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-                var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
-
-                var fullResult = new UserDomainsAndLicenseInfo
-                {
-                    UserDomainsWithIps = new UserDomainsWithIps
-                    {
-                        Email = results.Email,
-                        Domains = new Dictionary<string, List<SubDomainAndIps>>()
-                    }
-                };
-
-                foreach (var domain in results.Domains)
-                {
-                    var list = new List<SubDomainAndIps>();
-                    foreach (var subDomain in domain.Value)
-                    {
-                        try
+                        using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
-                            list.Add(new SubDomainAndIps
+                            streamWriter.Write(SetupHandler.GeneralDomainRegistrationServiceError + responseString);
+                            streamWriter.Flush();
+                        }
+
+                        return;
+                    }
+
+                    var results = JsonConvert.DeserializeObject<UserDomainsResult>(responseString);
+
+                    var fullResult = new UserDomainsAndLicenseInfo
+                    {
+                        UserDomainsWithIps = new UserDomainsWithIps
+                        {
+                            Email = results.Email,
+                            Domains = new Dictionary<string, List<SubDomainAndIps>>()
+                        }
+                    };
+
+                    foreach (var domain in results.Domains)
+                    {
+                        var list = new List<SubDomainAndIps>();
+                        foreach (var subDomain in domain.Value)
+                        {
+                            try
                             {
-                                SubDomain = subDomain,
-                                Ips = Dns.GetHostAddresses(subDomain + "." + SetupManager.RavenDbDomain).Select(ip => ip.ToString()).ToList(),
-                            });
+                                list.Add(new SubDomainAndIps
+                                {
+                                    SubDomain = subDomain,
+                                    Ips = Dns.GetHostAddresses(subDomain + "." + SetupManager.RavenDbDomain).Select(ip => ip.ToString()).ToList(),
+                                });
+                            }
+                            catch (Exception)
+                            {
+                                continue;
+                            }
                         }
-                        catch (Exception)
-                        {
-                            continue;
-                        }
+
+                        fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
                     }
 
-                    fullResult.UserDomainsWithIps.Domains.Add(domain.Key, list);
+                    var licenseStatus = ServerStore.LicenseManager.GetLicenseStatus(licenseInfo.License);
+                    fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
+                    fullResult.LicenseType = licenseStatus.Type;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
+                        context.Write(writer, blittable);
+                    }
                 }
-
-                var licenseStatus = ServerStore.LicenseManager.GetLicenseStatus(licenseInfo.License);
-                fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
-                fullResult.LicenseType = licenseStatus.Type;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                catch (Exception e)
                 {
-                    var blittable = EntityToBlittable.ConvertEntityToBlittable(fullResult, DocumentConventions.Default, context);
-                    context.Write(writer, blittable);
+                    throw new InvalidOperationException(SetupHandler.GeneralDomainRegistrationServiceError, e);
                 }
             }
         }
@@ -452,6 +477,8 @@ namespace Raven.Server.Web.System
                 url += ":" + port;
             return url;
         }
+
+        private static string GeneralDomainRegistrationServiceError = "The domain registration service is currently down. Please try again later.";
     }
 
     public class LicenseInfo
