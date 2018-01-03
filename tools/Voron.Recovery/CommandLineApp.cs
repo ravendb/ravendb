@@ -78,7 +78,7 @@ namespace Voron.Recovery
 
                     if (string.IsNullOrWhiteSpace(config.DataFileDirectory) ||
                         Directory.Exists(config.DataFileDirectory) == false ||
-                        File.Exists(Path.Combine(config.DataFileDirectory, DatafileName)))
+                        File.Exists(Path.Combine(config.DataFileDirectory, DatafileName)) == false)
                     {
                         return ExitWithError($"Missing {nameof(config.DataFileDirectory)} argument", cmd);
                     }
