@@ -75,14 +75,19 @@ namespace Raven.Server.Utils
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
 
-            var collection = new X509Certificate2Collection();
-            collection.Import(certBytes, null, X509KeyStorageFlags.Exportable);
-            collection.Import(serverCertBytes);
+            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+            var serverCert = DotNetUtilities.FromX509Certificate(certificateHolder.Certificate);
 
-            certBytes = collection.Export(X509ContentType.Pfx);
+            store.Load(new MemoryStream(certBytes), Array.Empty<char>());
+            store.SetCertificateEntry(serverCert.SubjectDN.ToString(), new X509CertificateEntry(serverCert));
+            
+            var memoryStream = new MemoryStream();
+            store.Save(memoryStream, Array.Empty<char>(), GetSeededSecureRandom());
+            certBytes = memoryStream.ToArray();
 
-            RegisterCertificateInOperatingSystem(new X509Certificate2(collection.Export(X509ContentType.Cert)));
-            return new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+            var cert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+            RegisterCertificateInOperatingSystem(new X509Certificate2(cert.Export(X509ContentType.Cert)));
+            return cert;
         }
 
         private static void ValidateNoPrivateKeyInServerCert(byte[] serverCertBytes)

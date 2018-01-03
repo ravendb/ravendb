@@ -12,6 +12,7 @@ using Org.BouncyCastle.Asn1.Crmf;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -487,6 +488,9 @@ namespace Raven.Server.ServerWide
             ValidatePrivateKey(source, password, rawBytes, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
+            
+            AddCertificateChainToTheUserCertificateAuthority(loadedCertificate, rawBytes);
+
 
             return new RavenServer.CertificateHolder
             {
@@ -494,6 +498,32 @@ namespace Raven.Server.ServerWide
                 CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
                 PrivateKey = privateKey
             };
+        }
+
+        private static void AddCertificateChainToTheUserCertificateAuthority(X509Certificate2 loadedCertificate, byte[] rawBytes)
+        {
+            // we have to add all the certs in the pfx file provides to the CA store for the current user 
+            // to avoid a remote call on any incoming connection by the SslStream infrastructure
+            // see: https://github.com/dotnet/corefx/issues/26061
+            
+            var collection = new X509Certificate2Collection();
+            collection.Import(rawBytes);
+
+            using (var userIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, 
+                System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
+            {
+                foreach (var cert in collection)
+                {
+                    if (cert.Thumbprint == loadedCertificate.Thumbprint)
+                        continue;
+
+                    var results = userIntermediateStore.Certificates.Find(X509FindType.FindByThumbprint, cert.Thumbprint, false);
+                    if (results.Count > 0)
+                        continue;
+
+                    userIntermediateStore.Add(cert);
+                }
+            }
         }
 
         public RavenServer.CertificateHolder LoadCertificateFromPath(string path, string password)
