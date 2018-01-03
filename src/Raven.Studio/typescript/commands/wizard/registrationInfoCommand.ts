@@ -18,13 +18,8 @@ class registrationInfoCommand extends commandBase {
         this.post(url, JSON.stringify(payload), null)
             .done(result => task.resolve(result))
             .fail((response: JQueryXHR) => {
-                if (response.status === 404) {
-                    task.resolve(null);
-                } else {
-                    
-                    this.reportError("Failed to load registration information", registrationInfoCommand.tryExtractError(response.responseText), response.statusText);
-                    task.reject();
-                }
+                this.reportError("Failed to load registration information", response.responseText, response.statusText);
+                task.reject();
             });
         
         return task;
