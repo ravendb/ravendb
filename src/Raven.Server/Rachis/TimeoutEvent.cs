@@ -47,7 +47,6 @@ namespace Raven.Server.Rachis
         {
             if (_timeoutEventSlim.IsSet == false)
             {
-
                 try
                 {
                     ExecuteTimeoutBehavior();
@@ -94,7 +93,7 @@ namespace Raven.Server.Rachis
                 if (Disable)
                     return;
                 
-                DisableTimeoutInternal();
+                _timer.Change(Timeout.Infinite, Timeout.Infinite);
 
                 try
                 {
