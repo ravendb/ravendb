@@ -239,6 +239,8 @@ namespace Raven.Client.Documents.Queries.Facets
                 //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
                 case "System.DateTime":
                     return $"'{((DateTime)value).GetDefaultRavenFormat()}'";
+                case "System.DateTimeOffset":
+                    return $"'{((DateTimeOffset)value).UtcDateTime.GetDefaultRavenFormat()}'";
                 case "System.Int32":
                     return NumberUtil.NumberToString((int)value);
                 case "System.Int64":
