@@ -1403,6 +1403,7 @@ namespace Raven.Client.Documents.Indexes
                     return node;
                 }
             }
+
             if (node.Method.Name == "GetValueOrDefault" && Nullable.GetUnderlyingType(node.Method.DeclaringType) != null)
             {
                 Visit(node.Object);
@@ -1433,6 +1434,7 @@ namespace Raven.Client.Documents.Indexes
                     Out(".");
                 }
             }
+
             if (node.Method.IsStatic && ShouldConvertToDynamicEnumerable(node))
             {
                 Out("DynamicEnumerable.");
@@ -1545,7 +1547,9 @@ namespace Raven.Client.Documents.Indexes
 
             Out(IsIndexerCall(node) ? "]" : ")");
 
-            if (node.Type.GetTypeInfo().IsValueType && TypeExistsOnServer(node.Type))
+            if (node.Type.GetTypeInfo().IsValueType && 
+                TypeExistsOnServer(node.Type) &&
+                node.Type.Name != typeof(KeyValuePair<,>).Name)
             {
                 switch (node.Method.Name)
                 {
