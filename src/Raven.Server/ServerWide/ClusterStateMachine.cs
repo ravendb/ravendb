@@ -19,6 +19,7 @@ using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Tcp;
@@ -1254,7 +1255,11 @@ namespace Raven.Server.ServerWide
             if (_parent.IsEncrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
-            var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate);
+            TcpConnectionInfo info;
+            using (var cts = new CancellationTokenSource(_parent.TcpConnectionTimeout))
+            {
+                info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate, cts.Token);
+            }
 
             TcpClient tcpClient = null;
             Stream stream = null;

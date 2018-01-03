@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Commands;
@@ -26,7 +27,12 @@ namespace Raven.Server.Web.System
             try
             {
                 var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan);
-                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.Certificate.Certificate);
+                Task<TcpConnectionInfo> connectionInfo;
+                using (var cts = new CancellationTokenSource(Server.Configuration.Cluster.OperationTimeout.AsTimeSpan))
+                {
+                    connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.Certificate.Certificate,
+                        cts.Token);
+                }
                 if (await Task.WhenAny(timeout, connectionInfo) == timeout)
                 {
                     throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.OperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");

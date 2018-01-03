@@ -148,8 +148,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 TcpConnectionInfo tcpConnection = null;
                 try
                 {
-                    tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
-                        _parent._server.Server.Certificate?.Certificate);
+                    using (var cts = new CancellationTokenSource(_parent.Config.TcpConnectionTimeout.AsTimeSpan))
+                    {
+                        tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
+                            _parent._server.Server.Certificate?.Certificate, cts.Token);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -166,8 +169,12 @@ namespace Raven.Server.ServerWide.Maintenance
                             needToWait = false; // avoid tight loop if there was timeout / error
                             await TimeoutManager.WaitFor(onErrorDelayTime, _token);
 
-                            tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
-                                _parent._server.Server.Certificate.Certificate);
+                            using (var cts = new CancellationTokenSource(_parent.Config.TcpConnectionTimeout.AsTimeSpan))
+                            using(var combined = CancellationTokenSource.CreateLinkedTokenSource(internalTaskCancellationToken.Token, cts.Token))
+                            {
+                                tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
+                                    _parent._server.Server.Certificate.Certificate,  combined.Token);
+                            }
                         }
 
                         if (tcpConnection == null)

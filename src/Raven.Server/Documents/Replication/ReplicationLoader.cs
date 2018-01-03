@@ -711,7 +711,10 @@ namespace Raven.Server.Documents.Replication
                 }
                 if (node is InternalReplication internalNode)
                 {
-                    return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.Certificate.Certificate);
+                    using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                    {
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.Certificate.Certificate, cts.Token);
+                    }
                 }
                 throw new InvalidOperationException(
                     $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");

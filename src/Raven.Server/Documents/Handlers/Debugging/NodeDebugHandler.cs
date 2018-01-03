@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide.Tcp;
@@ -123,30 +124,33 @@ namespace Raven.Server.Documents.Handlers.Debugging
             };
             try
             {
-                var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate);
-                result.TcpInfoTime = sp.ElapsedMilliseconds;
-                using (var tcpClient = await TcpUtils.ConnectAsync(info.Url, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
-                using (var stream = await TcpUtils
-                    .WrapStreamWithSslAsync(tcpClient, info, ServerStore.Engine.ClusterCertificate, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var cts = new CancellationTokenSource(ServerStore.Engine.TcpConnectionTimeout))
                 {
-                    var msg = new DynamicJsonValue
+                    var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "PingTest", ServerStore.Engine.ClusterCertificate, cts.Token);
+                    result.TcpInfoTime = sp.ElapsedMilliseconds;
+                    using (var tcpClient = await TcpUtils.ConnectAsync(info.Url, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
+                    using (var stream = await TcpUtils
+                        .WrapStreamWithSslAsync(tcpClient, info, ServerStore.Engine.ClusterCertificate, ServerStore.Engine.TcpConnectionTimeout).ConfigureAwait(false))
+                    using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Ping,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = -1
-                    };
+                        var msg = new DynamicJsonValue
+                        {
+                            [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
+                            [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Ping,
+                            [nameof(TcpConnectionHeaderMessage.OperationVersion)] = -1
+                        };
 
-                    using (var writer = new BlittableJsonTextWriter(context, stream))
-                    using (var msgJson = context.ReadObject(msg, "message"))
-                    {
-                        result.SendTime = sp.ElapsedMilliseconds;
-                        context.Write(writer, msgJson);
-                    }
-                    using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
-                    {
-                        var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        result.RecieveTime = sp.ElapsedMilliseconds;
+                        using (var writer = new BlittableJsonTextWriter(context, stream))
+                        using (var msgJson = context.ReadObject(msg, "message"))
+                        {
+                            result.SendTime = sp.ElapsedMilliseconds;
+                            context.Write(writer, msgJson);
+                        }
+                        using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
+                        {
+                            JsonDeserializationServer.TcpConnectionHeaderResponse(response);
+                            result.RecieveTime = sp.ElapsedMilliseconds;
+                        }
                     }
                 }
             }
