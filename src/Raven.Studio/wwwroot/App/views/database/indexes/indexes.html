@@ -27,7 +27,7 @@
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-default dropdown-toggle" title="Change the options of selected indexes"
                                             data-bind="enable: $root.globalIndexingStatus() === 'Running' && selectedIndexesName().length && !spinners.globalLockChanges(), css: { 'btn-spinner': spinners.globalLockChanges() }" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                        <i class="icon-play"></i><span>Set state...</span>
+                                        <i class="icon-play"></i><span>Set indexing state...</span>
                                         <span class="caret"></span>
                                         <span class="sr-only">Toggle Dropdown</span>
                                     </button>
@@ -336,7 +336,7 @@
             </span>
             <span class="text-danger" data-bind="visible: isDisabledState()">
                 <i class="icon-cancel"></i>
-                <span>Disabled</span>
+                <span>Indexing disabled</span>
             </span>
             <span class="text-danger" data-bind="visible: isErrorState()">
                 <i class="icon-danger"></i>
@@ -352,12 +352,12 @@
             </li>
             <li data-bind="visible: canBeDisabled()">
                 <a href="#" data-bind="click: $root.disableIndex" title="Disable">
-                    <i class="icon-cancel"></i><span>Disable</span>
+                    <i class="icon-cancel"></i><span>Disable indexing</span>
                 </a>
             </li>
             <li data-bind="visible: canBePaused()">
                 <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart" title="Pause until restart">
-                    <i class="icon-pause"></i><span>Pause until restart</span>
+                    <i class="icon-pause"></i><span>Pause indexing until restart</span>
                 </a>
             </li>
             <li data-bind="visible: canBeResumed()">
