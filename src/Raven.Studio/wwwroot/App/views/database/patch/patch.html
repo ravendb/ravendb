@@ -219,10 +219,10 @@
                     <div class="flex-grow flex-vertical scroll">
                         <div class="bg-info padding padding-sm">
                             <div class="row">
-                                <div class="col-xs-6">
+                                <div class="col-xs-9">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().Name : ''"></strong>
                                 </div>
-                                <div class="col-xs-6">                                 
+                                <div class="col-xs-3">                                 
                                     <span class="pull-right"> 
                                         <button title="Load saved patch" class="btn btn-success btn-sm close-panel" data-bind="click: usePatch , enable: previewItem()">Load</button>
                                     </span>
@@ -252,7 +252,7 @@
                             <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewPatch }">                             
                                 <a href="#" class="patch-link close-panel" data-bind="click: $parent.usePatchItem.bind($parent, $data)">
                                     <span class="name" data-bind="text: Name"></span>
-                                    <span class="modified" data-bind="text: ModificationDate"></span>
+                                    <span class="modified flex-noshrink" data-bind="text: ModificationDate"></span>
                                 </a>
                                 <a href="#" data-bind="click: $parent.removePatch" class="patch-remove"><i class="icon-trash"></i></a>
                             </li>

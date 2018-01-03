@@ -229,10 +229,10 @@
                     <div class="flex-grow flex-vertical scroll">
                         <div class="bg-info padding padding-sm">
                             <div class="row">
-                                <div class="col-xs-6">
+                                <div class="col-xs-9">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().name : ''"></strong>
                                 </div>
-                                <div class="col-xs-6">                                 
+                                <div class="col-xs-3">                                 
                                     <span class="pull-right"> 
                                         <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
                                     </span>
@@ -262,7 +262,7 @@
                             <li data-bind="css: { selected: $data === $parent.previewItem() }, event: { mouseenter: $parent.previewQuery }">
                                 <a href="#" class="patch-link close-panel" data-bind="click: $parent.useQueryItem.bind($parent, $data)">
                                     <span class="name" data-bind="text: name"></span>
-                                    <span class="modified" data-bind="text: modificationDate"></span>
+                                    <span class="modified flex-noshrink" data-bind="text: modificationDate"></span>
                                 </a>
                                 <a href="#" data-bind="click: $parent.removeQuery" class="patch-remove"><i class="icon-trash"></i></a>
                             </li>
