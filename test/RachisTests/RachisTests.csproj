@@ -32,9 +32,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
-    <PackageReference Include="xunit" Version="2.3.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
-    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
+    <PackageReference Include="xunit" Version="99.99.99-dev" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="99.99.99-dev" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="99.99.99-dev" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
