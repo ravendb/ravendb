@@ -5,6 +5,7 @@ import licenseActivateCommand = require("commands/licensing/licenseActivateComma
 import moment = require("moment");
 import license = require("models/auth/licenseModel");
 import messagePublisher = require("common/messagePublisher");
+import placeholderUtils = require("common/placeholderUtils");
 
 class licenseKeyModel {
 
@@ -157,6 +158,12 @@ class registration extends dialogViewModelBase {
         }
 
         super.close();
+    }
+    
+    attached() {
+        super.attached();
+        
+        placeholderUtils.fixPlaceholders($("body"));
     }
 
     submit() {
