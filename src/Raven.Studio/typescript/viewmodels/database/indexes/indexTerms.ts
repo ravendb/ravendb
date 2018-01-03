@@ -50,6 +50,8 @@ class indexTerms extends viewModelBase {
             value: term
         });
         query.queryText(queryText);
+        query.name("Index terms for " + this.indexName + " (" + fieldName + ": " + term + ")");
+        query.recentQuery(true);
 
         const queryDto = query.toStorageDto();
         const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
