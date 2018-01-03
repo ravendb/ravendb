@@ -404,7 +404,7 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
 
-                Timeout = new TimeoutEvent(0);
+                Timeout = new TimeoutEvent(0, "Consensus");
                 RandomizeTimeout();
 
                 // if we don't have a topology id, then we are passive
@@ -1492,6 +1492,7 @@ namespace Raven.Server.Rachis
         public virtual void Dispose()
         {
             _disposeEvent.Set();
+            Timeout.Dispose();
             OnDispose?.Invoke(this, EventArgs.Empty);
             _topologyChanged.TrySetCanceled();
             _stateChanged.TrySetCanceled();

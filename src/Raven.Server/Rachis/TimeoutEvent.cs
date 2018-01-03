@@ -2,6 +2,7 @@ using System;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Raven.Client.Exceptions;
+using Sparrow.Logging;
 
 namespace Raven.Server.Rachis
 {
@@ -16,14 +17,16 @@ namespace Raven.Server.Rachis
         private Action _timeoutHappened;
         private string _currentLeader;
 
-        public TimeoutEvent(int timeoutPeriod)
+        public TimeoutEvent(int timeoutPeriod, string name)
         {
             TimeoutPeriod = timeoutPeriod;
             _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
+            _logger = LoggingSource.Instance.GetLogger<TimeoutEvent>(name);
         }
 
         public int TimeoutPeriod;
+        private readonly Logger _logger;
 
         public void Start(Action onTimeout)
         {
@@ -42,20 +45,31 @@ namespace Raven.Server.Rachis
 
         private void Callback(object state)
         {
-            try
+            if (_timeoutEventSlim.IsSet == false)
             {
-                if (_timeoutEventSlim.IsSet == false)
+
+                try
                 {
                     ExecuteTimeoutBehavior();
-                    return;
                 }
-                _timeoutEventSlim.Reset();
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger .Info($"Failed to execute timeout callback, will retry again" ,e);
+                    }
+
+                    lock (this)
+                    {
+                        // schedule again once, because the error may be transient
+                        if (_timeoutHappened != null)
+                            _timer.Change(TimeoutPeriod, TimeoutPeriod);
+                    }
+                }
+                return;
             }
-            catch (Exception e)
-            {
-                _edi = ExceptionDispatchInfo.Capture(e);
-                _timer.Dispose();
-            }
+            _timeoutEventSlim.Reset();
+       
         }
 
         private void DisableTimeoutInternal()
@@ -80,6 +94,8 @@ namespace Raven.Server.Rachis
                 if (Disable)
                     return;
                 
+                DisableTimeoutInternal();
+
                 try
                 {
                     if (_timeoutHappened == null)
@@ -87,14 +103,11 @@ namespace Raven.Server.Rachis
                
 
                     _timeoutHappened?.Invoke();
+                    _timeoutHappened = null;
                 }
                 catch (ConcurrencyException)
                 {
                     // expected, ignoring
-                }
-                finally
-                {
-                   DisableTimeoutInternal();
                 }
             }
         }
