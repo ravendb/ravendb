@@ -1,6 +1,5 @@
 RavenDB is making use of the following OSS projects:
 
-* Certes (https://github.com/fszlin/certes) under the MIT license (https://github.com/fszlin/certes/blob/master/LICENSE)
 * CsvHelper (https://github.com/JoshClose/CsvHelper/) under dual licensing MS-PL and Apache 2.0 (https://raw.githubusercontent.com/JoshClose/CsvHelper/master/LICENSE.txt)
 * DasMulli.Win32.ServiceUtils (https://github.com/dasMulli/dotnet-win32-service) under the MIT license (https://github.com/dasMulli/dotnet-win32-service/blob/master/LICENSE)
 * Esprima .NET (https://github.com/sebastienros/esprima-dotnet) under the BSD 3 license (https://github.com/sebastienros/esprima-dotnet/blob/master/LICENSE.txt)
@@ -13,6 +12,7 @@ RavenDB is making use of the following OSS projects:
 * NCrontab.Advanced (https://github.com/jcoutch/NCrontab-Advanced) under the Apatch 2.0 license (https://github.com/jcoutch/NCrontab-Advanced/blob/master/LICENSE)
 * Npgsql (http://www.npgsql.org/) under the PostgreSQL License, a liberal OSI-approved open source license (https://raw.githubusercontent.com/npgsql/npgsql/master/LICENSE.txt)
 * Portable.BouncyCastle (https://github.com/onovotny/bc-csharp) under the license based on the MIT X Consortium license (https://raw.githubusercontent.com/onovotny/bc-csharp/netstandard/License.html)
+* Oocx.ACME (https://github.com/oocx/acme.net) under the MIT license (https://github.com/oocx/acme.net/blob/master/LICENSE)
 
 The full list of libraries used by the Studio can be found under:
 * https://github.com/ravendb/ravendb/blob/v4.0/src/Raven.Studio/bower.json

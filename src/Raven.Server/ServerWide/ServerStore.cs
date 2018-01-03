@@ -10,7 +10,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Certes.Acme;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
