@@ -21,6 +21,9 @@ using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Cmp;
 using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Crypto.Prng;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
@@ -363,22 +366,28 @@ namespace Raven.Server.Commercial
         {
             var certificate = new X509Certificate2(cert);
 
+            var certBytesWithKey = certificate.CopyWithPrivateKey(privateKey).Export(X509ContentType.Pfx);
+
+            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+                        
+            store.Load(new MemoryStream(certBytesWithKey), Array.Empty<char>());
             var chain = new X509Chain();
             chain.Build(certificate);
-
-            var pfx = new X509Certificate2Collection
-            {
-                certificate.CopyWithPrivateKey(privateKey)
-            };
 
             foreach (var item in chain.ChainElements)
             {
                 if (item.Certificate.Thumbprint == certificate.Thumbprint)
                     continue;
-                pfx.Add(item.Certificate);
-            }
+                
+                var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
 
-            var certBytes = pfx.Export(X509ContentType.Pkcs12);
+                store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
+            }
+            
+            var memoryStream = new MemoryStream();
+            store.Save(memoryStream, Array.Empty<char>(), new SecureRandom(new CryptoApiRandomGenerator()));
+            var certBytes = memoryStream.ToArray();
+            
             Debug.Assert(certBytes != null);
             setupInfo.Certificate = Convert.ToBase64String(certBytes);
 
@@ -1125,19 +1134,19 @@ namespace Raven.Server.Commercial
                         Environment.NewLine);
             }
             str += Environment.NewLine;
-            if (setupInfo.RegisterClientCert)
+            if (setupInfo.RegisterClientCert && PlatformDetails.RunningOnPosix == false)
             {
                 str +=
-                    ($"An administrator client certificate ({clientCertificateName}) has been installed on this machine ({Environment.MachineName}) and you can now access the server in a secure fashion." + Environment.NewLine);
+                    ($"An administrator client certificate ({clientCertificateName}) has been installed on this machine ({Environment.MachineName}) and you can now restart the server and access it in a secure fashion." + Environment.NewLine);
             }
             else
             {
                 str +=
-                    ($"An administrator client certificate ({clientCertificateName}) has been generated which can use to access the server." + Environment.NewLine);
+                    ($"An administrator client certificate ({clientCertificateName}) has been generated which can be used to access the server." + Environment.NewLine);
             }
 
             str +=
-                "If you are using Firefox, the certificate must be imported directly to the browser, you can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
+                "If you are using Firefox (or Chrome under Linux), the certificate must be imported directly to the browser, you can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
                 Environment.NewLine;
 
             str +=
