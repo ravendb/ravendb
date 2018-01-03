@@ -1161,9 +1161,20 @@ namespace Raven.Client.Http
                 if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
                     continue;
 
-                var extensionsString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+                if (!(extension is X509EnhancedKeyUsageExtension kue)) 
+                    continue;
+                
+                foreach (var eku in kue.EnhancedKeyUsages)
+                {
+                    if (eku.Value != "1.3.6.1.5.5.7.3.2") 
+                        continue;
+                    
+                    supported = true;
+                    break;
+                }
 
-                supported = extensionsString.Contains("1.3.6.1.5.5.7.3.2") || extensionsString.Contains("Client Authentication"); // Client Authentication
+                if (supported)
+                    break;
             }
 
             if (supported == false)
