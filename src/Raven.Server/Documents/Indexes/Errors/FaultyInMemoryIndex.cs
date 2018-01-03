@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
@@ -23,9 +24,18 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly Exception _e;
 
+        public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBase definition)
+            : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
+        {
+        }
+
         public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, IndexDefinition definition)
-            : base(IndexType.Faulty, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" },
-                   IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
+            : this(e, configuration, new FaultyIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
+        {
+        }
+
+        private FaultyInMemoryIndex(Exception e, IndexingConfiguration configuration, IndexDefinitionBase definition)
+            : base(IndexType.Faulty, definition)
         {
             _e = e;
             State = IndexState.Error;

@@ -1,34 +1,35 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
-    public class FaultyIndexDefinition : IndexDefinitionBase<IndexField>
+    public class FaultyAutoIndexDefinition : IndexDefinitionBase<IndexField>
     {
-        private readonly IndexDefinition _definition;
+        public readonly AutoIndexDefinitionBase Definition;
 
-        public FaultyIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority,
-            IndexField[] mapFields, IndexDefinition definition)
+        public FaultyAutoIndexDefinition(string name, HashSet<string> collections, IndexLockMode lockMode, IndexPriority priority,
+            IndexField[] mapFields, AutoIndexDefinitionBase definition)
             : base(name, collections, lockMode, priority, mapFields)
         {
-            _definition = definition;
+            Definition = definition;
         }
 
         protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            throw new NotSupportedException($"Definition of a faulty '{Name}' auto index does not support that");
         }
 
         protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
-            throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
+            throw new NotSupportedException($"Definition of a faulty '{Name}' auto index does not support that");
         }
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var definition = _definition.Clone();
+            var definition = Definition.GetOrCreateIndexDefinitionInternal();
             definition.Name = Name;
             definition.LockMode = LockMode;
             definition.Priority = Priority;
@@ -42,12 +43,12 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinitionBase indexDefinition)
         {
-            return IndexDefinitionCompareDifferences.All;
+            return Definition.Compare(indexDefinition);
         }
 
         public override IndexDefinitionCompareDifferences Compare(IndexDefinition indexDefinition)
         {
-            return _definition.Compare(indexDefinition);
+            return Definition.Compare(indexDefinition);
         }
     }
 }

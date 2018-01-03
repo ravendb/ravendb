@@ -238,7 +238,6 @@ namespace Raven.Server.Documents.Indexes
 
             var replacementIndexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + definition.Name;
 
-
             if (creationOptions == IndexCreationOptions.Noop)
             {
                 Debug.Assert(currentIndex != null);
@@ -301,7 +300,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             CreateIndexInternal(index);
-           
+
         }
 
         private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
@@ -403,7 +402,7 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (TimeoutException toe)
             {
-                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down. " + 
+                throw new IndexCreationException($"Failed to create auto index: {definition.Name}, the cluster is probably down. " +
                                                      $"Node {_serverStore.NodeTag} state is {_serverStore.LastStateChangeReason()}", toe);
             }
         }
@@ -750,6 +749,9 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 var definitionBase = index.Definition;
+                if (definitionBase is FaultyAutoIndexDefinition faultyAutoIndexDefinition)
+                    definitionBase = faultyAutoIndexDefinition.Definition;
+
                 if (definitionBase is AutoMapIndexDefinition)
                     index = AutoMapIndex.CreateNew((AutoMapIndexDefinition)definitionBase, _documentDatabase);
                 else if (definitionBase is AutoMapReduceIndexDefinition)
@@ -790,7 +792,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_documentDatabase.Configuration.Indexing.RunInMemory)
                 return;
-            
+
             // apply renames
             OpenIndexesFromRecord(_documentDatabase.Configuration.Indexing.StoragePath, record);
         }
@@ -839,7 +841,7 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
-                    OpenIndex(path, indexPath, exceptions, name, definition);
+                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: definition, autoIndexDefinition: null);
             }
 
             foreach (var kvp in record.AutoIndexes)
@@ -853,14 +855,14 @@ namespace Raven.Server.Documents.Indexes
                 var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
                 var indexPath = path.Combine(safeName).FullPath;
                 if (Directory.Exists(indexPath))
-                    OpenIndex(path, indexPath, exceptions, name, null/*auto index cannot be faulty*/);
+                    OpenIndex(path, indexPath, exceptions, name, staticIndexDefinition: null, autoIndexDefinition: definition);
             }
 
             if (exceptions != null && exceptions.Count > 0)
                 throw new AggregateException("Could not load some of the indexes", exceptions);
         }
 
-        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition definition)
+        private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition staticIndexDefinition, AutoIndexDefinition autoIndexDefinition)
         {
             Index index = null;
 
@@ -889,7 +891,9 @@ namespace Raven.Server.Documents.Indexes
                     return;
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
-                var fakeIndex = new FaultyInMemoryIndex(e, name, configuration, definition);
+                var fakeIndex = autoIndexDefinition != null 
+                    ? new FaultyInMemoryIndex(e, name, configuration, CreateAutoDefinition(autoIndexDefinition)) 
+                    : new FaultyInMemoryIndex(e, name, configuration, staticIndexDefinition);
 
                 var message = $"Could not open index at '{indexPath}'. Created in-memory, fake instance: {fakeIndex.Name}";
 
@@ -897,7 +901,7 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Info(message, e);
 
                 _documentDatabase.NotificationCenter.Add(AlertRaised.Create(
-                    _documentDatabase.Name, 
+                    _documentDatabase.Name,
                     "Indexes store initialization error",
                     message,
                     AlertType.IndexStore_IndexCouldNotBeOpened,
@@ -1041,13 +1045,13 @@ namespace Raven.Server.Documents.Indexes
                     var oldIndexDefinition = oldIndex.GetIndexDefinition();
                     var newIndexDefinition = newIndex.Definition.GetOrCreateIndexDefinitionInternal();
 
-                    if (newIndex.Definition.LockMode == IndexLockMode.Unlock && 
-                        newIndexDefinition.LockMode.HasValue == false && 
+                    if (newIndex.Definition.LockMode == IndexLockMode.Unlock &&
+                        newIndexDefinition.LockMode.HasValue == false &&
                         oldIndexDefinition.LockMode.HasValue)
                         newIndex.SetLock(oldIndexDefinition.LockMode.Value);
 
-                    if (newIndex.Definition.Priority == IndexPriority.Normal && 
-                        newIndexDefinition.Priority.HasValue == false && 
+                    if (newIndex.Definition.Priority == IndexPriority.Normal &&
+                        newIndexDefinition.Priority.HasValue == false &&
                         oldIndexDefinition.Priority.HasValue)
                         newIndex.SetPriority(oldIndexDefinition.Priority.Value);
                 }
@@ -1086,12 +1090,12 @@ namespace Raven.Server.Documents.Indexes
                             var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
 
                             newIndex.ShutdownEnvironment();
-                                
+
                             IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
                                 newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
 
                             newIndex.RestartEnvironment();
-                                
+
                             if (newIndex.Configuration.TempPath != null)
                             {
                                 IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
