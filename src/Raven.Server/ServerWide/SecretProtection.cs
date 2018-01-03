@@ -17,6 +17,7 @@ using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Voron.Impl;
 using Voron.Platform.Posix;
 using OpenFlags = Voron.Platform.Posix.OpenFlags;
 
@@ -167,22 +168,20 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public byte[] Protect(byte[] secret, byte[] entropy)
+        public byte[] Protect(byte[] secret)
         {
-            if (entropy.Length < (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
-                throw new InvalidOperationException($"The provided entropy is too small. Should be at least {Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()} bytes but was {entropy.Length} bytes");
-
             if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
             {
                 var tempKey = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes()];
                 fixed (byte* pTempKey = tempKey)
                 {
-                    Sodium.randombytes_buf(pTempKey, (UIntPtr)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+                    Sodium.randombytes_buf(pTempKey, Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
 
-                    var encryptProtectedData = EncryptProtectedData(secret, entropy, tempKey);
-                    
+                    var encryptProtectedData = EncryptProtectedData(secret, tempKey);
+                    var dpapiEntropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
+
                     //DPAPI doesn't do AEAD, so we encrypt the data as usual, then encrypt the temp key we use with DPAPI
-                    var protectedKey = ProtectedData.Protect(tempKey, entropy, DataProtectionScope.CurrentUser);
+                    var protectedKey = ProtectedData.Protect(tempKey, dpapiEntropy, DataProtectionScope.CurrentUser);
                     
                     Sodium.sodium_memzero(pTempKey, (UIntPtr)tempKey.Length);
                     
@@ -190,6 +189,8 @@ namespace Raven.Server.ServerWide
                     var bw = new BinaryWriter(ms);
                     bw.Write(protectedKey.Length);
                     bw.Write(protectedKey);
+                    bw.Write(dpapiEntropy.Length);
+                    bw.Write(dpapiEntropy);
                     bw.Write(encryptProtectedData.Length);
                     bw.Write(encryptProtectedData);
                     bw.Flush();
@@ -197,19 +198,22 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            return EncryptProtectedData(secret, entropy, _serverMasterKey.Value);
+            return EncryptProtectedData(secret, _serverMasterKey.Value);
         }
 
-        private static byte[] EncryptProtectedData(byte[] secret, byte[] entropy, byte[] key)
+        private static byte[] EncryptProtectedData(byte[] secret, byte[] key)
         {
-            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes() 
+                 + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
 
             fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
             fixed (byte* pProtectedData = protectedData)
-            fixed (byte* pEntropy = entropy)
             fixed (byte* pKey = key)
             {
+                var pEntropy = pProtectedData + secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+                Sodium.randombytes_buf(pEntropy, Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
+
                 var actualKey = stackalloc byte[key.Length];
                 if(Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
                     throw new InvalidOperationException("Could not derive key for secret encryption");
@@ -234,24 +238,36 @@ namespace Raven.Server.ServerWide
             return protectedData;
         }
 
-        public byte[] Unprotect(byte[] secret, byte[] entropy)
+        public byte[] Unprotect(byte[] secret)
         {
-            if (entropy.Length < (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
-                throw new InvalidOperationException($"The provided entropy is too small. Should be at least {Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()} bytes but was {entropy.Length} bytes");
-
             if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
             {
                 var ms = new MemoryStream(secret);
                 var br = new BinaryReader(ms);
                 var keyLen = br.ReadInt32();
+                if(keyLen != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes())
+                    throw new InvalidOperationException("Wrong size for key len: " + keyLen);
                 var key = br.ReadBytes(keyLen);
+                if(key.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes())
+                    throw new InvalidOperationException("Wrong size for key buffer: " + key.Length);
+                
+                var entrophyLen = br.ReadInt32();
+                if(entrophyLen != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+                    throw new InvalidOperationException("Wrong size for nonce len: " + entrophyLen);
+              
+                var entropy = br.ReadBytes(entrophyLen);
+                if(entropy.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
+                    throw new InvalidOperationException("Wrong size for nonce buffer: " + entropy.Length );
+              
                 var dataLen = br.ReadInt32();
                 var data = br.ReadBytes(dataLen);
-
+                if(data.Length != dataLen)
+                    throw new InvalidOperationException("Wrong size for data buffer: " + entropy.Length  + " but expected " + dataLen);
+              
                 var plainKey = ProtectedData.Unprotect(key, entropy, DataProtectionScope.CurrentUser);
                 try
                 {
-                    return DecryptProtectedData(data, entropy, plainKey);
+                    return DecryptProtectedData(data, plainKey);
                 }
                 finally
                 {
@@ -259,19 +275,22 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            return DecryptProtectedData(secret, entropy, _serverMasterKey.Value);
+            return DecryptProtectedData(secret, _serverMasterKey.Value);
         }
 
-        private static byte[] DecryptProtectedData(byte[] secret, byte[] entropy, byte[] key)
+        private static byte[] DecryptProtectedData(byte[] secret, byte[] key)
         {
-            var unprotectedData = new byte[secret.Length - (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()];
+            // here we'll throw if the size of the secret buffer is too small
+            var unprotectedData = new byte[secret.Length - (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()
+                                                         - (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
 
             fixed (byte* pContext = EncryptionContext)
             fixed (byte* pSecret = secret)
             fixed (byte* pUnprotectedData = unprotectedData)
-            fixed (byte* pEntropy = entropy)
             fixed (byte* pKey = key)
             {
+                var actualSecretLen = secret.Length -(int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+                var pEntropy = pSecret + actualSecretLen;
                 
                 var actualKey = stackalloc byte[key.Length];
                 if(Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
@@ -283,7 +302,7 @@ namespace Raven.Server.ServerWide
                     &mLen,
                     null,
                     pSecret,
-                    (ulong)secret.Length,
+                    (ulong)actualSecretLen,
                     null,
                     0,
                     pEntropy,
@@ -293,7 +312,7 @@ namespace Raven.Server.ServerWide
                 if (rc != 0)
                     throw new InvalidOperationException($"Unable to unprotect secret, rc={rc}");
 
-                Debug.Assert(mLen == (ulong)secret.Length - (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
+                Debug.Assert(mLen == (ulong)actualSecretLen - (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
             }
 
             return unprotectedData;

@@ -285,15 +285,10 @@ namespace Raven.Server.ServerWide
                         throw new FileLoadException($"The server store secret key is provided in {secretKey} but the server failed to read the file. Admin assistance required.", e);
                     }
 
-                    var secret = new byte[buffer.Length - 32];
-                    var entropy = new byte[32];
-                    Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
-                    Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
-
                     options.DoNotConsiderMemoryLockFailureAsCatastrophicError = Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     try
                     {
-                        options.MasterKey = Secrets.Unprotect(secret, entropy);
+                        options.MasterKey = Secrets.Unprotect(buffer);
                         
                     }
                     catch (Exception e)
@@ -777,16 +772,9 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    var entropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
+                    var protectedData = Secrets.Protect(key);
 
-                    var protectedData = Secrets.Protect(key, entropy);
-
-                    var ms = new MemoryStream();
-                    ms.Write(entropy, 0, entropy.Length);
-                    ms.Write(protectedData, 0, protectedData.Length);
-                    ms.Position = 0;
-
-                    tree.Add(name, ms);
+                    tree.Add(name, protectedData);
                 }
                 finally
                 {
@@ -807,12 +795,10 @@ namespace Raven.Server.ServerWide
                 return null;
 
             var entropy = new byte[(int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
-            var reader = readResult.Reader;
-            reader.Read(entropy, 0, entropy.Length);
-            var protectedData = new byte[reader.Length - entropy.Length];
-            reader.Read(protectedData, 0, protectedData.Length);
+            var protectedData = new byte[readResult.Reader.Length];
+            readResult.Reader.Read(protectedData, 0, protectedData.Length);
 
-            return Secrets.Unprotect(protectedData, entropy);
+            return Secrets.Unprotect(protectedData);
 
         }
 

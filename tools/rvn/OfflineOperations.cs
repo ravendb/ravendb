@@ -23,15 +23,13 @@ namespace rvn
 
             dstOptions.MasterKey = masterKey;
 
-            var entropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); 
-            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey, entropy);
+            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 
             using (var f = File.OpenWrite(Path.Combine(dstDir, SecretKeyEncrypted)))
             {
                 f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
                 f.Flush();
             }
 
@@ -41,14 +39,12 @@ namespace rvn
         public static string PutKey(string destDir)
         {
             var base64Key = RecoverServerStoreKey(destDir);
-            var entropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); 
             var secret = Convert.FromBase64String(base64Key);
-            var protect = new SecretProtection(new SecurityConfiguration()).Protect(secret, entropy);
+            var protect = new SecretProtection(new SecurityConfiguration()).Protect(secret);
 
             using (var f = File.OpenWrite(Path.Combine(destDir, SecretKeyEncrypted)))
             {
                 f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
                 f.Flush();
             }
 
@@ -70,15 +66,13 @@ namespace rvn
 
             dstOptions.MasterKey = masterKey;
 
-            var entropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()); 
-            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey, entropy);
+            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 
             using (var f = File.OpenWrite(Path.Combine(dstDir, SecretKeyEncrypted)))
             {
                 f.Write(protect, 0, protect.Length);
-                f.Write(entropy, 0, entropy.Length);
                 f.Flush();
             }
 
@@ -92,16 +86,11 @@ namespace rvn
         {
             var dstDir = Path.Combine(Path.GetDirectoryName(srcDir), "Temp.Decryption");
             var bytes = File.ReadAllBytes(Path.Combine(srcDir, SecretKeyEncrypted));
-            var nonceSize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
-            var secret = new byte[bytes.Length - nonceSize];
-            var entropy = new byte[nonceSize];
-            Array.Copy(bytes, 0, secret, 0, bytes.Length - nonceSize);
-            Array.Copy(bytes, bytes.Length - nonceSize, entropy, 0, nonceSize);
 
             var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
             var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
 
-            srcOptions.MasterKey = new SecretProtection(new SecurityConfiguration()).Unprotect(secret, entropy);
+            srcOptions.MasterKey = new SecretProtection(new SecurityConfiguration()).Unprotect(bytes);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 
@@ -122,14 +111,9 @@ namespace rvn
             if (File.Exists(keyPath) == false)
                 throw new IOException("File not exists:" + keyPath);
 
-            var nonceSize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
             var buffer = File.ReadAllBytes(keyPath);
-            var secret = new byte[buffer.Length - nonceSize];
-            var entropy = new byte[nonceSize];
-            Array.Copy(buffer, 0, secret, 0, buffer.Length - nonceSize);
-            Array.Copy(buffer, buffer.Length - nonceSize, entropy, 0, nonceSize);
 
-            var key = new SecretProtection(new SecurityConfiguration()).Unprotect(secret, entropy);
+            var key = new SecretProtection(new SecurityConfiguration()).Unprotect(buffer);
             return Convert.ToBase64String(key);
         }
 
