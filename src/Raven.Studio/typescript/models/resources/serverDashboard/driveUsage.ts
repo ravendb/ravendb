@@ -14,7 +14,10 @@ class legendColumn<T> implements virtualColumn {
         public colorAccessor: (item: T) => string,
         public header: string,
         public width: string) {
-        
+    }
+    
+    get headerTitle() {
+        return this.header;
     }
 
     renderCell(item: T, isSelected: boolean): string {

@@ -22,6 +22,10 @@ class textColumn<T> implements virtualColumn {
         public width: string,
         public opts: textColumnOpts<T> = {}) {
     }
+    
+    get headerTitle() {
+        return this.header;
+    }
 
     getCellValue(item: T) {
         return _.isFunction(this.valueAccessor)
