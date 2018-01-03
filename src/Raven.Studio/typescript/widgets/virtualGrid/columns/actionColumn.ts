@@ -33,6 +33,10 @@ class actionColumn<T> implements virtualColumn {
         this.width = width;
         this.opts = opts || {};
     }
+    
+    get headerTitle() {
+        return this.header;
+    }
 
     canHandle(actionId: string) {
         return this.actionUniqueId === actionId;
