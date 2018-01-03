@@ -19,6 +19,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.X509;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
@@ -975,25 +977,11 @@ namespace Raven.Server.Commercial
             if (sanNames == null)
                 yield break;
 
-            // If we have alternative names, find the apropriate url using the node tag
-            foreach (var line in sanNames?.Format(true).Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
+            var generalNames = GeneralNames.GetInstance(Asn1Object.FromByteArray(sanNames.RawData));
+            foreach (var name in generalNames.GetNames())
             {
-                string[] parts;
-
-                if (line.Contains('='))
-                {
-                    parts = line.Split('=');
-                }
-                else if (line.Contains(':'))
-                {
-                    parts = line.Split(':');
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Could not parse SAN names: {line}");
-                }
-
-                yield return parts.Length > 0 ? parts[1] : "";
+                var certificateAlternativeNames = name.ToString();
+                yield return certificateAlternativeNames;
             }
         }
 
