@@ -13,8 +13,15 @@ namespace Raven.Server.Smuggler.Migration
         }
 
         public string LastDocsEtag { get; set; }
+
         public string LastDocDeleteEtag { get; set; }
+
         public string LastAttachmentsEtag { get; set; }
+
         public string LastAttachmentsDeleteEtag { get; set; }
+
+        public string ServerUrl { get; set; }
+
+        public string DatabaseName { get; set; }
     }
 }

@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -330,6 +331,61 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     writer.WriteOperationId(context, operationId);
                 }
             }
+        }
+
+        [RavenAction("/databases/*/migrate/get-migrated-server-urls", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetMigratedServerUrls()
+        {
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var documents = Database.DocumentsStorage.GetDocumentsStartingWith(
+                    context, Migrator.MigrationStateKeyBase, null, null, null, 0, 64);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(MigratedServerUrls.List));
+                    writer.WriteStartArray();
+
+                    var urls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var document in documents)
+                    {
+                        if (document.Data.TryGet(nameof(ImportInfo.ServerUrl), out string serverUrl) == false)
+                        {
+                            // server url used to be saved only in the document id
+                            // document id: Raven/Migration/Status/{server-version}/{database-name}/{url}
+                            var splitted = document.Id.ToString()
+                                .Replace(Migrator.MigrationStateKeyBase, string.Empty)
+                                .Split("/http");
+
+                            if (splitted.Length != 2)
+                                continue;
+
+                            serverUrl = $"http{splitted.Last()}";
+                            if (string.IsNullOrWhiteSpace(serverUrl))
+                                continue;
+                        }
+
+                        urls.Add(serverUrl);
+                    }
+
+                    var first = true;
+                    foreach (var url in urls)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+
+                        writer.WriteString(url);
+                    }
+
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]

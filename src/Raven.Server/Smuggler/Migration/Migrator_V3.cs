@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Smuggler.Migration
@@ -163,8 +164,7 @@ namespace Raven.Server.Smuggler.Migration
                 if (operationStateBlittable == null)
                     return;
 
-                var blittableCopy = context.ReadObject(operationStateBlittable, MigrationStateKey);
-                await SaveLastOperationState(blittableCopy);
+                await SaveLastOperationState(operationStateBlittable);
             }
         }
 
@@ -195,7 +195,13 @@ namespace Raven.Server.Smuggler.Migration
                     return null;
                 }
 
-                return operationStateBlittable;
+                operationStateBlittable.Modifications = new DynamicJsonValue
+                {
+                    [nameof(ImportInfo.ServerUrl)] = ServerUrl,
+                    [nameof(ImportInfo.DatabaseName)] = DatabaseName
+                };
+                var blittableCopy = context.ReadObject(operationStateBlittable, MigrationStateKey);
+                return blittableCopy;
             }
         }
 

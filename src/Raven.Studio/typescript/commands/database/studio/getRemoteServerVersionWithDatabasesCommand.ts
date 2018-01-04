@@ -1,7 +1,7 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class getRemoteServerVersionWithDatabases extends commandBase {
+class getRemoteServerVersionWithDatabasesCommand extends commandBase {
 
     constructor(private serverUrl: string) {
         super();
@@ -13,10 +13,8 @@ class getRemoteServerVersionWithDatabases extends commandBase {
         };
         
         const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(args);
-        
         return this.query(url, null);
-            
     }
 }
 
-export = getRemoteServerVersionWithDatabases; 
+export = getRemoteServerVersionWithDatabasesCommand; 

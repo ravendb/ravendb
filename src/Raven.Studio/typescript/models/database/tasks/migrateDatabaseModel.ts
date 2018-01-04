@@ -19,6 +19,7 @@ class migrateDatabaseModel {
     
     serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>("Unknown");
     buildVersion = ko.observable<number>();
+    serverUrls = ko.observableArray<string>([]);
     databaseNames = ko.observableArray<string>([]);
 
     serverMajorVersionNumber = ko.pureComputed<string>(() => {
@@ -180,6 +181,24 @@ class migrateDatabaseModel {
         this.versionCheckValidationGroup = ko.validatedObservable({
             serverUrl: this.serverUrl
         });
+    }
+
+    createServerUrlAutoCompleter() {
+        return ko.pureComputed(() => {
+            const options = this.serverUrls();
+            let key = this.serverUrl();
+
+            if (key) {
+                key = key.toLowerCase();
+                return options.filter(x => x.toLowerCase().includes(key));
+            }
+
+            return options;
+        });
+    }
+
+    selectServerUrl(serverUrl: string) {
+        this.serverUrl(serverUrl);
     }
 
     createDatabaseNameAutoCompleter() {
