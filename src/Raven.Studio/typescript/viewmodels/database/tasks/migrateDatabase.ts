@@ -3,7 +3,7 @@ import migrateDatabaseCommand = require("commands/database/studio/migrateDatabas
 import migrateDatabaseModel = require("models/database/tasks/migrateDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
-import getRemoteServerVersion = require("commands/database/studio/getRemoteServerVersion");
+import getRemoteServerVersionWithDatabases = require("commands/database/studio/getRemoteServerVersionWithDatabases");
 import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
 
@@ -59,15 +59,17 @@ class migrateDatabase extends viewModelBase {
 
         const url = this.model.serverUrl();
 
-        new getRemoteServerVersion(url)
+        new getRemoteServerVersionWithDatabases(url)
             .execute()
-            .done(buildInfo => {
-                if (buildInfo.MajorVersion !== "Unknown") {
-                    this.model.serverMajorVersion(buildInfo.MajorVersion);
-                    this.model.buildVersion(buildInfo.BuildVersion);
+            .done(info => {
+                if (info.MajorVersion !== "Unknown") {
+                    this.model.serverMajorVersion(info.MajorVersion);
+                    this.model.buildVersion(info.BuildVersion);
+                    this.model.databaseNames(info.DatabaseNames);
                 } else {
                     this.model.serverMajorVersion(null);
                     this.model.buildVersion(null);
+                    this.model.databaseNames([]);
                 }
             })
             .fail((response: JQueryXHR) => {
@@ -75,6 +77,7 @@ class migrateDatabase extends viewModelBase {
                     const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
                     const message = generalUtils.trimMessage(messageAndOptionalException.message);
                     this.model.serverMajorVersion.setError(message);
+                    this.model.databaseNames([]);
                 }
             })
             .always(() => this.spinners.versionDetect(false));

@@ -16,6 +16,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Migration;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Constants = Raven.Client.Constants;
@@ -164,7 +165,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/remote-server/build/version", "GET", AuthorizationStatus.Operator)]
-        public async Task GetRemoteServerBuildInfo()
+        public async Task GetRemoteServerBuildInfoWithDatabases()
         {
             var serverUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("serverUrl");
             var migrator = new Migrator(new SingleDatabaseMigrationConfiguration
@@ -173,16 +174,18 @@ namespace Raven.Server.Web.System
             }, ServerStore);
 
             var buildInfo = await migrator.GetBuildInfo();
+            var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion);
             migrator.DisposeHttpClient(); // the http client isn't needed anymore
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var json = new DynamicJsonValue
                 {
-                    [nameof(BuildInfo.BuildVersion)] = buildInfo.BuildVersion,
-                    [nameof(BuildInfo.ProductVersion)] = buildInfo.ProductVersion,
-                    [nameof(BuildInfo.MajorVersion)] = buildInfo.MajorVersion,
-                    [nameof(BuildInfo.FullVersion)] = buildInfo.FullVersion
+                    [nameof(BuildInfoWithDatabaseNames.BuildVersion)] = buildInfo.BuildVersion,
+                    [nameof(BuildInfoWithDatabaseNames.ProductVersion)] = buildInfo.ProductVersion,
+                    [nameof(BuildInfoWithDatabaseNames.MajorVersion)] = buildInfo.MajorVersion,
+                    [nameof(BuildInfoWithDatabaseNames.FullVersion)] = buildInfo.FullVersion,
+                    [nameof(BuildInfoWithDatabaseNames.DatabaseNames)] = TypeConverter.ToBlittableSupportedType(databaseNames),
                 };
 
                 context.Write(writer, json);

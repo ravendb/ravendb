@@ -31,7 +31,17 @@
                         <div class="form-group" data-bind="validationElement: databaseName">
                             <label class="control-label">Database name</label>
                             <div class="flex-grow">
-                                <input data-bind="textInput: databaseName" type="text" class="form-control" placeholder="Source database name" />
+                                <div class="dropdown btn-block">
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                           id="server-url"
+                                           data-bind="textInput: databaseName"
+                                           placeholder="Source database name">
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNameAutoCompleter(), autoComplete: '#server-url'">
+                                        <li data-bind="click: $parent.selectDatabaseName.bind($parent, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                         

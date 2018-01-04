@@ -47,7 +47,7 @@ namespace Raven.Server.Smuggler.Migration
                 httpClientHandler.Credentials = new NetworkCredential(
                     configuration.UserName, 
                     configuration.Password, 
-                    configuration.Domain);
+                    configuration.Domain ?? string.Empty);
             }
 
             _httpClient = new HttpClient(httpClientHandler);
@@ -135,10 +135,7 @@ namespace Raven.Server.Smuggler.Migration
             if (databases == null || databases.Count == 0)
             {
                 // migrate all databases
-                var databaseNames = _buildMajorVersion == MajorVersion.V4
-                    ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
-                    : await AbstractLegacyMigrator.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown);
-
+                var databaseNames = await GetDatabaseNames(_buildMajorVersion);
                 if (databases == null)
                     databases = new List<DatabaseMigrationSettings>();
 
@@ -181,6 +178,16 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
+        public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion)
+        {
+            if (builMajorVersion == MajorVersion.Unknown)
+                return new List<string>();
+
+            return builMajorVersion == MajorVersion.V4
+                ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
+                : await AbstractLegacyMigrator.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown);
+        }
+
         public long StartMigratingSingleDatabase(DatabaseMigrationSettings databaseMigrationSettings, DocumentDatabase database)
         {
             var operationId = database.Operations.GetNextOperationId();
@@ -204,7 +211,7 @@ namespace Raven.Server.Smuggler.Migration
                     {
                         try
                         {
-                            var migrationStateKey = $"{MigrationStateKeyBase}/" +
+                            var migrationStateKey = $"{MigrationStateKeyBase}" +
                                                     $"{EnumHelper.GetDescription(_buildMajorVersion)}/" +
                                                     $"{databaseName}/" +
                                                     $"{_serverUrl}";
