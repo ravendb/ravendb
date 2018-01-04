@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Operations
         public RavenCommand<IEnumerable<(string Key, long Index, T Value)>> GetCommand(IDocumentStore store, DocumentConventions conventions, 
             JsonOperationContext context, HttpCache cache)
         {
-            return new ListCompareExchangeValuesCommand<T>(_keyPrefix, _page, _size, conventions);
+            return new ListCompareExchangeValuesCommand(_keyPrefix, _page, _size, conventions);
         }
 
         public ListCompareExchangeValuesOperation(string keyPrefix, int? page = null, int? size = null)
@@ -76,7 +76,7 @@ namespace Raven.Client.Documents.Operations
             _size = size;
         }
 
-        private class ListCompareExchangeValuesCommand<T> : RavenCommand<IEnumerable<(string Key, long Index, T Value)>>
+        private class ListCompareExchangeValuesCommand : RavenCommand<IEnumerable<(string Key, long Index, T Value)>>
         {
             private readonly string _keyPrefix;
             private readonly int? _page;

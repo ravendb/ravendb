@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.ExceptionServices;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Sparrow.Logging;
@@ -11,7 +10,6 @@ namespace Raven.Server.Rachis
         public bool Disable;
 
         private readonly ManualResetEventSlim _timeoutEventSlim = new ManualResetEventSlim();
-        private ExceptionDispatchInfo _edi;
         private readonly Timer _timer;
         private long _lastDeferredTicks;
         private Action _timeoutHappened;
@@ -32,7 +30,6 @@ namespace Raven.Server.Rachis
         {
             lock (this)
             {
-                _edi?.Throw();
                 if (onTimeout == _timeoutHappened)
                 {
                     Defer(_currentLeader);
@@ -113,7 +110,6 @@ namespace Raven.Server.Rachis
 
         public void Defer(string leader)
         {
-            _edi?.Throw();
             Interlocked.Exchange(ref _lastDeferredTicks, DateTime.UtcNow.Ticks);
             _timeoutEventSlim.Set();
             _currentLeader = leader;

@@ -10,16 +10,16 @@ namespace FastTests
 {
     public class SkippableFactDiscoverer : IXunitTestCaseDiscoverer
     {
-        readonly IMessageSink diagnosticMessageSink;
+        private readonly IMessageSink _diagnosticMessageSink;
 
         public SkippableFactDiscoverer(IMessageSink diagnosticMessageSink)
         {
-            this.diagnosticMessageSink = diagnosticMessageSink;
+            _diagnosticMessageSink = diagnosticMessageSink;
         }
 
         public IEnumerable<IXunitTestCase> Discover(ITestFrameworkDiscoveryOptions discoveryOptions, ITestMethod testMethod, IAttributeInfo factAttribute)
         {
-            yield return new SkippableFactTestCase(diagnosticMessageSink, discoveryOptions.MethodDisplayOrDefault(), testMethod);
+            yield return new SkippableFactTestCase(_diagnosticMessageSink, discoveryOptions.MethodDisplayOptionsOrDefault(), discoveryOptions.MethodDisplayOrDefault(), testMethod);
         }
     }
 
@@ -28,8 +28,12 @@ namespace FastTests
         [Obsolete("Called by the de-serializer; should only be called by deriving classes for de-serialization purposes")]
         public SkippableFactTestCase() { }
 
+        [Obsolete("Please call the constructor which takes TestMethodDisplayOptions")]
         public SkippableFactTestCase(IMessageSink diagnosticMessageSink, TestMethodDisplay defaultMethodDisplay, ITestMethod testMethod, object[] testMethodArguments = null)
             : base(diagnosticMessageSink, defaultMethodDisplay, testMethod, testMethodArguments) { }
+
+        public SkippableFactTestCase(IMessageSink diagnosticMessageSink, TestMethodDisplayOptions defaultMethodDisplayOptions, TestMethodDisplay defaultMethodDisplay, ITestMethod testMethod, object[] testMethodArguments = null)
+            : base(diagnosticMessageSink, defaultMethodDisplay, defaultMethodDisplayOptions, testMethod, testMethodArguments) { }
 
         public override async Task<RunSummary> RunAsync(IMessageSink diagnosticMessageSink,
                                                         IMessageBus messageBus,
@@ -51,11 +55,11 @@ namespace FastTests
 
     public class SkippableFactMessageBus : IMessageBus
     {
-        readonly IMessageBus innerBus;
+        private readonly IMessageBus _innerBus;
 
         public SkippableFactMessageBus(IMessageBus innerBus)
         {
-            this.innerBus = innerBus;
+            _innerBus = innerBus;
         }
 
         public int DynamicallySkippedTestCount { get; private set; }
@@ -64,19 +68,18 @@ namespace FastTests
 
         public bool QueueMessage(IMessageSinkMessage message)
         {
-            var testFailed = message as ITestFailed;
-            if (testFailed != null)
+            if (message is ITestFailed testFailed)
             {
                 var exceptionType = testFailed.ExceptionTypes.FirstOrDefault();
                 if (exceptionType == typeof(SkipTestException).FullName)
                 {
                     DynamicallySkippedTestCount++;
-                    return innerBus.QueueMessage(new TestSkipped(testFailed.Test, testFailed.Messages.FirstOrDefault()));
+                    return _innerBus.QueueMessage(new TestSkipped(testFailed.Test, testFailed.Messages.FirstOrDefault()));
                 }
             }
 
             // Nothing we care about, send it on its way
-            return innerBus.QueueMessage(message);
+            return _innerBus.QueueMessage(message);
         }
     }
 
