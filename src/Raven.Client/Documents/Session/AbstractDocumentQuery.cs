@@ -1535,7 +1535,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return string.Empty;
 
             var type = whereParams.Value.GetType().GetNonNullableType();
-            
+
+            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out var strVal))
+                return strVal;
+
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
                 return whereParams.Value;
             if (type == typeof(string))
@@ -1573,8 +1576,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (result != null)
                 return result(whereParams.Value);
 
-            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out var strVal))
-                return strVal;
 
             return whereParams.Value;
         }
