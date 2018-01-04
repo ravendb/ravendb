@@ -49,8 +49,9 @@ namespace Raven.TestDriver
 
         public static Process GlobalServerProcess => _globalServerProcess;
 
-        public IDocumentStore GetDocumentStore([CallerMemberName] string database = null, TimeSpan? waitForIndexingTimeout = null)
+        public IDocumentStore GetDocumentStore(GetDocumentStoreOptions options = null, [CallerMemberName] string database = null)
         {
+            options = options ?? GetDocumentStoreOptions.Default;
             var name = database + "_" + Interlocked.Increment(ref _index);
             ReportInfo($"GetDocumentStore for db ${ database }.");
             var documentStore = GlobalServer.Value;
@@ -89,8 +90,8 @@ namespace Raven.TestDriver
 
             SetupDatabase(store);
 
-            if (waitForIndexingTimeout.HasValue)
-                WaitForIndexing(store, name, waitForIndexingTimeout);
+            if (options.WaitForIndexingTimeout.HasValue)
+                WaitForIndexing(store, name, options.WaitForIndexingTimeout);
 
             _documentStores[store] = null;
 
@@ -153,7 +154,7 @@ namespace Raven.TestDriver
             {
                 if (readLineTask == null)
                     readLineTask = output.ReadLineAsync();
-                
+
                 var task = Task.WhenAny(readLineTask, Task.Delay(TimeSpan.FromSeconds(5))).Result;
 
                 if (startupDuration.Elapsed > TimeSpan.FromMinutes(1))
@@ -165,7 +166,7 @@ namespace Raven.TestDriver
                 var line = readLineTask.Result;
 
                 readLineTask = null;
-                
+
                 sb.AppendLine(line);
 
                 if (line == null)
@@ -204,7 +205,7 @@ namespace Raven.TestDriver
 
                 throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + log);
             }
-            
+
             output.ReadToEndAsync()
                 .ContinueWith(x =>
                 {
@@ -346,7 +347,7 @@ namespace Raven.TestDriver
         {
             if (Debug == false)
                 return;
-            
+
             if (string.IsNullOrWhiteSpace(message))
                 throw new ArgumentNullException(nameof(message));
 
