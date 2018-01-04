@@ -67,9 +67,9 @@ namespace Raven.Server.Rachis
             base.Dispose();
         }
 
-        public override void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
+        public override long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration)
         {
-            StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
+            return StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
         }
 
         public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
@@ -1596,7 +1596,7 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader);
+        public abstract long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
         public abstract void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex);
 
