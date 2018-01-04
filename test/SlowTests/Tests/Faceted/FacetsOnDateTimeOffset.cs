@@ -1,10 +1,11 @@
 using System;
+using FastTests;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 
 namespace SlowTests.Tests.Faceted
 {
-    public class FacetsOnDateTimeOffset
+    public class FacetsOnDateTimeOffset : NoDisposalNeeded
     {
         private class ClassWithDateTimeOffset
         {
@@ -59,7 +60,7 @@ namespace SlowTests.Tests.Faceted
         {
             var actual = RangeFacet<ClassWithDateTimeOffset>.Parse(c => c.DateTimeOffset > DateTimeOffset.MinValue && c.DateTimeOffset < new DateTimeOffset(2017, 1, 2, 0, 0, 0, TimeSpan.Zero));
 
-            Assert.Equal("NullableDateTimeOffset > '0001-01-01T00:00:00.0000000' and NullableDateTimeOffset < '2017-01-02T00:00:00.0000000'", actual);
+            Assert.Equal("DateTimeOffset > '0001-01-01T00:00:00.0000000' and DateTimeOffset < '2017-01-02T00:00:00.0000000'", actual);
         }
     }
 }

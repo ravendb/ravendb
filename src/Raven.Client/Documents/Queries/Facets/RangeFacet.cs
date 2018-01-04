@@ -138,29 +138,9 @@ namespace Raven.Client.Documents.Queries.Facets
                 return ce.Value;
             }
 
-            //http://stackoverflow.com/questions/238765/given-a-type-expressiontype-memberaccess-how-do-i-get-the-field-value
-            //http://stackoverflow.com/questions/671968/retrieving-property-name-from-lambda-expression
             if (operation.Right is MemberExpression me)
             {
-                if (me.Member is FieldInfo field)
-                {
-                    //This handles x < somefield
-                    if (me.Expression is ConstantExpression obj)
-                    {
-                        var value = field.GetValue(obj.Value);
-                        return value;
-                    }
-                }
-                else
-                {
-                    //This handles things like DateTime.Now
-                    if (me.Member is PropertyInfo property && me.Member != null)
-                    {
-                        //This chokes on anonymous types!?													
-                        var value = property.GetValue(property, null);
-                        return value;
-                    }
-                }
+                return ParseMemberExpression(me);
             }
 
             //i.e. new DateTime(10, 4, 2001) || dateTimeVar.AddDays(2) || val +100
@@ -181,6 +161,39 @@ namespace Raven.Client.Documents.Queries.Facets
                                     operation.Left.GetType().Name, operation.NodeType, operation.Right.GetType().Name));
         }
 
+        private static object ParseMemberExpression(MemberExpression me)
+        {
+            //http://stackoverflow.com/questions/238765/given-a-type-expressiontype-memberaccess-how-do-i-get-the-field-value
+            //http://stackoverflow.com/questions/671968/retrieving-property-name-from-lambda-expression
+            if (me.Member is FieldInfo field)
+            {
+                //This handles x < somefield
+                if (me.Expression is ConstantExpression obj)
+                {
+                    var value = field.GetValue(obj.Value);
+                    return value;
+                }
+                else if (field.IsStatic)
+                {
+                    var value = field.GetValue(null);
+                    return value;
+                }
+            }
+            else
+            {
+                //This handles things like DateTime.Now
+                if (me.Member is PropertyInfo property && me.Member != null)
+                {
+                    //This chokes on anonymous types!?													
+                    var value = property.GetValue(property, null);
+                    return value;
+                }
+            }
+            throw new InvalidOperationException(string.Format("Unable to parse expression: {0} {1} {2}",
+                             me.GetType().Name, me.NodeType, me.Member));
+
+        }
+
         private static object ParseUnaryExpression(UnaryExpression expression)
         {
             if (expression.NodeType == ExpressionType.Convert)
@@ -189,6 +202,8 @@ namespace Raven.Client.Documents.Queries.Facets
 
                 switch (operand.NodeType)
                 {
+                    case ExpressionType.MemberAccess:
+                        return ParseMemberExpression((MemberExpression)operand);
                     case ExpressionType.Constant:
                         var constant = (ConstantExpression)operand;
                         var type = expression.Type.GetTypeInfo().IsGenericType ? expression.Type.GenericTypeArguments[0] : expression.Type;
