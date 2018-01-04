@@ -1142,6 +1142,12 @@ namespace Raven.Server.ServerWide
 
                     foreach (var db in databasesToCleanup)
                     {
+                        if (LoadDatabaseRecord(db, out var _)?.Topology?.Count > 1)
+                        {
+                            //TODO: don't unload a replicated database until RavenDB-10065 is fixed
+                            continue;
+                        }
+                        
                         if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) &&
                             resourceTask != null &&
                             resourceTask.Status == TaskStatus.RanToCompletion &&
