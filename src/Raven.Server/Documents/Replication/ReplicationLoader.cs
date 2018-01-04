@@ -702,9 +702,10 @@ namespace Raven.Server.Documents.Replication
                         DocumentConventions.Default))
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     {
-                        var cmd = new GetTcpInfoCommand("extrenal-replication");
+                        var database = exNode.ConnectionString.Database;
+                        var cmd = new GetTcpInfoCommand("extrenal-replication", database);
                         requestExecutor.Execute(cmd, ctx);
-                        node.Database = exNode.ConnectionString.Database;
+                        node.Database = database;
                         node.Url = requestExecutor.Url;
                         return cmd.Result;
                     }
@@ -713,7 +714,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.NodeTag, "Replication", _server.Server.Certificate.Certificate, cts.Token);
+                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, "Replication", _server.Server.Certificate.Certificate, cts.Token);
                     }
                 }
                 throw new InvalidOperationException(

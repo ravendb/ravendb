@@ -1142,6 +1142,7 @@ namespace Raven.Server.ServerWide
 
                     foreach (var db in databasesToCleanup)
                     {
+                       
                         if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) &&
                             resourceTask != null &&
                             resourceTask.Status == TaskStatus.RanToCompletion &&
@@ -1158,6 +1159,13 @@ namespace Raven.Server.ServerWide
                             resourceTask.Result.Configuration.Core.RunInMemory)
                             continue;
                         var idleDbInstance = resourceTask.Result;
+
+                        if (idleDbInstance.ReplicationLoader?.IncomingHandlers.Any() == true)
+                        {
+                            //TODO: until RavenDB-10065 is fixed, don't unload a replicated database if it has valid a incoming connection
+                            continue;
+                        }
+                        
                         if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
                             continue;
 
