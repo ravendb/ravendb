@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
@@ -15,6 +16,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Xunit.Sdk;
 
 namespace FastTests.Server.Documents.Revisions
 {
@@ -117,9 +119,17 @@ namespace FastTests.Server.Documents.Revisions
                 using (var session = store2.OpenAsyncSession())
                 {
                     var revisions = await session.Advanced.Revisions.GetForAsync<Company>(company.Id);
-                    Assert.Equal(5, revisions.Count);
-                    Assert.Equal("Company #2: 9", revisions[0].Name);
-                    Assert.Equal("Company #2: 5", revisions[4].Name);
+                    try
+                    {
+                        Assert.Equal(5, revisions.Count);
+                        Assert.Equal("Company #2: 9", revisions[0].Name);
+                        Assert.Equal("Company #2: 5", revisions[4].Name);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new XunitException($"Revisions: {string.Join(", ", revisions.Select(r => r.Name))}. " +
+                                                 $"Exception: {e}");
+                    }
                 }
             }
         }
