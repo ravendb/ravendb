@@ -29,12 +29,12 @@ class studioConfig extends viewModelBase {
     }
 
     canActivate(args: any): any {
-        var deffered = $.Deferred();
+        var deferred = $.Deferred();
 
-        deffered.resolve({ can: true });
+        deferred.resolve({ can: true });
         this.configDocument(documentClass.empty());
 
-        return deffered;
+        return deferred;
     }
 
     attached() {

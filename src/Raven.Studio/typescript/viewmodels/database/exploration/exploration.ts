@@ -28,16 +28,16 @@ class exploration extends viewModelBase {
     }
 
     canActivate(args: any): any {
-        var deffered = $.Deferred();
+        var deferred = $.Deferred();
 
         new getCollectionsStatsCommand(this.activeDatabase())
             .execute()
             .done((collectionStats: collectionsStats) => {
                 this.collections(collectionStats.collections.map(x => x.name));
             })
-            .always(() => deffered.resolve({ can: true }));
+            .always(() => deferred.resolve({ can: true }));
 
-        return deffered;
+        return deferred;
     }
 
     activate(args?: string) {

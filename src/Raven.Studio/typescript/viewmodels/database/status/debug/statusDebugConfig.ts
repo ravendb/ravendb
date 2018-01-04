@@ -17,9 +17,9 @@ class statusDebugConfig extends viewModelBase {
     canActivate(args: any) {
         super.canActivate(args);
 
-        var deffered = $.Deferred();
-        this.fetchStatusDebugConfig().always(() => deffered.resolve({ can: true }));
-        return deffered;
+        var deferred = $.Deferred();
+        this.fetchStatusDebugConfig().always(() => deferred.resolve({ can: true }));
+        return deferred;
     }
 
     activate(args: any) {
