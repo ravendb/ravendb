@@ -29,7 +29,7 @@ namespace Voron.Impl.Paging
 
     public sealed unsafe class CryptoPager : AbstractPager
     {
-        private static readonly byte[] Context = Encodings.Utf8.GetBytes("Raven DB!");
+        private static readonly byte[] Context = Encodings.Utf8.GetBytes("RavenDB!");
 
             
         public AbstractPager Inner { get; }
@@ -305,11 +305,12 @@ namespace Voron.Impl.Paging
         {
             var num = page->PageNumber;
             var destination = (byte*)page;
-            var subKey = stackalloc byte[32];
+            var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+            var subKey = stackalloc byte[(int)subKeyLen ];
             fixed (byte* ctx = Context)
             fixed (byte* mk = _masterKey)
             {
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
                 var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;
@@ -348,11 +349,12 @@ namespace Voron.Impl.Paging
             var num = page->PageNumber;
 
             var destination = (byte*)page;
-            var subKey = stackalloc byte[32];
+            var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+            var subKey = stackalloc byte[(int)subKeyLen ];
             fixed (byte* ctx = Context)
             fixed (byte* mk = _masterKey)
             {
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen , (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
 
                 var dataSize = (ulong)GetNumberOfPages(page) * Constants.Storage.PageSize;

@@ -1479,20 +1479,21 @@ namespace Voron.Impl.Journal
             return prepreToWriteToJournal;
         }
 
-        internal static readonly byte[] Context = Encoding.UTF8.GetBytes("TX & ACID");
+        internal static readonly byte[] Context = Encoding.UTF8.GetBytes("Txn-Acid");
 
         private void EncryptTransaction(byte* fullTxBuffer)
         {
             var txHeader = (TransactionHeader*)fullTxBuffer;
 
             txHeader->Flags |= TransactionPersistenceModeFlags.Encrypted;
-            ulong macLen = 16;
-            var subKey = stackalloc byte[32];
+            ulong macLen = (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
+            var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+            var subKey = stackalloc byte[(int)subKeyLen ];
             fixed (byte* mk = _env.Options.MasterKey)
             fixed (byte* ctx = Context)
             {
                 var num = txHeader->TransactionId;
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
             }
 
@@ -1514,7 +1515,7 @@ namespace Voron.Impl.Journal
                 subKey
             );
             
-            Debug.Assert(macLen == 16);
+            Debug.Assert(macLen == (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes());
 
             if (rc != 0)
                 throw new InvalidOperationException("Failed to call crypto_aead_xchacha20poly1305_ietf_encrypt, rc = " + rc);

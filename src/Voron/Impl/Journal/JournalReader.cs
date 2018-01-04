@@ -207,11 +207,12 @@ namespace Voron.Impl.Journal
             if ((txHeader->Flags & TransactionPersistenceModeFlags.Encrypted) != TransactionPersistenceModeFlags.Encrypted)
                 throw new InvalidOperationException($"Unable to decrypt transaction {num}, not encrypted");
 
-            var subKey = stackalloc byte[32];
+            var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
+            var subKey = stackalloc byte[(int)subKeyLen ];
             fixed (byte* mk = options.MasterKey)
             fixed (byte* ctx = WriteAheadJournal.Context)
             {
-                if (Sodium.crypto_kdf_derive_from_key(subKey, (UIntPtr)32, (ulong)num, ctx, mk) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
                     throw new InvalidOperationException("Unable to generate derived key");
             }
 
