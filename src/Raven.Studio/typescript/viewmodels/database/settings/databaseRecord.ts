@@ -14,7 +14,7 @@ class databaseRecord extends viewModelBase {
     docEditor: AceAjax.Editor;
     securedSettings: string;
     updatedDto: documentDto;
-    leavePageDeffered: JQueryPromise<any>;
+    leavePageDeferred: JQueryPromise<any>;
     isForbidden = ko.observable<boolean>(false);
 
     static containerId ="#databaseSettingsContainer";

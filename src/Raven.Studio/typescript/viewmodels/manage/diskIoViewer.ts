@@ -85,16 +85,16 @@ class diskIoViewer extends viewModelBase {
     }
 
     canActivate(args: any): any {
-        var deffered = $.Deferred();
+        var deferred = $.Deferred();
 
         new listDiskPerformanceRunsCommand()
             .execute() 
             .done((results: performanceRunItemDto[]) => {
                 this.performanceRuns(results);
             })
-            .always(() => deffered.resolve({ can: true }));
+            .always(() => deferred.resolve({ can: true }));
 
-        return deffered;
+        return deferred;
     }
 
     activate(args: any) {
