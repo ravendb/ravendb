@@ -27,26 +27,28 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
 
-            var lastAppliedIndex = _parent.GetLastCommitIndex(context) +1;
+            var lastAppliedIndex = _parent.GetLastCommitIndex(context);
             var maxTimeAllowedToWaitForApply = _parent.Timeout.TimeoutPeriod / 4;
-            for (; lastAppliedIndex <= uptoInclusive; lastAppliedIndex++)
+            for (var index = lastAppliedIndex + 1; index <= uptoInclusive; index++)
             {
-                var cmd = _parent.GetEntry(context, lastAppliedIndex, out RachisEntryFlags flags);
+                var cmd = _parent.GetEntry(context, index, out RachisEntryFlags flags);
                 if (cmd == null || flags == RachisEntryFlags.Invalid)
-                    throw new InvalidOperationException("Expected to apply entry " + lastAppliedIndex + " but it isn't stored");
+                    throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
 
-                if(flags != RachisEntryFlags.StateMachineCommand)
+                lastAppliedIndex = index;
+
+                if (flags != RachisEntryFlags.StateMachineCommand)
                     continue;
 
-                Apply(context, cmd, lastAppliedIndex, leader, serverStore);
-
+                Apply(context, cmd, index, leader, serverStore);
+                
                 if (duration.ElapsedMilliseconds >= maxTimeAllowedToWaitForApply)
                     // we don't want to spend so much time applying commands that we will time out the leader
                     // so we time this from the follower perspective and abort after applying a single command
                     // or 25% of the time has already passed
                     break; 
             }
-            var term = _parent.GetTermForKnownExisting(context, uptoInclusive);
+            var term = _parent.GetTermForKnownExisting(context, lastAppliedIndex);
 
             _parent.SetLastCommitIndex(context, lastAppliedIndex, term);
 
