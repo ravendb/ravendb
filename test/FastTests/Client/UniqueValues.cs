@@ -111,12 +111,12 @@ namespace FastTests.Client
             Assert.Equal("Karmel", res2.Value.Name);
             Assert.True(res2.Successful);
             
-            var list = (await store.Operations.SendAsync(new ListCompareExchangeValuesOperation("test"))).ToList();
+            var list = (await store.Operations.SendAsync(new ListCompareExchangeValuesOperation<User>("test"))).ToList();
             Assert.Equal(2, list.Count);
             Assert.Equal("test", list[0].Key);
-            Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
+            Assert.Equal("Karmel", list[0].Value.Name);
             Assert.Equal("test2", list[1].Key);
-            Assert.Equal("Karmel", ((User)EntityToBlittable.ConvertToEntity(typeof(User),"test", (BlittableJsonReaderObject)list[0].Value, store.Conventions)).Name);
+            Assert.Equal("Karmel", list[1].Value.Name);
         }
         
         [Fact]

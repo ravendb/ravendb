@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -56,16 +57,16 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class ListCompareExchangeValuesOperation : IOperation<IEnumerable<(string Key, long Index, object Value)>>
+    public class ListCompareExchangeValuesOperation<T> : IOperation<IEnumerable<(string Key, long Index, T Value)>>
     {
         private readonly string _keyPrefix;
         private readonly int? _page;
         private readonly int? _size;
 
-        public RavenCommand<IEnumerable<(string Key, long Index, object Value)>> GetCommand(IDocumentStore store, DocumentConventions conventions, 
+        public RavenCommand<IEnumerable<(string Key, long Index, T Value)>> GetCommand(IDocumentStore store, DocumentConventions conventions, 
             JsonOperationContext context, HttpCache cache)
         {
-            return new ListCompareExchangeValuesCommand(_keyPrefix, _page, _size, conventions);
+            return new ListCompareExchangeValuesCommand<T>(_keyPrefix, _page, _size, conventions);
         }
 
         public ListCompareExchangeValuesOperation(string keyPrefix, int? page = null, int? size = null)
@@ -75,7 +76,7 @@ namespace Raven.Client.Documents.Operations
             _size = size;
         }
 
-        private class ListCompareExchangeValuesCommand : RavenCommand<IEnumerable<(string Key, long Index, object Value)>>
+        private class ListCompareExchangeValuesCommand<T> : RavenCommand<IEnumerable<(string Key, long Index, T Value)>>
         {
             private readonly string _keyPrefix;
             private readonly int? _page;
@@ -112,11 +113,10 @@ namespace Raven.Client.Documents.Operations
                 return request;
             }
 
-            private IEnumerable<(string Key, long Index, object Value)> GetResult(BlittableJsonReaderArray array)
+            private IEnumerable<(string Key, long Index, T Value)> GetResult(BlittableJsonReaderArray array)
             {
                 if(array == null)
                     yield break;
-                
                 foreach (BlittableJsonReaderObject item in array)
                 {
                     if(item == null)
@@ -126,10 +126,27 @@ namespace Raven.Client.Documents.Operations
                     item.TryGet("Value", out BlittableJsonReaderObject raw);
                     item.TryGet("Key", out string key);
                     
-                    object val = null;
-                    raw?.TryGet("Object", out val);
-                    
-                    yield return (key, index, val);
+                    if(typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string))
+                    {
+                        // simple
+                        T value = default(T);
+                        raw?.TryGet<T>("Object", out value);
+                        yield return (key, index, value);
+                    }
+                    else
+                    {
+                        BlittableJsonReaderObject val = null;
+                        raw?.TryGet("Object", out val);
+                        if(val== null)
+                        {
+                            yield return (key, index, default(T));
+                        }
+                        else
+                        {
+                            var convereted = EntityToBlittable.ConvertToEntity(typeof(T), null, val, _conventions);
+                            yield return (key, index, (T)convereted);
+                        }
+                    }
                 }
             }
             
