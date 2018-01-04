@@ -1,13 +1,13 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-class getRemoteServerVersion extends commandBase {
+class getRemoteServerVersionWithDatabases extends commandBase {
 
     constructor(private serverUrl: string) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Smuggler.Migration.BuildInfo> {
+    execute(): JQueryPromise<Raven.Server.Smuggler.Migration.BuildInfoWithDatabaseNames> {
         const args = {
             serverUrl: this.serverUrl
         };
@@ -19,4 +19,4 @@ class getRemoteServerVersion extends commandBase {
     }
 }
 
-export = getRemoteServerVersion; 
+export = getRemoteServerVersionWithDatabases; 
