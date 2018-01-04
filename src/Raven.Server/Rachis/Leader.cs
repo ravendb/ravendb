@@ -466,7 +466,7 @@ namespace Raven.Server.Rachis
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
 
-                _engine.Apply(context, maxIndexOnQuorum, this);
+                maxIndexOnQuorum = _engine.Apply(context, maxIndexOnQuorum, this, Stopwatch.StartNew());
 
                 context.Transaction.Commit();
 

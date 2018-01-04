@@ -144,10 +144,10 @@ namespace Raven.Server.Rachis
 
                             if (lastEntryIndexToCommit > lastAppliedIndex)
                             {
-                                _engine.Apply(context, lastEntryIndexToCommit, null);
+                                lastAppliedIndex = _engine.Apply(context, lastEntryIndexToCommit, null, sp);
                             }
 
-                            lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastEntryIndexToCommit);
+                            lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
                             _engine.TruncateLogBefore(context, lastTruncate);
                             lastCommit = lastEntryIndexToCommit;
                             if (_engine.Log.IsInfoEnabled)

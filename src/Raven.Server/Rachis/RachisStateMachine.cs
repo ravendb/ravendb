@@ -23,25 +23,34 @@ namespace Raven.Server.Rachis
             ContextPoolForReadOnlyOperations = _parent.ContextPool;
         }
 
-        public void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore)
+        public long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, ServerStore serverStore, Stopwatch duration)
         {
             Debug.Assert(context.Transaction != null);
 
-            var lastAppliedIndex = _parent.GetLastCommitIndex(context);
-            for (var index = lastAppliedIndex+1; index <= uptoInclusive; index++)
+            var lastAppliedIndex = _parent.GetLastCommitIndex(context) +1;
+            var maxTimeAllowedToWaitForApply = _parent.Timeout.TimeoutPeriod / 4;
+            for (; lastAppliedIndex <= uptoInclusive; lastAppliedIndex++)
             {
-                var cmd = _parent.GetEntry(context, index, out RachisEntryFlags flags);
+                var cmd = _parent.GetEntry(context, lastAppliedIndex, out RachisEntryFlags flags);
                 if (cmd == null || flags == RachisEntryFlags.Invalid)
-                    throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
+                    throw new InvalidOperationException("Expected to apply entry " + lastAppliedIndex + " but it isn't stored");
 
                 if(flags != RachisEntryFlags.StateMachineCommand)
                     continue;
 
-                Apply(context, cmd, index, leader, serverStore);
+                Apply(context, cmd, lastAppliedIndex, leader, serverStore);
+
+                if (duration.ElapsedMilliseconds >= maxTimeAllowedToWaitForApply)
+                    // we don't want to spend so much time applying commands that we will time out the leader
+                    // so we time this from the follower perspective and abort after applying a single command
+                    // or 25% of the time has already passed
+                    break; 
             }
             var term = _parent.GetTermForKnownExisting(context, uptoInclusive);
 
-            _parent.SetLastCommitIndex(context, uptoInclusive, term);
+            _parent.SetLastCommitIndex(context, lastAppliedIndex, term);
+
+            return lastAppliedIndex;
         }
 
         protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore);
