@@ -245,8 +245,6 @@ namespace Raven.Server.ServerWide
                 var ms = new MemoryStream(secret);
                 var br = new BinaryReader(ms);
                 var keyLen = br.ReadInt32();
-                if(keyLen != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes())
-                    throw new InvalidOperationException("Wrong size for key len: " + keyLen);
                 var key = br.ReadBytes(keyLen);
                 if(key.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes())
                     throw new InvalidOperationException("Wrong size for key buffer: " + key.Length);
