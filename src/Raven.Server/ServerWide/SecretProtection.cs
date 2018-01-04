@@ -246,7 +246,7 @@ namespace Raven.Server.ServerWide
                 var br = new BinaryReader(ms);
                 var keyLen = br.ReadInt32();
                 var key = br.ReadBytes(keyLen);
-                if(key.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes())
+                if(key.Length != keyLen)
                     throw new InvalidOperationException("Wrong size for key buffer: " + key.Length);
                 
                 var entrophyLen = br.ReadInt32();
