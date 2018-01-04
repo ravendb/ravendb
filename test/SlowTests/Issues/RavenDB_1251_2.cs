@@ -179,9 +179,7 @@ namespace SlowTests.Issues
 
         public static bool DurationQueryValueConverter(string name, Duration value, bool forRange, out string strValue)
         {
-            strValue = forRange
-                ? NumberUtil.NumberToString(value.Ticks)
-                : "\"" + value + "\"";
+            strValue = new TimeSpan(value.Ticks).ToString("c");
 
             return true;
         }
