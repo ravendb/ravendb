@@ -41,6 +41,8 @@ namespace Raven.Server.Smuggler.Migration
                 LastAttachmentsEtag = Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty,
                 LastDocDeleteEtag = Result.LegacyLastDocumentEtag ?? LastEtagsInfo.EtagEmpty,
                 LastAttachmentsDeleteEtag = Result.LegacyLastAttachmentEtag ?? LastEtagsInfo.EtagEmpty,
+                ServerUrl = ServerUrl,
+                DatabaseName = DatabaseName
             };
 
             return EntityToBlittable.ConvertEntityToBlittable(lastEtagsInfo, DocumentConventions.Default, context);

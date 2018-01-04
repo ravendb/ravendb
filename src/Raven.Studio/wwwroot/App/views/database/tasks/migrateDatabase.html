@@ -9,7 +9,19 @@
                         <div class="form-group" data-bind="validationElement: serverUrl">
                             <label class="control-label">Server URL</label>
                             <div class="flex-grow">
-                                <input data-bind="textInput: serverUrl" type="text" class="form-control" placeholder="Source server url" />
+                                <div class="flex-grow">
+                                    <div class="dropdown btn-block">
+                                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                               id="server-url"
+                                               data-bind="textInput: serverUrl"
+                                               placeholder="Source server url">
+                                        <ul class="dropdown-menu max-height" data-bind="foreach: createServerUrlAutoCompleter(), autoComplete: '#server-url'">
+                                            <li data-bind="click: $parent.selectServerUrl.bind($parent, $data)">
+                                                <a href="#" data-bind="text: $data"></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -33,10 +45,10 @@
                             <div class="flex-grow">
                                 <div class="dropdown btn-block">
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           id="server-url"
+                                           id="database-name"
                                            data-bind="textInput: databaseName"
                                            placeholder="Source database name">
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNameAutoCompleter(), autoComplete: '#server-url'">
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNameAutoCompleter(), autoComplete: '#database-name'">
                                         <li data-bind="click: $parent.selectDatabaseName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>

@@ -3,7 +3,8 @@ import migrateDatabaseCommand = require("commands/database/studio/migrateDatabas
 import migrateDatabaseModel = require("models/database/tasks/migrateDatabaseModel");
 import notificationCenter = require("common/notifications/notificationCenter");
 import eventsCollector = require("common/eventsCollector");
-import getRemoteServerVersionWithDatabases = require("commands/database/studio/getRemoteServerVersionWithDatabases");
+import getMigratedServerUrlsCommand = require("commands/database/studio/getMigratedServerUrlsCommand");
+import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
 import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
 
@@ -42,7 +43,19 @@ class migrateDatabase extends viewModelBase {
             return this.activeDatabase().hasRevisionsConfiguration();
         });
     }
-    
+
+    activate(args: any) {
+        super.activate(args);
+
+        const deferred = $.Deferred();
+        new getMigratedServerUrlsCommand(this.activeDatabase())
+            .execute()
+            .done(data => this.model.serverUrls(data.List))
+            .always(() => deferred.resolve());
+
+        return deferred;
+    }
+
     attached() {
         super.attached();
 
@@ -59,7 +72,7 @@ class migrateDatabase extends viewModelBase {
 
         const url = this.model.serverUrl();
 
-        new getRemoteServerVersionWithDatabases(url)
+        new getRemoteServerVersionWithDatabasesCommand(url)
             .execute()
             .done(info => {
                 if (info.MajorVersion !== "Unknown") {

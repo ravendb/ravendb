@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Migration
 {
     public class Migrator
     {
-        private const string MigrationStateKeyBase = "Raven/Migration/Status";
+        public const string MigrationStateKeyBase = "Raven/Migration/Status/";
 
         private readonly string _serverUrl;
         private readonly HttpClient _httpClient;

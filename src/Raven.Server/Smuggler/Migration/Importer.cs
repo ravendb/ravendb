@@ -76,7 +76,9 @@ namespace Raven.Server.Smuggler.Migration
 
                     var importInfo = new ImportInfo
                     {
-                        LastEtag = smugglerResult.GetLastEtag()
+                        LastEtag = smugglerResult.GetLastEtag(),
+                        ServerUrl = ServerUrl,
+                        DatabaseName = DatabaseName
                     };
 
                     var importInfoBlittable = EntityToBlittable.ConvertEntityToBlittable(importInfo, DocumentConventions.Default, context);
@@ -221,5 +223,9 @@ namespace Raven.Server.Smuggler.Migration
     public class ImportInfo
     {
         public long LastEtag { get; set; }
+
+        public string ServerUrl { get; set; }
+
+        public string DatabaseName { get; set; }
     }
 }
