@@ -78,10 +78,12 @@ class migrateDatabase extends viewModelBase {
                 if (info.MajorVersion !== "Unknown") {
                     this.model.serverMajorVersion(info.MajorVersion);
                     this.model.buildVersion(info.BuildVersion);
+                    this.model.fullVersion(info.FullVersion);
                     this.model.databaseNames(info.DatabaseNames);
                 } else {
                     this.model.serverMajorVersion(null);
                     this.model.buildVersion(null);
+                    this.model.fullVersion(null);
                     this.model.databaseNames([]);
                 }
             })
