@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
@@ -17,7 +18,9 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -111,7 +114,10 @@ namespace Raven.Server.Utils.Cli
             Stats,
             Info,
             Gc,
-            AddServerCert,
+            TrustServerCert,
+            TrustClientCert,
+            GenerateClientCert,
+            //ReplaceClusterCert,
             LowMem,
             Help,
             Logo,
@@ -482,34 +488,267 @@ namespace Raven.Server.Utils.Cli
             return isOn; // here rc is not an exit code, it is a setter to _experimental
         }
 
-        private static bool CommandAddServerCert(List<string> args, RavenCli cli)
-        {
-            var path = args.First();
+        private const string ServerAuthenticationOid = "1.3.6.1.5.5.7.3.1";
+        private const string ClientAuthenticationOid = "1.3.6.1.5.5.7.3.2";
 
-            var cert = args.Count != 1 ? new X509Certificate2(path, args[1]) : new X509Certificate2(path);
+        private static bool CommandTrustServerCert(List<string> args, RavenCli cli)
+        {
+            var name = args[0];
+            var path = args[1];
+
+            if (args.Count < 2 || args.Count > 3)
+            {
+                WriteError("Usage: trustServerCert <name> <path-to-pfx> [password]", cli);
+                return false;
+            }
+            
+            X509Certificate2 cert;
+            try
+            {
+                cert = args.Count == 3 ? new X509Certificate2(path, args[2]) : new X509Certificate2(path);
+            }
+            catch (Exception e)
+            {
+                WriteError("Failed to load the provided certificate. Please check the path and password." + e, cli);
+                return false;
+            }
+
+            var serverAuth = false;
+            var clientAuth = false;
+            foreach (var extension in cert.Extensions.OfType<X509EnhancedKeyUsageExtension>())
+            {
+                foreach (var oid in extension.EnhancedKeyUsages)
+                {
+                    if (oid.Value.Equals(ServerAuthenticationOid, StringComparison.Ordinal))
+                        serverAuth = true;
+                    if (oid.Value.Equals(ClientAuthenticationOid, StringComparison.Ordinal))
+                        clientAuth = true;
+                }
+            }
+
+            if (clientAuth == false || serverAuth == false)
+            {
+                WriteError($"Certificate {cert.Thumbprint} cannot be a ravendb server certificate. It does not include both Extended Key Usages: Server Authentication ({ServerAuthenticationOid}), Client Authentication ({ClientAuthenticationOid}).", cli);
+                return false;
+            }
+
             WriteText("Successfully read certificate: " + cert.Thumbprint, TextColor, cli);
             WriteText(cert.ToString(), TextColor, cli);
+
             var certKey = Constants.Certificates.Prefix + cert.Thumbprint;
 
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                var json = new CertificateDefinition
+                var certDef = new CertificateDefinition
                 {
+                    Name = name,
                     // this does not include the private key, that is only for the client
                     Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
                     Permissions = new Dictionary<string, DatabaseAccess>(),
                     SecurityClearance = SecurityClearance.ClusterNode,
                     Thumbprint = cert.Thumbprint,
                     NotAfter = cert.NotAfter
-                }.ToJson();
-
-                using (var certificate = ctx.ReadObject(json, "Server/Certificate/Definition"))
-                using (var tx = ctx.OpenWriteTransaction())
+                };
+                
+                try
                 {
-                    cli._server.ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
-                    tx.Commit();
+                    if (cli._server.ServerStore.CurrentRachisState == RachisState.Passive)
+                    {
+                        using (var certificate = ctx.ReadObject(certDef.ToJson(), "Server/Certificate/Definition"))
+                        using (var tx = ctx.OpenWriteTransaction())
+                        {
+                            cli._server.ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                            tx.Commit();
+                        }
+                    }
+                    else
+                    {
+                        var putResult = cli._server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certDef.Thumbprint, certDef)).Result;
+                        cli._server.ServerStore.Cluster.WaitForIndexNotification(putResult.Index).Wait();
+                    }
+                }
+                catch (Exception e)
+                {
+                    WriteError($"Failed to store cerrificate {cert.Thumbprint} in the server." + e, cli);
+                    return false;
+                }
+
+                WriteText("Successfully registered the server certificate" + cert.Thumbprint, TextColor, cli);
+            }
+
+            return true;
+        }
+
+        private static bool CommandTrustClientCert(List<string> args, RavenCli cli)
+        {
+            var name = args[0];
+            var path = args[1];
+
+            if (args.Count < 2 || args.Count > 3)
+            {
+                WriteError("Usage: trustClientCert <name> <path-to-pfx> [password]", cli);
+                return false;
+            }
+
+            byte[] certBytes;
+            X509Certificate2 cert;
+            try
+            {
+                certBytes = File.ReadAllBytes(path);
+                cert = args.Count == 3 ? new X509Certificate2(certBytes, args[2]) : new X509Certificate2(certBytes);
+            }
+            catch (Exception e)
+            {
+                WriteError("Failed to load the provided certificate. Please check the path and password." + e, cli);
+                return false;
+            }
+
+            var clientAuth = false;
+            foreach (var extension in cert.Extensions.OfType<X509EnhancedKeyUsageExtension>())
+            {
+                foreach (var oid in extension.EnhancedKeyUsages)
+                {
+                    if (oid.Value.Equals(ClientAuthenticationOid, StringComparison.Ordinal))
+                        clientAuth = true;
                 }
             }
+
+            if (clientAuth == false)
+            {
+                WriteError($"Certificate {cert.Thumbprint} cannot be used as a client certificate. It does not include the Extended Key Usage: Client Authentication ({ClientAuthenticationOid}).", cli);
+                return false;
+            }
+
+            WriteText("Successfully read certificate: " + cert.Thumbprint, TextColor, cli);
+            WriteText(cert.ToString(), TextColor, cli);
+
+            using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var certDef = new CertificateDefinition
+                {
+                    Name = name,
+                    // this does not include the private key, that is only for the client
+                    Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
+                    Permissions = new Dictionary<string, DatabaseAccess>(),
+                    SecurityClearance = SecurityClearance.ClusterAdmin,
+                    Thumbprint = cert.Thumbprint,
+                    NotAfter = cert.NotAfter
+                };
+                
+                try
+                {
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, cli._server.ServerStore, ctx).Wait();
+                }
+                catch (Exception e)
+                {
+                    WriteError($"Failed to put cerrificate {cert.Thumbprint} in the server." + e, cli);
+                    return false;
+                }
+
+                WriteText("Successfully registered the client certificate " + cert.Thumbprint, TextColor, cli);
+            }
+
+            return true;
+        }
+
+        private static bool CommandGenerateClientCert(List<string> args, RavenCli cli)
+        {
+            var name = args[0];
+            var path = args[1];
+
+            if (args.Count < 2 || args.Count > 3)
+            {
+                WriteError("Usage: generateClientCert <name> <path-to-output-folder> [password]", cli);
+                return false;
+            }
+
+            cli._server.ServerStore.EnsureNotPassive();
+
+            var certDef = new CertificateDefinition
+            {
+                Name = name,
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance = SecurityClearance.ClusterAdmin,
+                Password = args.Count == 3 ? args[2] : null
+            };
+
+            byte[] outputBytes;
+            try
+            {
+                outputBytes = AdminCertificatesHandler.GenerateCertificateInternal(certDef, cli._server.ServerStore).Result;
+            }
+            catch (Exception e)
+            {
+                WriteError("Failed to generate a client certificate." + e, cli);
+                return false;
+            }
+
+            var certPath = "";
+            try
+            {
+                var certificateFileName = $"admin.client.certificate.{name}.zip";
+                certPath = Path.Combine(path, certificateFileName);
+
+                using (var certfile = new FileStream(certPath, FileMode.Create))
+                {
+                    certfile.Write(outputBytes, 0, outputBytes.Length);
+                    certfile.Flush(true);
+                }
+            }
+            catch (Exception e)
+            {
+                WriteError("Failed save the generated certificate to path: "+ certPath + e, cli);
+                return false;
+            }
+
+            WriteText("Successfully saved the client certificate to " + certPath, TextColor, cli);
+
+            return true;
+        }
+        
+        private static bool CommandReplaceClusterCert(List<string> args, RavenCli cli)
+        {
+            var name = args[0];
+            var path = args[1];
+
+            if (args.Count < 2 || args.Count > 3)
+            {
+                WriteError("Usage: replaceClusterCert <name> <path-to-pfx> [password]", cli);
+                return false;
+            }
+
+            cli._server.ServerStore.EnsureNotPassive();
+            
+            X509Certificate2 cert;
+            try
+            {
+                cert = args.Count == 3 ? new X509Certificate2(path, args[2]) : new X509Certificate2(path);
+            }
+            catch (Exception e)
+            {
+                WriteError("Failed to load the provided certificate. Please check the path and password." + e, cli);
+                return false;
+            }
+
+            WriteText("Successfully read certificate: " + cert.Thumbprint, TextColor, cli);
+            WriteText(cert.ToString(), TextColor, cli);
+
+            try
+            {
+                var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
+
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(cert, name);
+
+                Task.WhenAny(replicationTask, timeoutTask).Wait();
+                if (replicationTask.IsCompleted == false)
+                    throw new TimeoutException("Timeout when trying to replace the server certificate.");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to replace the server certificate.", e);
+            }
+
+            WriteText("The cluster certificate will be replaced in all the nodes of the cluster.", TextColor, cli);
 
             return true;
         }
@@ -723,20 +962,23 @@ namespace Raven.Server.Utils.Cli
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
                 new[] {"lowMem", "Simulate Low-Memory event"},
-                new[] {"addServerCert <path> [password]", "Register the certificate as a trusted certificate of a cluster member"},
                 new[] {"timer <on|off|fire>", "enable or disable candidate selection timer (Rachis), or fire timeout immediately"},
                 new[] {"experimental <on|off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
                 new[] {"script <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
                 new[] {"logout", "Logout (applicable only on piped connection)"},
                 new[] {"resetServer", "Restarts the server (shutdown and re-run)"},
                 new[] {"shutdown", "Shutdown the server"},
-                new[] {"help", "This help screen"}
+                new[] {"help", "This help screen"},
+                new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
+                new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
+                new[] {"trustClientCert <name> <path-to-pfx> [password]", "Register a client certificate to be trusted on this server with 'ClusterAdmin' security clearance."},
             };
 
             string[][] commandExperimentalDescription =
             {
                 new[] {"createDb <database> <dir>", "Create database named 'database' in DataDir 'dir'"},
-                new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"}
+                new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"},
+                //new[] {"replaceClusterCert <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
             };
 
             var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
@@ -749,7 +991,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 41 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', 63 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             WriteText("", TextColor, cli);
 
@@ -759,7 +1001,7 @@ namespace Raven.Server.Utils.Cli
                 foreach (var cmd in commandExperimentalDescription)
                 {
                     WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                    WriteText(new string(' ', 29 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                    WriteText(new string(' ', 52 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
                 }
                 WriteText("", TextColor, cli);
             }
@@ -775,7 +1017,9 @@ namespace Raven.Server.Utils.Cli
             [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandGc },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
-            [Command.AddServerCert] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandAddServerCert },
+            [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustServerCert },
+            [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustClientCert },
+            [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandGenerateClientCert },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
@@ -790,7 +1034,8 @@ namespace Raven.Server.Utils.Cli
             // experimental, will not appear in 'help':
             [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
             [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true },
-            [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true } // test cli
+            [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true }, // test cli
+            //[Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert, Experimental = true }
         };
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)

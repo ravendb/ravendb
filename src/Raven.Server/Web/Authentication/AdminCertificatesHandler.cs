@@ -14,6 +14,7 @@ using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Client;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
@@ -53,6 +54,13 @@ namespace Raven.Server.Web.Authentication
 
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
+                if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                {
+                    var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
+                    var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
+                    throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
+                }
+
                 byte[] certs = null;
                 await
                     ServerStore.Operations.AddOperation(
@@ -61,7 +69,7 @@ namespace Raven.Server.Web.Authentication
                         Documents.Operations.Operations.OperationType.CertificateGeneration,
                         async onProgress =>
                         {
-                            certs = await GenerateCertificateInternal(ctx, certificate);
+                            certs = await GenerateCertificateInternal(certificate, ServerStore);
 
                             return ClientCertificateGenerationResult.Instance;
                         },
@@ -75,18 +83,11 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        private async Task<byte[]> GenerateCertificateInternal(TransactionOperationContext ctx, CertificateDefinition certificate)
+        public static async Task<byte[]> GenerateCertificateInternal(CertificateDefinition certificate, ServerStore serverStore)
         {
-            ValidateCertificate(certificate, ServerStore);
-
-            if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
-            {
-                var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
-                var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
-                throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
-            }
+            ValidateCertificateDefinition(certificate, serverStore);
             
-            if (Server.Certificate?.Certificate == null)
+            if (serverStore.Server.Certificate?.Certificate == null)
             {
                 var keys = new[]
                 {
@@ -100,7 +101,7 @@ namespace Raven.Server.Web.Authentication
             }
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.Certificate, out var clientCertBytes);
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate, out var clientCertBytes);
 
             var newCertDef = new CertificateDefinition
             {
@@ -113,8 +114,8 @@ namespace Raven.Server.Web.Authentication
                 NotAfter = selfSignedCertificate.NotAfter
             };
             
-            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
-            await ServerStore.Cluster.WaitForIndexNotification(res.Index);
+            var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint, newCertDef));
+            await serverStore.Cluster.WaitForIndexNotification(res.Index);
 
             var ms = new MemoryStream();
             using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
@@ -183,15 +184,14 @@ namespace Raven.Server.Web.Authentication
             {
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                ValidateCertificate(certificate, ServerStore);
+                ValidateCertificateDefinition(certificate, ServerStore);
+
+                var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
+                var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
 
                 if ((certificate.SecurityClearance == SecurityClearance.ClusterAdmin || certificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
-                {
-                    var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
-                    var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
                     throw new InvalidOperationException($"Cannot save the certificate '{certificate.Name}' with '{certificate.SecurityClearance}' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
-                }
-
+                
                 if (string.IsNullOrWhiteSpace(certificate.Certificate))
                     throw new ArgumentException($"{nameof(certificate.Certificate)} is a mandatory property when saving an existing certificate");
 
@@ -205,57 +205,90 @@ namespace Raven.Server.Web.Authentication
                     throw new ArgumentException($"Unable to parse the {nameof(certificate.Certificate)} property, expected a Base64 value", e);
                 }
 
-                var collection = new X509Certificate2Collection();
-                collection.Import(certBytes);
-
-                var first = true;
-                var collectionPrimaryKey = string.Empty;
-                
-                foreach (var x509Certificate in collection)
+                try
                 {
-                    var currentCertificate = new CertificateDefinition
-                    {
-                        Name = certificate.Name,
-                        Permissions = certificate.Permissions,
-                        SecurityClearance = certificate.SecurityClearance,
-                        Password = certificate.Password
-                    };
-                    
-                    if (x509Certificate.HasPrivateKey)
-                    {
-                        // avoid storing the private key
-                        currentCertificate.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
-                    }
-
-                    // In case of a collection, we group all the certificates together and treat them as one unit. 
-                    // They all have the same name and permissions but a different thumbprint.
-                    // The first certificate in the collection will be the primary certificate and its thumbprint will be the one shown in a GET request
-                    // The other certificates are secondary certificates and will contain a link to the primary certificate.
-                    currentCertificate.Thumbprint = x509Certificate.Thumbprint;
-                    currentCertificate.NotAfter = x509Certificate.NotAfter;
-                    currentCertificate.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
-
-                    if (first)
-                    {
-                        var firstKey = Constants.Certificates.Prefix + x509Certificate.Thumbprint;
-                        collectionPrimaryKey = firstKey;
-
-                        foreach (var cert in collection)
-                        {
-                            if (Constants.Certificates.Prefix + cert.Thumbprint != firstKey)
-                                currentCertificate.CollectionSecondaryKeys.Add(Constants.Certificates.Prefix + cert.Thumbprint);
-                        }
-                    }
-                    else
-                        currentCertificate.CollectionPrimaryKey = collectionPrimaryKey;
-                    
-                    var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + x509Certificate.Thumbprint, currentCertificate));
-                    await ServerStore.Cluster.WaitForIndexNotification(res.Index);
-                    first = false;
+                    await PutCertificateCollectionInCluster(certificate, certBytes, ServerStore, ctx);
                 }
-                
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to put certificate {certificate.Name} in the cluster.", e);
+                }
+
                 NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            }
+        }
+
+        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, ServerStore serverStore, TransactionOperationContext ctx)
+        {
+            var collection = new X509Certificate2Collection();
+            collection.Import(certBytes);
+
+            var first = true;
+            var collectionPrimaryKey = string.Empty;
+            
+            foreach (var x509Certificate in collection)
+            {
+                if (serverStore.Server.Certificate.Certificate.Thumbprint.Equals(x509Certificate.Thumbprint))
+                    throw new InvalidOperationException($"You are trying to import the same server certificate ({x509Certificate.Thumbprint}) as the one which is already loaded. This is not supported.");
+            }
+
+            foreach (var x509Certificate in collection)
+            {
+                var currentCertDef = new CertificateDefinition
+                {
+                    Name = certDef.Name,
+                    Permissions = certDef.Permissions,
+                    SecurityClearance = certDef.SecurityClearance,
+                    Password = certDef.Password,
+
+                };
+
+                if (x509Certificate.HasPrivateKey)
+                {
+                    // avoid storing the private key
+                    currentCertDef.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
+                }
+
+                // In case of a collection, we group all the certificates together and treat them as one unit. 
+                // They all have the same name and permissions but a different thumbprint.
+                // The first certificate in the collection will be the primary certificate and its thumbprint will be the one shown in a GET request
+                // The other certificates are secondary certificates and will contain a link to the primary certificate.
+                currentCertDef.Thumbprint = x509Certificate.Thumbprint;
+                currentCertDef.NotAfter = x509Certificate.NotAfter;
+                currentCertDef.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
+
+                if (first)
+                {
+                    var firstKey = Constants.Certificates.Prefix + x509Certificate.Thumbprint;
+                    collectionPrimaryKey = firstKey;
+
+                    foreach (var cert in collection)
+                    {
+                        if (Constants.Certificates.Prefix + cert.Thumbprint != firstKey)
+                            currentCertDef.CollectionSecondaryKeys.Add(Constants.Certificates.Prefix + cert.Thumbprint);
+                    }
+                }
+                else
+                    currentCertDef.CollectionPrimaryKey = collectionPrimaryKey;
+
+                var certKey = Constants.Certificates.Prefix + currentCertDef.Thumbprint;
+                if (serverStore.CurrentRachisState == RachisState.Passive)
+                {
+                    using (var certificate = ctx.ReadObject(currentCertDef.ToJson(), "Client/Certificate/Definition"))
+                    using (var tx = ctx.OpenWriteTransaction())
+                    {
+                        serverStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                        tx.Commit();
+                    }
+                }
+                else
+                {
+                    var putResult = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(certKey, currentCertDef));
+                    await serverStore.Cluster.WaitForIndexNotification(putResult.Index);
+                }
+                
+                first = false;
             }
         }
 
@@ -283,7 +316,7 @@ namespace Raven.Server.Web.Authentication
 
                 var key = Constants.Certificates.Prefix + thumbprint;
                 var definition = ReadCertificateFromCluster(ctx, key);
-                if ((definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode) 
+                if (definition != null && (definition.SecurityClearance == SecurityClearance.ClusterAdmin || definition.SecurityClearance == SecurityClearance.ClusterNode) 
                     && IsClusterAdmin() == false)
                 {
                     var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + clientCert?.Thumbprint);
@@ -291,7 +324,7 @@ namespace Raven.Server.Web.Authentication
                         $"Cannot delete the certificate '{definition.Name}' with '{definition.SecurityClearance}' security clearance because the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
                 }
 
-                if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
+                if (string.IsNullOrEmpty(definition?.CollectionPrimaryKey) == false)
                     throw new InvalidOperationException(
                         $"Cannot delete the certificate '{definition.Name}' with thumbprint '{definition.Thumbprint}'. You need to delete the primary certificate of the collection: {definition.CollectionPrimaryKey}");
 
@@ -299,7 +332,9 @@ namespace Raven.Server.Web.Authentication
                 {
                     key
                 };
-                keysToDelete.AddRange(definition.CollectionSecondaryKeys);
+
+                if (definition != null)
+                    keysToDelete.AddRange(definition.CollectionSecondaryKeys);
 
                 await DeleteInternal(keysToDelete);
             }
@@ -440,7 +475,7 @@ namespace Raven.Server.Web.Authentication
             {
                 var newCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                ValidateCertificate(newCertificate, ServerStore);
+                ValidateCertificateDefinition(newCertificate, ServerStore);
 
                 var key = Constants.Certificates.Prefix + newCertificate.Thumbprint;
 
@@ -561,20 +596,20 @@ namespace Raven.Server.Web.Authentication
         {
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-server-cert"))
+            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-cluster-cert"))
             {
                 try
                 {
                     var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
                     if (string.IsNullOrWhiteSpace(certificate.Name))
-                        throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition.");
+                        certificate.Name = "Cluster-Wide Certificate";
 
                     if (string.IsNullOrWhiteSpace(certificate.Certificate))
                         throw new ArgumentException($"{nameof(certificate.Certificate)} is a required field in the certificate definition.");
 
                     if (IsClusterAdmin() == false)
-                        throw new InvalidOperationException($"Cannot replace the server certificate with '{certificate.Name}'. Only a ClusterAdmin can do this.");
+                        throw new InvalidOperationException("Cannot replace the server certificate. Only a ClusterAdmin can do this.");
 
                     byte[] certBytes;
                     try
@@ -599,9 +634,8 @@ namespace Raven.Server.Web.Authentication
                     }
 
                     var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
-
-
-                    var replicationTask = Server.StartCertificateReplicationAsync(newCertificate);
+                    
+                    var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Name);
 
                     await Task.WhenAny(replicationTask, timeoutTask);
                     if (replicationTask.IsCompleted == false)
@@ -614,7 +648,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static void ValidateCertificate(CertificateDefinition certificate, ServerStore serverStore)
+        public static void ValidateCertificateDefinition(CertificateDefinition certificate, ServerStore serverStore)
         {
             if (string.IsNullOrWhiteSpace(certificate.Name))
                 throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
