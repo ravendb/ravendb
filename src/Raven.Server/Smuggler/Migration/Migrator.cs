@@ -31,7 +31,7 @@ namespace Raven.Server.Smuggler.Migration
         public Migrator(MigrationConfigurationBase configuration, ServerStore serverStore)
         {
             var uri = new Uri(configuration.ServerUrl.TrimEnd('/'));
-            _serverUrl = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+            _serverUrl = uri.GetLeftPart(UriPartial.Authority);
             _serverStore = serverStore;
             _buildMajorVersion = configuration.BuildMajorVersion;
             _buildVersion = configuration.BuildVersion;
