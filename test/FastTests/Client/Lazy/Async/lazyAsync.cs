@@ -105,7 +105,7 @@ namespace FastTests.Client.Lazy.Async
         }
 
         [Fact]
-        public async void WithQueuedActions_Load()
+        public async Task WithQueuedActions_Load()
         {
             using (var store = GetDocumentStore())
             {
@@ -209,7 +209,7 @@ select {
         {
             public Detail()
             {
-                
+
             }
             public string Id { get; set; }
             public string Name { get; set; }
@@ -235,7 +235,7 @@ select {
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Item { Position = 1 },"items/1");
+                    session.Store(new Item { Position = 1 }, "items/1");
                     session.Store(new Item { Position = 2 }, "items/2");
                     session.SaveChanges();
                 }
@@ -248,7 +248,7 @@ from Items
 where id() in ($ids)
 select triple(Position) as Position
 ")
-                        .AddParameter("ids", new[] {"items/1", "items/2"})
+                        .AddParameter("ids", new[] { "items/1", "items/2" })
                         .ToListAsync();
 
 
