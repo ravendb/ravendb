@@ -1,4 +1,5 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+﻿using System.Threading.Tasks;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Client
@@ -6,7 +7,7 @@ namespace FastTests.Client
     public class ExistsAsync : RavenTestBase
     {
         [Fact]
-        public async void CheckIfDocumentExists()
+        public async Task CheckIfDocumentExists()
         {
             using (var store = GetDocumentStore())
             {
@@ -17,12 +18,20 @@ namespace FastTests.Client
                     await asyncSession.SaveChangesAsync();
                 }
 
+                using (var asyncSession = store.OpenSession())
+                {
+                    Assert.True(asyncSession.Advanced.Exists("users/1"));
+                    Assert.False(asyncSession.Advanced.Exists("users/10"));
+                    asyncSession.Load<User>("users/2");
+                    Assert.True(asyncSession.Advanced.Exists("users/2"));
+                }
+
                 using (var asyncSession = store.OpenAsyncSession())
                 {
-                    Assert.True(await asyncSession.ExistsAsync("users/1"));
-                    Assert.False(await asyncSession.ExistsAsync("users/10"));
+                    Assert.True(await asyncSession.Advanced.ExistsAsync("users/1"));
+                    Assert.False(await asyncSession.Advanced.ExistsAsync("users/10"));
                     await asyncSession.LoadAsync<User>("users/2");
-                    Assert.True(await asyncSession.ExistsAsync("users/2"));
+                    Assert.True(await asyncSession.Advanced.ExistsAsync("users/2"));
                 }
             }
         }

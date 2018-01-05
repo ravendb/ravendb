@@ -17,6 +17,12 @@ namespace Raven.Client.Documents.Session
     public partial interface IAsyncAdvancedSessionOperations
     {
         /// <summary>
+        ///     Check if document exists
+        /// </summary>
+        /// <param name="id">Document id</param>
+        Task<bool> ExistsAsync(string id);
+
+        /// <summary>
         ///     Loads multiple entities that contain common prefix.
         /// </summary>
         /// <param name="idPrefix">prefix for which documents should be returned e.g. "products/"</param>

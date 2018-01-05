@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -30,7 +31,7 @@ namespace FastTests.Issues
         }
 
         [Fact]
-        public async void RecreatingIndexesToARecreatedDatabase()
+        public async Task RecreatingIndexesToARecreatedDatabase()
         {
             var path = NewDataPath();
             using (var store = GetDocumentStore(new RavenTestBase.Options
@@ -78,7 +79,7 @@ namespace FastTests.Issues
                     }
                 }));
 
-                
+
                 sp.Start();
                 while (sp.Elapsed <= TimeSpan.FromSeconds(10))
                 {
