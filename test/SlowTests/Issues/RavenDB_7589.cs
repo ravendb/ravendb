@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Commands;
@@ -76,22 +77,11 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var identities = GetIdentities(store, 0, 2000);
+                var identities = GetIdentities(store);
 
                 Assert.Equal(1502, identities.Count);
                 Assert.Equal(2, identities["companies|"]);
                 Assert.Equal(1, identities["addresses|"]);
-
-                identities = GetIdentities(store, 0, 1);
-                Assert.Equal(1, identities.Count);
-                Assert.Equal(1, identities["addresses|"]);
-
-                identities = GetIdentities(store, 1, 1);
-                Assert.Equal(1, identities.Count);
-                Assert.Equal(2, identities["companies|"]);
-
-                identities = GetIdentities(store, 1502, 10);
-                Assert.Equal(0, identities.Count);
 
                 await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), exportFile1);
             }
@@ -103,7 +93,7 @@ namespace SlowTests.Issues
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
 
-                var identities = GetIdentities(store, 0, 2000);
+                var identities = GetIdentities(store);
 
                 Assert.Equal(1502, identities.Count);
                 Assert.Equal(2, identities["companies|"]);
@@ -135,7 +125,7 @@ namespace SlowTests.Issues
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile2);
 
-                var identities = GetIdentities(store, 0, 2000);
+                var identities = GetIdentities(store);
 
                 Assert.Equal(1502, identities.Count);
                 Assert.Equal(3, identities["companies|"]);
@@ -153,51 +143,15 @@ namespace SlowTests.Issues
             }
         }
 
-        private static Dictionary<string, long> GetIdentities(IDocumentStore store, int start, int pageSize)
+        private static Dictionary<string, long> GetIdentities(IDocumentStore store)
         {
             using (var commands = store.Commands())
             {
-                var command = new GetIdentitiesCommand(start, pageSize);
+                var command = new GetIdentitiesCommand();
 
                 commands.RequestExecutor.Execute(command, commands.Context);
 
                 return command.Result;
-            }
-        }
-
-        private class GetIdentitiesCommand : RavenCommand<Dictionary<string, long>>
-        {
-            private readonly int _start;
-            private readonly int _pageSize;
-            public override bool IsReadRequest { get; } = true;
-
-            public GetIdentitiesCommand(int start, int pageSize)
-            {
-                _start = start;
-                _pageSize = pageSize;
-
-                CanCache = false;
-                CanCacheAggressively = false;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/debug/identities?start={_start}&pageSize={_pageSize}";
-
-                return new HttpRequestMessage
-                {
-                    Method = HttpMethod.Get
-                };
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                Result = new Dictionary<string, long>();
-
-                foreach (var propertyName in response.GetPropertyNames())
-                {
-                    Result[propertyName] = (long)response[propertyName];
-                }
             }
         }
     }

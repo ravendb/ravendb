@@ -33,7 +33,12 @@ namespace Raven.Client.Documents.Operations
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
-            Result = _deserializeIdentities(response).Identities;
+            Result = new Dictionary<string, long>();
+
+            foreach (var propertyName in response.GetPropertyNames())
+            {
+                Result[propertyName] = (long)response[propertyName];
+            }
         }
     }
 
