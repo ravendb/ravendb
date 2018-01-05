@@ -21,14 +21,24 @@ class registrationInfoCommand extends commandBase {
                 if (response.status === 404) {
                     task.resolve(null);
                 } else {
-                    this.reportError("Failed to load registration information", response.responseText, response.statusText);
+                    
+                    this.reportError("Failed to load registration information", registrationInfoCommand.tryExtractError(response.responseText), response.statusText);
                     task.reject();
                 }
             });
         
         return task;
-        
-        
+    }
+    
+    private static tryExtractError(payload: string) {
+        try {
+            const json = JSON.parse(payload);
+            if (json && json.Error) {
+                return json.Error;
+            }
+        } catch (e) {
+        }
+        return payload;
     }
 }
 
