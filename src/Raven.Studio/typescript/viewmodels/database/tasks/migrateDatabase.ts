@@ -47,7 +47,7 @@ class migrateDatabase extends viewModelBase {
     activate(args: any) {
         super.activate(args);
 
-        const deferred = $.Deferred();
+        const deferred = $.Deferred<void>();
         new getMigratedServerUrlsCommand(this.activeDatabase())
             .execute()
             .done(data => this.model.serverUrls(data.List))
