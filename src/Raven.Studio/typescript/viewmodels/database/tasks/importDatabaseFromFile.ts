@@ -11,7 +11,6 @@ import appUrl = require("common/appUrl");
 import copyToClipboard = require("common/copyToClipboard");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import EVENTS = require("common/constants/events");
-import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 
@@ -88,6 +87,14 @@ class importDatabaseFromFile extends viewModelBase {
             const curl = "curl" + (navigator.platform.startsWith("Win") ? ".exe" : "");
             return curl + " -F 'importOptions=" + json.replace(/"/g, '\\"') + "' -F 'file=@.\\Dump of Database.ravendbdump' " +
                 appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerImport;
+        });
+
+        this.isUploading.subscribe((newValue) => {
+            if (newValue) {
+                this.dirtyFlag().forceDirty();
+            } else {
+                this.dirtyFlag().reset();
+            }
         });
 
         this.setupValidation();
