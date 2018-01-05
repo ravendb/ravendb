@@ -165,15 +165,6 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void WaitForIndexesAfterSaveChanges(TimeSpan? timeout = null, bool throwOnTimeout = true, string[] indexes = null);
 
-        /// <summary>
-        /// Convert blittable to entity
-        /// </summary>
-        /// <param name="entityType"></param>
-        /// <param name="id"></param>
-        /// <param name="documentFound"></param>
-        /// <returns></returns>
-        object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound);
-
         EntityToBlittable EntityToBlittable { get; }
     }
 }

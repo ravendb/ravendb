@@ -380,7 +380,7 @@ more responsive application.
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
                 if (docInfo.Entity == null)
-                    docInfo.Entity = ConvertToEntity(entityType, id, document);
+                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, document);
 
                 if (noTracking == false)
                 {
@@ -393,7 +393,7 @@ more responsive application.
             if (IncludedDocumentsById.TryGetValue(id, out docInfo))
             {
                 if (docInfo.Entity == null)
-                    docInfo.Entity = ConvertToEntity(entityType, id, document);
+                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, document);
 
                 if (noTracking == false)
                 {
@@ -404,7 +404,7 @@ more responsive application.
                 return docInfo.Entity;
             }
 
-            var entity = ConvertToEntity(entityType, id, document);
+            var entity = EntityToBlittable.ConvertToEntity(entityType, id, document);
 
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 throw new InvalidOperationException("Document " + id + " must have Change Vector");
@@ -425,18 +425,6 @@ more responsive application.
             }
 
             return entity;
-        }
-
-        /// <summary>
-        /// Converts the json document to an entity.
-        /// </summary>
-        /// <param name="entityType"></param>
-        /// <param name="id">The id.</param>
-        /// <param name="documentFound">The document found.</param>
-        /// <returns></returns>
-        public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject documentFound)
-        {
-            return EntityToBlittable.ConvertToEntity(entityType, id, documentFound);
         }
 
         /// <summary>
@@ -1238,7 +1226,7 @@ more responsive application.
 
             documentInfo.Document = document;
 
-            documentInfo.Entity = ConvertToEntity(typeof(T), documentInfo.Id, document);
+            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, document);
 
             var type = entity.GetType();
             foreach (var property in ReflectionUtil.GetPropertiesAndFieldsFor(type, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
