@@ -41,6 +41,8 @@ namespace Raven.Server.Documents.Handlers
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
                 stats.CountOfAttachments = attachments.AttachmentCount;
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
+                stats.CountOfIdentities = ServerStore.Cluster.ReadIdentities();
+                stats.CountOfCompareExchange = "";
                 stats.CountOfIndexes = indexes.Count;
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 

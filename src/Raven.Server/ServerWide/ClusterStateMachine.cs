@@ -1347,6 +1347,35 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<(string Prefix, long Value)> GetNumberOfIdentities<T>(TransactionOperationContext<T> context, string databaseName)
+            where T : RavenTransaction
+        {
+            var identities = context.Transaction.InnerTransaction.ReadTree(Identities);
+
+            var prefixString = UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null);
+            using (Slice.From(context.Allocator, prefixString, out var prefix))
+            {
+                using (var it = identities.Iterate(prefetch: false))
+                {
+                    it.SetRequiredPrefix(prefix);
+                    it.
+                    if (it.Seek(prefix) == false)
+                        yield break;
+
+                    do
+                    {
+                        var key = it.CurrentKey;
+                        var keyAsString = key.ToString();
+                        var value = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+
+                        yield return (keyAsString.Substring(prefixString.Length), value);
+
+                    } while (it.MoveNext());
+                }
+            }
+        }
+
+        private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice, 
         private static void DeleteTreeByPrefix<T>(TransactionOperationContext<T> context, string prefixString, Slice treeSlice,
             RootObjectType type = RootObjectType.VariableSizeTree)
             where T : RavenTransaction

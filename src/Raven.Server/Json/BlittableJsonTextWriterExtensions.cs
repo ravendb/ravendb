@@ -587,6 +587,14 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.CountOfIdentities));
+            writer.WriteInteger(statistics.CountOfIdentities);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.CountOfCompareExchange));
+            writer.WriteInteger(statistics.CountOfCompareExchange);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
             writer.WriteString(statistics.DatabaseChangeVector);
             writer.WriteComma();
