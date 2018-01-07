@@ -3306,9 +3306,7 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
                     Assert.Equal("nl", queryResult[0].Language);
                 }
             }
-        }
-        
-
+        }        
                 
         [Fact]
         public void Can_Load_Old_Document_With_Undefined_Member()
@@ -3450,6 +3448,40 @@ from Orders as o load o.Company as company, company.EmployeesIds as _docs_1[] se
                     Assert.Equal("Garcia", queryResult[0].Name);
                     Assert.Equal("Bob", queryResult[1].Name);
                     Assert.Equal("Phil", queryResult[2].Name);
+                }
+            }
+        }
+        
+        [Fact]
+        public void CanProjectWithEnumerableCount()
+        {               
+            //http://issues.hibernatingrhinos.com/issue/RDBC-99
+            
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", Roles = new []{ "1", "2" }});
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {                   
+                    var query = from user in session.Query<User>()
+                                select new
+                                {
+                                    user.Name,
+                                    NumberOfRoles = user.Roles.Count()
+                                };
+                    
+                    Assert.Equal("from Users as user " +
+                                 "select { Name : user.Name, NumberOfRoles : user.Roles.length }", 
+                                query.ToString());
+                    
+                    var queryResult = query.ToList();
+                    
+                    Assert.Equal(1, queryResult.Count);                    
+                    Assert.Equal(2, queryResult[0].NumberOfRoles);
                 }
             }
         }
