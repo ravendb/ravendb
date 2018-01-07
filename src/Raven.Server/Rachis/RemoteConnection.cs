@@ -173,7 +173,7 @@ namespace Raven.Server.Rachis
             });
         }
 
-        public void Send(JsonOperationContext context, AppendEntries ae, List<BlittableJsonReaderObject> items = null)
+        public void Send(JsonOperationContext context, Action updateFollowerTicks, AppendEntries ae, List<BlittableJsonReaderObject> items = null)
         {
             if (_log.IsInfoEnabled)
             {
@@ -207,6 +207,7 @@ namespace Raven.Server.Rachis
 
             foreach (var item in items)
             {
+                updateFollowerTicks();
                 Send(context, item);
             }
         }

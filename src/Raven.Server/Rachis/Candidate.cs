@@ -167,6 +167,11 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}:Failure during candidacy run", e);
                     }
+                    if (_engine.CurrentState == RachisState.Candidate)
+                    {
+                        // if we are still a candidate, start the candidacy again.
+                        _engine.SwitchToCandidateState("An error occured during the last candidacy: " + e);
+                    }
                 }
             }
         }
