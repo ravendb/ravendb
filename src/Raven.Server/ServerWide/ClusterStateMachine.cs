@@ -505,7 +505,10 @@ namespace Raven.Server.ServerWide
             }
 
             DeleteTreeByPrefix(context, UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null), Identities);
-            DeleteTreeByPrefix(context, databaseName + "/", CompareExchange, RootObjectType.Table);
+            using (Slice.From(context.Allocator, databaseName, out var databaseSlice))
+            {
+                context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg).DeleteByPrimaryKeyPrefix(databaseSlice);
+            }
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
