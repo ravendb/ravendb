@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
@@ -57,13 +58,13 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class ListCompareExchangeValuesOperation<T> : IOperation<IEnumerable<(string Key, long Index, T Value)>>
+    public class ListCompareExchangeValuesOperation<T> : IOperation<List<(string Key, long Index, T Value)>>
     {
         private readonly string _keyPrefix;
         private readonly int? _page;
         private readonly int? _size;
 
-        public RavenCommand<IEnumerable<(string Key, long Index, T Value)>> GetCommand(IDocumentStore store, DocumentConventions conventions, 
+        public RavenCommand<List<(string Key, long Index, T Value)>> GetCommand(IDocumentStore store, DocumentConventions conventions, 
             JsonOperationContext context, HttpCache cache)
         {
             return new ListCompareExchangeValuesCommand(_keyPrefix, _page, _size, conventions);
@@ -76,7 +77,7 @@ namespace Raven.Client.Documents.Operations
             _size = size;
         }
 
-        private class ListCompareExchangeValuesCommand : RavenCommand<IEnumerable<(string Key, long Index, T Value)>>
+        private class ListCompareExchangeValuesCommand : RavenCommand<List<(string Key, long Index, T Value)>>
         {
             private readonly string _keyPrefix;
             private readonly int? _page;
@@ -115,18 +116,19 @@ namespace Raven.Client.Documents.Operations
 
             private IEnumerable<(string Key, long Index, T Value)> GetResult(BlittableJsonReaderArray array)
             {
-                if(array == null)
+                if (array == null)
                     yield break;
+                
                 foreach (BlittableJsonReaderObject item in array)
                 {
-                    if(item == null)
+                    if (item == null)
                         continue;
-                    
+
                     item.TryGet("Index", out long index);
                     item.TryGet("Value", out BlittableJsonReaderObject raw);
                     item.TryGet("Key", out string key);
-                    
-                    if(typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string))
+
+                    if (typeof(T).GetTypeInfo().IsPrimitive || typeof(T) == typeof(string))
                     {
                         // simple
                         T value = default(T);
@@ -137,7 +139,7 @@ namespace Raven.Client.Documents.Operations
                     {
                         BlittableJsonReaderObject val = null;
                         raw?.TryGet("Object", out val);
-                        if(val== null)
+                        if (val == null)
                         {
                             yield return (key, index, default(T));
                         }
@@ -149,11 +151,11 @@ namespace Raven.Client.Documents.Operations
                     }
                 }
             }
-            
+
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 response.TryGet("Results", out BlittableJsonReaderArray array);
-                Result = GetResult(array);
+                Result = GetResult(array).ToList();
             }
         }
     }
