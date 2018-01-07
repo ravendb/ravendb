@@ -12,6 +12,7 @@ using Raven.Client.ServerWide;
 using System.Threading;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using FastTests.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using SlowTests.Voron.Issues;
 using Voron;
@@ -52,18 +53,11 @@ namespace Tryouts
             using (var store = new DocumentStore
             {
                 Urls = new[] { "http://localhost:8080" }
-            }.Initialize())
-            {
-                try
+                Console.WriteLine(i);
+                using (var a = new RevisionsReplication())
                 {
-                    var res = store.Maintenance.Server.Send(new DeleteDatabasesOperation("Bench", true));                    
+                    a.WillDeleteOldRevisions().Wait();
                 }
-                catch { }
-
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord
-                {
-                    DatabaseName = "Bench"
-                }));
             }
         }
 

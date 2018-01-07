@@ -2294,8 +2294,8 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         
             using (var store = GetDocumentStore())
             {
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
-                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("users/1", "Karmel", 0));
+                var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("users/1"));
                 Assert.Equal("Karmel", res.Value);
                 Assert.True(res.Successful);
                             
@@ -2329,12 +2329,12 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         
             using (var store = GetDocumentStore())
             {
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<User>("users/1", new User
                 {
                     Name = "Karmel",
                     LastName = "Indych"
                 }, 0));
-                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("users/1"));
+                var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<User>("users/1"));
                 Assert.Equal("Karmel", res.Value.Name);
                 Assert.True(res.Successful);
                             
@@ -2368,11 +2368,11 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         
             using (var store = GetDocumentStore())
             {
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom","Jerry", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera","Zeus", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Gaya","Uranus", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com","users/2", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com","users/1", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Tom","Jerry", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Hera","Zeus", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Gaya","Uranus", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Jerry@gmail.com","users/2", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Zeus@gmail.com","users/1", 0));
               
                 using (var session = store.OpenSession())
                 {
@@ -2425,11 +2425,11 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
 
             using (var store = GetDocumentStore())
             {
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom", "Jerry", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera", "Zeus", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com", "users/2", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com", "users/1", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<Linked>("ActiveUser", new Linked
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Tom", "Jerry", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Hera", "Zeus", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Jerry@gmail.com", "users/2", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("Zeus@gmail.com", "users/1", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeOperation<Linked>("ActiveUser", new Linked
                 {
                     Name = "Uranus",
                     Next = new Linked
