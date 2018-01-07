@@ -18,7 +18,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IDocumentActions Conflicts();
         IIndexActions Indexes();
         IKeyValueActions<long> Identities();
-        IKeyValueActions<BlittableJsonReaderObject> CmpXchg();
+        IKeyValueActions<BlittableJsonReaderObject> CompareExchange();
     }
 
     public interface IDocumentActions : INewDocumentActions, IDisposable

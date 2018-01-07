@@ -478,7 +478,7 @@ namespace Raven.Client.Util
             }
         }
 
-        public class CmpXchgSupport : JavascriptConversionExtension
+        public class CompareExchangeSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {

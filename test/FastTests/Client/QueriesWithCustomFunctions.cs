@@ -2290,7 +2290,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         }
 
         [Fact]
-        public async Task QueryCmpXchgValue(){
+        public async Task QueryCompareExchangeValue(){
         
             using (var store = GetDocumentStore())
             {
@@ -2326,7 +2326,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         }
         
         [Fact]
-        public async Task QueryCmpXchgInnerValue(){
+        public async Task QueryCompareExchangeInnerValue(){
         
             using (var store = GetDocumentStore())
             {
@@ -2364,7 +2364,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         }
 
         [Fact]
-        public async Task QueryCmpXchgWhere(){
+        public async Task QueryCompareExchangeWhere(){
         
             using (var store = GetDocumentStore())
             {
@@ -2420,7 +2420,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
         }
 
         [Fact(Skip = "RavenDB-9850")]
-        public async Task QueryCmpXchgWhereWithProperty()
+        public async Task QueryCompareExchangeWhereWithProperty()
         {
 
             using (var store = GetDocumentStore())

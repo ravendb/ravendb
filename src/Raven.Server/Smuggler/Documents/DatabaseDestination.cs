@@ -69,9 +69,9 @@ namespace Raven.Server.Smuggler.Documents
             return new DatabaseKeyValueActions(_database);
         }
 
-        public IKeyValueActions<BlittableJsonReaderObject> CmpXchg()
+        public IKeyValueActions<BlittableJsonReaderObject> CompareExchange()
         {
-            return new DatabaseCmpXchgActions(_database);
+            return new DatabaseCompareExchangeActions(_database);
         }
 
         public IIndexActions Indexes()
@@ -231,11 +231,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private class DatabaseCmpXchgActions : IKeyValueActions<BlittableJsonReaderObject>
+        private class DatabaseCompareExchangeActions : IKeyValueActions<BlittableJsonReaderObject>
         {
             private readonly DocumentDatabase _database;
-            private readonly List<AddOrUpdateCompareExchangeCommand> _cmpXchgCommands = new List<AddOrUpdateCompareExchangeCommand>();
-            public DatabaseCmpXchgActions(DocumentDatabase database)
+            private readonly List<AddOrUpdateCompareExchangeCommand> _compareExchangeCommands = new List<AddOrUpdateCompareExchangeCommand>();
+            public DatabaseCompareExchangeActions(DocumentDatabase database)
             {
                 _database = database;
             }
@@ -244,14 +244,14 @@ namespace Raven.Server.Smuggler.Documents
             {
                 const int batchSize = 1024;
                 string prefix = _database.Name + "/";
-                _cmpXchgCommands.Add(new AddOrUpdateCompareExchangeCommand
+                _compareExchangeCommands.Add(new AddOrUpdateCompareExchangeCommand
                 {
                     Key = prefix + key,
                     Index = 0,
                     Value = value
                 });
 
-                if (_cmpXchgCommands.Count < batchSize)
+                if (_compareExchangeCommands.Count < batchSize)
                     return;
 
                 SendCommands();
@@ -259,7 +259,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void Dispose()
             {
-                if (_cmpXchgCommands.Count == 0)
+                if (_compareExchangeCommands.Count == 0)
                     return;
 
                 SendCommands();
@@ -270,10 +270,10 @@ namespace Raven.Server.Smuggler.Documents
                 //fire and forget, do not hold-up smuggler operations waiting for Raft command
                 AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand
                 {
-                    Commands = _cmpXchgCommands
+                    Commands = _compareExchangeCommands
                 }));
 
-                _cmpXchgCommands.Clear();
+                _compareExchangeCommands.Clear();
             }
         }
         

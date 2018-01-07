@@ -100,9 +100,9 @@ namespace Raven.Server.Smuggler.Documents
             return GetType(type);
         }
 
-        public IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg)
+        public IDisposable GetCompareExchange(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
-            cmpXchg = InternalGetCmpXchg();
+            compareExchange = InternalGetCompareExchange();
             return null;
         }
 
@@ -111,7 +111,7 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCmpXchg()
+        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchange()
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchagne"))
@@ -126,7 +126,7 @@ namespace Raven.Server.Smuggler.Documents
                         if (reader.TryGet("Key", out string key) == false ||
                             reader.TryGet("Value", out LazyStringValue value) == false)
                         {
-                            _result.CmpXchg.ErroredCount++;
+                            _result.CompareExchange.ErroredCount++;
                             _result.AddWarning("Could not read compare exchange entry.");
 
                             continue;

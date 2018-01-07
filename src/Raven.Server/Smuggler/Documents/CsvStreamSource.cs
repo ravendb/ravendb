@@ -319,9 +319,9 @@ namespace Raven.Server.Smuggler.Documents
             return new DisposableAction(() => { });
         }
 
-        public IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg)
+        public IDisposable GetCompareExchange(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
-            cmpXchg = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
+            compareExchange = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
             return new DisposableAction(() => { });
         }
 
