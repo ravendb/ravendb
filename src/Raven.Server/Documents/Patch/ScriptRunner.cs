@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("DeleteDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnDeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
                 ScriptEngine.SetValue("PutDocument", new ClrFunctionInstance(ScriptEngine, ThrowOnPutDocument));
-                ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CmpXchange));
+                ScriptEngine.SetValue("cmpxchg", new ClrFunctionInstance(ScriptEngine, CompareExchange));
 
                 ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, GetMetadata));
 
@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(ScriptEngine, _context, metadata);
             }
 
-            private JsValue CmpXchange(JsValue self, JsValue[] args)
+            private JsValue CompareExchange(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
 
@@ -554,7 +554,7 @@ namespace Raven.Server.Documents.Patch
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    value = _database.ServerStore.Cluster.GetCmpXchg(ctx, prefix + key).Value;
+                    value = _database.ServerStore.Cluster.GetCompareExchange(ctx, prefix + key).Value;
                 }
 
                 if (value == null)

@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide
 
         private static readonly TableSchema ItemsSchema;
 
-        private static readonly TableSchema CmpXchgItemsSchema;
+        private static readonly TableSchema CompareExchangeSchema;
         public enum UniqueItems
         {
             Key,
@@ -64,13 +64,13 @@ namespace Raven.Server.ServerWide
         }
 
         private static readonly Slice Items;
-        private static readonly Slice CmpXchg;
+        private static readonly Slice CompareExchange;
         public static readonly Slice Identities;
 
         static ClusterStateMachine()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
-            Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CmpXchg);
+            Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CompareExchange);
             Slice.From(StorageEnvironment.LabelsContext, "Identities", out Identities);
 
             ItemsSchema = new TableSchema();
@@ -83,8 +83,8 @@ namespace Raven.Server.ServerWide
                 Count = 1
             });
 
-            CmpXchgItemsSchema = new TableSchema();
-            CmpXchgItemsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            CompareExchangeSchema = new TableSchema();
+            CompareExchangeSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1
@@ -209,7 +209,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(AddOrUpdateCompareExchangeCommand):
                     case nameof(RemoveCompareExchangeCommand):
-                        CompareExchange(context, type, cmd, index, out var removeItem);
+                        ExecuteCompareExchange(context, type, cmd, index, out var removeItem);
                         leader?.SetStateOf(index, removeItem);
                         break;
                     case nameof(InstallUpdatedServerCertificateCommand):
@@ -505,7 +505,7 @@ namespace Raven.Server.ServerWide
             }
 
             DeleteTreeByPrefix(context, UpdateValueForDatabaseCommand.GetStorageKey(databaseName, null), Identities);
-            DeleteTreeByPrefix(context, databaseName + "/", CmpXchg, RootObjectType.Table);
+            DeleteTreeByPrefix(context, databaseName + "/", CompareExchange, RootObjectType.Table);
         }
 
         internal static unsafe void UpdateValue(long index, Table items, Slice lowerKey, Slice key, BlittableJsonReaderObject updated)
@@ -854,7 +854,7 @@ namespace Raven.Server.ServerWide
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
             return slice.Content.Match(Items.Content)
-                   || slice.Content.Match(CmpXchg.Content)
+                   || slice.Content.Match(CompareExchange.Content)
                    || slice.Content.Match(Identities.Content);
         }
 
@@ -862,7 +862,7 @@ namespace Raven.Server.ServerWide
         {
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
-            CmpXchgItemsSchema.Create(context.Transaction.InnerTransaction, CmpXchg, 32);
+            CompareExchangeSchema.Create(context.Transaction.InnerTransaction, CompareExchange, 32);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(Identities);
         }
@@ -948,9 +948,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void CompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
+        public void ExecuteCompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out object result)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
             result = compareExchange.Execute(context,items,index);
             OnTransactionDispose(context, index);
@@ -975,35 +975,35 @@ namespace Raven.Server.ServerWide
             };
         }
         
-        public (long Index, BlittableJsonReaderObject Value) GetCmpXchg(TransactionOperationContext context, string key)
+        public (long Index, BlittableJsonReaderObject Value) GetCompareExchange(TransactionOperationContext context, string key)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var dbKey = key.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {
                 if (items.ReadByKey(keySlice, out var reader))
                 {
-                    var index = ReadCmpXchgIndex(reader);
-                    var value = ReadCmpXchgValue(context, reader);
+                    var index = ReadCompareExchangeIndex(reader);
+                    var value = ReadCompareExchangeValue(context, reader);
                     return (index, value);
                 }
                 return (-1, null);
             }
         }
         
-        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCmpXchgByPrefix(TransactionOperationContext context, string dbName, string prefix, 
-            int currentPage = 0, int pageSize = 1024)
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeStartsWith(TransactionOperationContext context, 
+            string dbName, string prefix, int currentPage = 0, int pageSize = 1024)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
+            var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var dbKey = prefix.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {
                 foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, currentPage * pageSize))
                 {
                     pageSize--;
-                    var key = ReadCmpXchgKey(item.Value.Reader, dbName);
-                    var index = ReadCmpXchgIndex(item.Value.Reader);
-                    var value = ReadCmpXchgValue(context, item.Value.Reader);
+                    var key = ReadCompareExchangeKey(item.Value.Reader, dbName);
+                    var index = ReadCompareExchangeIndex(item.Value.Reader);
+                    var value = ReadCompareExchangeValue(context, item.Value.Reader);
                     yield return (key, index, value);
                     
                     if(pageSize == 0)
@@ -1012,18 +1012,18 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe string ReadCmpXchgKey(TableValueReader reader, string dbPrefix)
+        private static unsafe string ReadCompareExchangeKey(TableValueReader reader, string dbPrefix)
         {
             var ptr = reader.Read((int)UniqueItems.Key, out var size);
             return Encodings.Utf8.GetString(ptr, size).Substring(dbPrefix.Length + 1);
         }
 
-        private static unsafe BlittableJsonReaderObject ReadCmpXchgValue(TransactionOperationContext context, TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject ReadCompareExchangeValue(TransactionOperationContext context, TableValueReader reader)
         {
             return new BlittableJsonReaderObject(reader.Read((int)UniqueItems.Value, out var size), size, context);
         }
 
-        private static unsafe long ReadCmpXchgIndex(TableValueReader reader)
+        private static unsafe long ReadCompareExchangeIndex(TableValueReader reader)
         {
             return *(long*)reader.Read((int)UniqueItems.Index, out var _);
         }

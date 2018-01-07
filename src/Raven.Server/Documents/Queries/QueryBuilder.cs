@@ -374,14 +374,14 @@ namespace Raven.Server.Documents.Queries
             var server = documentsContext.DocumentDatabase.ServerStore;
             switch (methodType)
             {
-                case MethodType.CmpXchg:
+                case MethodType.CompareExchange:
                     var v = GetValue(query, metadata, parameters, method.Arguments[0]);
                     if (v.Type != ValueTokenType.String)
                         throw new InvalidQueryException("Expected value of type string, but got: " + v.Type, query.QueryText, parameters);
 
                     var prefix = documentsContext.DocumentDatabase.Name + "/";
                     object value = null;
-                    server.Cluster.GetCmpXchg(serverContext, prefix + v.Value).Value?.TryGetMember("Object", out value);
+                    server.Cluster.GetCompareExchange(serverContext, prefix + v.Value).Value?.TryGetMember("Object", out value);
 
                     if (value == null)
                         return new ValueExpression(null, ValueTokenType.Null);

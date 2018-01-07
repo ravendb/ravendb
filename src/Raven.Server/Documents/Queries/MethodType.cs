@@ -19,7 +19,7 @@
         Max,
         Average,
 
-        CmpXchg,
+        CompareExchange,
         
         Spatial_Circle,
         Spatial_Wkt,
