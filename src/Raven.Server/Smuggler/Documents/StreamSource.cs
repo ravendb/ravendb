@@ -114,7 +114,7 @@ namespace Raven.Server.Smuggler.Documents
         private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchange()
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchagne"))
+            using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
             using (var builder = new BlittableJsonDocumentBuilder(_context,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
