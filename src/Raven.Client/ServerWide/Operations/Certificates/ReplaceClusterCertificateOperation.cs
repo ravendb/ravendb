@@ -1,0 +1,69 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Sparrow.Json;
+
+namespace Raven.Client.ServerWide.Operations.Certificates
+{
+    public class ReplaceClusterCertificateOperation : IServerOperation
+    {
+        private readonly X509Certificate2 _certificate;
+        private readonly string _name;
+
+        public ReplaceClusterCertificateOperation(string name, X509Certificate2 certificate)
+        {
+            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+            _name = name ?? throw new ArgumentNullException(nameof(name));
+        }
+
+        public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new ReplaceClusterCertificateCommand(_name, _certificate);
+        }
+
+        private class ReplaceClusterCertificateCommand : RavenCommand
+        {
+            private readonly X509Certificate2 _certificate;
+            private readonly string _name;
+
+            public ReplaceClusterCertificateCommand(string name, X509Certificate2 certificate)
+            {
+                _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
+                _name = name ?? throw new ArgumentNullException(nameof(name));
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/certificates/replace-cluster-cert";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                        {
+                            writer.WriteStartObject();
+
+                            writer.WritePropertyName(nameof(CertificateDefinition.Name));
+                            writer.WriteString(_name.ToString());
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
+                            writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Pfx))); // keep the private key -> this is a server cert
+                            
+                            writer.WriteEndObject();
+                        }
+                    })
+                };
+
+                return request;
+            }
+        }
+    }
+}
