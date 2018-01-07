@@ -60,6 +60,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(1, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
 
                     await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
@@ -67,6 +69,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(2, stats.CountOfAttachments);
                     Assert.Equal(2, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
 
                     using (var session = store.OpenSession())
                     {
@@ -144,6 +148,8 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal(1, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfAttachments);
                 Assert.Equal(1, stats.CountOfUniqueAttachments);
+                Assert.Equal(0, stats.CountOfIdentities);
+                Assert.Equal(0, stats.CountOfCompareExchange);
 
                 SpinWait.SpinUntil(() =>
                 {
@@ -163,6 +169,8 @@ namespace SlowTests.Client.Attachments
                 Assert.Equal(1, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfAttachments);
                 Assert.Equal(1, stats.CountOfUniqueAttachments);
+                Assert.Equal(0, stats.CountOfIdentities);
+                Assert.Equal(0, stats.CountOfCompareExchange);
 
                 using (var session = store.OpenSession())
                 {
@@ -261,6 +269,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(0, stats.CountOfAttachments);
                     Assert.Equal(0, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
 
                     using (var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                         store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/jpeg"));
@@ -269,6 +279,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(1, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
 
                     await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
@@ -276,6 +288,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(1, stats.CountOfDocuments);
                     Assert.Equal(1, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
 
                     using (var session = store.OpenSession())
                     {
@@ -338,6 +352,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(2, stats.CountOfRevisionDocuments);
                     Assert.Equal(2, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
                 }
 
                 using (var store2 = GetDocumentStore(new Options
@@ -354,6 +370,8 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(3, stats.CountOfRevisionDocuments);
                     Assert.Equal(2, stats.CountOfAttachments);
                     Assert.Equal(1, stats.CountOfUniqueAttachments);
+                    Assert.Equal(0, stats.CountOfIdentities);
+                    Assert.Equal(0, stats.CountOfCompareExchange);
 
                     using (var session = store2.OpenSession())
                     {
