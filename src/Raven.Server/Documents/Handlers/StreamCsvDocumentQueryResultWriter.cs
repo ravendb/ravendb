@@ -92,8 +92,14 @@ namespace Raven.Server.Documents.Handlers
 
         private IEnumerable<string> GetPropertiesRecursive(string parentPath, BlittableJsonReaderObject obj)
         {
+            var inMetadata = Constants.Documents.Metadata.Key.Equals(parentPath);
             foreach (var propery in obj.GetPropertyNames())
             {
+                //skip properties starting with '@' unless we are in the metadata and we need to export @metadata.@collection
+                if (inMetadata && propery.Equals(Constants.Documents.Metadata.Collection) == false)
+                    continue;                
+                if(propery.StartsWith('@') && propery.Equals(Constants.Documents.Metadata.Key) == false && parentPath.Equals(Constants.Documents.Metadata.Key) == false)
+                    continue; 
                 var path = IsNullOrEmpty(parentPath) ? propery : $"{parentPath}.{propery}";
                 object res;
                 if (obj.TryGetMember(propery, out res) && res is BlittableJsonReaderObject)
@@ -104,7 +110,7 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
                 else
-                {
+                {                    
                     yield return path;
                 }
             }
