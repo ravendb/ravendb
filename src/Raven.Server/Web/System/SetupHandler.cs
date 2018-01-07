@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -54,25 +55,48 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
-
-                    HttpContext.Response.StatusCode = (int)response.StatusCode;
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    string error = null;
+                    object result = null;
+                    string responseString = null;
                     
-                    if (response.IsSuccessStatusCode == false)
+                    try
                     {
-                        responseString = SetupHandler.GeneralDomainRegistrationServiceError + responseString;
+                        var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
+
+                        HttpContext.Response.StatusCode = (int)response.StatusCode;
+                        responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                        if (response.IsSuccessStatusCode == false)
+                        {
+                            error = responseString;
+                        }
+                        else
+                        {
+                            result = JsonConvert.DeserializeObject<JObject>(responseString);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        result = responseString;
+                        error = e.ToString();
                     }
 
                     using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                     {
-                        streamWriter.Write(responseString);
+                        new JsonSerializer().Serialize(streamWriter, new
+                        {
+                            Message = GeneralDomainRegistrationServiceError,
+                            HttpContext.Response.StatusCode,
+                            Response = result,
+                            Error = error
+                        });
+                        
                         streamWriter.Flush();
                     }
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException(SetupHandler.GeneralDomainRegistrationServiceError, e);
+                    throw new InvalidOperationException(GeneralDomainRegistrationServiceError, e);
                 }
             }
         }
@@ -91,16 +115,44 @@ namespace Raven.Server.Web.System
 
                 try
                 {
-                    var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+                    string error = null;
+                    object result = null;
+                    string responseString = null;
+                    
+                    try
+                    {
+                        var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
-                    HttpContext.Response.StatusCode = (int)response.StatusCode;
-                    var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                        HttpContext.Response.StatusCode = (int)response.StatusCode;
+                        responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                    if (response.IsSuccessStatusCode == false)
+                        if (response.IsSuccessStatusCode == false)
+                        {
+                            error = responseString;
+                        }
+                        else
+                        {
+                            result = JsonConvert.DeserializeObject<JObject>(responseString);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        result = responseString;
+                        error = e.ToString();
+                    }
+
+                    if (error != null)
                     {
                         using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
-                            streamWriter.Write(SetupHandler.GeneralDomainRegistrationServiceError + responseString);
+                            new JsonSerializer().Serialize(streamWriter, new
+                            {
+                                Message = GeneralDomainRegistrationServiceError,
+                                HttpContext.Response.StatusCode,
+                                Response = result,
+                                Error = error
+                            });
+                            
                             streamWriter.Flush();
                         }
 
