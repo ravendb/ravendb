@@ -80,20 +80,9 @@ namespace Raven.Client.Util
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                var node = context.Node as MemberExpression;
-                if (node != null && node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
+                if (context.Node is MemberExpression node && node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
                 {
-                    var writer = context.GetWriter();
-                    context.PreventDefault();
-
-                    context.Visitor.Visit(node.Expression);
-
-                    using (writer.Operation(node))
-                    {
-                        writer.Write(".");
-                        writer.Write("length");
-                    }
-
+                    HandleCount(context, node.Expression);
                     return;
                 }
 
@@ -393,6 +382,9 @@ namespace Raven.Client.Util
                             return;
                         }
                     }
+                    case "Count":
+                        HandleCount(context, methodCallExpression.Arguments[0]);
+                        return;
                     default:
                         return;
                 }
@@ -428,6 +420,19 @@ namespace Raven.Client.Util
                 if (methodName == "Contains")
                 {
                     javascriptWriter.Write(">=0");
+                }
+            }
+
+            private static void HandleCount(JavascriptConversionContext context, Expression expression)
+            {
+                var writer = context.GetWriter();
+                context.PreventDefault();
+
+                context.Visitor.Visit(expression);
+
+                using (writer.Operation(expression))
+                {
+                    writer.Write(".length");
                 }
             }
 
