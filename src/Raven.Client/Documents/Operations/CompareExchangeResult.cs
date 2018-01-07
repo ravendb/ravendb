@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations
         public static CompareExchangeResult<T> ParseFromBlittable(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response.TryGet(nameof(Index), out long index) == false)
-                throw new InvalidDataException("Response is invalid.");
+                throw new InvalidDataException("Response is invalid. Index is missing.");
 
             response.TryGet(nameof(Successful), out bool successful);
             response.TryGet(nameof(Value), out BlittableJsonReaderObject raw);

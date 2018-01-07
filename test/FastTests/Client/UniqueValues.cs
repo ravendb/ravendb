@@ -20,8 +20,7 @@ namespace FastTests.Client
             var store = GetDocumentStore();
             await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("test", "Karmel", 0));
             var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("test"));
-            Assert.Equal("Karmel", res.Value);
-            Assert.True(res.Successful);
+            Assert.Equal("Karmel", res.Single().Value);
         }
 
         [Fact]
@@ -83,12 +82,12 @@ namespace FastTests.Client
             await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
             await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
-            res = await store2.Operations.SendAsync(new GetCompareExchangeOperation<User>("test"));
-            Assert.Equal("Karmel", res.Value.Name);
+            var result = await store2.Operations.SendAsync(new GetCompareExchangeOperation<User>("test"));
+            Assert.Equal("Karmel", result.Single().Value.Name);
             Assert.True(res.Successful);
 
-            res = await store2.Operations.SendAsync(new GetCompareExchangeOperation<User>("test2"));
-            Assert.Equal("Karmel", res.Value.Name);
+            result = await store2.Operations.SendAsync(new GetCompareExchangeOperation<User>("test2"));
+            Assert.Equal("Karmel", result.Single().Value.Name);
             Assert.True(res.Successful);
         }
 
@@ -111,7 +110,7 @@ namespace FastTests.Client
             Assert.Equal("Karmel", res2.Value.Name);
             Assert.True(res2.Successful);
             
-            var list = (await store.Operations.SendAsync(new GetCompareExchangeStartsWithOperation<User>("test"))).ToList();
+            var list = await store.Operations.SendAsync(new GetCompareExchangeOperation<User>("test"));
             Assert.Equal(2, list.Count);
             Assert.Equal("test", list[0].Key);
             Assert.Equal("Karmel", list[0].Value.Name);
@@ -146,9 +145,8 @@ namespace FastTests.Client
             res = await store.Operations.SendAsync(new DeleteCompareExchangeOperation<string>("test", 0));
             Assert.False(res.Successful);
             
-            res = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("test"));
-            Assert.Equal("Karmel", res.Value);
-            Assert.True(res.Successful);
+            var result = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("test"));
+            Assert.Equal("Karmel", result.Single().Value);
         }
         
         [Fact]
@@ -187,14 +185,14 @@ namespace FastTests.Client
             {
                 Name = "Karmel"
             }, 0));
-            var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<User>("test"));
-            Assert.Equal("Karmel", res.Value.Name);
-            Assert.True(res.Successful);
+            var result = await store.Operations.SendAsync(new GetCompareExchangeOperation<User>("test"));
+            var item = result.Single();
+            Assert.Equal("Karmel", item.Value.Name);
 
             var res2 = await store.Operations.SendAsync(new PutCompareExchangeOperation<User>("test", new User
             {
                 Name = "Karmel2"
-            }, res.Index));
+            }, item.Index));
             Assert.True(res2.Successful);
             Assert.Equal("Karmel2", res2.Value.Name);
         }

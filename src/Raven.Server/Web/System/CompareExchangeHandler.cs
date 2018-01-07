@@ -18,7 +18,7 @@ namespace Raven.Server.Web.System
     class CompareExchangeHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/cmpxchg", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetCompareExchangeValue()
+        public Task GetCompareExchange()
         {
             var keys = GetStringValuesQueryString("key", required: false);
             
@@ -113,7 +113,7 @@ namespace Raven.Server.Web.System
 
 
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
-        public async Task PutCompareExchangeValue()
+        public async Task PutCompareExchange()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");
@@ -146,7 +146,7 @@ namespace Raven.Server.Web.System
         }
         
         [RavenAction("/databases/*/cmpxchg", "DELETE", AuthorizationStatus.ValidUser)]
-        public async Task DeleteCompareExchangeValue()
+        public async Task DeleteCompareExchange()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");

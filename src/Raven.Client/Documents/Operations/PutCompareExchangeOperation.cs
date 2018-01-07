@@ -26,17 +26,17 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<CompareExchangeResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PutCompareExchangeValueCommand(_key, _value, _index, conventions);
+            return new PutCompareExchangeCommand(_key, _value, _index, conventions);
         }
 
-        private class PutCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>
+        private class PutCompareExchangeCommand : RavenCommand<CompareExchangeResult<T>>
         {
             private readonly string _key;
             private readonly T _value;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
 
-            public PutCompareExchangeValueCommand(string key, T value, long index, DocumentConventions conventions = null)
+            public PutCompareExchangeCommand(string key, T value, long index, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
