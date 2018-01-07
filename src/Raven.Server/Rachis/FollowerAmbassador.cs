@@ -91,6 +91,11 @@ namespace Raven.Server.Rachis
             _wakeLeader.Set();
         }
 
+        private void UpdateFollowerTicks()
+        {
+            Interlocked.Exchange(ref _lastReplyFromFollower, DateTime.UtcNow.Ticks);
+        }
+        
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
         {
             _engine = engine;
@@ -243,7 +248,7 @@ namespace Raven.Server.Rachis
                                     );
                                 }
                                 _debugRecorder.Record("Sending entries");
-                                _connection.Send(context, appendEntries, entries);
+                                _connection.Send(context, UpdateFollowerTicks, appendEntries, entries);
                                 _debugRecorder.Record("Waiting for response");
                                 var aer = _connection.Read<AppendEntriesResponse>(context);
                                 _debugRecorder.Record("Response was recieved");
@@ -261,7 +266,7 @@ namespace Raven.Server.Rachis
                                 }
                                 if (aer.CurrentTerm != _engine.CurrentTerm)
                                     ThrowInvalidTermChanged(aer);
-                                
+
                                 UpdateLastMatchFromFollower(aer.LastLogIndex);
                             }
                             
@@ -279,6 +284,7 @@ namespace Raven.Server.Rachis
                             // either we have new entries to send, or we waited for long enough 
                             // to send another heartbeat
                             task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
+                            UpdateFollowerTicks(); // keep the leader in full confidence of his leadership 
                             _debugRecorder.Record("Cycle done");
                             _debugRecorder.Start();
                         }

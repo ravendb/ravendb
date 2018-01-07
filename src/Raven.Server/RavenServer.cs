@@ -800,6 +800,8 @@ namespace Raven.Server
                     tcpClient.NoDelay = true;
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
+                    tcpClient.ReceiveTimeout = tcpClient.SendTimeout = (int)Configuration.Cluster.TcpConnectionTimeout.AsTimeSpan.TotalMilliseconds;
+                    
                     Stream stream = tcpClient.GetStream();
                     stream = await AuthenticateAsServerIfSslNeeded(stream);
                     var tcp = new TcpConnectionOptions
