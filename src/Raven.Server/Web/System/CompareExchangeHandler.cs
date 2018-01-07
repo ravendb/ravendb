@@ -28,9 +28,9 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(CmpXchgResult<object>.Index)] = res.Index,
-                        [nameof(CmpXchgResult<object>.Value)] = res.Value,
-                        [nameof(CmpXchgResult<object>.Successful)] = true
+                        [nameof(CompareExchangeResult<object>.Index)] = res.Index,
+                        [nameof(CompareExchangeResult<object>.Value)] = res.Value,
+                        [nameof(CompareExchangeResult<object>.Successful)] = true
                     });
                     writer.Flush();
                 }
@@ -62,9 +62,9 @@ namespace Raven.Server.Web.System
                         var tuple = ((long Index, object Value))res;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CmpXchgResult<object>.Index)] = tuple.Index,
-                            [nameof(CmpXchgResult<object>.Value)] = tuple.Value,
-                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Index == raftIndex
+                            [nameof(CompareExchangeResult<object>.Index)] = tuple.Index,
+                            [nameof(CompareExchangeResult<object>.Value)] = tuple.Value,
+                            [nameof(CompareExchangeResult<object>.Successful)] = tuple.Index == raftIndex
                         });
                     }
                     writer.Flush();
@@ -95,9 +95,9 @@ namespace Raven.Server.Web.System
                         var tuple = ((long Index, object Value))res;
                         context.Write(writer, new DynamicJsonValue
                         {
-                            [nameof(CmpXchgResult<object>.Index)] = tuple.Index,
-                            [nameof(CmpXchgResult<object>.Value)] = tuple.Value,
-                            [nameof(CmpXchgResult<object>.Successful)] = tuple.Index == raftIndex
+                            [nameof(CompareExchangeResult<object>.Index)] = tuple.Index,
+                            [nameof(CompareExchangeResult<object>.Value)] = tuple.Value,
+                            [nameof(CompareExchangeResult<object>.Successful)] = tuple.Index == raftIndex
                         });
                     }
                     writer.Flush();
