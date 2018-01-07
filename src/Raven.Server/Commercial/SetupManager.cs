@@ -717,7 +717,7 @@ namespace Raven.Server.Commercial
 
             var serverCert = setupInfo.GetX509Certificate();
 
-            var localServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, localNode.Port, out _);
+            var localServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, localNode.Port, localNode.TcpPort, out _, out _);
 
             try
             {
@@ -737,7 +737,7 @@ namespace Raven.Server.Commercial
                     // In case an external ip was specified, this is the ip we update in the dns records. (not the one we bind to)
                     var ips = localNode.ExternalIpAddress == null
                         ? localIps.ToArray()
-                        : new[] { new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.Port) };
+                        : new[] { new IPEndPoint(IPAddress.Parse(localNode.ExternalIpAddress), localNode.ExternalPort) };
 
                     await AssertDnsUpdatedSuccessfully(localServerUrl, ips, token);
                 }
@@ -781,6 +781,9 @@ namespace Raven.Server.Commercial
 
                 if (node.Value.Port == 0)
                     setupInfo.NodeSetupInfos[node.Key].Port = 443;
+
+                if (node.Value.TcpPort == 0)
+                    setupInfo.NodeSetupInfos[node.Key].TcpPort = 38888;
             }
 
             await AssertLocalNodeCanListenToEndpoints(setupInfo, serverStore);
@@ -825,8 +828,10 @@ namespace Raven.Server.Commercial
                 Syscall.FsyncDirectoryFor(settingsPath);
         }
 
-        private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, out string domain)
+        private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string tcpUrl, out string domain)
         {
+            tcpUrl = null;
+
             var cn = cert.GetNameInfo(X509NameType.DnsName, false);
             if (cn[0] == '*')
             {
@@ -835,6 +840,11 @@ namespace Raven.Server.Commercial
                     throw new FormatException($"{cn} is not a valid wildcard name for a certificate.");
 
                 domain = parts[1];
+                
+                tcpUrl = $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
+
+                if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
+                    return $"https://{nodeTag.ToLower()}.{domain}:{setupInfo.NodeSetupInfos[nodeTag].ExternalPort}";
 
                 if (port == 443)
                     return $"https://{nodeTag.ToLower()}.{domain}";
@@ -854,10 +864,17 @@ namespace Raven.Server.Commercial
             }
 
             var url = $"https://{domain}";
+
+            if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
+                url += ":" + setupInfo.NodeSetupInfos[nodeTag].ExternalPort;
+
             if (port != 443)
                 url += ":" + port;
 
+            tcpUrl = $"tcp://{domain}:{tcpPort}";
+
             setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl = url;
+            setupInfo.NodeSetupInfos[nodeTag].PublicTcpServerUrl = tcpUrl;
 
             return setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl;
         }
@@ -904,7 +921,8 @@ namespace Raven.Server.Commercial
                             serverCertBytes = Convert.FromBase64String(base64);
                             serverCert = new X509Certificate2(serverCertBytes, setupInfo.Password, X509KeyStorageFlags.Exportable);
 
-                            publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out domainFromCert);
+                            publicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, LocalNodeTag, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
+                                setupInfo.NodeSetupInfos[LocalNodeTag].TcpPort, out var _, out domainFromCert);
 
                             try
                             {
@@ -934,8 +952,8 @@ namespace Raven.Server.Commercial
                                 progress.AddInfo($"Adding node '{node.Key}' to the cluster.");
                                 onProgress(progress);
 
-                                setupInfo.NodeSetupInfos[node.Key].PublicServerUrl =
-                                    GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port, out var _);
+                                setupInfo.NodeSetupInfos[node.Key].PublicServerUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port,
+                                    node.Value.TcpPort, out var _, out var _);
 
                                 try
                                 {
@@ -1017,11 +1035,21 @@ namespace Raven.Server.Commercial
                             onProgress(progress);
 
                             if (node.Value.Addresses.Count != 0)
+                            {
                                 jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port)));
+                                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.TcpPort)));
+                            }
+
+                            var httpUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
+                                setupInfo.NodeSetupInfos[LocalNodeTag].TcpPort, out var tcpUrl, out var _);
 
                             jsonObj[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = string.IsNullOrEmpty(node.Value.PublicServerUrl)
-                                ? GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port, out var _)
+                                ? httpUrl
                                 : node.Value.PublicServerUrl;
+
+                            jsonObj[RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl)] = string.IsNullOrEmpty(node.Value.PublicTcpServerUrl)
+                                ? tcpUrl
+                                : node.Value.PublicTcpServerUrl;
 
                             var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
@@ -1250,13 +1278,21 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
-                    var externalIpMsg = setupMode == SetupMode.LetsEncrypt
-                        ? "This can happen if the ip is external (behind a firewall). If this is the case, try going back to the previous screen and add the same ip as an external ip."
-                        : "";
+                    var port = setupInfo.NodeSetupInfos[LocalNodeTag].Port;
+                    string linuxMsg = null;
+                    if (PlatformDetails.RunningOnPosix && (port == 80 || port == 443))
+                    {
+                        linuxMsg = $"It can happen if port {port} is not allowed for the non-root ravendb process. Try using setcap to allow it.";
+                    }
 
-                    throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'. The specified ip address might not be reachable due to network issues.{Environment.NewLine}" +
+                    var also = linuxMsg == null ? "" : "also";
+                    var externalIpMsg = setupMode == SetupMode.LetsEncrypt
+                        ? $"It can {also} happen if the ip is external (behind a firewall, docker). If this is the case, try going back to the previous screen and add the same ip as an external ip."
+                        : "";
+                    
+                    throw new InvalidOperationException($"Failed to start webhost on node '{LocalNodeTag}'. The specified ip address might not be reachable due to network issues. {linuxMsg}{Environment.NewLine}{externalIpMsg}{Environment.NewLine}" +
                                                         $"Settings file:{settingsPath}.{Environment.NewLine}" +
-                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.{Environment.NewLine}" + externalIpMsg, e);
+                                                        $"IP addresses: {string.Join(", ", addresses.Select(addr => addr.ToString()))}.", e);
                 }
 
                 using (var httpMessageHandler = new HttpClientHandler())
@@ -1385,7 +1421,7 @@ namespace Raven.Server.Commercial
                 {
                     throw new InvalidOperationException(
                         $"Cannot resolve '{hostname}' locally but succeeded resolving the address using google's api ({GoogleDnsApi})."
-                        + Environment.NewLine + "Try to clear your local/network DNS cache and restart validation."
+                        + Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again."
                         + Environment.NewLine + "Another temporary solution is to configure your local network connection to use google's DNS server (8.8.8.8).", e);
                 }
 
