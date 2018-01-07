@@ -4,6 +4,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
     {
         Documents,
         Queries,
-        Revisions
+        Revisions,
+        CompareExchange,
     }
 }

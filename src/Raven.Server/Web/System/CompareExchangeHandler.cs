@@ -1,8 +1,13 @@
-﻿using System.Net;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -15,59 +20,97 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCompareExchangeValue()
         {
-            var prefix = Database.Name + "/";
-            var key = prefix + GetStringQueryString("key");
+            var keys = GetStringValuesQueryString("key", required: false);
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var res = ServerStore.Cluster.GetCmpXchg(context, key);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(CompareExchangeResult<object>.Index)] = res.Index,
-                        [nameof(CompareExchangeResult<object>.Value)] = res.Value,
-                        [nameof(CompareExchangeResult<object>.Successful)] = true
-                    });
-                    writer.Flush();
-                }
+                if (keys.Count > 0)
+                    GetCompareExchangeByKey(context, keys);
+                else
+                    GetCompareExchange(context);
             }
             
             return Task.CompletedTask;
         }
+
+        private void GetCompareExchange(TransactionOperationContext context)
+        {
+            var sw = Stopwatch.StartNew();
+
+            var start = GetStart();
+            var pageSize = GetPageSize();
+
+            var prefix = Database.Name + "/";
+            var startsWithKey = GetStringQueryString("startsWith", false);
+            var items = ServerStore.Cluster.GetCompareExchangeStartsWith(context, Database.Name, prefix + startsWithKey, start, pageSize);
+
+            var numberOfResults = 0;
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                
+                writer.WriteArray(context, "Results", items,
+                    (textWriter, operationContext, item) =>
+                    {
+                        numberOfResults++;
+                        operationContext.Write(textWriter, new DynamicJsonValue
+                        {
+                            ["Key"] = item.Key,
+                            ["Value"] = item.Value,
+                            ["Index"] = item.Index
+                        });
+                    });
+
+                writer.WriteEndObject();
+            }
+
+            AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeStartsWith), 
+                HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+        }
         
-        [RavenAction("/databases/*/cmpxchg/list", "GET", AuthorizationStatus.ValidUser)]
-        public Task ListCompareExchangeValues()
+        private void GetCompareExchangeByKey(TransactionOperationContext context, StringValues keys)
         {
             var prefix = Database.Name + "/";
-            var key = prefix + GetStringQueryString("startsWith", false);
-            var page = GetStart();
-            var size = GetPageSize();
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            var sw = Stopwatch.StartNew();
+
+            var items = new List<(string Key, long Index, BlittableJsonReaderObject Value)>(keys.Count);
+            foreach (var key in keys)
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                var item = ServerStore.Cluster.GetCompareExchange(context, prefix + key);
+                if (item.Value == null && keys.Count == 1)
                 {
-                    writer.WriteStartObject();
-                    using (context.OpenReadTransaction())
-                        writer.WriteArray(context, "Results", ServerStore.Cluster.GetCmpXchgByPrefix(context, Database.Name, key, page, size), 
-                            (textWriter, operationContext, item) =>
-                            {
-                                operationContext.Write(textWriter,new DynamicJsonValue
-                                {
-                                    ["Key"] = item.Key,
-                                    ["Value"] = item.Value,
-                                    ["Index"] = item.Index
-                                });
-                            });
-                    writer.WriteEndObject();
-                    writer.Flush();
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
                 }
+
+                items.Add((key, item.Index, item.Value));
             }
-            return Task.CompletedTask;
+
+            var numberOfResults = 0;
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                
+                writer.WriteArray(context, "Results", items,
+                    (textWriter, operationContext, item) =>
+                    {
+                        numberOfResults++;
+                        operationContext.Write(textWriter, new DynamicJsonValue
+                        {
+                            ["Key"] = item.Key,
+                            ["Value"] = item.Value,
+                            ["Index"] = item.Index
+                        });
+                    });
+
+                writer.WriteEndObject();
+            }
+
+            AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeByKey), HttpContext.Request.QueryString.Value, 
+                numberOfResults, keys.Count, sw.ElapsedMilliseconds);
         }
+
 
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
         public async Task PutCompareExchangeValue()
@@ -98,7 +141,6 @@ namespace Raven.Server.Web.System
                             [nameof(CompareExchangeResult<object>.Successful)] = tuple.Index == raftIndex
                         });
                     }
-                    writer.Flush();
                 }
             }
         }
@@ -131,7 +173,6 @@ namespace Raven.Server.Web.System
                             [nameof(CompareExchangeResult<object>.Successful)] = tuple.Index == raftIndex
                         });
                     }
-                    writer.Flush();
                 }
             }
         }

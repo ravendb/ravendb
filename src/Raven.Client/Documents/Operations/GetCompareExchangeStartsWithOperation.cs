@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Operations
             public override bool IsReadRequest => true;
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/cmpxchg/list?startsWith={_keyPrefix}";
+                url = $"{node.Url}/databases/{node.Database}/cmpxchg?startsWith={_keyPrefix}";
                 
                 if (_page != null)
                 {
