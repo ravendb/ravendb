@@ -624,9 +624,7 @@ namespace Raven.Server.Web.Authentication
                     X509Certificate2 newCertificate;
                     try
                     {
-                        newCertificate = string.IsNullOrEmpty(certificate.Password)
-                            ? new X509Certificate2(certBytes)
-                            : new X509Certificate2(certBytes, certificate.Password);
+                        newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
                     }
                     catch (Exception e)
                     {
@@ -646,6 +644,9 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException("Failed to replace the server certificate.", e);
                 }
             }
+
+            NoContentStatus();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
 
         public static void ValidateCertificateDefinition(CertificateDefinition certificate, ServerStore serverStore)
