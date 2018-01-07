@@ -43,8 +43,11 @@ namespace Raven.Server.Commercial
         public class NodeInfo
         {
             public string PublicServerUrl { get; set; }
+            public string PublicTcpServerUrl { get; set; }
             public int Port { get; set; }
+            public int TcpPort { get; set; }
             public string ExternalIpAddress { get; set; }
+            public int ExternalPort { get; set; }  
             public List<string> Addresses { get; set; }
 
             public DynamicJsonValue ToJson()
@@ -52,8 +55,11 @@ namespace Raven.Server.Commercial
                 return new DynamicJsonValue
                 {
                     [nameof(PublicServerUrl)] = PublicServerUrl,
+                    [nameof(PublicTcpServerUrl)] = PublicTcpServerUrl,
                     [nameof(Port)] = Port,
+                    [nameof(TcpPort)] = TcpPort,
                     [nameof(ExternalIpAddress)] = ExternalIpAddress,
+                    [nameof(ExternalPort)] = ExternalPort,
                     [nameof(Addresses)] = new DynamicJsonArray(Addresses)
                 };
             }
@@ -79,13 +85,15 @@ namespace Raven.Server.Commercial
     {
         public List<string> Addresses { get; set; }
         public int Port { get; set; }
+        public int TcpPort { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Addresses)] = new DynamicJsonArray(Addresses),
-                [nameof(Port)] = Port
+                [nameof(Port)] = Port,
+                [nameof(TcpPort)] = TcpPort
             };
         }
     }

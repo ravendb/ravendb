@@ -435,7 +435,16 @@ namespace Raven.Server.Web.System
 
                 jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured);
                 jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork);
+
+                if (setupInfo.Port == 0)
+                    setupInfo.Port = 8080;
+
                 jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
+
+                if (setupInfo.TcpPort == 0)
+                    setupInfo.TcpPort = 38888;
+
+                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 

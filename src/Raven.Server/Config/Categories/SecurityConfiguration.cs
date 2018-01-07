@@ -61,7 +61,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.MasterKey.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyExecArguments { get; set; }
 
-        [Description("The number of milliseconds to wait for the Master Key executable to exit. Default: 30 seconds")]
+        [Description("The number of seconds to wait for the Master Key executable to exit. Default: 30 seconds")]
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Security.MasterKey.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
