@@ -48,19 +48,6 @@ namespace Tryouts
             new AuthenticationBasicTests().CanUseEncryption().Wait();
         }
 
-        private static void ResetBench()
-        {
-            using (var store = new DocumentStore
-            {
-                Urls = new[] { "http://localhost:8080" }
-                Console.WriteLine(i);
-                using (var a = new RevisionsReplication())
-                {
-                    a.WillDeleteOldRevisions().Wait();
-                }
-            }
-        }
-
         private static void SerialStores()
         {
             using (var store = new DocumentStore
@@ -82,7 +69,6 @@ namespace Tryouts
                 Console.WriteLine($"Serial stores: {sp.ElapsedMilliseconds}");
             }
         }
-
 
         private static void ParallelStores(int multiplier)
         {
