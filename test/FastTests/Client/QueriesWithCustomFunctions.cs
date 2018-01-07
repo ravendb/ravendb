@@ -2295,9 +2295,10 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
             using (var store = GetDocumentStore())
             {
                 await store.Operations.SendAsync(new PutCompareExchangeOperation<string>("users/1", "Karmel", 0));
-                var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("users/1"));
-                Assert.Equal("Karmel", res.Value);
-                Assert.True(res.Successful);
+                var result = await store.Operations.SendAsync(new GetCompareExchangeOperation<string>("users/1"));
+                var item = result.Single();
+                Assert.Equal("users/1", item.Key);
+                Assert.Equal("Karmel", item.Value);
                             
                 using (var session = store.OpenSession())
                 {
@@ -2335,8 +2336,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                     LastName = "Indych"
                 }, 0));
                 var res = await store.Operations.SendAsync(new GetCompareExchangeOperation<User>("users/1"));
-                Assert.Equal("Karmel", res.Value.Name);
-                Assert.True(res.Successful);
+                Assert.Equal("Karmel", res.Single().Value.Name);
                             
                 using (var session = store.OpenSession())
                 {
