@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
@@ -14,7 +13,7 @@ namespace Raven.Server.Web.System
     class CompareExchangeHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/cmpxchg", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetCmpXchgValue()
+        public Task GetCompareExchangeValue()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");
@@ -34,12 +33,44 @@ namespace Raven.Server.Web.System
                     });
                     writer.Flush();
                 }
-                return Task.CompletedTask;
             }
+            
+            return Task.CompletedTask;
+        }
+        
+        [RavenAction("/databases/*/cmpxchg/list", "GET", AuthorizationStatus.ValidUser)]
+        public Task ListCompareExchangeValues()
+        {
+            var prefix = Database.Name + "/";
+            var key = prefix + GetStringQueryString("startsWith", false);
+            var page = GetStart();
+            var size = GetPageSize();
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    using (context.OpenReadTransaction())
+                        writer.WriteArray(context, "Results", ServerStore.Cluster.GetCmpXchgByPrefix(context, Database.Name, key, page, size), 
+                            (textWriter, operationContext, item) =>
+                            {
+                                operationContext.Write(textWriter,new DynamicJsonValue
+                                {
+                                    ["Key"] = item.Key,
+                                    ["Value"] = item.Value,
+                                    ["Index"] = item.Index
+                                });
+                            });
+                    writer.WriteEndObject();
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
-        public async Task PutCmpXchgValue()
+        public async Task PutCompareExchangeValue()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");
@@ -72,8 +103,8 @@ namespace Raven.Server.Web.System
             }
         }
         
-        [RavenAction("/databases/*/cmpxchg", "Delete", AuthorizationStatus.ValidUser)]
-        public async Task DeleteCmpXchgValue()
+        [RavenAction("/databases/*/cmpxchg", "DELETE", AuthorizationStatus.ValidUser)]
+        public async Task DeleteCompareExchangeValue()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");
@@ -103,37 +134,6 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
-        }
-
-        [RavenAction("/databases/*/cmpxchg/list", "GET", AuthorizationStatus.ValidUser)]
-        public Task ListCmpXchgValues()
-        {
-            var prefix = Database.Name + "/";
-            var key = prefix + GetStringQueryString("startsWith", false);
-            var page = GetStart();
-            var size = GetPageSize();
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    using (context.OpenReadTransaction())
-                    writer.WriteArray(context, "Results", ServerStore.Cluster.GetCmpXchgByPrefix(context, Database.Name, key, page, size), 
-                        (textWriter, operationContext, item) =>
-                    {
-                        operationContext.Write(textWriter,new DynamicJsonValue
-                        {
-                            ["Key"] = item.Key,
-                            ["Value"] = item.Value,
-                            ["Index"] = item.Index
-                        });
-                    });
-                    writer.WriteEndObject();
-                    writer.Flush();
-                }
-            }
-            return Task.CompletedTask;
         }
     }
 }

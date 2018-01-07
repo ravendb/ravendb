@@ -114,9 +114,9 @@ namespace Raven.Server.Smuggler.Documents
         private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCmpXchg()
         {
             var state = new JsonParserState();
-            using (var parser = new UnmanagedJsonParser(_context, state, "import/cmpxchg"))
+            using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchagne"))
             using (var builder = new BlittableJsonDocumentBuilder(_context,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "import/cmpxchg", parser, state))
+                BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
                 foreach (var reader in ReadArray())
                 {
