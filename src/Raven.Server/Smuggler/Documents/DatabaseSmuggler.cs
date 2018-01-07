@@ -74,7 +74,7 @@ namespace Raven.Server.Smuggler.Documents
                     EnsureStepProcessed(result.Conflicts);
                     EnsureStepProcessed(result.Indexes);
                     EnsureStepProcessed(result.Identities);
-                    EnsureStepProcessed(result.CmpXchg);
+                    EnsureStepProcessed(result.CompareExchange);
                 }
 
                 return result;
@@ -148,7 +148,7 @@ namespace Raven.Server.Smuggler.Documents
                     counts = ProcessLegacyAttachmentDeletions(result);
                     break;
                 case DatabaseItemType.CompareExchange:
-                    counts = ProcessCmpXchg(result);
+                    counts = ProcessCompareExchange(result);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -190,7 +190,7 @@ namespace Raven.Server.Smuggler.Documents
                     counts = result.Identities;
                     break;
                 case DatabaseItemType.CompareExchange:
-                    counts = result.CmpXchg;
+                    counts = result.CompareExchange;
                     break;
                 case DatabaseItemType.LegacyDocumentDeletions:
                     counts = new SmugglerProgressBase.Counts();
@@ -486,19 +486,19 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
-        private SmugglerProgressBase.Counts ProcessCmpXchg(SmugglerResult result)
+        private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
         {
-            using (var actions = _destination.CmpXchg())
-            using (_source.GetCmpXchg(out var cmpXchg))
+            using (var actions = _destination.CompareExchange())
+            using (_source.GetCompareExchange(out var compareExchange))
             {
-                foreach (var kvp in cmpXchg)
+                foreach (var kvp in compareExchange)
                 {
                     _token.ThrowIfCancellationRequested();
-                    result.CmpXchg.ReadCount++;
+                    result.CompareExchange.ReadCount++;
 
                     if (kvp.Equals(default((string, long, BlittableJsonReaderObject))))
                     {
-                        result.CmpXchg.ErroredCount++;
+                        result.CompareExchange.ErroredCount++;
                         continue;
                     }
 
@@ -508,13 +508,13 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     catch (Exception e)
                     {
-                        result.CmpXchg.ErroredCount++;
+                        result.CompareExchange.ErroredCount++;
                         result.AddError($"Could not write compare exhcnage '{kvp.key}->{kvp.value}': {e.Message}");
                     }
                 }
             }
 
-            return result.CmpXchg;
+            return result.CompareExchange;
         }
 
         private SmugglerProgressBase.Counts ProcessLegacyAttachments(SmugglerResult result)

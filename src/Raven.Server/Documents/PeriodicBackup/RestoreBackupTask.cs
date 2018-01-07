@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 ImportSingleBackupFile(database, onProgress, null, lastPath, context, destination, smugglerOptions);
             }
             result.Identities.Processed = true;
-            result.CmpXchg.Processed = true;
+            result.CompareExchange.Processed = true;
         }
 
         private async Task<long> WriteIdentitiesAsync(string databaseName, Dictionary<string, long> identities)

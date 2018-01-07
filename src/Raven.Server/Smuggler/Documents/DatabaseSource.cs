@@ -192,14 +192,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IDisposable GetCmpXchg(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> cmpXchg)
+        public IDisposable GetCompareExchange(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
             using (var scope = new DisposableScope())
             {
                 scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
-                cmpXchg = _database.ServerStore.Cluster.GetCompareExchangeStartsWith(context, _database.Name, _database.Name, 0, int.MaxValue);
+                compareExchange = _database.ServerStore.Cluster.GetCompareExchangeStartsWith(context, _database.Name, _database.Name, 0, int.MaxValue);
 
                 return scope.Delay();
             }
