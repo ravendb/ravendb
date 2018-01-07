@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Queries
                     switch (methodType)
                     {
                         case MethodType.Id:
-                        case MethodType.CmpXchg:
+                        case MethodType.CompareExchange:
                         case MethodType.Count:
                         case MethodType.Sum:
                         case MethodType.Spatial_Point:
@@ -1235,7 +1235,7 @@ namespace Raven.Server.Documents.Queries
                     var methodType = QueryMethod.GetMethodType(rme.Name);
                     switch (methodType)
                     {
-                        case MethodType.CmpXchg:
+                        case MethodType.CompareExchange:
                             if (rme.Arguments.Count != 1)
                                 throw new InvalidQueryException("Method cmpxchg() expects only one argument to be provided", QueryText, parameters);
 

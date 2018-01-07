@@ -199,7 +199,7 @@ namespace Raven.Server.Smuggler.Documents
                 scope.EnsureDispose(_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
-                cmpXchg = _database.ServerStore.Cluster.GetCmpXchgByPrefix(context, _database.Name, _database.Name, 0, int.MaxValue);
+                cmpXchg = _database.ServerStore.Cluster.GetCompareExchangeStartsWith(context, _database.Name, _database.Name, 0, int.MaxValue);
 
                 return scope.Delay();
             }
