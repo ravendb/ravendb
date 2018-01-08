@@ -1,7 +1,5 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import UserDomainsAndLicenseInfo = Raven.Server.Commercial.UserDomainsAndLicenseInfo;
-import {RelativeTimeSpec} from "../../../wwwroot/lib/moment/moment";
 
 class getIpsInfoCommand extends commandBase {
 
@@ -21,7 +19,6 @@ class getIpsInfoCommand extends commandBase {
             Emails: this.userDomainsWithIps.Emails,
             RootDomains: this.userDomainsWithIps.RootDomains,
             Domains: this.userDomainsWithIps.Domains
-            //UserDomainsWithIps: this.userDomainsWithIps
         };
 
         const task = $.Deferred<Raven.Server.Commercial.UserDomainsWithIps>();

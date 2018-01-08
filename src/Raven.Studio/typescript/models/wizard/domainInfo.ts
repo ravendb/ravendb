@@ -30,7 +30,7 @@ class domainInfo {
         const checkDomain = (val: string, params: any, callback: (currentValue: string, result: boolean) => void) => {
             new checkDomainAvailabilityCommand(val, this.licenseProvider())
                 .execute()
-                .done(result => {
+                .done((result: domainAvailabilityResult) => {
                     callback(this.domain(), result.Available || result.IsOwnedByMe); 
                 });
         };

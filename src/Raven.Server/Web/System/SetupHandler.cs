@@ -80,16 +80,26 @@ namespace Raven.Server.Web.System
                         result = responseString;
                         error = e.ToString();
                     }
-
+                    
                     using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                     {
-                        new JsonSerializer().Serialize(streamWriter, new
+
+                        if (error != null)
                         {
-                            Message = GeneralDomainRegistrationServiceError,
-                            HttpContext.Response.StatusCode,
-                            Response = result,
-                            Error = error
-                        });
+                            new JsonSerializer().Serialize(streamWriter, new
+                            {
+                                Message = GeneralDomainRegistrationServiceError,
+                                HttpContext.Response.StatusCode,
+                                Response = result,
+                                Error = error
+                            });
+                            
+                            streamWriter.Flush();
+                        }
+                        else
+                        {
+                            streamWriter.Write(responseString);
+                        }
                         
                         streamWriter.Flush();
                     }
