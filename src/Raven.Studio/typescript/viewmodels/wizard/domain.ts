@@ -140,32 +140,6 @@ class domain extends setupStep {
             }           
         });    
     }
-
-    createRootDomainNameAutocompleter(rootDomainText: KnockoutObservable<string>) {
-        return ko.pureComputed(() => {
-            const key = rootDomainText();
-            const availableRootDomains = this.model.domain().availableRootDomains();
-
-            if (key) {
-                return availableRootDomains.filter(x => x.toLowerCase().includes(key.toLowerCase()));
-            } else {
-                return availableRootDomains;
-            }
-        });
-    }
-
-    createUserEmailAutocompleter(userEmailText: KnockoutObservable<string>) {
-        return ko.pureComputed(() => {
-            const key = userEmailText();
-            const availableUserEmails = this.model.domain().availableEmails();
-
-            if (key) {
-                return availableUserEmails.filter(x => x.toLowerCase().includes(key.toLowerCase()));
-            } else {
-                return availableUserEmails;
-            }
-        });
-    }
 }
 
 export = domain;

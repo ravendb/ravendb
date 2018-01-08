@@ -36,7 +36,7 @@
                                 <span data-bind="text: rootDomain() || 'Select root domain'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu max-height" data-bind="foreach: $root.createRootDomainNameAutocompleter(rootDomain)">
+                            <ul class="dropdown-menu max-height" data-bind="foreach: availableRootDomains">
                                 <li>
                                     <a href="#" data-bind="text: $data, click: $parent.rootDomain.bind($parent, $data)"></a>
                                 </li>
@@ -66,7 +66,7 @@
                                 <span data-bind="text: userEmail() || 'Select E-mail'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu max-height" data-bind="foreach: $root.createUserEmailAutocompleter(userEmail)">
+                            <ul class="dropdown-menu max-height" data-bind="foreach: availableEmails">
                                 <li>
                                     <a href="#" data-bind="text: $data, click: $parent.userEmail.bind($parent, $data)"></a>
                                 </li>
