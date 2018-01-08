@@ -56,6 +56,9 @@ namespace Raven.Client.Documents.Operations
         
         public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
+            if (response == null)
+                return null;
+
             var value = GetValues(response, conventions).FirstOrDefault();
             return value.Value;
         }
