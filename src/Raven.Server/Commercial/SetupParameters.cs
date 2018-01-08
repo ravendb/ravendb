@@ -12,6 +12,7 @@ namespace Raven.Server.Commercial
     public class SetupParameters
     {
         public int? FixedServerPortNumber { get;set; }
+        public int? FixedServerTcpPortNumber { get;set; }
         
         public bool IsDocker { get; set; }
 
@@ -19,6 +20,7 @@ namespace Raven.Server.Commercial
         {
             var result = new SetupParameters();
             DetermineFixedPortNumber(serverStore, result);
+            DetermineFixedTcpPortNumber(serverStore, result);
             result.IsDocker = Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER") == "true";
             return result;
         }
@@ -34,6 +36,20 @@ namespace Raven.Server.Commercial
             {
                 Uri.TryCreate(serverStore.Configuration.Core.ServerUrls[0], UriKind.Absolute, out var uri);
                 result.FixedServerPortNumber = uri.Port;
+            }
+        }
+        
+        private static void DetermineFixedTcpPortNumber(ServerStore serverStore, SetupParameters result)
+        {
+            var serverUrlKey = RavenConfiguration.GetKey(x => x.Core.TcpServerUrls);
+            var arguments = serverStore.Configuration.CommandLineSettings?.Args;
+            if (arguments == null)
+                return;
+
+            if (CommandLineConfigurationArgumentsHelper.IsConfigurationKeyInCliArgs(serverUrlKey, arguments))
+            {
+                Uri.TryCreate(serverStore.Configuration.Core.TcpServerUrls[0], UriKind.Absolute, out var uri);
+                result.FixedServerTcpPortNumber = uri.Port;
             }
         }
     }

@@ -62,11 +62,19 @@
                         </div>
                     </div>
                     <div class="form-group" data-bind="validationElement: port">
-                        <label for="port" class="control-label">Port</label>
+                        <label for="port" class="control-label">HTTP Port</label>
                         <div class="flex-grow">
                             <input type="text" autocomplete="off" class="form-control" id="port"
                                    placeholder="Default: 443"
                                    data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode() && isLocal(), attr: { title: $root.model.fixPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
+                        </div>
+                    </div>
+                    <div class="form-group" data-bind="validationElement: tcpPort">
+                        <label for="tcpPort" class="control-label">TCP Port</label>
+                        <div class="flex-grow">
+                            <input type="text" autocomplete="off" class="form-control" id="tcpPort"
+                                   placeholder="Default: 38888"
+                                   data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode() && isLocal(), attr: { title: $root.model.fixTcpPortNumberOnLocalNode() && isLocal() ? 'Fixed by startup parameter' : '' }">
                         </div>
                     </div>
                     <div data-bind="foreach: ips">
@@ -140,6 +148,8 @@
                                            data-bind="textInput: externalIpAddress">
                                 </div>
                             </div>
+                            
+                            <!-- TODO put inbox for external port -->
                         </div>
                      </div>
                 </div>
