@@ -12,7 +12,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class GetCompareExchangeValuesOperation<T> : IOperation<List<CompareExchangeValue<T>>>
+    public class GetCompareExchangeValuesOperation<T> : IOperation<Dictionary<string, CompareExchangeValue<T>>>
     {
         private readonly string[] _keys;
 
@@ -35,12 +35,12 @@ namespace Raven.Client.Documents.Operations
             _pageSize = pageSize;
         }
 
-        public RavenCommand<List<CompareExchangeValue<T>>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
+        public RavenCommand<Dictionary<string, CompareExchangeValue<T>>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
             return new GetCompareExchangeValuesCommand(this, conventions);
         }
 
-        private class GetCompareExchangeValuesCommand : RavenCommand<List<CompareExchangeValue<T>>>
+        private class GetCompareExchangeValuesCommand : RavenCommand<Dictionary<string, CompareExchangeValue<T>>>
         {
             private readonly GetCompareExchangeValuesOperation<T> _operation;
             private readonly DocumentConventions _conventions;
