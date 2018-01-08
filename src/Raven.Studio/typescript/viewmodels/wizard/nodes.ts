@@ -203,11 +203,17 @@ class nodes extends setupStep {
                node.port(this.model.fixedLocalPort().toString());
            }
            
+           if (idx === 0 && this.model.fixTcpPortNumberOnLocalNode()) {
+               node.tcpPort(this.model.fixedTcpPort().toString());
+           }
+           
            idx++;
         });
     }    
 
     private initTooltips() {
+        const ownCerts = this.model.mode() === "Secured";
+        
         popoverUtils.longWithHover($("#dns-name-info"),
             {
                 content:
@@ -216,7 +222,9 @@ class nodes extends setupStep {
                 placement: "top"
             });
 
-        const ipAddressInfo =  "IP Address or Hostname that will be associated with the DNS Name.<br/>" +
+        const ipText = ownCerts ? "IP Address or Hostname that should already be associated with DNS name in certificate. " : "IP Address or Hostname that will be associated with the DNS Name.";
+        
+        const ipAddressInfo =  ipText + "<br/>" +
             "For example:<br/>" +
             "<ul>" +
             "  <li>10.0.0.84</li>" +
@@ -233,6 +241,7 @@ class nodes extends setupStep {
 
         popoverUtils.longWithHover($("#ip-address-info-with-warning"),
             {
+                //TODO: check if we should display this in own cert flow 
                 content: ipAddressInfo + "<strong>Note:</strong> If Hostname is used then an external ip must also be provided.",
                 placement: "top"
             });
