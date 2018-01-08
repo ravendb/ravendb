@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Replication
 
             public TPerformance[] Performance { get; }
 
-            public void Write(JsonOperationContext context, BlittableJsonTextWriter writer)
+            public void Write(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
             {
                 writer.WriteStartObject();
 
@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Replication
 
         public interface IReplicationPerformanceStats
         {
-            void Write(JsonOperationContext context, BlittableJsonTextWriter writer);
+            void Write(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
         }
     }
 }

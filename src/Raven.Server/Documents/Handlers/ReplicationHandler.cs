@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Handlers
             ms.SetLength(0);
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ms, Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
 
@@ -228,6 +228,7 @@ namespace Raven.Server.Documents.Handlers
                 });
 
                 writer.WriteEndObject();
+                await writer.OuterFlushAsync();
             }
 
             ms.TryGetBuffer(out ArraySegment<byte> bytes);

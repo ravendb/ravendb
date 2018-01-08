@@ -125,10 +125,11 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.Headers[Constants.Headers.Etag] = CharExtensions.ToInvariantString(result.ResultEtag);
 
-            int numberOfResults;
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            int numberOfResults = 0;
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
-                writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
+                numberOfResults = await writer.WriteDocumentQueryResultAsync(context, result, metadataOnly, numberOfResults);
+                await writer.OuterFlushAsync();
             }
 
             Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
@@ -175,7 +176,7 @@ namespace Raven.Server.Documents.Handlers
 
             var explanations = Database.QueryRunner.ExplainDynamicIndexSelection(indexQuery);
 
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
             {
                 writer.WriteStartObject();
                 writer.WriteArray(context, "Results", explanations, (w, c, explanation) =>
@@ -183,6 +184,7 @@ namespace Raven.Server.Documents.Handlers
                     w.WriteExplanation(context, explanation);
                 });
                 writer.WriteEndObject();
+                await writer.OuterFlushAsync();
             }
         }
 
