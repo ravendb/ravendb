@@ -5,6 +5,7 @@ class unsecureSetup {
     static readonly localNetworks = [ "127.0.0.1", "localhost", "::1" ];
     
     port = ko.observable<string>();
+    tcpPort = ko.observable<string>();
     ips = ko.observableArray<ipEntry>([]);
     unsafeNetworkConfirm = ko.observable<boolean>(false);
     
@@ -26,6 +27,10 @@ class unsecureSetup {
     
     private initValidation() {
         this.port.extend({
+            number: true
+        });
+        
+        this.tcpPort.extend({
             number: true
         });
         
@@ -52,7 +57,8 @@ class unsecureSetup {
         this.validationGroup = ko.validatedObservable({
             port: this.port, 
             unsafeNetworkConfirm: this.unsafeNetworkConfirm,
-            ips: this.ips
+            ips: this.ips,
+            tcpPort: this.tcpPort
         })
     }
 
@@ -67,7 +73,8 @@ class unsecureSetup {
     toDto() : Raven.Server.Commercial.UnsecuredSetupInfo {
         return {
             Port: this.port() ? parseInt(this.port(), 10) : 8080,
-            Addresses: this.ips().map(x => x.ip())
+            Addresses: this.ips().map(x => x.ip()),
+            TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : 38888
         }
     }
     
