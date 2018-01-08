@@ -876,6 +876,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (genericTypeDefinition == typeof(ICollection<>) ||
                     genericTypeDefinition == typeof(List<>) ||
                     genericTypeDefinition == typeof(IList<>) ||
+                    genericTypeDefinition == typeof(HashSet<>) ||
                     genericTypeDefinition == typeof(Array))
                 {
                     VisitListMethodCall(expression);
