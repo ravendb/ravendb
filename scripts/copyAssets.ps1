@@ -1,5 +1,5 @@
 function CopyLicenseFile ( $targetDir ) {
-    $licensePath = [io.path]::combine("docs", "license.txt")
+    $licensePath = "LICENSE"
     Copy-Item "$licensePath" -Destination "$targetDir"
 }
 
