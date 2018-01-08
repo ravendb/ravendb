@@ -444,7 +444,7 @@ namespace Raven.Server.Web.System
                 if (setupInfo.TcpPort == 0)
                     setupInfo.TcpPort = 38888;
 
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
+                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
                 var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
 
@@ -575,9 +575,9 @@ namespace Raven.Server.Web.System
             throw new UnauthorizedAccessException("RavenDB has already been setup. Cannot use the /setup endpoints any longer.");
         }
 
-        private static string IpAddressToUrl(string address, int port)
+        private static string IpAddressToUrl(string address, int port, string scheme = "http")
         {
-            var url = "http://" + address;
+            var url = scheme + "://" + address;
             if (port != 80)
                 url += ":" + port;
             return url;
