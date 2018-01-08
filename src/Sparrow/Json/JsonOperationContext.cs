@@ -49,7 +49,8 @@ namespace Sparrow.Json
         }
 
         private int _numberOfAllocatedPathCaches = -1;
-        private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
+        private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];        
+        private Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
         private int _numberOfAllocatedStringsValues;
         private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
@@ -839,12 +840,12 @@ namespace Sparrow.Json
             }
         }
 
-        public void Write(BlittableJsonTextWriter writer, BlittableJsonReaderObject json)
+        public void Write(AbstractBlittableJsonTextWriter writer, BlittableJsonReaderObject json)
         {
             WriteInternal(writer, json);
         }
 
-        private void WriteInternal(BlittableJsonTextWriter writer, object json)
+        private void WriteInternal(AbstractBlittableJsonTextWriter writer, object json)
         {
             _jsonParserState.Reset();
             _objectJsonParser.Reset(json);
@@ -856,12 +857,12 @@ namespace Sparrow.Json
             _objectJsonParser.Reset(null);
         }
 
-        public void Write(BlittableJsonTextWriter writer, DynamicJsonValue json)
+        public void Write(AbstractBlittableJsonTextWriter writer, DynamicJsonValue json)
         {
             WriteInternal(writer, json);
         }
 
-        public void Write(BlittableJsonTextWriter writer, DynamicJsonArray json)
+        public void Write(AbstractBlittableJsonTextWriter writer, DynamicJsonArray json)
         {
             _jsonParserState.Reset();
             _objectJsonParser.Reset(json);
@@ -873,7 +874,7 @@ namespace Sparrow.Json
             _objectJsonParser.Reset(null);
         }
 
-        public unsafe void WriteObject(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        public unsafe void WriteObject(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
         {
             if (state.CurrentTokenType != JsonParserToken.StartObject)
                 throw new InvalidOperationException("StartObject expected, but got " + state.CurrentTokenType);
@@ -905,7 +906,7 @@ namespace Sparrow.Json
             writer.WriteEndObject();
         }
 
-        private unsafe void WriteValue(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        private unsafe void WriteValue(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
         {
             switch (state.CurrentTokenType)
             {
@@ -947,7 +948,7 @@ namespace Sparrow.Json
             }
         }
 
-        public void WriteArray(BlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
+        public void WriteArray(AbstractBlittableJsonTextWriter writer, JsonParserState state, ObjectJsonParser parser)
         {
             if (state.CurrentTokenType != JsonParserToken.StartArray)
                 throw new InvalidOperationException("StartArray expected, but got " + state.CurrentTokenType);
@@ -974,6 +975,22 @@ namespace Sparrow.Json
         public bool GrowAllocation(AllocatedMemoryData allocation, int sizeIncrease)
         {
             return _arenaAllocator.GrowAllocation(allocation, sizeIncrease);
+        }
+
+        public MemoryStream CheckoutMemoryStream()
+        {
+            if (_cachedMemoryStreams.Count == 0)
+            {
+                return new MemoryStream();                
+            }
+
+            return _cachedMemoryStreams.Pop();                                    
+        }     
+
+        public void ReturnMemoryStream(MemoryStream stream)
+        {
+            stream.SetLength(0);
+            _cachedMemoryStreams.Push(stream);
         }
 
         public void ReturnMemory(AllocatedMemoryData allocation)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -42,7 +43,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteExplanation(this BlittableJsonTextWriter writer, JsonOperationContext context, DynamicQueryToIndexMatcher.Explanation explanation)
+        public static void WriteExplanation(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, DynamicQueryToIndexMatcher.Explanation explanation)
         {
             writer.WriteStartObject();
 
@@ -90,7 +91,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteSuggestionResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionResult result)
+        public static void WriteSuggestionResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionResult result)
         {
             writer.WriteStartObject();
 
@@ -103,7 +104,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteFacetResult(this BlittableJsonTextWriter writer, JsonOperationContext context, FacetResult result)
+        public static void WriteFacetResult(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, FacetResult result)
         {
             writer.WriteStartObject();
 
@@ -246,6 +247,33 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
+        public static async Task<int> WriteDocumentQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, DocumentQueryResult result, bool metadataOnly, int numberOfResults)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.TotalResults));
+            writer.WriteInteger(result.TotalResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.SkippedResults));
+            writer.WriteInteger(result.SkippedResults);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
+            writer.WriteComma();
+
+            writer.WriteArray(nameof(result.IncludedPaths),
+                result.IncludedPaths);
+            writer.WriteComma();
+
+            numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly, numberOfResults, partial: true);
+
+            writer.WriteEndObject();
+            return numberOfResults;
+            
+        }
+
         public static void WriteQueryResult<TResult, TInclude>(this BlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, out int numberOfResults, bool partial = false)
         {
             if (partial == false)
@@ -324,6 +352,88 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
         }
 
+        public static async Task<int> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, int numberOfResults, bool partial = false)
+        {
+            if (partial == false)
+                writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.IndexName));
+            writer.WriteString(result.IndexName);
+            writer.WriteComma();
+
+            var results = (object)result.Results;
+            if (results is List<Document> documents)
+            {
+                writer.WritePropertyName(nameof(result.Results));
+                numberOfResults = await writer.WriteDocumentsAsync(context, documents, metadataOnly);
+                writer.WriteComma();
+            }
+            else if (results is List<BlittableJsonReaderObject> objects)
+            {
+                writer.WritePropertyName(nameof(result.Results));
+                numberOfResults = await writer.WriteObjectsAsync(context, objects);
+                writer.WriteComma();
+            }
+            else if (results is List<FacetResult> facets)
+            {
+                numberOfResults = facets.Count;
+
+                writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
+                writer.WriteComma();
+                await writer.MaybeOuterFlsuhAsync();
+            }
+            else if (results is List<SuggestionResult> suggestions)
+            {
+                numberOfResults = suggestions.Count;
+
+                writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
+                writer.WriteComma();
+                await writer.MaybeOuterFlsuhAsync();
+            }
+            else
+                throw new NotSupportedException($"Cannot write query result of '{typeof(TResult)}' type in '{result.GetType()}'.");
+
+            var includes = (object)result.Includes;
+            if (includes is List<Document> includeDocuments)
+            {
+                writer.WritePropertyName(nameof(result.Includes));
+                await writer.WriteIncludesAsync(context, includeDocuments);
+                writer.WriteComma();
+            }
+            else if (includes is List<BlittableJsonReaderObject> includeObjects)
+            {
+                if (includeObjects.Count != 0)
+                    throw new NotSupportedException("Cannot write query includes of List<BlittableJsonReaderObject>, but got non zero response");
+
+                writer.WritePropertyName(nameof(result.Includes));
+                writer.WriteStartObject();
+                writer.WriteEndObject();
+                writer.WriteComma();
+            }
+            else
+                throw new NotSupportedException($"Cannot write query includes of '{typeof(TInclude)}' type in '{result.GetType()}'.");
+
+            writer.WritePropertyName(nameof(result.IndexTimestamp));
+            writer.WriteString(result.IndexTimestamp.ToString(DefaultFormat.DateTimeFormatsToWrite));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.LastQueryTime));
+            writer.WriteString(result.LastQueryTime.ToString(DefaultFormat.DateTimeFormatsToWrite));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.IsStale));
+            writer.WriteBool(result.IsStale);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.ResultEtag));
+            writer.WriteInteger(result.ResultEtag);
+
+            if (partial == false)
+                writer.WriteEndObject();
+
+            return numberOfResults;
+        }
+
         public static void WriteTermsQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, TermsQueryResultServerSide queryResult)
         {
             writer.WriteStartObject();
@@ -341,7 +451,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexingPerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
+        public static void WriteIndexingPerformanceStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexingPerformanceStats stats)
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "index/performance"));
@@ -542,7 +652,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
+        public static void WriteIndexDefinition(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexDefinition indexDefinition, bool removeAnalyzers = false)
         {
             writer.WriteStartObject();
 
@@ -716,13 +826,13 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteIndexStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
+        public static void WriteIndexStats(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexStats stats)
         {
             var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(stats);
             writer.WriteObject(context.ReadObject(djv, "index/stats"));
         }
 
-        private static void WriteIndexFieldOptions(this BlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options, bool removeAnalyzers)
+        private static void WriteIndexFieldOptions(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IndexFieldOptions options, bool removeAnalyzers)
         {
             writer.WriteStartObject();
 
@@ -810,7 +920,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteDocuments(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out int numberOfResults)
+        public static void WriteDocuments(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, out int numberOfResults)
         {
             numberOfResults = 0;
 
@@ -831,7 +941,30 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static void WriteDocument(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
+        public static async Task<int> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly)
+        {
+            int numberOfResults = 0;
+
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var document in documents)
+            {
+                numberOfResults++;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                WriteDocument(writer, context, document, metadataOnly);
+                await writer.MaybeOuterFlsuhAsync();
+            }
+
+            writer.WriteEndArray();
+            return numberOfResults;
+        }
+
+        public static void WriteDocument(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document, bool metadataOnly)
         {
             if (document == null)
             {
@@ -855,7 +988,7 @@ namespace Raven.Server.Json
                 else
                     writer.WriteDocumentMetadata(context, document);
             }
-        }
+        }        
 
         public static void WriteIncludes(this BlittableJsonTextWriter writer, JsonOperationContext context, List<Document> includes)
         {
@@ -882,7 +1015,34 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static void WriteConflict(BlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)
+        public static async Task WriteIncludesAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, List<Document> includes)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var document in includes)
+            {
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                if (document is IncludeDocumentsCommand.ConflictDocument conflict)
+                {
+                    writer.WritePropertyName(conflict.Id);
+                    WriteConflict(writer, conflict);
+                    await writer.MaybeOuterFlsuhAsync();
+                    continue;
+                }
+
+                writer.WritePropertyName(document.Id);
+                WriteDocument(writer, context, metadataOnly: false, document: document);
+                await writer.MaybeOuterFlsuhAsync();
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private static void WriteConflict(AbstractBlittableJsonTextWriter writer, IncludeDocumentsCommand.ConflictDocument conflict)
         {
             writer.WriteStartObject();
 
@@ -935,10 +1095,43 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
+        public static async Task<int> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects)
+        {
+            int numberOfResults = 0;
+
+            writer.WriteStartArray();
+
+            var first = true;
+            foreach (var o in objects)
+            {
+                numberOfResults++;
+
+                if (first == false)
+                    writer.WriteComma();
+                first = false;
+
+                if (o == null)
+                {
+                    writer.WriteNull();
+                    continue;
+                }
+
+                using (o)
+                {
+                    writer.WriteObject(o);
+                }
+
+                await writer.MaybeOuterFlsuhAsync();
+            }
+
+            writer.WriteEndArray();
+            return numberOfResults;
+        }
+
         [ThreadStatic]
         private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
 
-        public static void WriteDocumentMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context,
+        public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
             Document document)
         {
             if (_buffers == null)
@@ -951,7 +1144,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteMetadata(this BlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
+        public static void WriteMetadata(this AbstractBlittableJsonTextWriter writer, Document document, BlittableJsonReaderObject metadata)
         {
             writer.WritePropertyName(Constants.Documents.Metadata.Key);
             writer.WriteStartObject();
@@ -1011,14 +1204,14 @@ namespace Raven.Server.Json
 
         private static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);
 
-        private static void WriteDocumentInternal(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        private static void WriteDocumentInternal(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             writer.WriteStartObject();
             WriteDocumentProperties(writer, context, document);
             writer.WriteEndObject();
-        }
+        }        
 
-        private static void WriteDocumentProperties(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
+        private static void WriteDocumentProperties(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();

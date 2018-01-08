@@ -242,7 +242,7 @@ namespace Raven.Server.Web.System
         }
 
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
-            TransactionOperationContext context, BlittableJsonTextWriter writer)
+            TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
                          dbTask != null &&
@@ -403,7 +403,7 @@ namespace Raven.Server.Web.System
             return node;
         }
 
-        private void WriteFaultedDatabaseInfo(JsonOperationContext context, BlittableJsonTextWriter writer, Task<DocumentDatabase> dbTask, string databaseName)
+        private void WriteFaultedDatabaseInfo(JsonOperationContext context, AbstractBlittableJsonTextWriter writer, Task<DocumentDatabase> dbTask, string databaseName)
         {
             var exception = dbTask.Exception;
 

@@ -2,14 +2,80 @@
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Sparrow.Extensions;
 
 namespace Sparrow.Json
 {
-    public unsafe class BlittableJsonTextWriter : IDisposable
+    public class AsyncBlittableJsonTextWriter : AbstractBlittableJsonTextWriter
     {
-        private readonly JsonOperationContext _context;
-        private readonly Stream _stream;
+        private Stream _outputStream;
+        private readonly CancellationToken _cancellationToken;
+
+        public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken) : base(context, context.CheckoutMemoryStream())
+        {
+            _outputStream = stream;
+            _cancellationToken = cancellationToken;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ValueTask<int> MaybeOuterFlsuhAsync()
+        {
+            var innerStream = _stream as MemoryStream;
+            if (innerStream.Length * 2 <= innerStream.Capacity)
+                return new ValueTask<int>(0);
+
+            Flush();
+            return new ValueTask<int>(OuterFlushAsync());
+        }
+
+        public async Task<int> OuterFlushAsync()
+        {
+            var innerStream = _stream as MemoryStream;
+            Flush();
+            innerStream.TryGetBuffer(out var bytes);
+            var bytesCount = bytes.Count;
+            if (bytesCount == 0)
+                return 0;
+            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken);
+            innerStream.SetLength(0);
+            return bytesCount;
+        }
+
+        public int OuterFlush()
+        {
+            var innerStream = _stream as MemoryStream;
+            Flush();
+            innerStream.TryGetBuffer(out var bytes);
+            var bytesCount = bytes.Count;
+            if (bytesCount == 0)
+                return 0;
+            _outputStream.Write(bytes.Array, bytes.Offset, bytesCount);
+            _stream.SetLength(0);
+            return bytesCount;
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            OuterFlush();
+            _context.ReturnMemoryStream((MemoryStream)_stream);
+        }
+    }
+
+    public class BlittableJsonTextWriter : AbstractBlittableJsonTextWriter
+    {        
+        public BlittableJsonTextWriter(JsonOperationContext context, Stream stream) : base(context, stream)
+        {            
+        }
+    }
+
+
+    public unsafe abstract class AbstractBlittableJsonTextWriter : IDisposable
+    {
+        protected readonly JsonOperationContext _context;
+        protected readonly Stream _stream;
         private const byte StartObject = (byte)'{';
         private const byte EndObject = (byte)'}';
         private const byte StartArray = (byte)'[';
@@ -38,7 +104,7 @@ namespace Sparrow.Json
         private readonly JsonOperationContext.ManagedPinnedBuffer _pinnedBuffer;
         private readonly AllocatedMemoryData _parserAuxiliarMemory;
 
-        static BlittableJsonTextWriter()
+        static AbstractBlittableJsonTextWriter()
         {
             EscapeCharacters = new byte[256];
             for (int i = 0; i < EscapeCharacters.Length; i++)
@@ -54,7 +120,7 @@ namespace Sparrow.Json
             EscapeCharacters[(byte)'"'] = (byte)'"';
         }
 
-        public BlittableJsonTextWriter(JsonOperationContext context, Stream stream)
+        public AbstractBlittableJsonTextWriter(JsonOperationContext context, Stream stream)
         {
             _context = context;
             _stream = stream;
@@ -658,7 +724,7 @@ WriteLargeCompressedString:
             }
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             try
             {

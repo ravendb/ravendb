@@ -8,8 +8,8 @@ namespace Sparrow.Json
     public static class BlittableJsonTextWriterExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray<T>(this BlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items, 
-            Action<BlittableJsonTextWriter, JsonOperationContext, T> onWrite)
+        public static void WriteArray<T>(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context, string name, IEnumerable<T> items, 
+            Action<AbstractBlittableJsonTextWriter, JsonOperationContext, T> onWrite)
         {
             writer.WritePropertyName(name);
 
@@ -29,7 +29,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this BlittableJsonTextWriter writer, string name, IEnumerable<LazyStringValue> items)
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<LazyStringValue> items)
         {
             writer.WritePropertyName(name);
 
@@ -47,7 +47,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this BlittableJsonTextWriter writer, string name, IEnumerable<string> items)
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<string> items)
         {
             writer.WritePropertyName(name);
 
@@ -71,7 +71,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this BlittableJsonTextWriter writer, string name, IEnumerable<DynamicJsonValue> items, JsonOperationContext context)
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<DynamicJsonValue> items, JsonOperationContext context)
         {
             writer.WritePropertyName(name);
 
@@ -89,7 +89,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WriteArray(this BlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
+        public static void WriteArray(this AbstractBlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
         {
             writer.WritePropertyName(name);
 
