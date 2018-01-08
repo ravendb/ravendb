@@ -624,7 +624,7 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
-            _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
+            _lastSentDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
             if (_external == false)
