@@ -39,6 +39,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -216,6 +217,8 @@ namespace Raven.Server.ServerWide
                         InstallUpdatedServerCertificate(context, cmd, index);
                         break;
                     case nameof(RecheckStatusOfServerCertificateCommand):
+                        if (_parent.Log.IsOperationsEnabled)
+                            _parent.Log.Operations($"Node {_parent.Tag}: Received {nameof(RecheckStatusOfServerCertificateCommand)}.");
                         NotifyValueChanged(context, type, index); // just need to notify listeners
                         break;
                     case nameof(ConfirmReceiptServerCertificateCommand):
@@ -286,64 +289,87 @@ namespace Raven.Server.ServerWide
 
         private void ConfirmReceiptServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            using (Slice.From(context.Allocator, "server/cert", out var key))
+            if (_parent.Log.IsOperationsEnabled)
+                _parent.Log.Operations($"Node {_parent.Tag}: Received {nameof(ConfirmReceiptServerCertificateCommand)}.");
+            try
             {
-                if (cmd.TryGet(nameof(ConfirmReceiptServerCertificateCommand.Thumbprint), out string thumbprint) == false)
+                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                using (Slice.From(context.Allocator, "server/cert", out var key))
                 {
-                    throw new ArgumentException("Thumbprint property didn't exist in ConfirmReceiptServerCertificateCommand");
+                    if (cmd.TryGet(nameof(ConfirmReceiptServerCertificateCommand.Thumbprint), out string thumbprint) == false)
+                    {
+                        throw new ArgumentException("Thumbprint property didn't exist in ConfirmReceiptServerCertificateCommand");
+                    }
+                    var certInstallation = GetItem(context, "server/cert");
+                    if (certInstallation == null)
+                        return; // already applied? 
+
+                    if (certInstallation.TryGet("Thumbprint", out string storedThumbprint) == false)
+                        throw new ArgumentException("Thumbprint property didn't exist in 'server/cert' value");
+
+                    if (storedThumbprint != thumbprint)
+                        return; // confirmation for a different cert, ignoring
+
+                    certInstallation.TryGet("Confirmations", out int confirmations);
+
+                    certInstallation.Modifications = new DynamicJsonValue(certInstallation)
+                    {
+                        ["Confirmations"] = confirmations + 1
+                    };
+
+                    certInstallation = context.ReadObject(certInstallation, "server.cert.update");
+
+                    UpdateValue(index, items, key, key, certInstallation);
+
+                    if (_parent.Log.IsOperationsEnabled)
+                        _parent.Log.Operations($"Node {_parent.Tag}: Confirming to replace the server certificate.");
+
+                    // this will trigger the handling of the certificate update 
+                    NotifyValueChanged(context, nameof(ConfirmReceiptServerCertificateCommand), index);
                 }
-                var certInstallation = GetItem(context, "server/cert");
-                if (certInstallation == null)
-                    return; // already applied? 
-                
-                if(certInstallation.TryGet("Thumbprint", out string storedThumbprint) == false)
-                    throw new ArgumentException("Thumbprint property didn't exist in 'server/cert' value");
-
-                if (storedThumbprint != thumbprint)
-                    return; // confirmation for a different cert, ignoring
-
-                certInstallation.TryGet("Confirmations", out int confirmations);
-
-                certInstallation.Modifications = new DynamicJsonValue(certInstallation)
-                {
-                    ["Confirmations"] = confirmations +1
-                };
-
-                certInstallation = context.ReadObject(certInstallation, "server.cert.update");
-
-                UpdateValue(index, items, key, key, certInstallation);
-                
-                // this will trigger the handling of the certificate update 
-                NotifyValueChanged(context, nameof(ConfirmReceiptServerCertificateCommand), index);
+            }
+            catch (Exception e)
+            {
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations($"Node {_parent.Tag}: {nameof(ConfirmReceiptServerCertificate)} failed.");
             }
         }
 
         private void InstallUpdatedServerCertificate(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
         {
-            if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) == false || string.IsNullOrEmpty(cert))
+            if (_parent.Log.IsOperationsEnabled)
+                _parent.Log.Operations($"Node {_parent.Tag}: Received {nameof(InstallUpdatedServerCertificateCommand)}.");
+            try
             {
-                throw new ArgumentException("Certificate property didn't exist in InstallUpdatedServerCertificateCommand");
-            }
-
-            var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert));
-            // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not alllowed
-            using (Slice.From(context.Allocator, "server/cert", out var key))
-            {
-                var djv = new DynamicJsonValue
+                if (cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.Certificate), out string cert) == false || string.IsNullOrEmpty(cert))
                 {
-                    ["Certificate"] = cert,
-                    ["Thumbprint"] = x509Certificate.Thumbprint,
-                    ["Confirmations"] = 0
-                };
+                    throw new ArgumentException("Certificate property didn't exist in InstallUpdatedServerCertificateCommand");
+                }
 
-                var json = context.ReadObject(djv, "server.cert.update.info");
+                var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert));
+                // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not alllowed
+                using (Slice.From(context.Allocator, "server/cert", out var key))
+                {
+                    var djv = new DynamicJsonValue
+                    {
+                        ["Certificate"] = cert,
+                        ["Thumbprint"] = x509Certificate.Thumbprint,
+                        ["Confirmations"] = 0
+                    };
 
-                var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-                UpdateValue(index, items,key, key, json);
+                    var json = context.ReadObject(djv, "server.cert.update.info");
+
+                    var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+                    UpdateValue(index, items, key, key, json);
+                }
+                // this will trigger the notification to the leader
+                NotifyValueChanged(context, nameof(InstallUpdatedServerCertificateCommand), index);
             }
-            // this will trigger the notification to the leader
-            NotifyValueChanged(context, nameof(InstallUpdatedServerCertificateCommand), index);
+            catch (Exception e)
+            {
+                if (_parent.Log.IsOperationsEnabled)
+                    _parent.Log.Operations($"Node {_parent.Tag}: {nameof(InstallUpdatedServerCertificate)} failed.", e);
+            }
         }
 
         private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)

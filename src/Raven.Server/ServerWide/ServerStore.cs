@@ -562,94 +562,118 @@ namespace Raven.Server.ServerWide
             {
                 case nameof(RecheckStatusOfServerCertificateCommand):
                 case nameof(ConfirmReceiptServerCertificateCommand):
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
+                    try
                     {
-                        var cert = Cluster.GetItem(context, "server/cert");
-                        if (cert == null)
-                            return; // was already processed?
-                        if (cert.TryGet("Confirmations", out int confirmations) == false)
-                            throw new InvalidOperationException("Expected to get confirmations count");
-
-                        if (GetClusterTopology(context).AllNodes.Count > confirmations)
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
                         {
-                            if (Server.Certificate?.Certificate != null &&
-                                (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
-                                return; // we still have time for all the nodes to update themselves 
+                            var cert = Cluster.GetItem(context, "server/cert");
+                            if (cert == null)
+                                return; // was already processed?
+                            if (cert.TryGet("Confirmations", out int confirmations) == false)
+                                throw new InvalidOperationException("Expected to get confirmations count");
 
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Node {NodeTag}: when replacing server certificate, confirmation count: {confirmations}.");
+
+                            if (GetClusterTopology(context).AllNodes.Count > confirmations)
+                            {
+                                if (Server.Certificate?.Certificate != null &&
+                                    (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
+                                {
+                                    if (Logger.IsOperationsEnabled)
+                                        Logger.Operations($"Node {NodeTag}: Not all nodes have confirmed the certificate replacement. " +
+                                                          $"We still have {(Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays} until expiration. " +
+                                                          $"The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration.");
+                                    return; // we still have time for all the nodes to update themselves 
+                                }
+                            }
+
+                            if (cert.TryGet("Certificate", out string certBase64) == false ||
+                                cert.TryGet("Thumbprint", out string certThumbprint) == false)
+                                throw new InvalidOperationException("Invalid server cert value, expected to get Certificate and Thumbprint properties");
+
+                            if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
+                                return;// already replaced it, nothing to do
+
+                            // and now we have to replace the cert...
+                            if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
+                            {
+                                NotificationCenter.Add(AlertRaised.Create(
+                                    null,
+                                    "Unable to refresh server certificate",
+                                    "Cluster wanted to install updated server certificate, but no path has been configured",
+                                    AlertType.ClusterTopologyWarning,
+                                    NotificationSeverity.Error,
+                                    "Cluster.Certificate.Install.Error"));
+                                return;
+                            }
+                            
+                            var bytesToSave = Convert.FromBase64String(certBase64);
+                            var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
+
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Node {NodeTag}: Replacing the certificate used by the server to: {newClusterCertificate.Thumbprint} ({newClusterCertificate.SubjectName.Name})");
+
+                            if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
+                            {
+                                bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
+                            }
+
+                            using (var certStream = File.Create(Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath)))
+                            {
+                                certStream.Write(bytesToSave, 0, bytesToSave.Length);
+                                certStream.Flush(true);
+                            }
+
+                            Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
+
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations($"Node {NodeTag}: Server certificate replaced successfully.");
                         }
-
-                        if (cert.TryGet("Certificate", out string certBase64) == false ||
-                            cert.TryGet("Thumbprint", out string certThumbprint) == false)
-                            throw new InvalidOperationException("Invalid server cert value, expected to get Certificate and Thumbprint properties");
-
-                        if (certThumbprint == Server.Certificate?.Certificate?.Thumbprint)
-                            return;// already replaced it, nothing to do
-
-                        // and now we have to replace the cert...
-                        if (string.IsNullOrEmpty(Configuration.Security.CertificatePath))
-                        {
-                            NotificationCenter.Add(AlertRaised.Create(
-                                null,
-                                "Unable to refresh server certificate",
-                                "Cluster wanted to install updated server certificate, but no path has been configured",
-                                AlertType.ClusterTopologyWarning,
-                                NotificationSeverity.Error,
-                                "Cluster.Certificate.Install.Error"));
-                            return;
-                        }
-
-
-                        var bytesToSave = Convert.FromBase64String(certBase64);
-                        var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
-
+                    }
+                    catch (Exception e)
+                    {
                         if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Replacing the certificate used by the server to: {newClusterCertificate.FriendlyName} - {newClusterCertificate.Thumbprint}");
-
-
-                        if (string.IsNullOrEmpty(Configuration.Security.CertificatePassword) == false)
-                        {
-                            bytesToSave = newClusterCertificate.Export(X509ContentType.Pkcs12, Configuration.Security.CertificatePassword);
-                        }
-
-                        using (var certStream = File.Create(Path.Combine(AppContext.BaseDirectory, Configuration.Security.CertificatePath)))
-                        {
-                            certStream.Write(bytesToSave, 0, bytesToSave.Length);
-                            certStream.Flush(true);
-                        }
-
-                        Server.SetCertificate(newClusterCertificate, bytesToSave, Configuration.Security.CertificatePassword);
-
+                            Logger.Operations($"Node {NodeTag}: Failed to process {t.Type}.", e);
                     }
                     break;
                 case nameof(InstallUpdatedServerCertificateCommand):
-                    using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
+                    try
                     {
-                        var cert = Cluster.GetItem(context, "server/cert");
-                        if (cert == null)
-                            return; // was already processed?
-                        if (cert.TryGet("Thumbprint", out string certThumbprint) == false)
-                            throw new InvalidOperationException("Invalid server cert value, expected to get Thumbprint property");
-
-                        if (cert.TryGet("Certificate", out string base64Cert) == false)
-                            throw new InvalidOperationException("Invalid server cert value, expected to get Certificate property");
-
-                        var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert));
-
-                        var now = DateTime.UtcNow;
-                        if (certificate.NotBefore.ToUniversalTime() > now)
+                        using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        using (context.OpenReadTransaction())
                         {
-                            if (Logger.IsOperationsEnabled)
-                            {
-                                Logger.Operations($"Unable to confirm certificate update because the NotBefore property is set " +
-                                                  $"to {certificate.NotBefore.ToUniversalTime():O} and now it is {now:O}. Will try again later");
-                            }
-                            return;
-                        }
+                            var cert = Cluster.GetItem(context, "server/cert");
+                            if (cert == null)
+                                return; // was already processed?
+                            if (cert.TryGet("Thumbprint", out string certThumbprint) == false)
+                                throw new InvalidOperationException("Invalid server cert value, expected to get Thumbprint property");
 
-                        // we got it, now let us let the leader know about it
-                        SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
+                            if (cert.TryGet("Certificate", out string base64Cert) == false)
+                                throw new InvalidOperationException("Invalid server cert value, expected to get Certificate property");
+
+                            var certificate = new X509Certificate2(Convert.FromBase64String(base64Cert));
+
+                            var now = DateTime.UtcNow;
+                            if (certificate.NotBefore.ToUniversalTime() > now)
+                            {
+                                if (Logger.IsOperationsEnabled)
+                                {
+                                    Logger.Operations($"Node {NodeTag}: Unable to confirm certificate update because the NotBefore property is set " +
+                                                      $"to {certificate.NotBefore.ToUniversalTime():O} and now it is {now:O}. Will try again later");
+                                }
+                                return;
+                            }
+
+                            // we got it, now let us let the leader know about it
+                            SendToLeaderAsync(new ConfirmReceiptServerCertificateCommand(certThumbprint));
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Node {NodeTag}: Failed to process {t.Type}.", e);
                     }
                     break;
                 case nameof(PutClientConfigurationCommand):

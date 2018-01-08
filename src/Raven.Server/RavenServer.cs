@@ -362,6 +362,10 @@ namespace Raven.Server
 
             // we first register it as a valid cluster node certificate in the cluster
             await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
+
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations($"Node {ServerStore.NodeTag}: Received new certificate, starting certificate replication.");
+
             var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
             await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
             {
