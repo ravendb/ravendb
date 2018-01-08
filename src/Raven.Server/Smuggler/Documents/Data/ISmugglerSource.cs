@@ -20,7 +20,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
         IDisposable GetIdentities(out IEnumerable<(string Prefix, long Value)> identities);
-        IDisposable GetCompareExchange(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange);
+        IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange);
         long SkipType(DatabaseItemType type, Action<long> onSkipped);
     }
 

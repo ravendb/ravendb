@@ -7,12 +7,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class DeleteCompareExchangeOperation<T> : IOperation<CompareExchangeResult<T>>
+    public class DeleteCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
     {
         private readonly string _key;
         private readonly long _index;
 
-        public DeleteCompareExchangeOperation(string key, long index)
+        public DeleteCompareExchangeValueOperation(string key, long index)
         {
             _key = key;
             _index = index;

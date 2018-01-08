@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Queries
 
                     var prefix = documentsContext.DocumentDatabase.Name + "/";
                     object value = null;
-                    server.Cluster.GetCompareExchange(serverContext, prefix + v.Value).Value?.TryGetMember("Object", out value);
+                    server.Cluster.GetCompareExchangeValue(serverContext, prefix + v.Value).Value?.TryGetMember("Object", out value);
 
                     if (value == null)
                         return new ValueExpression(null, ValueTokenType.Null);

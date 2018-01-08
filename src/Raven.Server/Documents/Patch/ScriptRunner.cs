@@ -554,7 +554,7 @@ namespace Raven.Server.Documents.Patch
                 using (_database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    value = _database.ServerStore.Cluster.GetCompareExchange(ctx, prefix + key).Value;
+                    value = _database.ServerStore.Cluster.GetCompareExchangeValue(ctx, prefix + key).Value;
                 }
 
                 if (value == null)

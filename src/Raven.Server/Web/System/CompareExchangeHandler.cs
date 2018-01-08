@@ -18,7 +18,7 @@ namespace Raven.Server.Web.System
     class CompareExchangeHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/cmpxchg", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetCompareExchange()
+        public Task GetCompareExchangeValues()
         {
             var keys = GetStringValuesQueryString("key", required: false);
             
@@ -26,15 +26,15 @@ namespace Raven.Server.Web.System
             using (context.OpenReadTransaction())
             {
                 if (keys.Count > 0)
-                    GetCompareExchangeByKey(context, keys);
+                    GetCompareExchangeValuesByKey(context, keys);
                 else
-                    GetCompareExchange(context);
+                    GetCompareExchangeValues(context);
             }
             
             return Task.CompletedTask;
         }
 
-        private void GetCompareExchange(TransactionOperationContext context)
+        private void GetCompareExchangeValues(TransactionOperationContext context)
         {
             var sw = Stopwatch.StartNew();
 
@@ -43,7 +43,7 @@ namespace Raven.Server.Web.System
 
             var prefix = Database.Name + "/";
             var startsWithKey = GetStringQueryString("startsWith", false);
-            var items = ServerStore.Cluster.GetCompareExchangeStartsWith(context, Database.Name, prefix + startsWithKey, start, pageSize);
+            var items = ServerStore.Cluster.GetCompareExchangeValuesStartsWith(context, Database.Name, prefix + startsWithKey, start, pageSize);
 
             var numberOfResults = 0;
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -65,11 +65,11 @@ namespace Raven.Server.Web.System
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeStartsWith), 
+            AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith), 
                 HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
         }
         
-        private void GetCompareExchangeByKey(TransactionOperationContext context, StringValues keys)
+        private void GetCompareExchangeValuesByKey(TransactionOperationContext context, StringValues keys)
         {
             var prefix = Database.Name + "/";
             var sw = Stopwatch.StartNew();
@@ -77,7 +77,7 @@ namespace Raven.Server.Web.System
             var items = new List<(string Key, long Index, BlittableJsonReaderObject Value)>(keys.Count);
             foreach (var key in keys)
             {
-                var item = ServerStore.Cluster.GetCompareExchange(context, prefix + key);
+                var item = ServerStore.Cluster.GetCompareExchangeValue(context, prefix + key);
                 if (item.Value == null && keys.Count == 1)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -107,13 +107,13 @@ namespace Raven.Server.Web.System
                 writer.WriteEndObject();
             }
 
-            AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeByKey), HttpContext.Request.QueryString.Value, 
+            AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(GetCompareExchangeValuesByKey), HttpContext.Request.QueryString.Value, 
                 numberOfResults, keys.Count, sw.ElapsedMilliseconds);
         }
 
 
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
-        public async Task PutCompareExchange()
+        public async Task PutCompareExchangeValue()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");
@@ -146,7 +146,7 @@ namespace Raven.Server.Web.System
         }
         
         [RavenAction("/databases/*/cmpxchg", "DELETE", AuthorizationStatus.ValidUser)]
-        public async Task DeleteCompareExchange()
+        public async Task DeleteCompareExchangeValue()
         {
             var prefix = Database.Name + "/";
             var key = prefix + GetStringQueryString("key");

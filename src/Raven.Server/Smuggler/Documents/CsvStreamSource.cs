@@ -319,7 +319,7 @@ namespace Raven.Server.Smuggler.Documents
             return new DisposableAction(() => { });
         }
 
-        public IDisposable GetCompareExchange(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
+        public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
             compareExchange = Enumerable.Empty<(string key, long index, BlittableJsonReaderObject value)>();
             return new DisposableAction(() => { });
