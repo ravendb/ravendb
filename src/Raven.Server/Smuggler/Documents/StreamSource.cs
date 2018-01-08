@@ -100,9 +100,9 @@ namespace Raven.Server.Smuggler.Documents
             return GetType(type);
         }
 
-        public IDisposable GetCompareExchange(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
+        public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
-            compareExchange = InternalGetCompareExchange();
+            compareExchange = InternalGetCompareExchangeValues();
             return null;
         }
 
@@ -111,7 +111,7 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchange()
+        private IEnumerable<(string key, long index, BlittableJsonReaderObject value)> InternalGetCompareExchangeValues()
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))

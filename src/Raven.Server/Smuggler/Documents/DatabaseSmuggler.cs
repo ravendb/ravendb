@@ -489,7 +489,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
         {
             using (var actions = _destination.CompareExchange())
-            using (_source.GetCompareExchange(out var compareExchange))
+            using (_source.GetCompareExchangeValues(out var compareExchange))
             {
                 foreach (var kvp in compareExchange)
                 {

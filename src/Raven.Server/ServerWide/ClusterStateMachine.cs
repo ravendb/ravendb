@@ -1005,7 +1005,7 @@ namespace Raven.Server.ServerWide
             };
         }
         
-        public (long Index, BlittableJsonReaderObject Value) GetCompareExchange(TransactionOperationContext context, string key)
+        public (long Index, BlittableJsonReaderObject Value) GetCompareExchangeValue(TransactionOperationContext context, string key)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var dbKey = key.ToLowerInvariant();
@@ -1021,7 +1021,7 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeStartsWith(TransactionOperationContext context, 
+        public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context, 
             string dbName, string prefix, int currentPage = 0, int pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);

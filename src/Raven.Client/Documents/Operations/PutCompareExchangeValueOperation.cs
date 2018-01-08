@@ -11,13 +11,13 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PutCompareExchangeOperation<T> : IOperation<CompareExchangeResult<T>>
+    public class PutCompareExchangeValueOperation<T> : IOperation<CompareExchangeResult<T>>
     {
         private readonly string _key;
         private readonly T _value;
         private readonly long _index;
 
-        public PutCompareExchangeOperation(string key, T value, long index)
+        public PutCompareExchangeValueOperation(string key, T value, long index)
         {
             _key = key;
             _value = value;
