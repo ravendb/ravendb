@@ -112,10 +112,8 @@ namespace FastTests.Client
             
             var values = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test"));
             Assert.Equal(2, values.Count);
-            Assert.Equal("test", values[0].Key);
-            Assert.Equal("Karmel", values[0].Value.Name);
-            Assert.Equal("test2", values[1].Key);
-            Assert.Equal("Karmel", values[1].Value.Name);
+            Assert.Equal("Karmel", values["test"].Value.Name);
+            Assert.Equal("Karmel", values["test2"].Value.Name);
         }
         
         [Fact]

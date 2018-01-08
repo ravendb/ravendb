@@ -10,12 +10,12 @@ namespace Raven.Client.Documents.Operations
 {
     internal static class CompareExchangeValueResultParser<T>
     {
-        public static List<CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
             if (response.TryGet("Results", out BlittableJsonReaderArray items) == false)
                     throw new InvalidDataException("Response is invalid. Results is missing.");
 
-            var results = new List<CompareExchangeValue<T>>();
+            var results = new Dictionary<string, CompareExchangeValue<T>>();
             foreach (BlittableJsonReaderObject item in items)
             {
                 if (item == null)
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations
                     // simple
                     T value = default(T);
                     raw?.TryGet("Object", out value);
-                    results.Add(new CompareExchangeValue<T>(key, index, value));
+                    results[key] = new CompareExchangeValue<T>(key, index, value);
                 }
                 else
                 {
@@ -41,12 +41,12 @@ namespace Raven.Client.Documents.Operations
                     raw?.TryGet("Object", out val);
                     if (val == null)
                     {
-                        results.Add(new CompareExchangeValue<T>(key, index, default(T)));
+                        results[key] = new CompareExchangeValue<T>(key, index, default(T));
                     }
                     else
                     {
                         var convereted = EntityToBlittable.ConvertToEntity(typeof(T), null, val, conventions);
-                        results.Add(new CompareExchangeValue<T>(key, index, (T)convereted));
+                        results[key] = new CompareExchangeValue<T>(key, index, (T)convereted);
                     }
                 }
             }
@@ -56,7 +56,8 @@ namespace Raven.Client.Documents.Operations
         
         public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, DocumentConventions conventions)
         {
-            return GetValues(response, conventions).FirstOrDefault();
+            var value = GetValues(response, conventions).FirstOrDefault();
+            return value.Value;
         }
     }
 }
