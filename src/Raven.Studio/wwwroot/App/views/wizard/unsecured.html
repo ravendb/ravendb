@@ -3,11 +3,19 @@
     <div class="panel padding padding-lg">
         <div class="margin-bottom">
             <div class="form-group" data-bind="validationElement: port">
-                <label for="port" class="control-label">Port</label>
+                <label for="port" class="control-label">HTTP Port</label>
                 <div class="flex-grow">
                     <input type="text" autocomplete="off" class="form-control" id="port"
-                           placeholder="Default: 8080"
+                           placeholder="Default: 8080. Used by clients and studio."
                            data-bind="textInput: port, disable: $root.model.fixPortNumberOnLocalNode, attr: { title: $root.model.fixPortNumberOnLocalNode() ? 'Fixed by startup parameter': '' }">
+                </div>
+            </div>
+            <div class="form-group" data-bind="validationElement: tcpPort">
+                <label for="tcpPort" class="control-label">TCP Port</label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="tcpPort"
+                           placeholder="Default: 38888. Used for inter-servers communication, i.e cluster management, replication"
+                           data-bind="textInput: tcpPort, disable: $root.model.fixPortNumberOnLocalNode, attr: { title: $root.model.fixPortNumberOnLocalNode() ? 'Fixed by startup parameter': '' }">
                 </div>
             </div>
             <div data-bind="foreach: ips">
