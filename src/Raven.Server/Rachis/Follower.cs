@@ -48,13 +48,15 @@ namespace Raven.Server.Rachis
             
             while (true)
             {
+               
                 entries.Clear();
 
                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     _debugRecorder.Record("Wait for entries");
                     var appendEntries = _connection.Read<AppendEntries>(context);
-
+                    var sp = Stopwatch.StartNew();
+                   
                     if (appendEntries.Term != _engine.CurrentTerm)
                     {
                         _connection.Send(context, new AppendEntriesResponse
@@ -73,7 +75,6 @@ namespace Raven.Server.Rachis
                     
                     _debugRecorder.Record("Got entries");
                     _engine.Timeout.Defer(_connection.Source);
-                    var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
                     {
                         for (int i = 0; i < appendEntries.EntriesCount; i++)
@@ -145,6 +146,15 @@ namespace Raven.Server.Rachis
                         LastLogIndex = lastLogIndex,
                         Success = true
                     });
+
+                    if (sp.Elapsed > _engine.ElectionTimeout / 2)
+                    {
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            _engine.Log.Info($"{ToString()}: Took a long time to complete the cycle with {entries.Count} entries: {sp.Elapsed}");
+                        }
+                    }
+                    
                     _engine.Timeout.Defer(_connection.Source);
                     _engine.ReportLeaderTime(appendEntries.TimeAsLeader);
 
@@ -689,11 +699,11 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.GetTermFor(context, response.PrevLogIndex) == response.PrevLogTerm)
                     {
-                        minIndex = midpointIndex + 1;
+                        minIndex = Math.Min(midpointIndex + 1, maxIndex);
                     }
                     else
                     {
-                        maxIndex = midpointIndex - 1;
+                        maxIndex = Math.Max(midpointIndex - 1, minIndex);
                     }
                 }
                 midpointIndex = (maxIndex + minIndex) / 2;

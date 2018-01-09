@@ -195,9 +195,11 @@ namespace Raven.Server.Rachis
                         _debugRecorder.Record("Send snapshot");
 
                         var entries = new List<BlittableJsonReaderObject>();
+                        var stopWatcher = Stopwatch.StartNew();
                         while (_leader.Running && _running)
                         {
                             entries.Clear();
+                            stopWatcher.Restart();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
                                 AppendEntries appendEntries;
@@ -290,7 +292,12 @@ namespace Raven.Server.Rachis
                             
                             // either we have new entries to send, or we waited for long enough 
                             // to send another heartbeat
-                            task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
+                            // but if we spent too much time already we will continue without waiting.
+                            var timeToWait = Math.Max(_engine.ElectionTimeout.TotalMilliseconds / 3 - stopWatcher.ElapsedMilliseconds, 0);
+                            if (timeToWait > 20)
+                            {
+                                task.Wait(TimeSpan.FromMilliseconds(timeToWait));
+                            }
                             UpdateFollowerTicks(); // keep the leader in full confidence of his leadership 
                             _debugRecorder.Record("Cycle done");
                             _debugRecorder.Start();
@@ -678,11 +685,11 @@ namespace Raven.Server.Rachis
                         }
                         else if (llr.MidpointTerm == termForMidpointIndex)
                         {
-                            llr.MinIndex = llr.MidpointIndex + 1;
+                            llr.MinIndex = Math.Min(llr.MidpointIndex + 1, llr.MaxIndex);
                         }
                         else
                         {
-                            llr.MaxIndex = llr.MidpointIndex - 1;
+                            llr.MaxIndex = Math.Max(llr.MidpointIndex - 1, llr.MinIndex);
                         }
                         var midIndex = (llr.MinIndex + llr.MaxIndex) / 2;
                         var termFor = _engine.GetTermFor(context, midIndex);
