@@ -4,24 +4,32 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class favNodeBadge {
 
-    private favicon: any;
+    private favicons: Array<any>;
 
     initialize() {
-        this.favicon = new Favico({
-            position: 'downleft',
-            bgColor: '#e33572', textColor: '#ffffff'
+        
+        this.favicons = [];
+        
+        $("link[rel=icon]").each((idx, el) => {
+            this.favicons.push(new Favico({
+                position: 'downright',
+                bgColor: '#e33572', 
+                textColor: '#ffffff',
+                element: el
+            }));
         });
-
+        
         // we set badge as side of effect of ko.computed
         ko.computed(() => {
             const tag = clusterTopologyManager.default.localNodeTag();
             const count = clusterTopologyManager.default.nodesCount();
 
-            this.favicon.reset();
-
-            if (tag && count > 1) {
-                this.favicon.badge(tag as any);
-            }
+            this.favicons.forEach(fav => {
+                fav.reset();
+                if (tag && count > 1) {
+                    fav.badge(tag as any);    
+                }
+            });
         });
     }
 }
