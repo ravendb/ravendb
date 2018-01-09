@@ -594,6 +594,8 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/replace-cluster-cert", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task ReplaceClusterCert()
         {
+            var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
+
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-cluster-cert"))
@@ -633,7 +635,7 @@ namespace Raven.Server.Web.Authentication
 
                     var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), ServerStore.ServerShutdown);
                     
-                    var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Name);
+                    var replicationTask = Server.StartCertificateReplicationAsync(newCertificate, certificate.Name, replaceImmediately);
 
                     await Task.WhenAny(replicationTask, timeoutTask);
                     if (replicationTask.IsCompleted == false)

@@ -573,10 +573,13 @@ namespace Raven.Server.ServerWide
                             if (cert.TryGet("Confirmations", out int confirmations) == false)
                                 throw new InvalidOperationException("Expected to get confirmations count");
 
+                            if (cert.TryGet("ReplaceImmediately", out bool replaceImmediately) == false)
+                                throw new InvalidOperationException("Expected to get `ReplaceImmediately` property");
+
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations($"Node {NodeTag}: when replacing server certificate, confirmation count: {confirmations}.");
-
-                            if (GetClusterTopology(context).AllNodes.Count > confirmations)
+                            
+                            if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
                             {
                                 if (Server.Certificate?.Certificate != null &&
                                     (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
@@ -584,7 +587,8 @@ namespace Raven.Server.ServerWide
                                     if (Logger.IsOperationsEnabled)
                                         Logger.Operations($"Node {NodeTag}: Not all nodes have confirmed the certificate replacement. " +
                                                           $"We still have {(Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays} until expiration. " +
-                                                          $"The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration.");
+                                                          "The update will happen when all nodes confirm the replacement or we have less than 3 days left for expiration." +
+                                                          "If you wish to force replacing the certificate just for the nodes that are up, please set 'ReplaceImmediately' to true.");
                                     return; // we still have time for all the nodes to update themselves 
                                 }
                             }

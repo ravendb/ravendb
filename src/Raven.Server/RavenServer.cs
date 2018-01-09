@@ -77,6 +77,8 @@ namespace Raven.Server
 
         public readonly ServerStatistics Statistics;
 
+        public event EventHandler ServerCertificateChanged;
+
         public RavenServer(RavenConfiguration configuration)
         {
             JsonDeserializationValidator.Validate();
@@ -298,6 +300,7 @@ namespace Raven.Server
                 {
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
                         _httpsConnectionAdapter.SetCertificate(newCertificate.Certificate);
+                    ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
                 if (Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
@@ -343,7 +346,7 @@ namespace Raven.Server
                         Logger.Operations("Failed to update certificate from Lets Encrypt", e);
                     return;
                 }
-                await StartCertificateReplicationAsync(newCertificate.Certificate, "Updated Let's Encrypt Certificate");
+                await StartCertificateReplicationAsync(newCertificate.Certificate, "Updated Let's Encrypt Certificate", false);
             }
             catch (Exception e)
             {
@@ -352,14 +355,14 @@ namespace Raven.Server
             }
         }
 
-        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string name)
+        public async Task StartCertificateReplicationAsync(X509Certificate2 newCertificate, string name, bool replaceImmediately)
         {
             // the process of updating a new certificate is the same as deleting database
             // we first send the certificate to all the nodes, then we get aknowledgments
             // about that from them, and we replace only when they are are confirmed
             // to have been successful.
-            // However, if we have less than 3 days for renewing the cert, we'll replace
-            // immediately.
+            // However, if we have less than 3 days for renewing the cert or if 
+            // replaceImmediately is true, we'll replace immediately.
 
             // we first register it as a valid cluster node certificate in the cluster
             await ServerStore.RegisterServerCertificateInCluster(newCertificate, name);
@@ -370,7 +373,8 @@ namespace Raven.Server
             var base64Cert = Convert.ToBase64String(newCertificate.Export(X509ContentType.Pkcs12, (string)null));
             await ServerStore.SendToLeaderAsync(new InstallUpdatedServerCertificateCommand
             {
-                Certificate = base64Cert
+                Certificate = base64Cert,
+                ReplaceImmediately = replaceImmediately
             });
         }
 
@@ -1015,6 +1019,8 @@ namespace Raven.Server
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
                 _httpsConnectionAdapter.SetCertificate(certificate);
+                ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
+
                 if (newCertHolder.CertificateForClients != null)
                 {
                     try

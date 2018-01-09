@@ -493,14 +493,14 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandTrustServerCert(List<string> args, RavenCli cli)
         {
-            var name = args[0];
-            var path = args[1];
-
             if (args.Count < 2 || args.Count > 3)
             {
                 WriteError("Usage: trustServerCert <name> <path-to-pfx> [password]", cli);
                 return false;
             }
+
+            var name = args[0];
+            var path = args[1];
             
             X509Certificate2 cert;
             try
@@ -581,15 +581,15 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandTrustClientCert(List<string> args, RavenCli cli)
         {
-            var name = args[0];
-            var path = args[1];
-
             if (args.Count < 2 || args.Count > 3)
             {
                 WriteError("Usage: trustClientCert <name> <path-to-pfx> [password]", cli);
                 return false;
             }
 
+            var name = args[0];
+            var path = args[1];
+            
             byte[] certBytes;
             X509Certificate2 cert;
             try
@@ -653,14 +653,14 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandGenerateClientCert(List<string> args, RavenCli cli)
         {
-            var name = args[0];
-            var path = args[1];
-
             if (args.Count < 2 || args.Count > 3)
             {
                 WriteError("Usage: generateClientCert <name> <path-to-output-folder> [password]", cli);
                 return false;
             }
+
+            var name = args[0];
+            var path = args[1];
 
             cli._server.ServerStore.EnsureNotPassive();
 
@@ -708,13 +708,31 @@ namespace Raven.Server.Utils.Cli
         
         private static bool CommandReplaceClusterCert(List<string> args, RavenCli cli)
         {
-            var name = args[0];
-            var path = args[1];
-
-            if (args.Count < 2 || args.Count > 3)
+            if (args.Count < 2 || args.Count > 4)
             {
-                WriteError("Usage: replaceClusterCert <name> <path-to-pfx> [password]", cli);
+                WriteError("Usage: replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", cli);
                 return false;
+            }
+
+            string name;
+            string path;
+            string password = null;
+            var replaceImmediately = false;
+
+            if (args[0].Equals("-replaceImmediately"))
+            {
+                replaceImmediately = true;
+                name = args[1];
+                path = args[2];
+                if (args.Count == 4)
+                    password = args[3];
+            }
+            else
+            {
+                name = args[0];
+                path = args[1];
+                if (args.Count == 3)
+                    password = args[2];
             }
 
             cli._server.ServerStore.EnsureNotPassive();
@@ -722,9 +740,6 @@ namespace Raven.Server.Utils.Cli
             X509Certificate2 cert;
             try
             {
-                string password = null;
-                if (args.Count == 3)
-                    password = args[2];
                 cert = new X509Certificate2(path, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
             }
             catch (Exception e)
@@ -740,7 +755,7 @@ namespace Raven.Server.Utils.Cli
             {
                 var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromSeconds(60), cli._server.ServerStore.ServerShutdown);
 
-                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(cert, name);
+                var replicationTask = cli._server.ServerStore.Server.StartCertificateReplicationAsync(cert, name, replaceImmediately);
 
                 Task.WhenAny(replicationTask, timeoutTask).Wait();
                 if (replicationTask.IsCompleted == false)
@@ -748,10 +763,10 @@ namespace Raven.Server.Utils.Cli
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Failed to replace the server certificate.", e);
+                throw new InvalidOperationException("Failed to replace the server certificate. Check the logs for details.", e);
             }
 
-            WriteText("The cluster certificate will be replaced in all the nodes of the cluster. Check the logs for details.", TextColor, cli);
+            WriteText("Successfully replaced the server certificate.", TextColor, cli);
 
             return true;
         }
@@ -981,7 +996,7 @@ namespace Raven.Server.Utils.Cli
             {
                 new[] {"createDb <database> <dir>", "Create database named 'database' in DataDir 'dir'"},
                 new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"},
-                new[] {"replaceClusterCert <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
+                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
             };
 
             var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
@@ -1004,7 +1019,7 @@ namespace Raven.Server.Utils.Cli
                 foreach (var cmd in commandExperimentalDescription)
                 {
                     WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                    WriteText(new string(' ', 52 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                    WriteText(new string(' ', 74 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
                 }
                 WriteText("", TextColor, cli);
             }

@@ -13,27 +13,31 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     {
         private readonly X509Certificate2 _certificate;
         private readonly string _name;
+        private readonly bool _replaceImmediately;
 
-        public ReplaceClusterCertificateOperation(string name, X509Certificate2 certificate)
+        public ReplaceClusterCertificateOperation(string name, X509Certificate2 certificate, bool replaceImmediately)
         {
             _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
             _name = name ?? throw new ArgumentNullException(nameof(name));
+            _replaceImmediately = replaceImmediately;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ReplaceClusterCertificateCommand(_name, _certificate);
+            return new ReplaceClusterCertificateCommand(_name, _certificate, _replaceImmediately);
         }
 
         private class ReplaceClusterCertificateCommand : RavenCommand
         {
             private readonly X509Certificate2 _certificate;
             private readonly string _name;
+            private readonly bool _replaceImmediately;
 
-            public ReplaceClusterCertificateCommand(string name, X509Certificate2 certificate)
+            public ReplaceClusterCertificateCommand(string name, X509Certificate2 certificate, bool replaceImmediately)
             {
                 _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
                 _name = name ?? throw new ArgumentNullException(nameof(name));
+                _replaceImmediately = replaceImmediately;
             }
 
             public override bool IsReadRequest => false;
@@ -56,7 +60,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
                             writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Pfx))); // keep the private key -> this is a server cert
-                            
+                            writer.WriteComma();
+                            writer.WritePropertyName("replaceImmediately");
+                            writer.WriteBool(_replaceImmediately);
+
                             writer.WriteEndObject();
                         }
                     })

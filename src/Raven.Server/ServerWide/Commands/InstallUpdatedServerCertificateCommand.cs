@@ -7,15 +7,17 @@ namespace Raven.Server.ServerWide.Commands
     public class InstallUpdatedServerCertificateCommand : CommandBase
     {
         public string Certificate { get; set; }
+        public bool ReplaceImmediately { get; set; }
 
         public InstallUpdatedServerCertificateCommand()
         {
             // for deserialization
         }
 
-        public InstallUpdatedServerCertificateCommand(string certificate)
+        public InstallUpdatedServerCertificateCommand(string certificate, bool replaceImmediately)
         {
             Certificate = certificate;
+            ReplaceImmediately = replaceImmediately;
         }
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
@@ -27,6 +29,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var json = base.ToJson(context);
             json[nameof(Certificate)] = Certificate;
+            json[nameof(ReplaceImmediately)] = ReplaceImmediately;
             return json;
         }
     }
