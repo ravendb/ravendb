@@ -195,11 +195,10 @@ namespace Raven.Server.Rachis
                         _debugRecorder.Record("Send snapshot");
 
                         var entries = new List<BlittableJsonReaderObject>();
-                        var stopWatcher = Stopwatch.StartNew();
+                        var readWatcher = Stopwatch.StartNew();
                         while (_leader.Running && _running)
                         {
                             entries.Clear();
-                            stopWatcher.Restart();
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
                                 AppendEntries appendEntries;
@@ -252,13 +251,29 @@ namespace Raven.Server.Rachis
                                 _debugRecorder.Record("Sending entries");
                                 _connection.Send(context, UpdateFollowerTicks, appendEntries, entries);
                                 _debugRecorder.Record("Waiting for response");
-                                AppendEntriesResponse aer;
+                                AppendEntriesResponse aer = null;
                                 while (true)
                                 {
-                                    aer = _connection.Read<AppendEntriesResponse>(context);
+                                    readWatcher.Restart();
+                                    try
+                                    {
+                                        aer = _connection.Read<AppendEntriesResponse>(context);
+                                    }
+                                    finally
+                                    {
+                                        if (readWatcher.Elapsed > _engine.ElectionTimeout / 2)
+                                        {
+                                            if (_engine.Log.IsInfoEnabled)
+                                            {
+                                                var msg = aer == null ? "successfully" : "with exception";
+                                                _engine.Log.Info($"{ToString()}: waited long time ({readWatcher.ElapsedMilliseconds}) to read a single response from stream ({msg}).");
+                                            }
+                                        }
+                                    }
+                                    
                                     if (aer.Pending == false)
                                         break;
-                                    UpdateLastSend("Got pending message");
+                                    UpdateFollowerTicks();
                                 }
                                 _debugRecorder.Record("Response was recieved");
                                 if (aer.Success == false)
@@ -292,12 +307,7 @@ namespace Raven.Server.Rachis
                             
                             // either we have new entries to send, or we waited for long enough 
                             // to send another heartbeat
-                            // but if we spent too much time already we will continue without waiting.
-                            var timeToWait = Math.Max(_engine.ElectionTimeout.TotalMilliseconds / 3 - stopWatcher.ElapsedMilliseconds, 0);
-                            if (timeToWait > 20)
-                            {
-                                task.Wait(TimeSpan.FromMilliseconds(timeToWait));
-                            }
+                            task.Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 3));
                             UpdateFollowerTicks(); // keep the leader in full confidence of his leadership 
                             _debugRecorder.Record("Cycle done");
                             _debugRecorder.Start();
