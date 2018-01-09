@@ -85,15 +85,19 @@ namespace Raven.StorageExporter
             switch (algorithmType)
             {
                 case "DESCryptoServiceProvider":
+                case "DES":
                     SymmetricAlgorithmType = typeof (DESCryptoServiceProvider);
                     break;
                 case "RC2CryptoServiceProvider":
+                case "RC2":
                     SymmetricAlgorithmType = typeof (RC2CryptoServiceProvider);
                     break;
                 case "RijndaelManaged":
+                case "Rijndael":
                     SymmetricAlgorithmType = typeof (RijndaelManaged);
                     break;
                 case "TripleDESCryptoServiceProvider":
+                case "Triple DES":
                     SymmetricAlgorithmType = typeof (TripleDESCryptoServiceProvider);
                     break;
                 default:

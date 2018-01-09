@@ -14,6 +14,7 @@ using Raven.Bundles.Encryption.Plugin;
 using Raven.Bundles.Encryption.Settings;
 using Raven.Database.Config;
 using Raven.Database.FileSystem;
+using Raven.Database.FileSystem.Bundles.Encryption.Plugin;
 using Raven.Database.FileSystem.Infrastructure;
 using Raven.Database.FileSystem.Util;
 using Raven.Database.Impl;
@@ -578,20 +579,38 @@ namespace Raven.StorageExporter
             }
             if (storage == null && fileStorage == null)
                 return false;
+
+            EncryptionSettings encryptionSettings = null;
+
+            if (encryption != null)
+            {
+                encryptionSettings = new EncryptionSettings(encryption.EncryptionKey, encryption.SymmetricAlgorithmType,
+                    encryption.EncryptIndexes, encryption.PreferedEncryptionKeyBitsSize);
+            }
+
             if (isRavenFs)
             {
                 var filesOrderedPartCollection = new OrderedPartCollection<Database.FileSystem.Plugins.AbstractFileCodec>();
+
+                if (encryptionSettings != null)
+                {
+                    var fileEncryption = new FileEncryption();
+                    fileEncryption.SetSettings(encryptionSettings);
+                    filesOrderedPartCollection.Add(fileEncryption);
+                }
+
                 fileStorage.Initialize(new UuidGenerator(), filesOrderedPartCollection);
                 return true;
             }
             var orderedPartCollection = new OrderedPartCollection<AbstractDocumentCodec>();
-            if (encryption != null)
+
+            if (encryptionSettings != null)
             {
                 var documentEncryption = new DocumentEncryption();
-                documentEncryption.SetSettings(new EncryptionSettings(encryption.EncryptionKey, encryption.SymmetricAlgorithmType,
-                    encryption.EncryptIndexes, encryption.PreferedEncryptionKeyBitsSize));
+                documentEncryption.SetSettings(encryptionSettings);
                 orderedPartCollection.Add(documentEncryption);
             }
+
             if (hasCompression)
             {
                 orderedPartCollection.Add(new DocumentCompression());
