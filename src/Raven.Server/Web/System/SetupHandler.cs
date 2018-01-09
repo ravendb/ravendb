@@ -83,7 +83,6 @@ namespace Raven.Server.Web.System
                     
                     using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                     {
-
                         if (error != null)
                         {
                             new JsonSerializer().Serialize(streamWriter, new
@@ -174,8 +173,8 @@ namespace Raven.Server.Web.System
                     {
                         UserDomainsWithIps = new UserDomainsWithIps
                         {
-                        Emails = results.Emails,
-                        RootDomains = results.RootDomains,
+                            Emails = results.Emails,
+                            RootDomains = results.RootDomains,
                             Domains = new Dictionary<string, List<SubDomainAndIps>>()
                         }
                     };
@@ -254,7 +253,7 @@ namespace Raven.Server.Web.System
             
             return Task.CompletedTask;
         }
-		
+
         [RavenAction("/setup/parameters", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupParameters()
         {
@@ -340,9 +339,11 @@ namespace Raven.Server.Web.System
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
+
                 writer.WriteEndArray();
                 writer.WriteEndObject();
             }
+
             return Task.CompletedTask;
         }
 
@@ -399,11 +400,13 @@ namespace Raven.Server.Web.System
 
                         writer.WriteString(value);
                     }
+
                     writer.WriteEndArray();
 
                     writer.WriteEndObject();
                 }
             }
+
             return Task.CompletedTask;
         }
 
