@@ -177,6 +177,7 @@ namespace Raven.Server.Rachis
                         await TimeoutManager.WaitFor(timeToWait, cts.Token);
                         if (cts.IsCancellationRequested)
                             break;
+                        _engine.Timeout.Defer(_connection.Source);
                         _connection.Send(timeoutCtx, new AppendEntriesResponse
                         {
                             Pending = true,
