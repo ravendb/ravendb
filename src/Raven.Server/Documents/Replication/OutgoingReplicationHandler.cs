@@ -586,14 +586,6 @@ namespace Raven.Server.Documents.Replication
             {
                 if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
                     context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-
-                if(context.LastReplicationEtagFrom == null)
-                    context.LastReplicationEtagFrom = new Dictionary<string, long>();
-
-                if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
-                {
-                    context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
-                }
                 
                 var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
                     context.LastDatabaseChangeVector);
@@ -604,6 +596,14 @@ namespace Raven.Server.Documents.Replication
                 var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.LastDatabaseChangeVector);                
                 if (result.IsValid)
                 {
+                    if(context.LastReplicationEtagFrom == null)
+                        context.LastReplicationEtagFrom = new Dictionary<string, long>();
+
+                    if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
+                    {
+                        context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
+                    }
+                    
                     context.LastDatabaseChangeVector = result.ChangeVector;
                     
                     context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>

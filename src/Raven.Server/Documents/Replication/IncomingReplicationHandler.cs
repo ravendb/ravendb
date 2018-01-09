@@ -577,8 +577,10 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
-        public string FromToString => $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl} " +
-                                      $"into database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.GetNodeTcpServerUrl()}";
+
+        public string FromToString => $"In database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.GetNodeTcpServerUrl()} " +
+                                      $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl}";
+        
         public IncomingConnectionInfo ConnectionInfo { get; }
         
         private readonly List<ReplicationItem> _replicatedItems = new List<ReplicationItem>();
@@ -954,7 +956,6 @@ namespace Raven.Server.Documents.Replication
                         {
                             Debug.Assert(item.Flags.Contain(DocumentFlags.Artificial) == false);
 
-                           
                             maxReceivedChangeVectorByDatabase =
                                 ChangeVectorUtils.MergeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase);
 
