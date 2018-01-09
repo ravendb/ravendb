@@ -98,7 +98,15 @@ class nodes extends setupStep {
         super.compositionComplete();
         
         if (this.model.nodes().length) {
-            this.editedNode(this.model.nodes()[0]);
+
+            let firstNode = this.model.nodes()[0];
+
+            if (firstNode.ips().length === 0 ) {
+                firstNode.ips.push(new ipEntry());
+            }
+
+            this.editedNode(firstNode);
+
             this.initTooltips();
         }
 

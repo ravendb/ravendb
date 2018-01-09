@@ -493,7 +493,7 @@ namespace Raven.Server.Commercial
                         try
                         {
                             await Task.Delay(1000, cts.Token);
-                            response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-result?id=" + id,
+                            response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/registration-result?id=" + id,
                                     new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token)
                                 .ConfigureAwait(false);
                         }
@@ -632,7 +632,7 @@ namespace Raven.Server.Commercial
                         try
                         {
                             await Task.Delay(1000, cts.Token);
-                            response = await ApiHttpClient.Instance.PostAsync("/v4/dns-n-cert/registration-result?id=" + id,
+                            response = await ApiHttpClient.Instance.PostAsync("api/v1/dns-n-cert/registration-result?id=" + id,
                                     new StringContent(serializeObject, Encoding.UTF8, "application/json"), cts.Token)
                                 .ConfigureAwait(false);
                         }
@@ -1119,7 +1119,6 @@ namespace Raven.Server.Commercial
             }
         }
 
-
         private static string CreateReadmeText(SetupInfo setupInfo, string publicServerUrl, string clientCertificateName, string currentHostName)
         {
             var str =
@@ -1132,44 +1131,51 @@ namespace Raven.Server.Commercial
 
             if (setupInfo.ModifyLocalServer)
             {
-                str += ($"The current node (A - {currentHostName}) has already been configured and requires no further action on your part" +
+                str += ($"The current node ('A' - {currentHostName}) has already been configured and requires no further action on your part." +
                         Environment.NewLine);
             }
             str += Environment.NewLine;
             if (setupInfo.RegisterClientCert && PlatformDetails.RunningOnPosix == false)
             {
                 str +=
-                    ($"An administrator client certificate ({clientCertificateName}) has been installed on this machine ({Environment.MachineName}) and you can now restart the server and access it in a secure fashion." + Environment.NewLine);
+                    ($"An administrator client certificate ({clientCertificateName}) has been installed on this machine ({Environment.MachineName})." +
+                     Environment.NewLine + 
+                     "You can now restart the server and access it in a secure fashion." + 
+                     Environment.NewLine);
             }
             else
             {
                 str +=
-                    ($"An administrator client certificate ({clientCertificateName}) has been generated which can be used to access the server." + Environment.NewLine);
+                    ($"An administrator client certificate ({clientCertificateName}) has been generated which can be used to access the server." + 
+                     Environment.NewLine);
             }
 
             str +=
-                "If you are using Firefox (or Chrome under Linux), the certificate must be imported directly to the browser, you can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
+                "If you are using Firefox (or Chrome under Linux), the certificate must be imported directly to the browser." + 
+                Environment.NewLine + 
+                "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
                 Environment.NewLine;
 
             str +=
                 Environment.NewLine +
-                "It is recommended that you'll generate additional certificates with reduced access rights for applications and users to use. You can do that in the 'Manage Server' > 'Certificates' page in the RavenDB Studio." +
+                "It is recommended to generate additional certificates with reduced access rights for applications and users to use. " + 
+                Environment.NewLine + 
+                "This can be done using RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
                 Environment.NewLine;
 
             if (setupInfo.NodeSetupInfos.Count > 1)
             {
                 str +=
                     Environment.NewLine +
-                    "As you are setting up a cluster, you will find the configuration for each of the nodes available in the folders in this zip file. All you'll" +
+                    "As you are setting up a cluster, you will find the configuration for each of the nodes available in the folders in this zip file." +
                     Environment.NewLine +
-                    "to do is to extract the files from each folder to the base directory of the RavenDB node in question and start it. The cluster will configure" +
+                    "All you need to do is extract the files from each folder to the base directory of the RavenDB node in question and start it." +
                     Environment.NewLine +
-                    "itself and handle all setup for you." +
+                    "The new node will be added automatically to the existing cluster." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "Make sure that the various nodes can talk to each other using the URLs you have defined and that there is no firewall blocking communication between them."
+                    "Make sure that the various nodes can talk to each other using the URLs you have defined, and that there is no firewall blocking communication between them."
                     + Environment.NewLine;
-
             }
             return str;
         }
