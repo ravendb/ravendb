@@ -39,5 +39,10 @@ namespace Raven.Database.FileSystem.Bundles.Encryption.Plugin
         {
             return settings.Codec.Decode(PageEncryptionMarker, encodedDataStream);
         }
+
+        public void SetSettings(EncryptionSettings newSettings)
+        {
+            settings = newSettings;
+        }
     }
 }
