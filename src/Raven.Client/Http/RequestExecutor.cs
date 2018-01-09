@@ -9,8 +9,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Security.Authentication;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -635,18 +635,16 @@ namespace Raven.Client.Http
                                         throw timeoutException;
 
                                     sp.Stop();
+
                                     if (sessionInfo != null)
-                                    {
                                         sessionInfo.AsyncCommandRunning = false;
-                                    }
 
                                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
-                                    {
                                         ThrowFailedToContactAllNodes(command, request, e, timeoutException);
-                                    }
 
                                     return;
                                 }
+
                                 throw;
                             }
                         }
@@ -667,25 +665,23 @@ namespace Raven.Client.Http
                 {
                     if (shouldRetry == false)
                         throw;
+
                     sp.Stop();
+
                     if (sessionInfo != null)
-                    {
                         sessionInfo.AsyncCommandRunning = false;
-                    }
+
+                    ThrowIfClientException(response, e);
 
                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
-                    {
                         ThrowFailedToContactAllNodes(command, request, e, null);
-                    }
 
                     return;
                 }
                 finally
                 {
                     if (sessionInfo != null)
-                    {
                         sessionInfo.AsyncCommandRunning = false;
-                    }
                 }
 
                 command.StatusCode = response.StatusCode;
@@ -1161,14 +1157,14 @@ namespace Raven.Client.Http
                 if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
                     continue;
 
-                if (!(extension is X509EnhancedKeyUsageExtension kue)) 
+                if (!(extension is X509EnhancedKeyUsageExtension kue))
                     continue;
-                
+
                 foreach (var eku in kue.EnhancedKeyUsages)
                 {
-                    if (eku.Value != "1.3.6.1.5.5.7.3.2") 
+                    if (eku.Value != "1.3.6.1.5.5.7.3.2")
                         continue;
-                    
+
                     supported = true;
                     break;
                 }
@@ -1277,6 +1273,17 @@ namespace Raven.Client.Http
         protected void OnTopologyUpdated(Topology newTopology)
         {
             TopologyUpdated?.Invoke(newTopology);
+        }
+
+        private static void ThrowIfClientException(HttpResponseMessage response, Exception e)
+        {
+            if (response != null)
+                return;
+
+            if (e.InnerException == null)
+                return;
+
+            ExceptionDispatchInfo.Capture(e.InnerException).Throw();
         }
     }
 }
