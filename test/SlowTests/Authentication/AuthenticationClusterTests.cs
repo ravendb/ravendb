@@ -95,36 +95,28 @@ namespace SlowTests.Authentication
 
                 var newServerCert = CertificateUtils.CreateSelfSignedCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
 
+                var mre = new ManualResetEventSlim();
+
+                leader.ServerCertificateChanged += (sender, args) => mre.Set();
+
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new ReplaceClusterCertificateOperation("Replacement Server Cert", newServerCert)
+                    var command = new ReplaceClusterCertificateOperation("Replacement Server Cert", newServerCert, false)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);
                 }
 
-                await WaitForValueOnGroupAsync(databaseResult.Topology, s =>
-                {
-                    using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var cert = leader.ServerStore.Cluster.GetItem(context, "server/cert");
-                        if (cert == null)
-                            return 0;
-                        if (cert.TryGet("Confirmations", out int confirmations) == false)
-                            throw new InvalidOperationException("Expected to get confirmations count");
-                        return confirmations;
-                    }
-                }, clusterSize);
+                Assert.True(mre.Wait(5000));
 
                 Assert.True(leader.Certificate.Certificate.Thumbprint.Equals(newServerCert.Thumbprint));
 
                 using (var session = store.OpenSession())
                 {
                     var user1 = session.Load<User>("users/1");
-
-                    Assert.True(user1.Name == "Karmelush");
+                    Assert.NotNull(user1);
+                    Assert.Equal("Karmelush", user1.Name);
                 }
             }
         }

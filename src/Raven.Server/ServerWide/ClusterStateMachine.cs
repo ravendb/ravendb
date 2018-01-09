@@ -346,6 +346,8 @@ namespace Raven.Server.ServerWide
                     throw new ArgumentException("Certificate property didn't exist in InstallUpdatedServerCertificateCommand");
                 }
 
+                cmd.TryGet(nameof(InstallUpdatedServerCertificateCommand.ReplaceImmediately), out bool replaceImmediately);
+
                 var x509Certificate = new X509Certificate2(Convert.FromBase64String(cert));
                 // we assume that this is valid, and we don't check dates, since that would introduce external factor to the state machine, which is not alllowed
                 using (Slice.From(context.Allocator, "server/cert", out var key))
@@ -354,7 +356,8 @@ namespace Raven.Server.ServerWide
                     {
                         ["Certificate"] = cert,
                         ["Thumbprint"] = x509Certificate.Thumbprint,
-                        ["Confirmations"] = 0
+                        ["Confirmations"] = 0,
+                        ["ReplaceImmediately"] = replaceImmediately
                     };
 
                     var json = context.ReadObject(djv, "server.cert.update.info");
