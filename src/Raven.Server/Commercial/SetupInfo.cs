@@ -31,7 +31,7 @@ namespace Raven.Server.Commercial
                 [nameof(License)] = License.ToJson(),
                 [nameof(Email)] = Email,
                 [nameof(Domain)] = Domain,
-                [nameof(Domain)] = RootDomain,
+                [nameof(RootDomain)] = RootDomain,
                 [nameof(ModifyLocalServer)] = ModifyLocalServer,
                 [nameof(RegisterClientCert)] = RegisterClientCert,
                 [nameof(Certificate)] = Certificate,
