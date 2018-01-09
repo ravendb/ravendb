@@ -740,44 +740,55 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateState(string reason, bool forced = false)
         {
-            Timeout.DisableTimeout();
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
+            try
             {
-                var clusterTopology = GetTopology(context);
-                if (clusterTopology.TopologyId == null ||
-                    clusterTopology.Members.ContainsKey(_tag) == false)
+                Timeout.DisableTimeout();
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    if (Log.IsInfoEnabled)
+                    var clusterTopology = GetTopology(context);
+                    if (clusterTopology.TopologyId == null ||
+                        clusterTopology.Members.ContainsKey(_tag) == false)
                     {
-                        Log.Info("Can't switch to candidate mode when not initialized with topology / not a voter");
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info("Can't switch to candidate mode when not initialized with topology / not a voter");
+                        }
+                        return;
                     }
-                    return;
+                    if (clusterTopology.Members.Count == 1)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
+                        }
+                        SwitchToSingleLeader(context);
+                        return;
+                    }
                 }
-                if (clusterTopology.Members.Count == 1)
+
+                if (Log.IsInfoEnabled)
                 {
-                    if (Log.IsInfoEnabled)
-                    {
-                        Log.Info("Trying to switch to candidate when I'm the only member in the cluster, turning into a leader, instead");
-                    }
-                    SwitchToSingleLeader(context);
-                    return;
+                    Log.Info($"Switching to candidate state because {reason} forced: {forced}");
                 }
+
+                var candidate = new Candidate(this)
+                {
+                    IsForcedElection = forced
+                };
+
+                Candidate = candidate;
+                SetNewState(RachisState.Candidate, candidate, CurrentTerm, reason);
+                candidate.Start();
             }
-
-            if (Log.IsInfoEnabled)
+            catch (Exception e)
             {
-                Log.Info($"Switching to candidate state because {reason} forced: {forced}");
+                if (Log.IsInfoEnabled)
+                {
+                    Log.Info($"An error occured during switching to candidate state in term {CurrentTerm}.", e);
+                }
+                Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
-
-            var candidate = new Candidate(this)
-            {
-                IsForcedElection = forced
-            };
-
-            Candidate = candidate;
-            SetNewState(RachisState.Candidate, candidate, CurrentTerm, reason);
-            candidate.Start();
         }
 
         public void DeleteTopology(TransactionOperationContext context)
