@@ -27,8 +27,11 @@ function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
 }
 
 function UpdateVersionInFile ( $file, $version ) {
-    $text = $([System.IO.File]::ReadAllText($file)) -Replace '<Version>[A-Za-z0-9.-]*</Version>',"<Version>$version</Version>"
-    [System.IO.File]::WriteAllText($file, $text, [System.Text.Encoding]::UTF8)
+    write-host $file
+    $versionPattern = [regex]'(?sm)<Version>[A-Za-z0-9-\.\r\n\s]*</Version>'
+    $inputText = [System.IO.File]::ReadAllText($file)
+    $result = $versionPattern.Replace($inputText, "<Version>$version</Version>")
+    [System.IO.File]::WriteAllText($file, $result, [System.Text.Encoding]::UTF8)
 }
 
 function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit ) {
