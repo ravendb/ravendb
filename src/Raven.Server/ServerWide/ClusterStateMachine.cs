@@ -331,7 +331,7 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 if (_parent.Log.IsOperationsEnabled)
-                    _parent.Log.Operations($"Node {_parent.Tag}: {nameof(ConfirmReceiptServerCertificate)} failed.");
+                    _parent.Log.Operations($"Node {_parent.Tag}: {nameof(ConfirmReceiptServerCertificate)} failed.", e);
             }
         }
 

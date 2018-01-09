@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -95,82 +98,34 @@ namespace Raven.Server.Rachis
                         lastTruncate != appendEntries.TruncateLogBefore ||
                         entries.Count != 0)
                     {
-                        bool removedFromTopology = false;
-                        // we start the tx after we finished reading from the network
-                        if (_engine.Log.IsInfoEnabled)
+                        using (var cts = new CancellationTokenSource())
                         {
-                            _engine.Log.Info($"{ToString()}: Ready to start tx in {sp.Elapsed}");
-                        }
-                        using (var tx = context.OpenWriteTransaction())
-                        {
-                            if (_engine.Log.IsInfoEnabled)
+                            // applying the leader state may take a while, we need to ping
+                            // the server and let us know that we are still there
+                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);;
+                        
+                            bool hasRemovedFromTopology;
+                        
+                            (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp, 
+                                context, 
+                                entries, 
+                                appendEntries);
+
+                            if (hasRemovedFromTopology)
                             {
-                                _engine.Log.Info($"{ToString()}: Tx running in {sp.Elapsed}");
-                            }
-                            if (entries.Count > 0)
-                            {
-                                using (var lastTopology = _engine.AppendToLog(context, entries))
+                                if (_engine.Log.IsInfoEnabled)
                                 {
-                                    if (lastTopology != null)
-                                    {
-                                        if (_engine.Log.IsInfoEnabled)
-                                        {
-                                            _engine.Log.Info($"Topology changed to {lastTopology}");
-                                        }
-
-                                        var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
-                                        if (topology.Members.ContainsKey(_engine.Tag) ||
-                                            topology.Promotables.ContainsKey(_engine.Tag) ||
-                                            topology.Watchers.ContainsKey(_engine.Tag))
-                                        {
-                                            RachisConsensus.SetTopology(_engine, context, topology);
-                                        }
-                                        else
-                                        {
-                                            removedFromTopology = true;
-                                        }
-                                    }
+                                    _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
                                 }
+                                _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
+                                    "I was kicked out of the cluster and moved to passive mode");
+                                return;
                             }
 
-                            lastLogIndex = _engine.GetLastEntryIndex(context);
-
-                            var lastEntryIndexToCommit = Math.Min(
-                                lastLogIndex,
-                                appendEntries.LeaderCommit);
-
-
-                            var lastAppliedIndex = _engine.GetLastCommitIndex(context);
-
-                            if (lastEntryIndexToCommit > lastAppliedIndex)
-                            {
-                                lastAppliedIndex = _engine.Apply(context, lastEntryIndexToCommit, null, sp);
-                            }
-
-                            lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
-                            _engine.TruncateLogBefore(context, lastTruncate);
-                            lastCommit = lastEntryIndexToCommit;
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info($"{ToString()}: Ready to commit in {sp.Elapsed}");
-                            }
-                            tx.Commit();
-                        }
-
-                        if (_engine.Log.IsInfoEnabled && entries.Count > 0)
-                        {
-                            _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
-                        }
-
-                        if (removedFromTopology)
-                        {
-                            if (_engine.Log.IsInfoEnabled)
-                            {
-                                _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
-                            }
-                            _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
-                                               "I was kicked out of the cluster and moved to passive mode");
-                            return;
+                            // here we need to wait until the concurrent send pending to leader
+                            // is completed to avoid concurrent writes to the leader
+                            cts.Cancel();
+                            task.Wait(CancellationToken.None);
                         }
                     }
 
@@ -186,7 +141,7 @@ namespace Raven.Server.Rachis
                     _debugRecorder.Record("Processing entries is completed");
                     _connection.Send(context, new AppendEntriesResponse
                     {
-                        CurrentTerm = _engine.CurrentTerm,
+                        CurrentTerm = _term,
                         LastLogIndex = lastLogIndex,
                         Success = true
                     });
@@ -197,6 +152,122 @@ namespace Raven.Server.Rachis
                     _debugRecorder.Start();
                 }
             }
+        }
+
+        private async Task Concurrent_SendAppendEntriesPendingToLeaderAsync(CancellationTokenSource cts, long currentTerm, long lastLogIndex)
+        {
+            var timeoutPeriod = _engine.Timeout.TimeoutPeriod / 4;
+            var timeToWait = TimeSpan.FromMilliseconds(timeoutPeriod);
+            using (_engine.ContextPool.AllocateOperationContext(out JsonOperationContext timeoutCtx))
+            {
+                while (cts.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        await TimeoutManager.WaitFor(timeToWait, cts.Token);
+                        if (cts.IsCancellationRequested)
+                            break;
+                        _connection.Send(timeoutCtx, new AppendEntriesResponse
+                        {
+                            Pending = true,
+                            Success = false,
+                            CurrentTerm = currentTerm,
+                            LastLogIndex = lastLogIndex
+                        });
+                    }
+                    catch (TimeoutException)
+                    {
+                        break;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        private (bool HasRemovedFromTopology, long LastLogIndex, long LastTruncate,  long LastCommit)  ApplyLeaderStateToLocalState(Stopwatch sp, TransactionOperationContext context, List<RachisEntry> entries, AppendEntries appendEntries)
+        {
+            long lastLogIndex; 
+            long lastTruncate;
+            long lastCommit;
+            
+            bool removedFromTopology = false;
+            // we start the tx after we finished reading from the network
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"{ToString()}: Ready to start tx in {sp.Elapsed}");
+            }
+
+            using (var tx = context.OpenWriteTransaction())
+            {
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"{ToString()}: Tx running in {sp.Elapsed}");
+                }
+
+                if (entries.Count > 0)
+                {
+                    using (var lastTopology = _engine.AppendToLog(context, entries))
+                    {
+                        if (lastTopology != null)
+                        {
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info($"Topology changed to {lastTopology}");
+                            }
+
+                            var topology = JsonDeserializationRachis<ClusterTopology>.Deserialize(lastTopology);
+                            if (topology.Members.ContainsKey(_engine.Tag) ||
+                                topology.Promotables.ContainsKey(_engine.Tag) ||
+                                topology.Watchers.ContainsKey(_engine.Tag))
+                            {
+                                RachisConsensus.SetTopology(_engine, context, topology);
+                            }
+                            else
+                            {
+                                removedFromTopology = true;
+                            }
+                        }
+                    }
+                }
+
+                lastLogIndex = _engine.GetLastEntryIndex(context);
+
+                var lastEntryIndexToCommit = Math.Min(
+                    lastLogIndex,
+                    appendEntries.LeaderCommit);
+
+
+                var lastAppliedIndex = _engine.GetLastCommitIndex(context);
+
+                if (lastEntryIndexToCommit > lastAppliedIndex)
+                {
+                    lastAppliedIndex = _engine.Apply(context, lastEntryIndexToCommit, null, sp);
+                }
+
+                lastTruncate = Math.Min(appendEntries.TruncateLogBefore, lastAppliedIndex);
+                _engine.TruncateLogBefore(context, lastTruncate);
+                lastCommit = lastEntryIndexToCommit;
+                if (_engine.Log.IsInfoEnabled)
+                {
+                    _engine.Log.Info($"{ToString()}: Ready to commit in {sp.Elapsed}");
+                }
+
+                tx.Commit();
+            }
+
+            if (_engine.Log.IsInfoEnabled)
+            {
+                _engine.Log.Info($"{ToString()}: Processing entries request with {entries.Count} entries took {sp.Elapsed}");
+            }
+
+            return (HasRemovedFromTopology: removedFromTopology,  LastLogIndex: lastLogIndex,  LastTruncate: lastTruncate,  LastCommit: lastCommit);
         }
 
         public static bool CheckIfValidLeader(RachisConsensus engine, RemoteConnection connection, out LogLengthNegotiation negotiation)
