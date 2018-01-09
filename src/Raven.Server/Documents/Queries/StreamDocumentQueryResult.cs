@@ -4,7 +4,7 @@ using Raven.Server.ServerWide;
 
 namespace Raven.Server.Documents.Queries
 {
-    public class StreamDocumentQueryResult : QueryResultServerSide, IDisposable
+    public class StreamDocumentQueryResult : QueryResultServerSide
     {
         private readonly IStreamDocumentQueryResultWriter _writer;
         private readonly OperationCancelToken _token;
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries
 
         public override bool SupportsInclude => false;
 
-        public void Dispose()
+        public void Flush()// intentionally not using Disposable here, because we need better error handling
         {
             StartResponseIfNeeded();
 

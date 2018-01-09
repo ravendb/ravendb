@@ -1744,10 +1744,9 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamDocumentQueryResultWriter writer,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
-            using (var result = new StreamDocumentQueryResult(response, writer, token))
-            {
-                await QueryInternal(result, query, documentsContext, token);
-            }
+            var result = new StreamDocumentQueryResult(response, writer, token);
+            await QueryInternal(result, query, documentsContext, token);
+            result.Flush();
 
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }

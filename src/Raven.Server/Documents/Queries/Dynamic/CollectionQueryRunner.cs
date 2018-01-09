@@ -45,15 +45,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public override Task ExecuteStreamQuery(IndexQueryServerSide query, DocumentsOperationContext documentsContext, HttpResponse response, IStreamDocumentQueryResultWriter writer,
             OperationCancelToken token)
         {
-            using (var result = new StreamDocumentQueryResult(response, writer, token))
-            {
-                documentsContext.OpenReadTransaction();
+            var result = new StreamDocumentQueryResult(response, writer, token);
+            documentsContext.OpenReadTransaction();
 
-                FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
+            FillCountOfResultsAndIndexEtag(result, query.Metadata, documentsContext);
 
-                ExecuteCollectionQuery(result, query, query.Metadata.CollectionName, documentsContext, token.Token);
-            }
+            ExecuteCollectionQuery(result, query, query.Metadata.CollectionName, documentsContext, token.Token);
 
+            result.Flush();
+            
             return Task.CompletedTask;
         }
 

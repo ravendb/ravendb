@@ -14,6 +14,9 @@ namespace Sparrow.Json.Parsing
             if (Read(peepingTomStream, parser, state, buffer) == false)
                 ThrowInvalidJson(peepingTomStream);
 
+            if (state.CurrentTokenType == JsonParserToken.Null)
+                return null;
+            
             if (state.CurrentTokenType != JsonParserToken.String)
                 ThrowInvalidJson(peepingTomStream);
 
