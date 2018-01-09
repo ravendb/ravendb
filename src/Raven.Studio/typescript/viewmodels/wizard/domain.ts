@@ -70,7 +70,8 @@ class domain extends setupStep {
                                 router.navigate("#nodes");
                             })
                             .always(() => this.spinners.save(false));
-                    });               
+                    })
+                    .fail(() => this.spinners.save(false));
             } else {
                 this.spinners.save(false);
             }
