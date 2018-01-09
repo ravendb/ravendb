@@ -250,7 +250,14 @@ namespace Raven.Server.Rachis
                                 _debugRecorder.Record("Sending entries");
                                 _connection.Send(context, UpdateFollowerTicks, appendEntries, entries);
                                 _debugRecorder.Record("Waiting for response");
-                                var aer = _connection.Read<AppendEntriesResponse>(context);
+                                AppendEntriesResponse aer;
+                                while (true)
+                                {
+                                    aer = _connection.Read<AppendEntriesResponse>(context);
+                                    if (aer.Pending == false)
+                                        break;
+                                    UpdateLastSend("Got pending message");
+                                }
                                 _debugRecorder.Record("Response was recieved");
                                 if (aer.Success == false)
                                 {

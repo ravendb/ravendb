@@ -374,20 +374,26 @@ namespace Raven.Server.Rachis
                 throw;
             }
         }
-
+        
+        
         public void Send(JsonOperationContext context, AppendEntriesResponse aer)
         {
             if (_log.IsInfoEnabled)
             {
                 if (aer.Message != null)
                 {
-                    _log.Info($"Replying with success {aer.Success}: {aer.Message }");
+                    _log.Info($"Replying with success {aer.Success}: {aer.Message}");
+                }
+                else if (aer.Pending)
+                {
+                    _log.Info($"Replying with pending for {aer.CurrentTerm} / {aer.LastLogIndex}");
                 }
             }
             var msg = new DynamicJsonValue
             {
-                ["Type"] = "AppendEntriesResponse",
+                ["Type"] = nameof(AppendEntriesResponse),
                 [nameof(AppendEntriesResponse.Success)] = aer.Success,
+                [nameof(AppendEntriesResponse.Pending)] = aer.Pending,
                 [nameof(AppendEntriesResponse.Message)] = aer.Message,
                 [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
                 [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
