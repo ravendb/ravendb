@@ -265,7 +265,7 @@ namespace Raven.Server.Rachis
                                         {
                                             if (_engine.Log.IsInfoEnabled)
                                             {
-                                                var msg = aer == null ? "successfully" : "with exception";
+                                                var msg = aer?.Success == true ? "successfully" : "failed";
                                                 _engine.Log.Info($"{ToString()}: waited long time ({readWatcher.ElapsedMilliseconds}) to read a single response from stream ({msg}).");
                                             }
                                         }
