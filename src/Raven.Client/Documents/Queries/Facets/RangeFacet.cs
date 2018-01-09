@@ -68,11 +68,29 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public static string Parse(Expression<Func<T, bool>> expr)
         {
+            return Parse(null, (LambdaExpression)expr);
+        }
+        
+        public static string Parse(string prefix, LambdaExpression expr)
+        {
+            if (expr.Body is MethodCallExpression mce)
+            {
+                if (mce.Method.Name == "Any" && mce.Arguments.Count == 2)
+                {
+                    if (mce.Arguments[0] is MemberExpression src &&
+                        mce.Arguments[1] is LambdaExpression le)
+                    {
+                        return Parse(GetFieldName(prefix, src) , le);
+                    }
+                }
+                throw new InvalidOperationException("Don't know how to translate expression to facets: " + expr);
+            }
+            
             var operation = (BinaryExpression)expr.Body;
 
             if (operation.Left is MemberExpression me)
             {
-                var fieldName = GetFieldName(me);
+                var fieldName = GetFieldName(prefix, me);
                 var subExpressionValue = ParseSubExpression(operation);
                 var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);
                 return expression;
@@ -90,8 +108,8 @@ namespace Raven.Client.Documents.Queries.Facets
                 throw new InvalidOperationException("Expressions on both sides of '&&' must point to range field. E.g. x => x.Age > 18 && x.Age < 99");
             }
 
-            var leftFieldName = GetFieldName(leftMember);
-            var rightFieldName = GetFieldName(rightMember);
+            var leftFieldName = GetFieldName(prefix, leftMember);
+            var rightFieldName = GetFieldName(prefix, rightMember);
 
             if (leftFieldName != rightFieldName)
             {
@@ -119,10 +137,19 @@ namespace Raven.Client.Documents.Queries.Facets
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
         }
 
-        private static string GetFieldName(MemberExpression left)
+        private static string GetFieldName(string prefix, MemberExpression left)
         {
             if (Nullable.GetUnderlyingType(left.Member.DeclaringType) != null)
-                return GetFieldName(((MemberExpression)left.Expression));
+                return GetFieldName(prefix, ((MemberExpression)left.Expression));
+
+            if (left.Expression is MemberExpression parent)
+            {
+                return GetFieldName(prefix, parent) + "_" + left.Member.Name;
+            }
+
+            if (prefix != null)
+                return prefix + "_" + left.Member.Name;
+            
             return left.Member.Name;
         }
 
