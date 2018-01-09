@@ -39,7 +39,7 @@ namespace Raven.Client.Http
     {
         // https://aspnetmonsters.com/2016/08/2016-08-27-httpclientwrong/
 
-        private static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
+        internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClient = new ConcurrentDictionary<string, Lazy<HttpClient>>();
 

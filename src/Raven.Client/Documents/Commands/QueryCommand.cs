@@ -14,6 +14,8 @@ namespace Raven.Client.Documents.Commands
 {
     public class QueryCommand : RavenCommand<QueryResult>
     {
+        private static readonly TimeSpan AdditionalTimeToAddToTimeout = TimeSpan.FromSeconds(10);
+
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;
         private readonly bool _metadataOnly;
@@ -29,7 +31,16 @@ namespace Raven.Client.Documents.Commands
             _indexEntriesOnly = indexEntriesOnly;
 
             if (indexQuery.WaitForNonStaleResultsTimeout.HasValue && indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
-                Timeout = indexQuery.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
+            {
+                var timeout = indexQuery.WaitForNonStaleResultsTimeout.Value;
+                if (timeout < RequestExecutor.GlobalHttpClientTimeout) // if it is greater than it will throw in RequestExecutor
+                {
+                    timeout =  RequestExecutor.GlobalHttpClientTimeout - timeout > AdditionalTimeToAddToTimeout 
+                        ? timeout.Add(AdditionalTimeToAddToTimeout) : RequestExecutor.GlobalHttpClientTimeout; // giving the server an opportunity to finish the response
+                }
+
+                Timeout = timeout;
+            }
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
