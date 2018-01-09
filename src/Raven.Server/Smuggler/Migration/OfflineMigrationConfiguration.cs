@@ -57,7 +57,7 @@ namespace Raven.Server.Smuggler.Migration
 
             if (string.IsNullOrEmpty(EncryptionKey) == false && string.IsNullOrEmpty(EncryptionAlgorithm) == false && EncryptionKeyBitsSize.HasValue)
             {
-                sb.Append($" -Encryption {EnsureStringsAreQouted(EncryptionKey)} {EncryptionAlgorithm} {EncryptionKeyBitsSize.Value}");
+                sb.Append($" -Encryption {EnsureStringsAreQouted(EncryptionKey)} {EnsureStringsAreQouted(EncryptionAlgorithm)} {EncryptionKeyBitsSize.Value}");
             }
 
             return (sb.ToString(), tmpFile);
