@@ -15,7 +15,7 @@ class certificate extends setupStep {
         
         this.bindToCurrentInstance( "fileSelected");
         
-        this.passwordInputVisible = ko.pureComputed(()=> {
+        this.passwordInputVisible = ko.pureComputed(() => {
             return this.model.certificate().fileProtected();
         });        
         
