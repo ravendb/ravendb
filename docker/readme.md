@@ -36,31 +36,23 @@ Run Windows-based image: [run-nanoserver.ps1](run-nanoserver.ps1)
 
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
-- `-ConfigPath [absolute file path]` - required - *absolute* path to settings file used by RavenDB inside the container
-
-- `-DataDir [absolute dir path]` - host directory mounted to the volume used for persistence of RavenDB data (if not provided a regular docker volume is going to be used)
-
-- `-DataVolumeName [volume name]` - default `ravendb` - the name of the volume used for persistence of RavenDB data
-
-- `-BindPort [port]` - default `8080` - the port number on which RavenDB Server is exposed on the container
-
-- `-BindTcpPort [port]` - default `38888` - the port number on which RavenDB Server listens for TCP connections exposed on the container
-
-- `-NoSetup` - disable setup wizard
-
-- `-AuthenticationDisabled` - HERE BE DRAGONS - disable authentication for RavenDB server
-
-- `-RemoveOnExit` - removes container when server exits 
-
-- `-PublicServerUrl` - set the url under which server is available to the outside world (e.g. http://4.live-test.ravendb.net:80)
-
-- `-PublicTcpServerUrl` - set the url under which server is available to the outside world (e.g. tcp://4.live-test.ravendb.net:38888)
-
-- `-LogsMode` - set logging level (Operations, Information)
+|Option|Default|Description|
+|------|-------|-----------|
+|`-DryRun`| | print `docker run` command and exit |
+|`-LogsMode [log level]`| Operations | set logging level (Operations, Information) |
+|`-ConfigPath [absolute file path]` | | *absolute* path to settings file used by RavenDB inside the container |
+| `-DataDir [absolute dir path]` || host directory mounted to the volume used for persistence of RavenDB data (if not provided a regular docker volume is going to be used) |
+| `-BindPort [port]` | 8080 | the port number on which RavenDB Server is exposed on the container |
+| `-BindTcpPort [port]` | 38888 | the port number on which RavenDB Server listens for TCP connections exposed on the container |
+| `-NoSetup` | | disable setup wizard |
+| `-RemoveOnExit` || removes container on server process exit |
+| `-PublicServerUrl` || set the public url under which server is available to other nodes or admins (e.g. http://4.live-test.ravendb.net:80)
+| `-PublicTcpServerUrl` || set the url under which server is available to the outside world (e.g. tcp://4.live-test.ravendb.net:38888) |
+| `-AuthenticationDisabled` | | HERE BE DRAGONS - disable authentication for RavenDB server |
 
 Basic usage (saving data to `C:\docker\raven\databases` and using settings file mounted from host at `C:\docker\raven\settings.json`):
-```
-PS C:\work\ravendb-4\docker> .\run-ubuntu1604.ps1 -ConfigPath c:\work\docker\settings.json -DataDir C:\work\docker\databases
+```powershell
+> .\run-ubuntu1604.ps1 -ConfigPath c:\work\docker\settings.json -DataDir C:\work\docker\databases
 ```
 
 Once run RavenDB server should be exposed on port 8080 (default).
@@ -89,7 +81,7 @@ To configure RavenDB one can use (in order of precedence):
 #### Environment variables
 
 Environment variables prefixed with `RAVEN_` can be used to configure RavenDB server. E.g. one can use:
-```
+```bash
 RAVEN_Setup_Mode='None'
 ```
 to disable RavenDB Setup Wizard.
@@ -100,7 +92,7 @@ For docker containers one additional variable is available to modify CLI argumen
 
 To get logs available when running `docker logs` command, you need to turn that on for RavenDB server. Setting below environment variables like so is going to enable logging to console. Please note such behavior may have performance implications. Log level may be modified using `RAVEN_Logs_Mode` variable. 
 
-```
+```bash
 RAVEN_ARGS='--log-to-console'
 ```
 

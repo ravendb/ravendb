@@ -14,6 +14,7 @@ param(
     [switch]$RemoveOnExit,
     [switch]$DryRun,
     [switch]$DontScanVmSubnet,
+    [switch]$UseNightly = $False,
     [string]$Memory)
 
 $ErrorActionPreference = "Stop";
@@ -88,12 +89,6 @@ function DetermineServerIp ($serverId, $dockerSubnetAddress, $shouldScan) {
     return "$netPrefix.$lastOctet"
 }
 
-# $serverUrlScheme = "http"
-# if ([string]::IsNullOrEmpty($CertificatePath) -eq $false) {
-#     $DontScanVmSubnet = $true;
-#     $serverUrlScheme = "https"
-# }
-
 $dockerArgs = @('run')
 
 # run in detached mode
@@ -114,6 +109,8 @@ if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     $dockerArgs += "`"$($DataDir):/opt/RavenDB/Server/RavenData`""
 }
 
+$ravenArgs = @()
+
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     if ($(Test-Path $ConfigPath) -eq $False) {
         throw "Config file does not exist under $ConfigPath path."
@@ -126,9 +123,8 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     $dockerArgs += "-v"
     $dockerArgs += "`"$($configDir):$containerconfigDir`""
 
-    $dockerArgs += "-e"
     $envConfigPath = $containerConfigDir + '/' + $containerConfigFile 
-    $dockerArgs += "`"RAVEN_ARGS='-c $envConfigPath'`""
+    $ravenArgs += "-c '$envConfigPath'"
 
     write-host "Reading configuration from $ConfigPath"
 }
@@ -153,6 +149,8 @@ if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
     $dockerArgs += "RAVEN_Logs_Mode=$LogsMode"
 }
 
+$serverUrlScheme = 'http'
+
 if ([string]::IsNullOrEmpty($CertificatePath) -eq $False) {
     if ($(Test-Path $CertificatePath) -eq $False) {
         throw "Certificate file does not exist under $CertificatePath."
@@ -167,29 +165,15 @@ if ([string]::IsNullOrEmpty($CertificatePath) -eq $False) {
     $dockerArgs += "`"$($hostDir):$containerCertDir`""
 
     $dockerArgs += "-e"
-    $dockerArgs += "`"CERTIFICATE_PATH=$($containerCertDir + '/' + $containerCertFile)`""
+    $dockerArgs += "`"RAVEN_Security_Certificate_Path=$($containerCertDir + '/' + $containerCertFile)`""
+
+    $serverUrlScheme = 'https'
+    $ravenArgs += "--ServerUrl=https://0.0.0.0:8080"
 }
 
 if ([string]::IsNullOrEmpty($CertificatePassword) -eq $False) {
     $dockerArgs += "-e"
-    $dockerArgs += "CERTIFICATE_PASSWORD=$CertificatePassword"
-}
-
-if ([string]::IsNullOrEmpty($CertificatePasswordFile) -eq $False) {
-    if ($(Test-Path $CertificatePasswordFile) -eq $False) {
-        throw "Certificate file does not exist under $CertificatePath."
-    }
-
-    $containerCertPassDir = "/opt/RavenDB/secrets"
-    $containerCertPassFile = Split-Path -Leaf -Path $CertificatePasswordFile
-
-    $hostDir = Split-Path $CertificatePasswordFile
-
-    $dockerArgs += "-v"
-    $dockerArgs += "`"$($hostDir):$containerCertPassDir`""
-
-    $dockerArgs += "-e"
-    $dockerArgs += "`"CERTIFICATE_PASSWORD_FILE=$($containerCertPassDir + '/' + $containerCertPassFile)`""
+    $dockerArgs += "`"RAVEN_Security_Certificate_Password=$CertificatePassword`""
 }
 
 if ([string]::IsNullOrEmpty($Ip) -eq $False) {
@@ -201,13 +185,23 @@ if ([string]::IsNullOrEmpty($Hostname) -eq $False) {
     $dockerArgs += "--hostname=$Hostname"
 }
 
+if ([string]::IsNullOrEmpty($ravenArgs) -eq $False) {
+    $dockerArgs += "-e"
+    $dockerArgs += "`"RAVEN_ARGS='$ravenArgs'`""
+}
+
 $dockerArgs += '-p'
 $dockerArgs += "$($BindPort):8080"
 
 $dockerArgs += '-p'
 $dockerArgs += "$($BindTcpPort):38888"
 
-$RAVEN_IMAGE = 'ravendb/ravendb:ubuntu-latest'
+if ($UseNightly) {
+    $RAVEN_IMAGE = 'ravendb/ravendb-nightly:ubuntu-latest'
+} else {
+    $RAVEN_IMAGE = 'ravendb/ravendb:ubuntu-latest'
+}
+
 $dockerArgs += $RAVEN_IMAGE
 
 if ($DryRun) {
