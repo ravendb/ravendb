@@ -596,8 +596,8 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public void Delete(DocumentsOperationContext context, string id, BlittableJsonReaderObject deleteRevisionDocument, string changeVector,
-            long lastModifiedTicks, NonPersistentDocumentFlags nonPersistentFlags, DocumentFlags flags)
+        public void Delete(DocumentsOperationContext context, string id, BlittableJsonReaderObject deleteRevisionDocument,
+            DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks)
         {
             BlittableJsonReaderObject.AssertNoModifications(deleteRevisionDocument, id, assertChildren: true);
 
