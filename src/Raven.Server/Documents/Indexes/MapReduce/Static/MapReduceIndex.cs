@@ -128,12 +128,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                                     $"{nameof(IndexDefinition.OutputReduceToCollection)} must by set to unique value for each index or be null.");
                 }
 
-                var otherIndexCollections = otherIndex.Collections;
+                var otherIndexCollections = new HashSet<string>(otherIndex.Collections);
+
                 foreach (var referencedCollection in otherIndex.GetReferencedCollections())
                 foreach (var collectionName in referencedCollection.Value)
                 {
                     otherIndexCollections.Add(collectionName.Name);
                 }
+
                 if (otherIndexCollections.Contains(outputReduceToCollection) &&
                     CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(otherIndex, collections, indexes, out string description))
                 {
@@ -161,26 +163,39 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         private static bool CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(
-            MapReduceIndex otherIndex, HashSet<string> indexCollections,
+            MapReduceIndex indexToCheck, HashSet<string> indexCollections,
             List<MapReduceIndex> indexes, out string description)
         {
-            description = $"{otherIndex.Name}: {string.Join(",", otherIndex.Collections)} => {otherIndex.Definition.OutputReduceToCollection}";
+            description = $"{indexToCheck.Name}: {string.Join(",", indexToCheck.Collections)}";
 
-            if (string.IsNullOrWhiteSpace(otherIndex.Definition.OutputReduceToCollection))
+            var referencedCollections = new HashSet<string>();
+
+            foreach (var referencedCollection in indexToCheck.GetReferencedCollections())
+            foreach (var collectionName in referencedCollection.Value)
+            {
+                referencedCollections.Add(collectionName.Name);
+            }
+
+            if (referencedCollections.Count > 0)
+                description += $" (referenced: {string.Join(",", referencedCollections)})";
+
+            description += $" => {indexToCheck.Definition.OutputReduceToCollection}";
+            
+            if (string.IsNullOrWhiteSpace(indexToCheck.Definition.OutputReduceToCollection))
                 return false;
 
-            if (indexCollections.Contains(otherIndex.Definition.OutputReduceToCollection))
+            if (indexCollections.Contains(indexToCheck.Definition.OutputReduceToCollection))
                 return true;
 
             foreach (var index in indexes)
             {
-                var otherIndexCollections = index.Collections;
+                var otherIndexCollections = new HashSet<string>(index.Collections);
                 foreach (var referencedCollection in index.GetReferencedCollections())
                 foreach (var collectionName in referencedCollection.Value)
                 {
                     otherIndexCollections.Add(collectionName.Name);
                 }
-                if (otherIndexCollections.Contains(otherIndex.Definition.OutputReduceToCollection))
+                if (otherIndexCollections.Contains(indexToCheck.Definition.OutputReduceToCollection))
                 {
                     var failed = CheckIfThereIsAnIndexWhichWillOutputReduceDocumentsWhichWillBeUsedAsMapOnTheSpecifiedIndex(index, indexCollections, indexes, out string innerDescription);
                     description += Environment.NewLine + innerDescription;
