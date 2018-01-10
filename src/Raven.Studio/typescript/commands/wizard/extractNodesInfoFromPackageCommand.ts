@@ -7,13 +7,13 @@ class extractNodesInfoFromPackageCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<void> { //TODO: change return type!
+    execute(): JQueryPromise<Array<Raven.Server.Web.System.ConfigurationNodeInfo>> {
         const url = endpoints.global.setup.setupContinueExtract;
         const payload = {
             Zip: this.zipContents
         } as Raven.Server.Commercial.ContinueSetupInfo;
 
-        return this.post<void>(url, JSON.stringify(payload))
+        return this.post<Raven.Server.Web.System.ConfigurationNodeInfo>(url, JSON.stringify(payload))
             .fail((response: JQueryXHR) => this.reportError("Failed to fetch configuration parameters", response.responseText, response.statusText));
     }
 }

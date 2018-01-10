@@ -6,15 +6,16 @@ class continueSetup {
 
     importedFileName = ko.observable<string>();
     hasFileSelected = ko.observable(false);
+    nodesInfo = ko.observableArray<Raven.Server.Web.System.ConfigurationNodeInfo>([]);
     
     zipFile = ko.observable<string>();
     nodeTag = ko.observable<string>();
-    serverUrl = ko.observable<string>("https://TODO"); //TODO: assign me!
+    serverUrl = ko.observable<string>();
     
     validationGroup: KnockoutValidationGroup;
     
     constructor() {
-        _.bindAll(this, "fileSelected");
+        _.bindAll(this, "fileSelected", "onConfigEntrySelected");
         
         this.initValidation();
     }
@@ -31,6 +32,12 @@ class continueSetup {
             importedFileName: this.importedFileName,
             nodeTag: this.nodeTag
         });
+    }
+    
+    
+    onConfigEntrySelected(item: Raven.Server.Web.System.ConfigurationNodeInfo) {
+        this.nodeTag(item.Tag);
+        this.serverUrl(item.PublicServerUrl);
     }
 
     fileSelected(fileInput: HTMLInputElement) {
@@ -61,8 +68,8 @@ class continueSetup {
     private fetchNodesInfo() {
         new extractNodesInfoFromPackageCommand(this.zipFile())
             .execute()
-            .done(() => {
-                //TODO: assign values!
+            .done((nodesInfo) => {
+                this.nodesInfo(nodesInfo);
             });
     }
     

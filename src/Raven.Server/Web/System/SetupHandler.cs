@@ -586,7 +586,7 @@ namespace Raven.Server.Web.System
                             using (var sr = new StreamReader(entry.Open()))
                             {
                                 dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
-                                urlByTag[tag] = jsonObj["PublicServerUrl"];
+                                urlByTag[tag] = jsonObj[nameof(ConfigurationNodeInfo.PublicServerUrl)];
                             }
                         }
                     }
@@ -602,10 +602,10 @@ namespace Raven.Server.Web.System
                                 writer.WriteComma();
 
                             writer.WriteStartObject();
-                            writer.WritePropertyName("Tag");
+                            writer.WritePropertyName(nameof(ConfigurationNodeInfo.Tag));
                             writer.WriteString(node.Key);
                             writer.WriteComma();
-                            writer.WritePropertyName("PublicServerUrl");
+                            writer.WritePropertyName(nameof(ConfigurationNodeInfo.PublicServerUrl));
                             writer.WriteString(node.Value);
                             writer.WriteEndObject();
 
@@ -690,5 +690,11 @@ namespace Raven.Server.Web.System
     public class LicenseInfo
     {
         public License License { get; set; }
+    }
+    
+    public class ConfigurationNodeInfo
+    {
+        public string Tag { get; set; }
+        public string PublicServerUrl { get; set; }
     }
 }
