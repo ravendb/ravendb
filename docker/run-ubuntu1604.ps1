@@ -88,11 +88,11 @@ function DetermineServerIp ($serverId, $dockerSubnetAddress, $shouldScan) {
     return "$netPrefix.$lastOctet"
 }
 
-$serverUrlScheme = "http"
-if ([string]::IsNullOrEmpty($CertificatePath) -eq $false) {
-    $DontScanVmSubnet = $true;
-    $serverUrlScheme = "https"
-}
+# $serverUrlScheme = "http"
+# if ([string]::IsNullOrEmpty($CertificatePath) -eq $false) {
+#     $DontScanVmSubnet = $true;
+#     $serverUrlScheme = "https"
+# }
 
 $dockerArgs = @('run')
 
@@ -105,13 +105,13 @@ if ($RemoveOnExit) {
 
 if ($AuthenticationDisabled) {
     $dockerArgs += '-e'
-    $dockerArgs += "UNSECURED_ACCESS_ALLOWED=PublicNetwork"
+    $dockerArgs += "RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork"
 }
 
 if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     write-host "Mounting $DataDir as RavenDB data dir."
     $dockerArgs += "-v"
-    $dockerArgs += "`"$($DataDir):/databases`""
+    $dockerArgs += "`"$($DataDir):/opt/RavenDB/Server/RavenData`""
 }
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
@@ -128,7 +128,7 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
 
     $dockerArgs += "-e"
     $envConfigPath = $containerConfigDir + '/' + $containerConfigFile 
-    $dockerArgs += "`"CUSTOM_CONFIG_FILE=$envConfigPath`""
+    $dockerArgs += "`"RAVEN_ARGS='-c $envConfigPath'`""
 
     write-host "Reading configuration from $ConfigPath"
 }
@@ -140,17 +140,17 @@ if ([string]::IsNullOrEmpty($Memory) -eq $False) {
 
 if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
     $dockerArgs += "-e" 
-    $dockerArgs += "PUBLIC_SERVER_URL=$PublicServerUrl"
+    $dockerArgs += "RAVEN_PublicServerUrl=$PublicServerUrl"
 }
 
 if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
     $dockerArgs += "-e" 
-    $dockerArgs += "PUBLIC_TCP_SERVER_URL=$PublicTcpServerUrl"
+    $dockerArgs += "RAVEN_PublicServerUrl_Tcp=$PublicTcpServerUrl"
 }
 
 if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
     $dockerArgs += "-e"
-    $dockerArgs += "LOGS_MODE=$LogsMode"
+    $dockerArgs += "RAVEN_Logs_Mode=$LogsMode"
 }
 
 if ([string]::IsNullOrEmpty($CertificatePath) -eq $False) {

@@ -16,21 +16,19 @@ The files here support building and running RavenDB 4.0 in a docker container on
 
 ### Running
 
-You can run RavenDB manually invoking `docker run`, yet if you don't feel that docker-savvy and would like to make full use of RavenDB docker images we recommend using our scripts.
+Simplest way to run and try RavenDB out is:
 
-Simplest way to run and try RavenDB is (NOTE: server won't be secure):
-
+Linux:
 ```
-.\run-ubuntu1604.ps1 -AuthenticationDisabled
-```
-
-or with regular docker run:
-
-```
-docker run -e UNSECURED_ACCESS_ALLOWED=PublicNetwork -p 8080:8080 ravendb/ravendb
+$ docker run -p 8080:8080 ravendb/ravendb
 ```
 
-#### Scripts
+Windows:
+```
+$ docker run -p 8080:8080 ravendb/ravendb
+```
+
+You can run RavenDB manually invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
 Run Ubuntu-based image: [run-ubuntu1604.ps1](run-ubuntu1604.ps1)
 
@@ -48,9 +46,11 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-BindTcpPort [port]` - default `38888` - the port number on which RavenDB Server listens for TCP connections exposed on the container
 
+- `-NoSetup` - disable setup wizard
+
 - `-AuthenticationDisabled` - HERE BE DRAGONS - disable authentication for RavenDB server
 
-- `-RemoveOnExit` - removes container when the main process exits
+- `-RemoveOnExit` - removes container when server exits 
 
 - `-PublicServerUrl` - set the url under which server is available to the outside world (e.g. http://4.live-test.ravendb.net:80)
 
@@ -58,47 +58,55 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-LogsMode` - set logging level (Operations, Information)
 
-NOTE: Due to Windows containers limitations entire directory holding the settings file (passed via `-ConfigPath`) is going to be visible within the container.
-
 Basic usage (saving data to `C:\docker\raven\databases` and using settings file mounted from host at `C:\docker\raven\settings.json`):
 ```
 PS C:\work\ravendb-4\docker> .\run-ubuntu1604.ps1 -ConfigPath c:\work\docker\settings.json -DataDir C:\work\docker\databases
-Mounting C:\work\docker\databases as RavenDB data dir.
-Reading configuration from c:\work\docker\settings.json
-Starting container: docker run -d -v C:\work\docker\databases:/databases -v c:\work\docker\settings.json:/opt/raven-settings.json -p 8080:8080 -p 38888:38888 ravendb/ravendb:ubuntu-latest
-**********************************************
-
-RavenDB docker container running.
-Container ID is f01bdfbe111ffa3fd5b9217459bad776fe1e99877108315dc2a42de0cb644768
-
-To stop it use:     docker stop f01bdfbe111ffa3fd5b9217459bad776fe1e99877108315dc2a42de0cb644768
-To run shell use:   docker exec -it f01bdfbe111ffa3fd5b9217459bad776fe1e99877108315dc2a42de0cb644768 /bin/bash
-
-Access RavenDB Studio on http://10.0.75.2:8080
-Listening for TCP connections on: 10.0.75.2:38888
-
-Container IP address in Docker network: 172.17.0.2
-Docker bridge iface address: 10.0.75.1
-
-**********************************************
-PS C:\work\ravendb-4\docker>
 ```
 
 Once run RavenDB server should be exposed on port 8080 (default).
 
-#### On Docker volumes usage
+### Docker volumes
 
 Each of images above makes use of 2 volumes:
 
 - settings volume - holding RavenDB configuration,
 
-    Ubuntu container: `/opt/raven-settings.json`
-    Windows container: `C:\raven-config` directory
+    Ubuntu container: `/opt/RavenDB/config`
+    Windows container: `C:\ravendb\config`
 
 - databases volume - used for persistence of RavenDB data,
 
-    Ubuntu container: `/databases`
-    Windows container: `c:\databases`
+    Ubuntu container: `/opt/RavenDB/Server/RavenData`
+    Windows container: `c:/ravendb/Server/RavenData`
+
+### Configuration
+
+To configure RavenDB one can use (in order of precedence):
+    - environment variables, 
+    - `settings.json` configuration file, 
+    - CLI arguments
+
+#### Environment variables
+
+Environment variables prefixed with `RAVEN_` can be used to configure RavenDB server. E.g. one can use:
+```
+RAVEN_Setup_Mode='None'
+```
+to disable RavenDB Setup Wizard.
+
+For docker containers one additional variable is available to modify CLI arguments line - `RAVEN_ARGS`. 
+
+#### Enable Docker logs
+
+To get logs available when running `docker logs` command, you need to turn that on for RavenDB server. Setting below environment variables like so is going to enable logging to console. Please note such behavior may have performance implications. Log level may be modified using `RAVEN_Logs_Mode` variable. 
+
+```
+RAVEN_ARGS='--log-to-console'
+```
+
+#### Custom config path
+
+Use `--config-path PATH_TO_CONFIG` in order to use settings file from outside of server directory.
 
 #### Dockerfiles
 

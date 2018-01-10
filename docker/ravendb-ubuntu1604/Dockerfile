@@ -25,6 +25,6 @@ HEALTHCHECK --start-period=60s CMD /opt/RavenDB/healthcheck.sh
 
 WORKDIR /opt/RavenDB/Server
 
-VOLUME /opt/RavenDB/Server/RavenData /opt/RavenDB/cert /opt/RavenDB/secrets
+VOLUME /opt/RavenDB/Server/RavenData /opt/RavenDB/config
 
 CMD /opt/RavenDB/run-raven.sh
