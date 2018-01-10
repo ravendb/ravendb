@@ -41,7 +41,7 @@ namespace SlowTests.Issues
         private void VerifyLink(string url)
         {
             var response = _client.GetAsync(url).Result;
-            Assert.True(response.IsSuccessStatusCode);
+            Assert.True(response.IsSuccessStatusCode, url);
         }
 
         public void Dispose()
