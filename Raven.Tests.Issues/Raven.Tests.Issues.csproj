@@ -652,6 +652,7 @@
     <Compile Include="QueriesStartingWithAtShouldWork.cs" />
     <Compile Include="ReplicationAlerts.cs" />
     <Compile Include="RavenDB_3096.cs" />
+    <Compile Include="ReplicationHiloReset.cs" />
     <Compile Include="SlowIndex.cs" />
     <Compile Include="RavenDB_3113.cs" />
     <Compile Include="RavenDB_3106.cs" />

@@ -69,19 +69,34 @@ namespace Raven.Database.Storage.Voron.StorageActions
             if (readResult == null)
             {
                 if (val == 0)
+                {
+                    logger.Log(LogLevel.Debug,
+                        () => string.Format("GetNextIdentityValue({0},{1}) returns {2} -> {3}", name, val, 0,
+                            Environment.StackTrace));
                     return 0;
+                }
+
                 storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes((long)val), expectedVersion: 0);
+
+                logger.Log(LogLevel.Debug, () => string.Format("GetNextIdentityValue({0},{1}) returns {2} -> {3}", name, val, val, Environment.StackTrace));
                 return val;
             }
 
             using (var stream = readResult.Reader.AsStream())
             {
                 long existingValue = stream.ReadInt64();
-                if (val == 0)
-                    return val;
+                if (existingValue == 0)
+                {
+                    logger.Log(LogLevel.Debug,
+                        () => string.Format("GetNextIdentityValue({0},{1}) (existing value) returns {2} -> {3}", name,
+                            val, val, Environment.StackTrace));
+                    return existingValue;
+                }
+
                 var newValue = existingValue + val;
 
                 storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(newValue), expectedVersion: readResult.Version);
+                logger.Log(LogLevel.Debug, () => string.Format("GetNextIdentityValue({0},{1}) (existing value) returns {2} -> {3}", name, val, newValue, Environment.StackTrace));
                 return newValue;
             }
         }
@@ -92,6 +107,8 @@ namespace Raven.Database.Storage.Voron.StorageActions
 
             var lowerKeyName = name.ToLowerInvariant();
             storage.General.Add(writeBatch.Value, lowerKeyName, BitConverter.GetBytes(value));
+
+            logger.Log(LogLevel.Debug,() => string.Format("SetIdentityValue({0},{1}) -> {2}",name,value, Environment.StackTrace));            
         }
 
         public void PulseTransaction()
