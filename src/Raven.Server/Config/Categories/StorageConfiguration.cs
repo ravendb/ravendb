@@ -10,7 +10,6 @@ namespace Raven.Server.Config.Categories
         [Description("You can use this setting to specify a different path to temporary files. By default it is empty, which means that temporary files will be created at same location as data file.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Storage.TempPath", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [LegacyConfigurationEntry("Raven/Voron/TempPath")]
         public PathSetting TempPath { get; set; }
 
         [Description("Use the 32 bits memory mapped pager, even when running in 64 bits")]
