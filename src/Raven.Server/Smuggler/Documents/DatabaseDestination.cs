@@ -159,7 +159,7 @@ namespace Raven.Server.Smuggler.Documents
 
             public void DeleteDocument(string id)
             {
-                AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(new DeleteDocumentCommand(id, null, _database)).AsTask());
+                AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(new DeleteDocumentCommand(id, null, _database)));
             }
 
             public Stream GetTempStream()
@@ -192,14 +192,18 @@ namespace Raven.Server.Smuggler.Documents
                 var prevCommand = _prevCommand;
                 var prevCommandTask = _prevCommandTask;
 
+                var commandTask = _database.TxMerger.Enqueue(_command);
+                // we ensure that we first enqueue the command to if we 
+                // fail to do that, we won't be waiting on the previous
+                // one
                 _prevCommand = _command;
-                _prevCommandTask = _database.TxMerger.Enqueue(_command).AsTask();
+                _prevCommandTask = commandTask;
 
                 if (prevCommand != null)
                 {
                     using (prevCommand)
                     {
-                        prevCommandTask.Wait();
+                        prevCommandTask.GetAwaiter().GetResult();
                         Debug.Assert(prevCommand.IsDisposed == false,
                             "we rely on reusing this context on the next batch, so it has to be disposed here");
                     }
@@ -224,7 +228,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_command.Documents.Count > 0)
                 {
                     using (_command)
-                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command).AsTask());
+                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command));
                 }
 
                 _command = null;

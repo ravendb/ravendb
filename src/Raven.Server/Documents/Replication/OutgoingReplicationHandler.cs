@@ -635,7 +635,7 @@ namespace Raven.Server.Documents.Replication
                     // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
                     // is purely advisory. We just want to have the information up to date at some point, and we won't 
                     // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).AsTask().IgnoreUnobservedExceptions();
+                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
                 }
             }
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;

@@ -306,7 +306,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 else
                                 {
-                                    _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask();
+                                    _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd);
                                 }
                             }
                         }
@@ -488,7 +488,7 @@ namespace Raven.Server.Documents.Replication
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
                     var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
-                    task = _database.TxMerger.Enqueue(replicationCommand).AsTask();
+                    task = _database.TxMerger.Enqueue(replicationCommand);
 
                     using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
                     using (var msg = documentsContext.ReadObject(new DynamicJsonValue
