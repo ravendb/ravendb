@@ -276,11 +276,6 @@ namespace Raven.Server.Web.System
 
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(SetupParameters.IsPosix));
-                writer.WriteBool(setupParameters.IsPosix);
-
-                writer.WriteComma();
-
                 writer.WritePropertyName(nameof(SetupParameters.IsDocker));
                 writer.WriteBool(setupParameters.IsDocker);
 
