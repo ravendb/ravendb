@@ -1,0 +1,45 @@
+<h2 class="margin-bottom margin-top">
+    <strong class="margin-right">2.</strong> Complete Existing Cluster Setup
+</h2>
+
+
+<form class="flex-form" data-bind="with: model.continueSetup, submit: save">
+    <div class="panel padding padding-lg">
+        <div class="margin-bottom">
+            <div class="form-group" data-bind="validationElement: importedFileName">
+                <label for="importedFileName" class="control-label">Configuration package<i class="required"></i></label>
+                <div class="flex-grow input-group file-input" data-bind="validationElement: importedFileName">
+                    <input type="file" tabindex="-1" name="importFile" id="importedFileName" accept=""
+                           data-bind="event: { change: _.partial(fileSelected, $element) }">
+                    <span class="static-name form-control"
+                          data-bind="text: importedFileName() || 'Select configuration file (*.zip)'"></span>                          
+                    <span class="input-group-btn">
+                        <label for="importedFileName" class="btn btn-default">
+                            <i class="icon-document"></i>
+                            <span>Browse</span>
+                        </label>
+                    </span>
+                    <p class="help-block" data-bind="validationMessage: importedFileName"></p>
+                </div>
+            </div>
+            
+            <div class="form-group" data-bind="validationElement: nodeTag"> <!-- TODO: visible : ... -->
+                <label for="nodeTag" class="control-label">Node Tag</label>
+                <div class="flex-grow">
+                    <input type="text" autocomplete="off" class="form-control" id="nodeTag"
+                           data-bind="textInput: nodeTag" placeholder="">
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    <div class="navigation padding padding-lg flex-horizontal">
+        <button type="button" class="btn btn-default btn-lg" data-bind="click: $root.back">
+            <i class="icon-arrow-left"></i><span>Back</span>
+        </button>
+        <div class="flex-separator"></div>
+        <button type="submit" class="btn btn-primary btn-lg">
+            <span>Next</span> <i class="icon-arrow-right"></i>
+        </button>
+    </div>
+</form>

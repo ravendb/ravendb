@@ -332,6 +332,7 @@ namespace TypingsGenerator
             // server setup
             scripter.AddType(typeof(UnsecuredSetupInfo));
             scripter.AddType(typeof(SetupInfo));
+            scripter.AddType(typeof(ContinueSetupInfo));
             scripter.AddType(typeof(ClaimDomainInfo));
             scripter.AddType(typeof(SetupProgressAndResult));
             scripter.AddType(typeof(UserDomainsAndLicenseInfo));

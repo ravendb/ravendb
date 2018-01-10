@@ -50,6 +50,10 @@ class welcome extends setupStep {
         this.forwardToNextStep();
     }
     
+    chooseContinue() {
+        router.navigate("#continue");
+    }
+    
     forwardToNextStep() {
         switch (this.model.mode()) {
             case "Unsecured":

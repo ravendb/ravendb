@@ -7,6 +7,7 @@ import router = require("plugins/router");
 import saveUnsecuredSetupCommand = require("commands/wizard/saveUnsecuredSetupCommand");
 import serverNotificationCenterClient = require("common/serverNotificationCenterClient");
 import checkIfServerIsOnlineCommand = require("commands/wizard/checkIfServerIsOnlineCommand");
+import continueClusterConfigurationCommand = require("commands/wizard/continueClusterConfigurationCommand");
 
 type messageItem = {
     message: string;
@@ -46,12 +47,16 @@ class finish extends setupStep {
         });
     }
     
+    private hasValidContinueConfiguration() {
+        return this.isValid(this.model.continueSetup().validationGroup);
+    }
+    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
-        if (mode) {
+        if (mode || this.hasValidContinueConfiguration()) {
             return $.when({ can: true });
-        }
+        } 
 
         return $.when({ redirect: "#welcome" });
     }
@@ -69,6 +74,9 @@ class finish extends setupStep {
             case "Secured":
                 this.currentStep = 4;
                 break;
+            default: 
+                this.currentStep = 3;
+                break;
         }
         
         this.websocket = new serverNotificationCenterClient();
@@ -84,7 +92,11 @@ class finish extends setupStep {
         this.spinners.finishing(true);
         
         this.configurationTask = $.Deferred<void>();
-        switch (this.model.mode()) {
+        
+        if (this.hasValidContinueConfiguration()) {
+            this.continueClusterConfiguration(this.model.continueSetup().toDto());
+        } else {
+            switch (this.model.mode()) {
             case "Unsecured":
                 this.saveUnsecuredConfiguration();
                 this.configurationTask.resolve();
@@ -95,6 +107,7 @@ class finish extends setupStep {
             case "Secured":
                 this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
+            }
         }
 
         this.configurationTask
@@ -115,6 +128,14 @@ class finish extends setupStep {
         return new getNextOperationId(null).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
+            });
+    }
+    
+    private continueClusterConfiguration(dto: Raven.Server.Commercial.ContinueSetupInfo) {
+        new continueClusterConfigurationCommand(dto)
+            .execute()
+            .done((operation: operationIdDto) => {
+                this.websocket.watchOperation(operation.OperationId, e => this.onChange(e));
             });
     }
     

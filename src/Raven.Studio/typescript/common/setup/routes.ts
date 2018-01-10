@@ -19,6 +19,11 @@ class routes {
                 title: "RavenDB setup wizard",
                 moduleId: "viewmodels/wizard/finish",
                 nav: false
+            }, {
+                route: "continue",
+                title: "RavenDB setup wizard",
+                moduleId: "viewmodels/wizard/continueConfiguration",
+                nav: false
             },{
                 route: "license",
                 title: "RavenDB setup wizard",

@@ -3,6 +3,7 @@ import unsecureSetup = require("models/wizard/unsecureSetup");
 import licenseInfo = require("models/wizard/licenseInfo");
 import domainInfo = require("models/wizard/domainInfo");
 import nodeInfo = require("models/wizard/nodeInfo");
+import continueSetup = require("models/wizard/continueSetup");
 import certificateInfo = require("models/wizard/certificateInfo");
 import ipEntry = require("models/wizard/ipEntry");
 
@@ -16,6 +17,7 @@ class serverSetup {
     license = ko.observable<licenseInfo>(new licenseInfo());
     domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));
     unsecureSetup = ko.observable<unsecureSetup>(new unsecureSetup());
+    continueSetup = ko.observable<continueSetup>(new continueSetup());
     nodes = ko.observableArray<nodeInfo>();
     certificate = ko.observable<certificateInfo>(new certificateInfo());
     registerClientCertificate = ko.observable<boolean>(true);
