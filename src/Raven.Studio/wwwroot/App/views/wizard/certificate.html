@@ -1,14 +1,15 @@
 <h2 class="margin-bottom margin-top"><strong class="margin-right">2.</strong>Server Certificate Information</h2>
 <form class="flex-form" data-bind="submit: save">
     <div class="panel padding padding-lg">
-        <div class="margin-bottom" data-bind="with: model.certificate">
+        <div data-bind="with: model.certificate">
             <div class="form-group" data-bind="validationElement: certificate">
                 <label for="certificate" class="control-label">Certificate<i class="required"></i></label>
                 <div class="flex-grow input-group file-input" data-bind="validationElement: certificate">
                     <input type="file" tabindex="-1" name="importFile" id="certificate" accept=""
                            data-bind="event: { change: _.partial($root.fileSelected, $element) }">
                     <span class="static-name form-control"
-                          data-bind="text: $root.certificateFileName() || 'Select server certificate file (*.pfx)'"></span>                          
+                          data-bind="text: certificateFileName() || 'Select server certificate file (*.pfx)'">
+                    </span>                   
                     <span class="input-group-btn">
                         <label for="certificate" class="btn btn-default">
                             <i class="icon-document"></i>
@@ -25,9 +26,9 @@
                            data-bind="textInput: certificatePassword" placeholder="Enter certificate password">
                 </div>
             </div>
-            <div class="form-group" data-bind="visible: $root.certificateFileName() && certificateCNs().length !== 0">
+            <div class="form-group margin-bottom margin-bottom-lg" data-bind="visible: certificateFileName() && certificateCNs().length !== 0">
                 <label class="control-label">CN names</label>
-                <div class="flex-grow form-control-static">                   
+                <div class="flex-grow form-control-static">
                     <div data-bind="foreach: certificateCNs">
                         <div data-bind="text: $data"></div>
                     </div>
