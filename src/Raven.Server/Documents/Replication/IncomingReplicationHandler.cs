@@ -1040,8 +1040,8 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info($"RevisionDELETE '{item.Id}', with change vector = {item.ChangeVector}");
-                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, rcvdChangeVector,
-                                            item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication, item.Flags);
+                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, 
+                                            item.Flags, NonPersistentDocumentFlags.FromReplication, rcvdChangeVector, item.LastModifiedTicks);
                                         continue;
                                     }
 

@@ -417,8 +417,18 @@ namespace Raven.Server.Smuggler.Documents
                                 ThrowRevisionsDisabled();
 
                             PutAttachments(context, document);
-                            _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags, 
-                                document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
+
+                            if (document.Flags.Contain(DocumentFlags.DeleteRevision))
+                            {
+                                _database.DocumentsStorage.RevisionsStorage.Delete(context, id, document.Data, document.Flags,
+                                    document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
+                            }
+                            else
+                            {
+                                _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
+                                    document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
+                            }
+
                             continue;
                         }
 
