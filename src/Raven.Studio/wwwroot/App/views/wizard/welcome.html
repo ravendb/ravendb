@@ -10,7 +10,7 @@ Let's start with choosing your desired level of security. Select the security op
                 <h2 class="text-center margin-bottom margin-lg text-success">SECURE</h2>
                 <div class="row">
                     <div class="col-sm-6">
-                        <button data-bind="click: chooseGenerate, disable: $root.model.runningOnPosix" class="btn btn-icon btn-default">
+                        <button data-bind="click: chooseGenerate" class="btn btn-icon btn-default">
                             <i class="icon-lets-encrypt icon-xl"></i>
                             <p class="lead">Generate <br />Let's Encrypt Certificate</p>
                         </button>
@@ -29,7 +29,7 @@ Let's start with choosing your desired level of security. Select the security op
                         </div>
                     </div>
                     <div class="col-sm-6">
-                        <button data-bind="click: chooseSecured, disable: $root.model.runningOnPosix" class="btn btn-icon btn-default">
+                        <button data-bind="click: chooseSecured" class="btn btn-icon btn-default">
                             <i class="icon-certificate icon-xl"></i>
                             <p class="lead">Provide Your Own Certificate</p>
                         </button>
