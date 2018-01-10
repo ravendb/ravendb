@@ -174,9 +174,54 @@ namespace Raven.Server.Commercial
                 Total = 4
             };
 
-            AssertNoClusterDefined(serverStore);
-            
+            try
+            {
+                AssertNoClusterDefined(serverStore);
 
+                progress.AddInfo($"Continuing setup for node {setupInfo.NodeTag}.");
+                progress.AddInfo("Extracting zip file.");
+                
+                byte[] zipBytes;
+                try
+                {
+                    zipBytes = Convert.FromBase64String(setupInfo.Zip);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to parse the {nameof(setupInfo.Zip)} property, expected a Base64 value", e);
+                }
+
+                try
+                {
+                    using (var ms = new MemoryStream(zipBytes))
+                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
+                    {
+                        foreach (var entry in archive.Entries)
+                        {
+                            if (entry.Name.Equals("settings.json") == false)
+                                continue;
+
+                            var tag = entry.FullName[0].ToString();
+                            using (var sr = new StreamReader(entry.Open()))
+                            {
+                                dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
+
+                                
+                            }
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
+                }
+
+                
+            }
+            catch (Exception e)
+            {
+                LogErrorAndThrow(onProgress, progress, "", e);
+            }
             return progress;
         }
 
