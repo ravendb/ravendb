@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Replication
             {
                 try
                 {
-                    ResolveConflictsTask.Wait();
+                    ResolveConflictsTask.Wait(TimeSpan.FromSeconds(60));
                 }
                 catch (Exception e)
                 {
