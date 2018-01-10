@@ -79,7 +79,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                                 "which would output reduce results to documents in the 'Invoices' collection, " +
                                 "as 'Invoices' collection is consumed by other index in a way that would lead to an infinite loop." +
                                 $"{Environment.NewLine}" +
-                                $"DailyInvoicesIndexLoadDocument: InvoiceHolders,Invoices => DailyInvoices{Environment.NewLine}" +
+                                $"DailyInvoicesIndexLoadDocument: InvoiceHolders (referenced: Invoices) => DailyInvoices{Environment.NewLine}" +
                                 $"MonthlyInvoicesIndex: DailyInvoices => MonthlyInvoices{Environment.NewLine}" +
                                 $"--> YearlyToDailyInfiniteLoopIndex: MonthlyInvoices => *Invoices*", exception.Message);
             }
