@@ -12,6 +12,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Search;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -166,7 +167,7 @@ namespace Raven.Server.Commercial
             return cert;
         }
 
-        public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
+        public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo continueSetupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult
             {
@@ -178,51 +179,130 @@ namespace Raven.Server.Commercial
             {
                 AssertNoClusterDefined(serverStore);
 
-                progress.AddInfo($"Continuing setup for node {setupInfo.NodeTag}.");
-                progress.AddInfo("Extracting zip file.");
-                
+                progress.AddInfo($"Continuing cluster setup on node {continueSetupInfo.NodeTag}.");
+                onProgress(progress);
+
                 byte[] zipBytes;
+                byte[] certBytes;
+                byte[] clientCertBytes;
+                string certPassword;
+                dynamic settingsJsonObject;
+                X509Certificate2 cert;
+
                 try
                 {
-                    zipBytes = Convert.FromBase64String(setupInfo.Zip);
+                    zipBytes = Convert.FromBase64String(continueSetupInfo.Zip);
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException($"Unable to parse the {nameof(setupInfo.Zip)} property, expected a Base64 value", e);
+                    throw new ArgumentException($"Unable to parse the {nameof(continueSetupInfo.Zip)} property, expected a Base64 value", e);
                 }
 
+                progress.Processed++;
+                progress.AddInfo("Extracting setup settings and certificates from zip file.");
+                onProgress(progress);
                 try
                 {
-                    using (var ms = new MemoryStream(zipBytes))
-                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
-                    {
-                        foreach (var entry in archive.Entries)
-                        {
-                            if (entry.Name.Equals("settings.json") == false)
-                                continue;
-
-                            var tag = entry.FullName[0].ToString();
-                            using (var sr = new StreamReader(entry.Open()))
-                            {
-                                dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
-
-                                
-                            }
-                        }
-                    }
+                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out certBytes, out clientCertBytes);
                 }
                 catch (Exception e)
                 {
                     throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
                 }
 
-                
+                try
+                {
+                    certPassword = string.IsNullOrEmpty(RavenConfiguration.GetKey(x => x.Security.CertificatePassword))
+                        ? null
+                        : settingsJsonObject[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)];
+
+                    cert = new X509Certificate2(certBytes, certPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Unable to load the supplied certificate.", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Starting validation.");
+                onProgress(progress);
+
+                try
+                {
+                    await ValidateServerCanRunOnThisNode(settingsJsonObject, cert, serverStore, continueSetupInfo.NodeTag, token);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Validation failed.", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Validation is successful.");
+                progress.AddInfo("Writing configuration settings and certificate.");
+                onProgress(progress);
+
+                try
+                {
+                    CompleteConfidurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, cert, clientCertBytes, certBytes, certPassword, serverStore);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Could not complete configuration for new node.", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Configuration settings created.");
+                progress.AddInfo("Setting up RavenDB in 'Secured Mode' finished successfully.");
+                onProgress(progress);
+
             }
             catch (Exception e)
             {
-                LogErrorAndThrow(onProgress, progress, "", e);
+                LogErrorAndThrow(onProgress, progress, $"Cluster setup on node {continueSetupInfo.NodeTag} has failed", e);
             }
             return progress;
+        }
+
+        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out byte[] certBytes, out byte[] clientCertBytes)
+        {
+            certBytes = null;
+            clientCertBytes = null;
+            dynamic settingsJson = null; 
+            
+            using (var msZip = new MemoryStream(zipBytes))
+            using (var archive = new ZipArchive(msZip, ZipArchiveMode.Read, false))
+            {
+                foreach (var entry in archive.Entries)
+                {
+                    if (entry.FullName.StartsWith($"{nodeTag}/") && entry.Name.EndsWith(".pfx"))
+                    {
+                        using (var ms = new MemoryStream())
+                        {
+                            entry.Open().CopyTo(ms);
+                            certBytes = ms.ToArray();
+                        }
+                    }
+
+                    if (entry.Name.StartsWith("admin.client.certificate") && entry.Name.EndsWith(".pfx"))
+                    {
+                        using (var ms = new MemoryStream())
+                        {
+                            entry.Open().CopyTo(ms);
+                            clientCertBytes = ms.ToArray();
+                        }
+                    }
+
+                    if (entry.FullName.StartsWith($"{nodeTag}/") && entry.Name.EndsWith(".json"))
+                    {
+                        using (var sr = new StreamReader(entry.Open()))
+                        {
+                            settingsJson = JsonConvert.DeserializeObject(sr.ReadToEnd());
+                        }
+                    }
+                }
+            }
+
+            return settingsJson;
         }
 
         public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
@@ -798,11 +878,63 @@ namespace Raven.Server.Commercial
                 }
 
                 // Here we send the actual ips we will bind to in the local machine.
-                await SimulateRunningServer(serverCert, localServerUrl, localIps.ToArray(), setupInfo, serverStore.Configuration.ConfigPath, setupMode, token);
+                await SimulateRunningServer(serverCert, localServerUrl, localIps.ToArray(), localNode.Port, serverStore.Configuration.ConfigPath, setupMode, token);
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + localServerUrl, e);
+            }
+        }
+
+        public static async Task ValidateServerCanRunOnThisNode(dynamic settingsJsonObject, X509Certificate2 cert, ServerStore serverStore, string nodeTag, CancellationToken token)
+        {
+
+            string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
+            string serverUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.ServerUrls)];
+            SetupMode setupMode = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.SetupMode)];
+            string externalIp = string.IsNullOrEmpty(RavenConfiguration.GetKey(x => x.Core.ExternalIp)) 
+                ? null 
+                : settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.ExternalIp)];
+
+
+            var serverUrls = serverUrl.Split(";");
+            var port = new Uri(serverUrls[0]).Port;
+            var hostnamesOrIps = serverUrls.Select(url => new Uri(url).DnsSafeHost).ToArray();
+
+            var localIps = new List<IPEndPoint>();
+
+            foreach (var hostnameOrIp in hostnamesOrIps)
+                foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), port));
+            
+            try
+            {
+                if (serverStore.Server.ListenEndpoints.Port == port)
+                {
+                    var currentIps = serverStore.Server.ListenEndpoints.Addresses;
+                    if (localIps.Count == 0 && currentIps.Length == 1 &&
+                        (Equals(currentIps[0], IPAddress.Any) || Equals(currentIps[0], IPAddress.IPv6Any)))
+                        return; // listen to any ip in this 
+
+                    if (localIps.All(ip => currentIps.Contains(ip.Address)))
+                        return; // we already listen to all these IPs, no need to check
+                }
+
+                if (setupMode == SetupMode.LetsEncrypt)
+                {
+                    var ips = externalIp == null
+                        ? localIps.ToArray()
+                        : new[] { new IPEndPoint(IPAddress.Parse(externalIp), port) };
+
+                    await AssertDnsUpdatedSuccessfully(publicServerUrl, ips, token);
+                }
+
+                // Here we send the actual ips we will bind to in the local machine.
+                await SimulateRunningServer(cert, publicServerUrl, localIps.ToArray(), port, serverStore.Configuration.ConfigPath, setupMode, token);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to simulate running the server with the supplied settings using: " + publicServerUrl, e);
             }
         }
 
@@ -950,6 +1082,82 @@ namespace Raven.Server.Commercial
             foreach (var certHost in generalNames.GetNames())
             {
                 yield return certHost.Name.ToString();
+            }
+        }
+
+        private static void CompleteConfidurationForNewNode(
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            ContinueSetupInfo continueSetupInfo,
+            dynamic settingsJsonObject,
+            X509Certificate2 cert,
+            byte[] clientCertBytes,
+            byte[] certBytes,
+            string certPassword,
+            ServerStore serverStore)
+        {
+            try
+            {
+                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm, "During setup wizard, " +
+                                                                                                          "making sure there is no cluster from previous installation.");
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+            }
+
+            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", cert, certBytes, certPassword);
+
+            // todo I think it will happen anyway on server startup... check this
+            //serverStore.EnsureServerCertificateIsInClusterState("Cluster-Wide Certificate");
+
+            if (continueSetupInfo.RegisterClientCert)
+            {
+                RegisterClientCertInOs(onProgress, progress, new X509Certificate2(clientCertBytes));
+                progress.AddInfo("Registering admin client certificate in the OS personal store.");
+                onProgress(progress);
+            }
+
+            string certificateFileName = settingsJsonObject[RavenConfiguration.GetKey(x => x.Security.CertificatePath)];
+            var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
+
+            try
+            {
+                progress.AddInfo($"Saving certificate at {certPath}.");
+                onProgress(progress);
+
+                using (var certfile = new FileStream(certPath, FileMode.Create))
+                {
+                    certfile.Write(certBytes, 0, certBytes.Length);
+                    certfile.Flush(true);
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to save certificate at {certPath}.", e);
+            }
+
+            try
+            {
+                progress.AddInfo($"Saving configuration at {serverStore.Configuration.ConfigPath}.");
+                onProgress(progress);
+
+                var jsonString = JsonConvert.SerializeObject(settingsJsonObject, Formatting.Indented);
+                WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, jsonString);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to save configuration at {serverStore.Configuration.ConfigPath}.", e);
+            }
+            
+            try
+            {
+                string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
+                progress.Readme = CreateReadmeTextForNewNode(certPath, publicServerUrl, continueSetupInfo); //todo change both readme files and decide if to save this one to disk
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to create the readme text.", e);
             }
         }
 
@@ -1101,6 +1309,9 @@ namespace Raven.Server.Commercial
                             var httpUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
                                 setupInfo.NodeSetupInfos[LocalNodeTag].TcpPort, out var tcpUrl, out var _);
 
+                            if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
+                                jsonObj[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
+
                             jsonObj[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)] = string.IsNullOrEmpty(node.Value.PublicServerUrl)
                                 ? httpUrl
                                 : node.Value.PublicServerUrl;
@@ -1134,6 +1345,7 @@ namespace Raven.Server.Commercial
                                     writer.Write(jsonString);
                                     writer.Flush();
                                 }
+
                                 // we save this multiple times on each node, to make it easier 
                                 // to deploy by just copying the node
                                 entry = archive.CreateEntry($"{node.Key}/{certificateFileName}");
@@ -1274,6 +1486,67 @@ namespace Raven.Server.Commercial
             return str;
         }
 
+        private static string CreateReadmeTextForNewNode(string publicServerUrl, string currentHostName, ContinueSetupInfo continueSetupInfo)
+        {
+            // todo
+            var str =
+                string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
+                "Your RavenDB cluster settings, certificate and configuration are contained in this zip file." + Environment.NewLine;
+
+            str += Environment.NewLine +
+                   $"The new server is available at: {publicServerUrl}"
+                   + Environment.NewLine;
+
+            
+            str += ($"The current node ('{continueSetupInfo.NodeTag}' - {currentHostName}) has already been configured and requires no further action on your part." +
+                    Environment.NewLine);
+            
+            str += Environment.NewLine;
+            if (continueSetupInfo.RegisterClientCert && PlatformDetails.RunningOnPosix == false)
+            {
+                str +=
+                    ($"The administrator client certificate from the zip file has been installed on this machine ({Environment.MachineName})." +
+                     Environment.NewLine +
+                     "You can now restart the server and access it in a secure fashion." +
+                     Environment.NewLine);
+            }
+            else
+            {
+                str +=
+                    ($"An administrator client certificate.......has been generated which can be used to access the server." +
+                     Environment.NewLine);
+            }
+
+            str +=
+                "If you are using Firefox (or Chrome under Linux), the certificate must be imported directly to the browser." +
+                Environment.NewLine +
+                "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
+                Environment.NewLine;
+
+            str +=
+                Environment.NewLine +
+                "It is recommended to generate additional certificates with reduced access rights for applications and users to use. " +
+                Environment.NewLine +
+                "This can be done using RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
+                Environment.NewLine;
+
+            //if (setupInfo.NodeSetupInfos.Count > 1)
+            {
+                str +=
+                    Environment.NewLine +
+                    "As you are setting up a cluster, you will find the configuration for each of the nodes available in the folders in this zip file." +
+                    Environment.NewLine +
+                    "All you need to do is extract the files from each folder to the base directory of the RavenDB node in question and start it." +
+                    Environment.NewLine +
+                    "The new node will be added automatically to the existing cluster." +
+                    Environment.NewLine +
+                    Environment.NewLine +
+                    "Make sure that the various nodes can talk to each other using the URLs you have defined, and that there is no firewall blocking communication between them."
+                    + Environment.NewLine;
+            }
+            return str;
+        }
+
         private class UniqueResponseResponder : IStartup
         {
             private readonly string _response;
@@ -1299,7 +1572,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, SetupInfo setupInfo, string settingsPath, SetupMode setupMode, CancellationToken token)
+        public static async Task SimulateRunningServer(X509Certificate2 serverCertificate, string serverUrl, IPEndPoint[] addresses, int port, string settingsPath, SetupMode setupMode, CancellationToken token)
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server, settingsPath);
             configuration.Initialize();
@@ -1316,7 +1589,6 @@ namespace Raven.Server.Commercial
                         .CaptureStartupErrors(captureStartupErrors: true)
                         .UseKestrel(options =>
                         {
-                            var port = setupInfo.NodeSetupInfos[LocalNodeTag].Port;
                             if (addresses.Length == 0)
                             {
                                 var defaultIp = new IPEndPoint(IPAddress.Parse("0.0.0.0"), port == 0 ? 443 : port);

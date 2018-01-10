@@ -103,6 +103,7 @@ namespace Raven.Server.Commercial
     public class ContinueSetupInfo
     {
         public string NodeTag { get; set; }
+        public bool RegisterClientCert { get; set; }
         public string Zip { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -110,6 +111,7 @@ namespace Raven.Server.Commercial
             return new DynamicJsonValue
             {
                 [nameof(NodeTag)] = NodeTag,
+                [nameof(RegisterClientCert)] = RegisterClientCert,
                 [nameof(Zip)] = Zip
             };
         }

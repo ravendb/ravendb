@@ -32,6 +32,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("PublicServerUrl.Tcp", ConfigurationEntryScope.ServerWideOnly)]
         public UriSetting? PublicTcpServerUrl { get; set; }
 
+        [Description("External IP address")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("ExternalIp", ConfigurationEntryScope.ServerWideOnly)]
+        public string ExternalIp { get; set; }
+
         [Description("Whether the database should run purely in memory. When running in memory, nothing is written to disk and if the server is restarted all data will be lost. This is mostly useful for testing.")]
         [DefaultValue(false)]
         [ConfigurationEntry("RunInMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
