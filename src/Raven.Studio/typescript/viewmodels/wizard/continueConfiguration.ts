@@ -3,6 +3,17 @@ import router = require("plugins/router");
 
 class continueConfiguration extends setupStep {
 
+     canActivate(): JQueryPromise<canActivateResultDto> {
+        const mode = this.model.mode();
+
+        if (mode && mode === "Continue") {
+            return $.when({ can: true });
+        }
+
+        return $.when({ redirect: "#welcome" });
+    }
+    
+    
     back() {
         router.navigate("#welcome");
     }

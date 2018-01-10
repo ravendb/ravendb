@@ -235,6 +235,9 @@ class finish extends setupStep {
 
     back() {
         switch (this.model.mode()) {
+            case "Continue":
+                router.navigate("#continue"); 
+                break;
             case "Unsecured":
                 router.navigate("#unsecured");
                 break;

@@ -338,6 +338,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(UserDomainsAndLicenseInfo));
             scripter.AddType(typeof(UserDomainsWithIps));
             scripter.AddType(typeof(SetupMode));
+            scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
 
             return scripter;
