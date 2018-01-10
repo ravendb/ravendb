@@ -674,7 +674,7 @@ namespace StressTests.Sparrow
             });
 
             Assert.False(disposer.Disposed);
-            Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+            Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
             Assert.Equal(counter, 1);
             Assert.True(disposer.Disposed);
 
@@ -721,7 +721,7 @@ namespace StressTests.Sparrow
             {
                 Assert.Equal(counter, i);
                 Assert.False(disposer.Disposed);
-                Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+                Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
                 Assert.False(disposer.Disposed);
             }
 
