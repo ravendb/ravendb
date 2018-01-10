@@ -53,6 +53,7 @@ namespace Raven.Server.Commercial
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _licenseLimitsSemaphore = new SemaphoreSlim(1);
         private readonly bool _skipLeasingErrorsLogging;
+        private bool _eulaAcceptedButHasPendingRestart;
 
         public event Action LicenseChanged;
 
@@ -1487,6 +1488,33 @@ namespace Raven.Server.Commercial
                 var json = context.Read(licenseSupportStream, "license support info");
                 return JsonDeserializationServer.LicenseSupportInfo(json);
             }
+        }
+        
+        public bool CheckEulaAccepted()
+        {
+            return _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
+        }
+        
+        public void AcceptEula()
+        {
+            lock (typeof(LicenseManager))
+            {
+                 if (_eulaAcceptedButHasPendingRestart) 
+                    return;
+                
+                var settingsPath = _serverStore.Configuration.ConfigPath;
+                var originalSettings = File.ReadAllText(settingsPath);
+                dynamic jsonObj = JsonConvert.DeserializeObject(originalSettings);
+                
+                // write new setting
+                jsonObj[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
+                
+                var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                SetupManager.WriteSettingsJsonLocally(settingsPath, jsonString);
+                
+                _eulaAcceptedButHasPendingRestart = true;
+            }
+           
         }
     }
 }

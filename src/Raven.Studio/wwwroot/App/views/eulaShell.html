@@ -1,0 +1,32 @@
+<div class="container">
+    <div class="flex-horizontal">
+        <div>
+            <i class="icon-raven text-primary icon-lg"></i>
+        </div>
+        <div class="padding">
+            <h2 class="margin-none"> <strong>RavenDB End-User License Agreement</strong></h2>
+        </div>
+        
+    </div>
+
+    <div id="page-host-root" class="content-container eula-host">
+        <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
+    </div>
+
+</div>
+
+
+<footer class="status-footer">
+    <div class="footer-right">
+        <div class="footer-item">
+            <div title="Studio Version">
+                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
+            </div>
+        </div>
+        <div class="footer-item">
+            <div title="Server Version">
+                <i class="icon-server"></i> <span data-bind="text: $root.constructor.buildInfo.serverBuildVersion() ? $root.constructor.buildInfo.serverBuildVersion().FullVersion : ''"></span>
+            </div>
+        </div>
+    </div>
+</footer>

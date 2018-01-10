@@ -158,14 +158,47 @@ namespace Raven.Server.Web.System
             return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
         }
 
+        [RavenAction("/eula/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetEulaIndexFile()
+        {
+            if (ServerStore.LicenseManager.CheckEulaAccepted())
+            {
+                // redirect to studio - if user didn't configured it yet
+                // then studio endpoint redirect to wizard
+                HttpContext.Response.Headers["Location"] = "/studio/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
+            }
+
+            return GetStudioFileInternal("index.html");
+        }
+
+        [RavenAction("/eula/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task GetEulaFile()
+        {
+            string serverRelativeFileName = new StringSegment(
+                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
+            return GetStudioFileInternal(serverRelativeFileName);
+        }
+        
         [RavenAction("/wizard/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupIndexFile()
         {
+            if (ServerStore.LicenseManager.CheckEulaAccepted() == false)
+            {
+                // redirect to studio - if user didn't configured it yet
+                // then studio endpoint redirect to wizard
+                HttpContext.Response.Headers["Location"] = "/eula/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
+            }
+            
             // if user asks for entry point but we are already configured redirect to studio
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.Initial)
             {
                 HttpContext.Response.Headers["Location"] = "/studio/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
             }
 
             return GetStudioFileInternal("index.html");
@@ -182,11 +215,19 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioIndexFile()
         {
+            if (ServerStore.LicenseManager.CheckEulaAccepted() == false)
+            {
+                HttpContext.Response.Headers["Location"] = "/eula/index.html";
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
+                return Task.CompletedTask;
+            }
+            
             // if user asks for entry point but we are NOT already configured redirect to setup
             if (ServerStore.Configuration.Core.SetupMode == SetupMode.Initial)
             {
                 HttpContext.Response.Headers["Location"] = "/wizard/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
+                return Task.CompletedTask;
             }
 
             return GetStudioFileInternal("index.html");

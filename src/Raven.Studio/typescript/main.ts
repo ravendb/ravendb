@@ -52,6 +52,8 @@ define(["durandal/system", "durandal/app", "durandal/viewLocator", "plugins/dial
             
             if (window.location.pathname.startsWith("/studio")) {
                 app.setRoot("viewmodels/shell");
+            } else if (window.location.pathname.startsWith("/eula")) {
+                app.setRoot("viewmodels/eulaShell");
             } else {
                 app.setRoot("viewmodels/wizard/setupShell")
             }
