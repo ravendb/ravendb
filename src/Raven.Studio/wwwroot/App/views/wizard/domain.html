@@ -1,29 +1,29 @@
 <h2 class="margin-bottom margin-top"><strong class="margin-right">3.</strong>Choose Domain</h2>
 <div>
-    <form class="flex-form" data-bind="with: model.domain, submit: save">
-        <div class="panel padding padding-lg">            
+    <form class="form-horizontal flex-form" role="form" data-bind="with: model.domain, submit: save">
+        <div class="panel padding padding-lg">
             <div class="form-group row" data-bind="validationOptions: { insertMessages: false }, validationElement: domain">                
-                <label class="control-label">Domain<i class="required"></i></label>   
+                <label class="control-label">Domain<i class="required"></i></label>
                 <div class="flex-horizontal col-sm-6">
-                    <div class="flex-grow">                        
-                        <div class="dropdown btn-block">           
+                    <div class="flex-grow">
+                        <div class="dropdown btn-block">
                             <input type="text" class="form-control dropdown-toggle" autocomplete="off"
                                    placeholder="Enter domain" data-toggle="dropdown"
-                                   data-bind="textInput: domain, attr: { id: 'domainInput' }" />                            
-                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>                            
-                            <ul class="dropdown-menu max-height" role="menu"                      
-                                data-bind="autoComplete: '#domainInput', foreach: $root.createDomainNameAutocompleter(domain)">                                
+                                   data-bind="textInput: domain, attr: { id: 'domainInput' }" />
+                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            <ul class="dropdown-menu max-height" role="menu"
+                                data-bind="autoComplete: '#domainInput', foreach: $root.createDomainNameAutocompleter(domain)">
                                 <li role="presentation" data-bind="click: $parent.domain.bind($parent, $data)">
                                     <a role="menuitem" tabindex="-1" href="#">
                                         <span data-bind="text: $data"></span>
                                     </a>
                                 </li>
-                            </ul>                          
+                            </ul>
                         </div>
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: domain">
                             <div class="help-block" data-bind="validationMessage: domain"></div>
-                        </div>                        
-                    </div>                     
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="form-group row" data-bind="visible: availableRootDomains().length > 1, validationOptions: { insertMessages: false }, validationElement: rootDomain">
@@ -46,25 +46,25 @@
                         </div>
                     </div>
                 </div>
-            </div>          
+            </div>
             <div class="form-group row">
-                <label class="control-label"></label>
-                <div class="flex-horizontal col-sm-6">
-                    <span class="text-info bg-info padding padding-sm flex-grow">
-                        Full domain:  
-                        <strong data-bind="text: domain() ? fullDomain : '&lt' + 'Select domain' + '&gt' + '.' + rootDomain() "></strong>
-                    </span>
-                </div>
-            </div>  
-            <div class="form-group row" data-bind="visible: availableEmails().length === 1">
-                <label class="control-label"></label>
-                <div class="flex-horizontal col-sm-6">
-                    <span class="text-info bg-info padding padding-sm flex-grow">
-                        E-mail:  
-                        <strong data-bind="text: availableEmails()[0]"></strong>
-                    </span>
+                <label class="control-label col-sm-3">Full domain</label>
+                <div class="col-sm-9">
+                    <p class="form-control-static">
+                        <span data-bind="visible: !domain()">&lt;Select domain&gt;</span>
+                        <strong data-bind="visible: !domain(), text: '.' + rootDomain()"></strong>
+                        <strong data-bind="visible: domain(), text: fullDomain"></strong>
+                    </p>
                 </div>
             </div>
+            <div class="form-group row" data-bind="visible: availableEmails().length === 1">
+                <label class="control-label col-sm-3">E-mail</label>
+                <div class="col-sm-9">
+                    <p class="form-control-static">
+                        <strong data-bind="text: availableEmails()[0]"></strong>
+                    </p>
+                </div>
+            </div>            
             <div class="form-group row" data-bind="visible: availableEmails().length > 1, validationOptions: { insertMessages: false }, validationElement: userEmail">
                 <label class="control-label">E-mail<i class="required"></i></label>
                 <div class="flex-horizontal col-sm-6">
@@ -78,7 +78,7 @@
                                 <li>
                                     <a href="#" data-bind="text: $data, click: $parent.userEmail.bind($parent, $data)"></a>
                                 </li>
-                            </ul>                            
+                            </ul>
                         </div>
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: userEmail">
                             <div class="help-block" data-bind="validationMessage: userEmail"></div>
@@ -98,4 +98,4 @@
         </div>
     </form>
 </div>
-      
+
