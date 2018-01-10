@@ -62,14 +62,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(900)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.MaxIdleTimeInSec", ConfigurationEntryScope.ServerWideOnly)]
-        [LegacyConfigurationEntry("Raven/Databases/MaxIdleTimeForTenantDatabase")]
         public TimeSetting MaxIdleTime { get; set; }
 
         [Description("The time in seconds to check for an idle database")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Databases.FrequencyToCheckForIdleInSec", ConfigurationEntryScope.ServerWideOnly)]
-        [LegacyConfigurationEntry("Raven/Databases/FrequencyToCheckForIdleDatabases")]
         public TimeSetting FrequencyToCheckForIdle { get; set; }
     }
 }
