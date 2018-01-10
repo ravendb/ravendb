@@ -54,14 +54,16 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
+        public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, string overrideQuery = null)
         {
-            if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
+            var isQueryOverwritten = !string.IsNullOrEmpty(overrideQuery);
+            if ((httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0])) && isQueryOverwritten == false)
                 throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
+            var actualQuery = isQueryOverwritten ? overrideQuery: query[0] ;
             var result = new IndexQueryServerSide
             {
-                Query = Uri.UnescapeDataString(query[0]),
+                Query = Uri.UnescapeDataString(actualQuery),
                 // all defaults which need to have custom value
                 Start = start,
                 PageSize = pageSize
