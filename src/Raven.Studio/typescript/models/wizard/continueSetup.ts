@@ -9,6 +9,7 @@ class continueSetup {
     
     zipFile = ko.observable<string>();
     nodeTag = ko.observable<string>();
+    serverUrl = ko.observable<string>("https://TODO"); //TODO: assign me!
     
     validationGroup: KnockoutValidationGroup;
     
