@@ -650,6 +650,7 @@ namespace Raven.Server.Web.System
 
                 writer.WriteStartObject();
                 writer.WritePropertyName("OperationId");
+                writer.WriteComma();
                 writer.WriteInteger((long)operationId);
                 writer.WriteEndObject();
             }
