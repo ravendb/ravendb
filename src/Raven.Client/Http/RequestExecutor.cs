@@ -1277,14 +1277,17 @@ namespace Raven.Client.Http
 
         private static void ThrowIfClientException(HttpResponseMessage response, Exception e)
         {
-            switch (e)
+            switch (e.InnerException)
             {
                 case NullReferenceException _:
                 case ObjectDisposedException _:
-                    return;
-                default:
+                case InvalidOperationException _:
+                case ArgumentException _:
+                case IndexOutOfRangeException _:
                     ExceptionDispatchInfo.Capture(e.InnerException).Throw();
                     break;
+                default:
+                    return;
             }
         }
     }
