@@ -1,11 +1,13 @@
-<h2 class="margin-bottom margin-top"><strong class="margin-right">1.</strong> Welcome</h2>
+<h2 class="margin-bottom margin-top">
+    <strong class="margin-right">1.</strong> Welcome
+</h2>
 <p>
 The wizard will assist you with setting up your RavenDB server.<br/>
 Let's start with choosing your desired level of security. Select the security option that best addresses your needs.
 </p>
-<div class="row flex-row">
+<div class="row flex-row welcome">
     <div class="col-sm-8 flex-vertical">
-        <div class="panel flex-vertical flex-grow">
+        <div class="panel flex-vertical flex-grow margin-none">
             <div class="padding padding-lg flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-success">SECURE</h2>
                 <div class="row">
@@ -50,9 +52,13 @@ Let's start with choosing your desired level of security. Select the security op
                 </div>
             </div>
         </div>
+        <div class="flex-horizontal bg-info padding">
+            <div class="margin-right">Should you completed setting up first node, please use obtained configuration package to quickly configure this node. </div>
+            <button class="btn btn-primary" data-bind="click: chooseContinue"><i class="icon-arrow-right"></i><span>Complete Existing Cluster Setup</span></button>
+        </div>
     </div>
     <div class="col-sm-4 flex-vertical">
-        <div class="panel flex-vertical flex-grow">
+        <div class="panel flex-vertical flex-grow margin-none">
             <div class="padding padding-lg flex-grow">
                 <h2 class="text-center margin-bottom margin-lg text-warning">UNSECURE</h2>
                 <button data-bind="click: chooseUnsecured" class="btn btn-icon btn-default">
