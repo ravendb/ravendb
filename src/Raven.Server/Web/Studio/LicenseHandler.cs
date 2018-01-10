@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
@@ -9,6 +10,34 @@ namespace Raven.Server.Web.Studio
 {
     public class LicenseHandler : RequestHandler
     {
+        [RavenAction("/license/eula", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task Eula()
+        {
+            HttpContext.Response.ContentType = "text/plain; charset=utf-8";
+            
+            using (var stream = typeof(LicenseManager).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Commercial.RavenDB.license.txt"))
+            {
+                using (var responseStream = ResponseBodyStream())
+                {
+                    await stream.CopyToAsync(responseStream);
+                }
+            }
+        }
+        
+        [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public Task AcceptEula()
+        {
+            if (ServerStore.LicenseManager.CheckEulaAccepted())
+            {
+                NoContent();
+                return Task.CompletedTask;
+            }
+            
+            ServerStore.LicenseManager.AcceptEula();
+            return NoContent();
+        }
+        
+        
         [RavenAction("/license/status", "GET", AuthorizationStatus.ValidUser)]
         public Task Status()
         {

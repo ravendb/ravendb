@@ -1,0 +1,18 @@
+<h3>Please read the following license agreement carefully</h3>
+
+
+<div class="panel padding padding-lg text-center">
+<pre data-bind="text: eula">
+</pre>
+    
+</div>
+
+<div class="navigation padding padding-lg flex-horizontal">
+    <div class="flex-separator"></div>
+    <button class="btn btn-primary btn-lg" data-bind="enable: canAccept() && !spinners.accept(), click: accept, css: { 'btn-spinner' : spinners.accept } ">
+        <i class="icon-check"></i>
+        <span>Accept</span>
+    </button>
+</div>
+      
+

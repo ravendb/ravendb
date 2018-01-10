@@ -19,6 +19,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue("license.json")]
         [ConfigurationEntry("License.Path", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public PathSetting LicensePath { get; set; }
+        
+        [Description("Indicates if End-User License Agreement was accepted")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("License.Eula.Accepted", ConfigurationEntryScope.ServerWideOnly)]
+        public bool EulaAccepted { get; set; }
 
         [Description("EXPERT ONLY. Indicates if license can be activated")]
         [DefaultValue(true)]
