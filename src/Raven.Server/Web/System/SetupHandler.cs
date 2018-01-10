@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -547,6 +548,100 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.ContentType = "application/octet-stream";
 
                 HttpContext.Response.Body.Write(zip, 0, zip.Length);
+            }
+        }
+
+        [RavenAction("/setup/continue/extract", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public Task ExtractInfoFromZip()
+        {
+            AssertOnlyInSetupMode();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-setup-info"))
+            {                
+                var setupInfo = JsonDeserializationServer.ContinueSetupInfo(setupInfoJson);
+                byte[] zipBytes;
+                try
+                {
+                    zipBytes = Convert.FromBase64String(setupInfo.Zip);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to parse the {nameof(setupInfo.Zip)} property, expected a Base64 value", e);
+                }
+
+                try
+                {
+                    using (var ms = new MemoryStream(zipBytes))
+                    using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartArray();
+                        var first = true;
+
+                        foreach (var entry in archive.Entries)
+                        {
+                            if (entry.Name.Equals("settings.json") == false)
+                                continue;
+
+                            var tag = entry.FullName[0].ToString();
+                            using (var sr = new StreamReader(entry.Open()))
+                            {
+                                dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
+
+                                if (first == false)
+                                    writer.WriteComma();
+
+                                writer.WriteStartObject();
+                                writer.WritePropertyName("Tag");
+                                writer.WriteString(tag);
+                                writer.WriteComma();
+                                writer.WritePropertyName("PublicServerUrl");
+                                writer.WriteString(jsonObj["PublicServerUrl"]);
+                                writer.WriteEndObject();
+
+                                first = false;
+                            }
+                        }
+                        writer.WriteEndArray();
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/setup/continue", "POST", AuthorizationStatus.UnauthenticatedClients)]
+        public async Task ContinueClusterSetup()
+        {
+            AssertOnlyInSetupMode();
+            
+            var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+            var operationId = GetLongQueryString("operationId", false);
+
+            if (operationId.HasValue == false)
+                operationId = ServerStore.Operations.GetNextOperationId();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-cluster-setup"))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(setupInfoJson);
+
+                var operationResult = await ServerStore.Operations.AddOperation(
+                    null, "Continue Cluster Setup.",
+                    Documents.Operations.Operations.OperationType.Setup,
+                    progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
+                    operationId.Value, operationCancelToken);
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("OperationId");
+                writer.WriteInteger((long)operationId);
+                writer.WriteEndObject();
             }
         }
 

@@ -166,6 +166,20 @@ namespace Raven.Server.Commercial
             return cert;
         }
 
+        public static async Task<IOperationResult> ContinueClusterSetupTask(Action<IOperationProgress> onProgress, ContinueSetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
+        {
+            var progress = new SetupProgressAndResult
+            {
+                Processed = 0,
+                Total = 4
+            };
+
+            AssertNoClusterDefined(serverStore);
+            
+
+            return progress;
+        }
+
         public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
         {
             var progress = new SetupProgressAndResult
@@ -193,88 +207,84 @@ namespace Raven.Server.Commercial
                 {
                     throw new InvalidOperationException("Validation of supplied settings failed.", e);
                 }
-
-
+                
                 progress.AddInfo($"Getting challenge(s) from Let's Encrypt. Using e-mail: {setupInfo.Email}.");
                 onProgress(progress);
-
-
+                
                 var acmeClient = new LetsEncryptClient(serverStore.Configuration.Core.AcmeUrl);
                 await acmeClient.Init(setupInfo.Email, token);
                 
-                
+                var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+
+                progress.Processed++;
+                progress.AddInfo(challengeResult.Challenges != null
+                    ? "Successfully received challenge(s) information from Let's Encrypt."
+                    : "Using cached Let's Encrypt certificate.");
+
+                progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
+
+                onProgress(progress);
+
+                try
                 {
-                    var challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
-
-                    progress.Processed++;
-                    progress.AddInfo(challengeResult.Challenges != null
-                        ? "Successfully received challenge(s) information from Let's Encrypt."
-                        : "Using cached Let's Encrypt certificate.");
-
-                    progress.AddInfo($"Updating DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}.");
-
-                    onProgress(progress);
-
-                    try
-                    {
-                        await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challenges, setupInfo, token);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
-                    }
-
-                    progress.Processed++;
-                    progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
-                    progress.AddInfo("Completing Let's Encrypt challenge(s)...");
-                    onProgress(progress);
-
-                    await CompleteAuthorizationAndGetCertificate(() =>
-                        {
-                            progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
-                            progress.AddInfo("Acquiring certificate.");
-                            onProgress(progress);
-                        },
-                        setupInfo,
-                        acmeClient,
-                        challengeResult,
-                        token);
-
-                    progress.Processed++;
-                    progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
-                    progress.AddInfo("Starting validation.");
-                    onProgress(progress);
-
-                    try
-                    {
-                        await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.LetsEncrypt, token);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Validation failed.", e);
-                    }
-
-                    progress.Processed++;
-                    progress.AddInfo("Validation is successful.");
-                    progress.AddInfo("Creating new RavenDB configuration settings.");
-
-                    onProgress(progress);
-
-                    try
-                    {
-                        progress.SettingsZipFile =
-                            await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
-                    }
-                    catch (Exception e)
-                    {
-                        throw new InvalidOperationException("Failed to create the configuration settings.", e);
-                    }
-
-                    progress.Processed++;
-                    progress.AddInfo("Configuration settings created.");
-                    progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode finished successfully.");
-                    onProgress(progress);
+                    await UpdateDnsRecordsTask(onProgress, progress, challengeResult.Challenges, setupInfo, token);
                 }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException($"Failed to update DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
+                progress.AddInfo("Completing Let's Encrypt challenge(s)...");
+                onProgress(progress);
+
+                await CompleteAuthorizationAndGetCertificate(() =>
+                    {
+                        progress.AddInfo("Let's Encrypt challenge(s) completed successfully.");
+                        progress.AddInfo("Acquiring certificate.");
+                        onProgress(progress);
+                    },
+                    setupInfo,
+                    acmeClient,
+                    challengeResult,
+                    token);
+
+                progress.Processed++;
+                progress.AddInfo("Successfully acquired certificate from Let's Encrypt.");
+                progress.AddInfo("Starting validation.");
+                onProgress(progress);
+
+                try
+                {
+                    await ValidateServerCanRunWithSuppliedSettings(setupInfo, serverStore, SetupMode.LetsEncrypt, token);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Validation failed.", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Validation is successful.");
+                progress.AddInfo("Creating new RavenDB configuration settings.");
+
+                onProgress(progress);
+
+                try
+                {
+                    progress.SettingsZipFile =
+                        await CompleteClusterConfigurationAndGetSettingsZip(onProgress, progress, SetupMode.LetsEncrypt, setupInfo, serverStore, token);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Failed to create the configuration settings.", e);
+                }
+
+                progress.Processed++;
+                progress.AddInfo("Configuration settings created.");
+                progress.AddInfo("Setting up RavenDB in Let's Encrypt security mode finished successfully.");
+                onProgress(progress);
+                
             }
             catch (Exception e)
             {
