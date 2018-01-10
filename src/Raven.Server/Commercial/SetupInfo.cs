@@ -100,6 +100,21 @@ namespace Raven.Server.Commercial
         }
     }
 
+    public class ContinueSetupInfo
+    {
+        public string NodeTag { get; set; }
+        public string Zip { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(Zip)] = Zip
+            };
+        }
+    }
+
     public class ListDomainsInfo
     {
         public License License { get; set; }
