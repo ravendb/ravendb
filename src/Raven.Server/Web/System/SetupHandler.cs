@@ -557,28 +557,26 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-setup-info"))
+            using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-setup-info"))
             {                
-                var setupInfo = JsonDeserializationServer.ContinueSetupInfo(setupInfoJson);
+                var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
                 byte[] zipBytes;
                 try
                 {
-                    zipBytes = Convert.FromBase64String(setupInfo.Zip);
+                    zipBytes = Convert.FromBase64String(continueSetupInfo.Zip);
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException($"Unable to parse the {nameof(setupInfo.Zip)} property, expected a Base64 value", e);
+                    throw new ArgumentException($"Unable to parse the {nameof(continueSetupInfo.Zip)} property, expected a Base64 value", e);
                 }
 
                 try
                 {
+                    var urlByTag = new Dictionary<string, string>();
+
                     using (var ms = new MemoryStream(zipBytes))
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Read, false))
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        writer.WriteStartArray();
-                        var first = true;
-
                         foreach (var entry in archive.Entries)
                         {
                             if (entry.Name.Equals("settings.json") == false)
@@ -588,23 +586,35 @@ namespace Raven.Server.Web.System
                             using (var sr = new StreamReader(entry.Open()))
                             {
                                 dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
-
-                                if (first == false)
-                                    writer.WriteComma();
-
-                                writer.WriteStartObject();
-                                writer.WritePropertyName("Tag");
-                                writer.WriteString(tag);
-                                writer.WriteComma();
-                                writer.WritePropertyName("PublicServerUrl");
-                                writer.WriteString(jsonObj["PublicServerUrl"]);
-                                writer.WriteEndObject();
-
-                                first = false;
+                                urlByTag[tag] = jsonObj["PublicServerUrl"];
                             }
                         }
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartArray();
+                        var first = true;
+
+                        foreach (var node in urlByTag)
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Tag");
+                            writer.WriteString(node.Key);
+                            writer.WriteComma();
+                            writer.WritePropertyName("PublicServerUrl");
+                            writer.WriteString(node.Value);
+                            writer.WriteEndObject();
+
+                            first = false;
+                        }
+                        
                         writer.WriteEndArray();
                     }
+
                 }
                 catch (Exception e)
                 {
@@ -627,12 +637,12 @@ namespace Raven.Server.Web.System
                 operationId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-cluster-setup"))
+            using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-cluster-setup"))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(setupInfoJson);
+                var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
 
-                var operationResult = await ServerStore.Operations.AddOperation(
+                await ServerStore.Operations.AddOperation(
                     null, "Continue Cluster Setup.",
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
