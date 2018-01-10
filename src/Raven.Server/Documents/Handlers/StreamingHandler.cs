@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Json;
@@ -70,12 +71,30 @@ namespace Raven.Server.Documents.Handlers
             using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
+                var documentId = GetStringQueryString("fromDocument", false);
+                string overrideQuery = null;
+                if (string.IsNullOrEmpty(documentId) == false)
+                {
+                    Document document;
+                    using (context.OpenReadTransaction())
+                    {
+                        document = Database.DocumentsStorage.Get(context, documentId);                    
+                        if (document == null)
+                        {
+                            throw new DocumentDoesNotExistException($"Was request to stream a query taken from {documentId} document, but it does not exist.");
+                        }
+                        if (document.Data.TryGetMember("Query", out var obj))
+                        {
+                            overrideQuery = obj.ToString();
+                        }
+                    }
+                }
+                var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context, overrideQuery);
                 tracker.Query = query.Query;
-                
+                var format = GetStringQueryString("format", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
-                using (var writer = new StreamCsvDocumentQueryResultWriter(HttpContext.Response, ResponseBodyStream(), context, propertiesArray))
+                using (var writer = GetQueryResultWriter(format, HttpContext.Response, context, ResponseBodyStream(), propertiesArray))
                 {
                     try
                     {
@@ -98,11 +117,11 @@ namespace Raven.Server.Documents.Handlers
             using (var token = CreateTimeLimitedQueryToken())
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream(); 
+                var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
                 var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
                 tracker.Query = query.Query;
-                
+
                 var format = GetStringQueryString("format", false);
                 var properties = GetStringValuesQueryString("field", false);
                 var propertiesArray = properties.Count == 0 ? null : properties.ToArray();
@@ -121,13 +140,14 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream, string[] propertiesArray)
+        private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
+            string[] propertiesArray)
         {
             if (string.IsNullOrEmpty(format) == false && format.Equals("csv"))
             {
-                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray);                
+                return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray);
             }
-            
+
             if (propertiesArray != null)
             {
                 throw new NotSupportedException("Using json output format with custom fields is not supported");
