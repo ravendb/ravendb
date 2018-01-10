@@ -3,14 +3,17 @@ import endpoints = require("endpoints");
 
 class continueClusterConfigurationCommand extends commandBase {
 
-    constructor(private dto: Raven.Server.Commercial.ContinueSetupInfo) {
+    constructor(private operationId: number, private dto: Raven.Server.Commercial.ContinueSetupInfo) {
         super();
     }
 
-    execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.global.setup.setupContinue;
+    execute(): JQueryPromise<void> {
+        const args = {
+            operationId: this.operationId
+        }
+        const url = endpoints.global.setup.setupContinue + this.urlEncodeArgs(args);
 
-        return this.post<operationIdDto>(url, JSON.stringify(this.dto))
+        return this.post<operationIdDto>(url, JSON.stringify(this.dto), null, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to configure cluster node", response.responseText, response.statusText));
     }
 }

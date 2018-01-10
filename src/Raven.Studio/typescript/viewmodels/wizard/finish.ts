@@ -47,14 +47,10 @@ class finish extends setupStep {
         });
     }
     
-    private hasValidContinueConfiguration() {
-        return this.isValid(this.model.continueSetup().validationGroup);
-    }
-    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
-        if (mode || this.hasValidContinueConfiguration()) {
+        if (mode) {
             return $.when({ can: true });
         } 
 
@@ -74,7 +70,7 @@ class finish extends setupStep {
             case "Secured":
                 this.currentStep = 4;
                 break;
-            default: 
+            case "Continue":
                 this.currentStep = 3;
                 break;
         }
@@ -92,11 +88,11 @@ class finish extends setupStep {
         this.spinners.finishing(true);
         
         this.configurationTask = $.Deferred<void>();
-        
-        if (this.hasValidContinueConfiguration()) {
-            this.continueClusterConfiguration(this.model.continueSetup().toDto());
-        } else {
-            switch (this.model.mode()) {
+
+        switch (this.model.mode()) {
+            case "Continue":
+                this.continueClusterConfiguration(this.model.continueSetup().toDto());
+                break;
             case "Unsecured":
                 this.saveUnsecuredConfiguration();
                 this.configurationTask.resolve();
@@ -107,7 +103,6 @@ class finish extends setupStep {
             case "Secured":
                 this.saveSecuredConfiguration(endpoints.global.setup.setupSecured, this.model.toSecuredDto());
                 break;
-            }
         }
 
         this.configurationTask
@@ -130,12 +125,14 @@ class finish extends setupStep {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
             });
     }
-    
+
     private continueClusterConfiguration(dto: Raven.Server.Commercial.ContinueSetupInfo) {
-        new continueClusterConfigurationCommand(dto)
-            .execute()
-            .done((operation: operationIdDto) => {
-                this.websocket.watchOperation(operation.OperationId, e => this.onChange(e));
+        this.getNextOperationId()
+            .done((operationId: number) => {
+                this.websocket.watchOperation(operationId, e => this.onChange(e));
+
+                new continueClusterConfigurationCommand(operationId, dto)
+                    .execute();
             });
     }
     

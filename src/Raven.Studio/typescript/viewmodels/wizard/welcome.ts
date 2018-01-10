@@ -51,6 +51,7 @@ class welcome extends setupStep {
     }
     
     chooseContinue() {
+        this.model.mode("Continue");
         router.navigate("#continue");
     }
     

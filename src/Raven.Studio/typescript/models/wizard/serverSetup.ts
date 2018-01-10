@@ -13,7 +13,7 @@ class serverSetup {
 
     userDomains = ko.observable<Raven.Server.Commercial.UserDomainsWithIps>();
     
-    mode = ko.observable<Raven.Server.Commercial.SetupMode>();
+    mode = ko.observable<Raven.Server.Commercial.SetupMode | "Continue">();
     license = ko.observable<licenseInfo>(new licenseInfo());
     domain = ko.observable<domainInfo>(new domainInfo(() => this.license().toDto()));
     unsecureSetup = ko.observable<unsecureSetup>(new unsecureSetup());
@@ -131,29 +131,27 @@ class serverSetup {
     }
 
     getStudioUrl() {
-        if (this.continueSetup().validationGroup.isValid()) {
-            return this.continueSetup().serverUrl();
-        } else {
-            switch (this.mode()) {
-                case "Unsecured":
-                    const portPart = this.unsecureSetup().port() || '8080';
-                    return "http://" + this.unsecureSetup().ips()[0].ip() + ':' + portPart;
-                    
-                case "LetsEncrypt":
-                    return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
-                    
-                case "Secured":
-                    const wildcard = this.certificate().wildcardCertificate();
-                    if (wildcard) {
-                        const domain = this.getDomainForWildcard("a");
-                        return "https://" + domain + this.getPortPart();
-                    } else {
-                        return this.nodes()[0].getServerUrl();
-                    }
-                    
-                default:
-                    return null;
-            }
+        switch (this.mode()) {
+            case "Continue":
+                return this.continueSetup().serverUrl();
+            case "Unsecured":
+                const portPart = this.unsecureSetup().port() || '8080';
+                return "http://" + this.unsecureSetup().ips()[0].ip() + ':' + portPart;
+                
+            case "LetsEncrypt":
+                return "https://a." + this.domain().domain() + ".dbs.local.ravendb.net" + this.getPortPart();
+                
+            case "Secured":
+                const wildcard = this.certificate().wildcardCertificate();
+                if (wildcard) {
+                    const domain = this.getDomainForWildcard("a");
+                    return "https://" + domain + this.getPortPart();
+                } else {
+                    return this.nodes()[0].getServerUrl();
+                }
+                
+            default:
+                return null;
         }
     }
     
