@@ -562,9 +562,8 @@ namespace RachisTests.DatabaseCluster
                 await leader.ServerStore.RemoveFromClusterAsync(nodeTag);
                 await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag);
                 await Servers[1].ServerStore.WaitForState(RachisState.Follower);
-                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
-                dbToplogy = (await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
-                Assert.Equal(groupSize, dbToplogy.Members.Count);
+                Assert.Equal(groupSize,
+                    (WaitForValue(() => leaderStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName)).Topology.Members.Count, groupSize)));
             }
         }
 

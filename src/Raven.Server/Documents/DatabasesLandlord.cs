@@ -534,6 +534,7 @@ namespace Raven.Server.Documents
                 var sp = Stopwatch.StartNew();
                 var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
                 documentDatabase.Initialize();
+                AddToInitLog("Finish database initialization");
                 DeleteDatabaseCachedInfo(documentDatabase, _serverStore);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");

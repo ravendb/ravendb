@@ -131,7 +131,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            _timeoutHappened = null;
+            DisableTimeout();
             _timer.Dispose();
         }
     }

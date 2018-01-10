@@ -37,6 +37,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl;
@@ -273,11 +274,14 @@ namespace Raven.Server.Documents
                     _addToInitLog("Initializing IndexStore completed");
                     _indexStoreTask = null;
                 }
-
-                _addToInitLog("Initializing SubscriptionStorage");
+               
                 SubscriptionStorage.Initialize();
+                _addToInitLog("Initializing SubscriptionStorage completed");
 
-                NotifyFeaturesAboutStateChange(record, index);
+                TaskExecutor.Execute((state) =>
+                {
+                    NotifyFeaturesAboutStateChange(record, index);
+                }, null);
             }
             catch (Exception)
             {
@@ -752,17 +756,16 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
 
-
                 try
                 {
                     InitializeFromDatabaseRecord(record);
                     LastDatabaseRecordIndex = index;
-
                     IndexStore.HandleDatabaseRecordChange(record, index);
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);
                     SubscriptionStorage?.HandleDatabaseValueChange(record);
+
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
                 }

@@ -671,10 +671,12 @@ namespace Raven.Client.Http
                     if (sessionInfo != null)
                         sessionInfo.AsyncCommandRunning = false;
 
-                    ThrowIfClientException(response, e);
 
                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
+                    {
+                        ThrowIfClientException(response, e);
                         ThrowFailedToContactAllNodes(command, request, e, null);
+                    }
 
                     return;
                 }
