@@ -360,7 +360,7 @@ namespace Raven.Server.Smuggler.Documents
                                 "\tfrom doc in doc.Orders" + Environment.NewLine +
                                 "\tlet company = LoadDocument(doc.Company, \"Companies\")" + Environment.NewLine +
                                 "\tselect new {" + Environment.NewLine +
-                                    "\t\tCompanyName: comapny.Name" + Environment.NewLine +
+                                    "\t\tCompanyName: company.Name" + Environment.NewLine +
                                 "\t}" + Environment.NewLine +
                             exceptionMessage + Environment.NewLine;
                 }
