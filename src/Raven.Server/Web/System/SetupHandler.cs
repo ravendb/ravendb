@@ -638,7 +638,6 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-cluster-setup"))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
 
@@ -647,13 +646,9 @@ namespace Raven.Server.Web.System
                     Documents.Operations.Operations.OperationType.Setup,
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, operationCancelToken);
-
-                writer.WriteStartObject();
-                writer.WritePropertyName("OperationId");
-                writer.WriteComma();
-                writer.WriteInteger((long)operationId);
-                writer.WriteEndObject();
             }
+            
+            NoContentStatus();
         }
 
         [RavenAction("/setup/finish", "POST", AuthorizationStatus.UnauthenticatedClients)]
