@@ -3,9 +3,8 @@ import router = require("plugins/router");
 import listHostsForCertificateCommand = require("commands/wizard/listHostsForCertificateCommand");
 
 class certificate extends setupStep {
-
-    certificateFileName = ko.observable<string>();
-    passwordInputVisible = ko.observable<boolean>(false);
+ 
+    passwordInputVisible: KnockoutComputed<boolean>;
     
     spinners = {
         hosts: ko.observable<boolean>(false)
@@ -15,6 +14,18 @@ class certificate extends setupStep {
         super();
         
         this.bindToCurrentInstance( "fileSelected");
+        
+        this.passwordInputVisible = ko.pureComputed(()=> {
+            return this.model.certificate().fileProtected();
+        });        
+        
+        this.model.certificate().certificatePassword.extend({
+            required: {
+                onlyIf: () => {
+                    return this.model.certificate().fileProtected()
+                }
+            }
+        });
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -59,7 +70,7 @@ class certificate extends setupStep {
     }
     
     private tryToSetHostname() {
-        // if user loaded certificate with single CN (but not wild cart)
+        // if user loaded certificate with single CN (but not wildcard)
         // then populate node info with this information
         
         const certificate = this.model.certificate();
@@ -82,7 +93,7 @@ class certificate extends setupStep {
 
         const fileName = fileInput.value;
         const isFileSelected = fileName ? !!fileName.trim() : false;
-        this.certificateFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
+        this.model.certificate().certificateFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
 
         const file = fileInput.files[0];
         const reader = new FileReader();
@@ -109,12 +120,12 @@ class certificate extends setupStep {
                 cert.certificateCNs(_.uniq(hosts));
                 
                 if (!password) {
-                    this.passwordInputVisible(false);
+                    this.model.certificate().fileProtected(false);
                 }
             })
             .fail((response: JQueryXHR) => {
                 if (response.status === 400) {
-                    this.passwordInputVisible(true);
+                    this.model.certificate().fileProtected(true);
                 }
             })
             .always(() => this.spinners.hosts(false));

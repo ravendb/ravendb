@@ -24,6 +24,7 @@ class nodes extends setupStep {
     canCustomizeIp: KnockoutComputed<boolean>;
    
     maxNodesAddedMsg: KnockoutComputed<string>;
+    showNodeTagInUrl: KnockoutComputed<boolean>;
     
     constructor() {
         super();
@@ -67,6 +68,8 @@ class nodes extends setupStep {
             
             return null;
         });
+        
+        this.showNodeTagInUrl = ko.pureComputed(() => this.model.mode() !== "Secured" || this.model.certificate().wildcardCertificate());
     }
 
     canActivate(): JQueryPromise<canActivateResultDto> {
@@ -208,12 +211,12 @@ class nodes extends setupStep {
         popoverUtils.longWithHover($("#dns-name-info"),
             {
                 content:
-                "Select the domain name that will be used to reach the server on this node.<br />" +
+                "Domain name that will be used to reach the server on this node.<br />" +
                 "Note: It <strong>must</strong> be associated with the chosen IP Address below.",
                 placement: "top"
             });
 
-        const ipAddressInfo =  "Enter IP Address or Hostname that will be associated with the DNS Name.<br/>" +
+        const ipAddressInfo =  "IP Address or Hostname that will be associated with the DNS Name.<br/>" +
             "For example:<br/>" +
             "<ul>" +
             "  <li>10.0.0.84</li>" +

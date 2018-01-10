@@ -1,6 +1,9 @@
 /// <reference path="../../../typings/tsd.d.ts"/>
 
 class certificateInfo {
+    certificateFileName = ko.observable<string>();
+    fileProtected = ko.observable<boolean>(false);
+    
     certificate = ko.observable<string>();
     certificatePassword = ko.observable<string>();
     certificateCNs = ko.observableArray<string>([]);
@@ -15,6 +18,12 @@ class certificateInfo {
         this.wildcardCertificate = ko.pureComputed(() => {
             const cns = this.certificateCNs();
             return _.some(cns, x => x.startsWith("*"));
+            
+            // Curently, for the Setup Wizard flow, the server supports only the following 2 cases:
+            // 1. pfx file with Single Wildcard value (*.someDomain)
+            // 2. pfx file with Single -or- Multiple values of Non-Wildcard values (localhost, localhot2...)
+            // For all other cases, the server should throw an exception (Also, the two types should not be mixed)
+            
         });
     }
 
