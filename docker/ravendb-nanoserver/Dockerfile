@@ -12,7 +12,7 @@ RUN powershell -c 'c:\install-raven.ps1'
 
 COPY settings.json c:/ravendb/Server
 
-VOLUME c:/ravendb/Server/RavenData c:/ravendb/cert c:/ravendb/secrets c:/ravendb/config
+VOLUME c:/ravendb/Server/RavenData c:/ravendb/config
 
 WORKDIR C:/ravendb/Server
 
