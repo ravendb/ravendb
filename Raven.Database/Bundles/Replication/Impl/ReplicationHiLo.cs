@@ -6,11 +6,8 @@
 using System;
 using System.Threading;
 using Raven.Abstractions;
-using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
-using Raven.Client.Document;
 using Raven.Database;
-using Raven.Json.Linq;
 
 namespace Raven.Bundles.Replication.Impl
 {
@@ -32,15 +29,22 @@ namespace Raven.Bundles.Replication.Impl
         {
             Database = database;
 
-            // backward compatibility, read the hilo max then delete it, storing the value in the identity val
-
             var document = database.Documents.Get(RavenReplicationVersionHiLo, null);
-            if (document == null)
+            //we do not have the hilo document (old format), 
+            if (document == null) 
             {
-                currentMax = new Holder(0);
-                current = 0;
+                Database.TransactionalStorage.Batch(accessor =>
+                {
+                    current = accessor.General.GetNextIdentityValue(RavenReplicationHilo, 0);
+                });
+
+                var nextMax = current + 1;
+                currentMax = new Holder(nextMax);
+
                 return;
             }
+
+            // backward compatibility, read the hilo max then delete it, storing the value in the identity val
             var max = document.DataAsJson.Value<long>("Max");
             currentMax = new Holder(max);
             current = max;
@@ -95,7 +99,7 @@ namespace Raven.Bundles.Replication.Impl
                 {
                     using (Database.TransactionalStorage.DisableBatchNesting())
                     {
-                        var minNextMax = currentMax.Value;
+                        var minNextMax = currentMax?.Value ?? 0;
                         long max = 0;
                         using (Database.IdentityLock.Lock())
                         {
