@@ -83,9 +83,9 @@ namespace Raven.Server.Documents.Handlers
                         {
                             throw new DocumentDoesNotExistException($"Was request to stream a query taken from {documentId} document, but it does not exist.");
                         }
-                        if (document.Data.TryGetMember("Query", out var obj))
+                        if (document.Data.TryGet("Query", out overrideQuery) == false)
                         {
-                            overrideQuery = obj.ToString();
+                            throw new MissingFieldException($"Expected {documentId} to have a property named 'Query' of type 'String' but couldn't locate such property.");
                         }
                     }
                 }
