@@ -103,7 +103,7 @@ namespace Raven.Server.Smuggler.Documents
             return GetType(type);
         }
 
-        public DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus)
+        public DatabaseRecord GetDatabaseRecord()
         {
             if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);

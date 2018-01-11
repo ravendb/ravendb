@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
-using Raven.Server.Routing;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
@@ -13,7 +12,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     {
         IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion);
         DatabaseItemType GetNextType();
-        DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus);
+        DatabaseRecord GetDatabaseRecord();
         IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions);

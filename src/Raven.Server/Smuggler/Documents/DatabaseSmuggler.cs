@@ -405,13 +405,13 @@ namespace Raven.Server.Smuggler.Documents
         {
             using (var actions = _destination.DatabaseRecord())
             {
-                var databaseRecord = _source.GetDatabaseRecord(_options.AuthorizationStatus);
+                var databaseRecord = _source.GetDatabaseRecord();
 
                 _token.ThrowIfCancellationRequested();
                 
                 try
                 {
-                    actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord);
+                    actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus);
                 }
                 catch (Exception e)
                 {

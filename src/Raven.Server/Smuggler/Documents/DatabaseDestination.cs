@@ -13,6 +13,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -338,7 +339,7 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
             }
 
-            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress)
+            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus)
             {
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
                 var tasks = new List<Task>();

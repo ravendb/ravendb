@@ -5,6 +5,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -50,6 +51,6 @@ namespace Raven.Server.Smuggler.Documents.Data
 
     public interface IDatabaseRecordActions : IDisposable
     {
-        void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress);
+        void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus);
     }
 }
