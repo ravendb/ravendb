@@ -22,6 +22,7 @@ class nodes extends setupStep {
     showAgreement: KnockoutComputed<boolean>;
     showFullDomain: KnockoutComputed<boolean>;
     canCustomizeIp: KnockoutComputed<boolean>;
+    canCustomizeIpAndTcpPort: KnockoutComputed<boolean>;
    
     maxNodesAddedMsg: KnockoutComputed<string>;
     showNodeTagInUrl: KnockoutComputed<boolean>;
@@ -53,6 +54,7 @@ class nodes extends setupStep {
         this.showFullDomain = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.showAgreement = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.canCustomizeIp = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
+        this.canCustomizeIpAndTcpPort = ko.pureComputed(() => this.model.mode() === "Secured");
        
         this.maxNodesAddedMsg = ko.pureComputed(() => {   
             const numberOfNodesAdded = this.model.nodes().length;
