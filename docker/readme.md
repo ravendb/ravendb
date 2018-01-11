@@ -28,11 +28,13 @@ Windows image:
 $ docker run -p 8080:8080 ravendb/ravendb:windows-nanoserver-latest
 ```
 
+Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub.docker.com/r/ravendb/ravendb-nightly/)
+
 You can run RavenDB docker container manually invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
-Run Ubuntu-based image: [https://github.com/ravendb/ravendb/blob/v4.0/docker/run-ubuntu1604.ps1](run-ubuntu1604.ps1)
+Run Ubuntu-based image: [run-ubuntu1604.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-ubuntu1604.ps1)
 
-Run Windows-based image: [https://github.com/ravendb/ravendb/blob/v4.0/docker/run-nanoserver.ps1](run-nanoserver.ps1)
+Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-nanoserver.ps1)
 
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
@@ -59,18 +61,23 @@ Each of images above makes use of 2 volumes:
 - settings volume - holding RavenDB configuration,
 
     Ubuntu container: `/opt/RavenDB/config`
+
     Windows container: `C:\ravendb\config`
 
 - databases volume - used for persistence of RavenDB data,
 
     Ubuntu container: `/opt/RavenDB/Server/RavenData`
+
     Windows container: `c:/ravendb/Server/RavenData`
 
 ### Configuration
 
 To configure RavenDB one can use (in order of precedence):
+
     - environment variables, 
+
     - `settings.json` configuration file, 
+
     - CLI arguments
 
 #### Environment variables
