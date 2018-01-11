@@ -828,9 +828,10 @@ namespace Raven.Server.Commercial
                 Syscall.FsyncDirectoryFor(settingsPath);
         }
 
-        private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string tcpUrl, out string domain)
+        private static string GetServerUrlFromCertificate(X509Certificate2 cert, SetupInfo setupInfo, string nodeTag, int port, int tcpPort, out string publicTcpUrl, out string domain)
         {
-            tcpUrl = null;
+            publicTcpUrl = null;
+            var node = setupInfo.NodeSetupInfos[nodeTag];
 
             var cn = cert.GetNameInfo(X509NameType.DnsName, false);
             if (cn[0] == '*')
@@ -840,16 +841,17 @@ namespace Raven.Server.Commercial
                     throw new FormatException($"{cn} is not a valid wildcard name for a certificate.");
 
                 domain = parts[1];
-                
-                tcpUrl = $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
+
+                publicTcpUrl = node.ExternalTcpPort != 0 
+                    ? $"tcp://{nodeTag.ToLower()}.{domain}:{node.ExternalTcpPort}" 
+                    : $"tcp://{nodeTag.ToLower()}.{domain}:{tcpPort}";
 
                 if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
-                    return $"https://{nodeTag.ToLower()}.{domain}:{setupInfo.NodeSetupInfos[nodeTag].ExternalPort}";
+                    return $"https://{nodeTag.ToLower()}.{domain}:{node.ExternalPort}";
 
-                if (port == 443)
-                    return $"https://{nodeTag.ToLower()}.{domain}";
-
-                return $"https://{nodeTag.ToLower()}.{domain}:{port}";
+                return port == 443 
+                    ? $"https://{nodeTag.ToLower()}.{domain}" 
+                    : $"https://{nodeTag.ToLower()}.{domain}:{port}";
             }
 
             domain = cn; //default for one node case
@@ -865,18 +867,19 @@ namespace Raven.Server.Commercial
 
             var url = $"https://{domain}";
 
-            if (setupInfo.NodeSetupInfos[nodeTag].ExternalPort != 0)
-                url += ":" + setupInfo.NodeSetupInfos[nodeTag].ExternalPort;
-
-            if (port != 443)
+            if (node.ExternalPort != 0)
+                url += ":" + node.ExternalPort;
+            else if (port != 443)
                 url += ":" + port;
 
-            tcpUrl = $"tcp://{domain}:{tcpPort}";
+            publicTcpUrl = node.ExternalTcpPort != 0 
+                ? $"tcp://{domain}:{node.ExternalTcpPort}" 
+                : $"tcp://{domain}:{tcpPort}";
 
-            setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl = url;
-            setupInfo.NodeSetupInfos[nodeTag].PublicTcpServerUrl = tcpUrl;
+            node.PublicServerUrl = url;
+            node.PublicTcpServerUrl = publicTcpUrl;
 
-            return setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl;
+            return url;
         }
 
         public static IEnumerable<string> GetCertificateAlternativeNames(X509Certificate2 cert)
