@@ -5,11 +5,13 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -21,6 +23,50 @@ namespace RachisTests.DatabaseCluster
 {
     public class ClusterDatabaseMaintenance : ReplicationTestBase
     {
+
+        [NightlyBuildFact]
+        public async Task DontPurgeTombstonesWhenNodeIsDown()
+        {
+            var clusterSize = 3;
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, leaderIndex: 0);
+            using (var store = GetDocumentStore( new Options
+            {
+                CreateDatabase = true,
+                ReplicationFactor = clusterSize,
+                Server = leader
+            }))
+            {
+                var index = new IndexMerging.UsersByName();
+                await index.ExecuteAsync(store);
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(30), replicas: 2);
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(30), replicas: 1);
+                    session.Delete("users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                WaitForIndexing(store);
+
+                var database = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                await database.DocumentTombstoneCleaner.ExecuteCleanup();
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    Assert.Equal(2, database.DocumentsStorage.GetLastTombstoneEtag(ctx, "Users"));
+                }
+            }
+        }
+
         [NightlyBuildFact]
         public async Task MoveToRehabOnServerDown()
         {
@@ -565,7 +611,7 @@ namespace RachisTests.DatabaseCluster
                 await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.GetNodeHttpServerUrl(), nodeTag);
                 await Servers[1].ServerStore.WaitForState(RachisState.Follower);
                 Assert.Equal(groupSize,
-                    (WaitForValue(() => leaderStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName)).Topology.Members.Count, groupSize)));
+                    WaitForValue(() => leaderStore.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName)).Topology.Members.Count, groupSize));
             }
         }
 
