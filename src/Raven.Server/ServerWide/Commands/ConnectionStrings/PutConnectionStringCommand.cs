@@ -25,14 +25,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutRavenConnectionString : PutConnectionStringCommand<RavenConnectionString>
+    public class PutRavenConnectionStringCommand : PutConnectionStringCommand<RavenConnectionString>
     {
-        protected PutRavenConnectionString()
+        protected PutRavenConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public PutRavenConnectionString(RavenConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
+        public PutRavenConnectionStringCommand(RavenConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
         {
             
         }
@@ -44,14 +44,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class PutSqlConnectionString : PutConnectionStringCommand<SqlConnectionString>
+    public class PutSqlConnectionStringCommand : PutConnectionStringCommand<SqlConnectionString>
     {
-        protected PutSqlConnectionString()
+        protected PutSqlConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public PutSqlConnectionString(SqlConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
+        public PutSqlConnectionStringCommand(SqlConnectionString connectionString, string databaseName) : base(connectionString, databaseName)
         {
 
         }

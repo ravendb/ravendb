@@ -992,7 +992,7 @@ namespace Raven.Server.ServerWide
             switch (connectionStringType)
             {
                 case ConnectionStringType.Raven:
-                    command = new PutRavenConnectionString(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
+                    command = new PutRavenConnectionStringCommand(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName);
                     break;
                 case ConnectionStringType.Sql:
                     var connection = JsonDeserializationCluster.SqlConnectionString(connectionString);
@@ -1008,7 +1008,7 @@ namespace Raven.Server.ServerWide
                         throw new Exception("Invalid connection string. " + e.Message);
                     }
 
-                    command = new PutSqlConnectionString(connection, databaseName);
+                    command = new PutSqlConnectionStringCommand(connection, databaseName);
 
                     break;
                 default:
