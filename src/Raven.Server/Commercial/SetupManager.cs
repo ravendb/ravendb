@@ -243,7 +243,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    CompleteConfidurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, cert, clientCertBytes, certBytes, certPassword, serverStore);
+                    CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, cert, certBytes, certPassword, clientCertBytes, serverStore);
                 }
                 catch (Exception e)
                 {
@@ -1085,15 +1085,15 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static void CompleteConfidurationForNewNode(
+        private static void CompleteConfigurationForNewNode(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
             ContinueSetupInfo continueSetupInfo,
             dynamic settingsJsonObject,
             X509Certificate2 cert,
-            byte[] clientCertBytes,
             byte[] certBytes,
             string certPassword,
+            byte[] clientCertBytes,
             ServerStore serverStore)
         {
             try
@@ -1153,7 +1153,7 @@ namespace Raven.Server.Commercial
             try
             {
                 string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
-                progress.Readme = CreateReadmeTextForNewNode(certPath, publicServerUrl, continueSetupInfo); //todo change both readme files and decide if to save this one to disk
+                progress.Readme = CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert); 
             }
             catch (Exception e)
             {
@@ -1363,7 +1363,8 @@ namespace Raven.Server.Commercial
                         progress.AddInfo("Adding readme file to zip archive.");
                         onProgress(progress);
                         var currentHostName = setupMode == SetupMode.LetsEncrypt ? BuildHostName("A", setupInfo.Domain, setupInfo.RootDomain) : new Uri(publicServerUrl).Host;
-                        string readmeString = CreateReadmeText(setupInfo, publicServerUrl, clientCertificateName, currentHostName);
+                        string readmeString = CreateReadmeText("A", publicServerUrl, setupInfo.NodeSetupInfos.Count > 1, setupInfo.RegisterClientCert);
+
                         progress.Readme = readmeString;
                         try
                         {
@@ -1425,7 +1426,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static string CreateReadmeText(SetupInfo setupInfo, string publicServerUrl, string clientCertificateName, string currentHostName)
+        private static string CreateReadmeText(string nodeTag, string publicServerUrl, bool isCluster, bool registerClientCert)
         {
             var str =
                 string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
@@ -1435,25 +1436,26 @@ namespace Raven.Server.Commercial
                    $"The new server is available at: {publicServerUrl}"
                    + Environment.NewLine;
 
-            if (setupInfo.ModifyLocalServer)
-            {
-                str += ($"The current node ('A' - {currentHostName}) has already been configured and requires no further action on your part." +
-                        Environment.NewLine);
-            }
+            
+            str += $"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
+                    Environment.NewLine;
+            
             str += Environment.NewLine;
-            if (setupInfo.RegisterClientCert && PlatformDetails.RunningOnPosix == false)
+            if (registerClientCert && PlatformDetails.RunningOnPosix == false)
             {
                 str +=
-                    ($"An administrator client certificate ({clientCertificateName}) has been installed on this machine ({Environment.MachineName})." +
-                     Environment.NewLine + 
-                     "You can now restart the server and access it in a secure fashion." + 
-                     Environment.NewLine);
+                     $"An administrator client certificate has been installed on this machine ({Environment.MachineName})." +
+                     Environment.NewLine +
+                     $"You can now restart the server and access the studio at {publicServerUrl}. Chrome will let you choose to use the certificate." + 
+                     Environment.NewLine;
             }
             else
             {
                 str +=
-                    ($"An administrator client certificate ({clientCertificateName}) has been generated which can be used to access the server." + 
-                     Environment.NewLine);
+                    $"An administrator client certificate has been generated and is located in the zip file." + 
+                     Environment.NewLine +
+                    $"However, the certificate was not installed on this machine ({Environment.MachineName}) but it can be done manually." +
+                    Environment.NewLine;
             }
 
             str +=
@@ -1462,91 +1464,43 @@ namespace Raven.Server.Commercial
                 "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
                 Environment.NewLine;
 
+            if (PlatformDetails.RunningOnPosix)
+                str += 
+                    "In Linux, importing the client certificate to the browser might fail for 'Unknown Reasons'." +
+                    Environment.NewLine +
+                    "If you encounter this bug, use the RavenCli command 'generateClientCert' to create a new certificate with a password." +
+                    Environment.NewLine +
+                    "For more information on this workaround, read the security documentation in 'ravendb.net'." +
+                    Environment.NewLine;
+
             str +=
                 Environment.NewLine +
-                "It is recommended to generate additional certificates with reduced access rights for applications and users to use. " + 
+                "It is recommended to generate additional certificates with reduced access rights for applications and users to use." + 
                 Environment.NewLine + 
-                "This can be done using RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
+                "This can be done using the RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
                 Environment.NewLine;
 
-            if (setupInfo.NodeSetupInfos.Count > 1)
+            if (isCluster)
             {
                 str +=
                     Environment.NewLine +
-                    "As you are setting up a cluster, you will find the configuration for each of the nodes available in the folders in this zip file." +
+                    "You have chosen to setup a cluster. The cluster topology and node addresses have already been configured." +
                     Environment.NewLine +
-                    "All you need to do is extract the files from each folder to the base directory of the RavenDB node in question and start it." +
+                    "The next step is to bring up the other nodes (with a fresh downloaded RavenDB) and complete the setup wizard there." +
                     Environment.NewLine +
-                    "The new node will be added automatically to the existing cluster." +
+                    "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'. This will validate and join the new node to the existing cluster." +
                     Environment.NewLine +
+                    "Please do not try to configure a cluster more than once (on each node seperately) - it is NOT supported." +
                     Environment.NewLine +
-                    "Make sure that the various nodes can talk to each other using the URLs you have defined, and that there is no firewall blocking communication between them."
-                    + Environment.NewLine;
+                    "Make sure that the various nodes can talk to each other using the URLs you have defined, and that there is no firewall blocking communication between them." + 
+                    Environment.NewLine +
+                    "When you finish the wizard for a new node and restart it, the cluster will detect it... there is no need to manually add it again." +
+                    Environment.NewLine +
+                    "Access the leader node through the studio and go to the 'Manage Server' > 'Cluster' page to see the cluster topology graph. There, watch the new nodes become green.";
             }
             return str;
         }
-
-        private static string CreateReadmeTextForNewNode(string publicServerUrl, string currentHostName, ContinueSetupInfo continueSetupInfo)
-        {
-            // todo
-            var str =
-                string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
-                "Your RavenDB cluster settings, certificate and configuration are contained in this zip file." + Environment.NewLine;
-
-            str += Environment.NewLine +
-                   $"The new server is available at: {publicServerUrl}"
-                   + Environment.NewLine;
-
-            
-            str += ($"The current node ('{continueSetupInfo.NodeTag}' - {currentHostName}) has already been configured and requires no further action on your part." +
-                    Environment.NewLine);
-            
-            str += Environment.NewLine;
-            if (continueSetupInfo.RegisterClientCert && PlatformDetails.RunningOnPosix == false)
-            {
-                str +=
-                    ($"The administrator client certificate from the zip file has been installed on this machine ({Environment.MachineName})." +
-                     Environment.NewLine +
-                     "You can now restart the server and access it in a secure fashion." +
-                     Environment.NewLine);
-            }
-            else
-            {
-                str +=
-                    ($"An administrator client certificate.......has been generated which can be used to access the server." +
-                     Environment.NewLine);
-            }
-
-            str +=
-                "If you are using Firefox (or Chrome under Linux), the certificate must be imported directly to the browser." +
-                Environment.NewLine +
-                "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
-                Environment.NewLine;
-
-            str +=
-                Environment.NewLine +
-                "It is recommended to generate additional certificates with reduced access rights for applications and users to use. " +
-                Environment.NewLine +
-                "This can be done using RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
-                Environment.NewLine;
-
-            //if (setupInfo.NodeSetupInfos.Count > 1)
-            {
-                str +=
-                    Environment.NewLine +
-                    "As you are setting up a cluster, you will find the configuration for each of the nodes available in the folders in this zip file." +
-                    Environment.NewLine +
-                    "All you need to do is extract the files from each folder to the base directory of the RavenDB node in question and start it." +
-                    Environment.NewLine +
-                    "The new node will be added automatically to the existing cluster." +
-                    Environment.NewLine +
-                    Environment.NewLine +
-                    "Make sure that the various nodes can talk to each other using the URLs you have defined, and that there is no firewall blocking communication between them."
-                    + Environment.NewLine;
-            }
-            return str;
-        }
-
+        
         private class UniqueResponseResponder : IStartup
         {
             private readonly string _response;
