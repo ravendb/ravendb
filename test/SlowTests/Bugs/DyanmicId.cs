@@ -30,7 +30,7 @@ namespace SlowTests.Bugs
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.FindIdentityPropertyNameFromEntityName = (typeName) => "ID";
+                    s.Conventions.FindIdentityPropertyNameFromCollectionName = (typeName) => "ID";
                     s.Conventions.FindIdentityProperty = prop => prop.Name == "ID";
                 }
             }))

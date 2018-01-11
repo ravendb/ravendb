@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Conventions
 
             FindIdentityProperty = q => q.Name == "Id";
             IdentityPartsSeparator = "/";
-            FindIdentityPropertyNameFromEntityName = entityName => "Id";
+            FindIdentityPropertyNameFromCollectionName = collectionName => "Id";
 
             FindClrType = (id, doc) =>
             {
@@ -150,7 +150,7 @@ namespace Raven.Client.Documents.Conventions
         private bool _prettifyGeneratedLinqExpressions;
         private Func<string, string> _transformTypeCollectionNameToDocumentIdPrefix;
         private Func<string, object, Task<string>> _asyncDocumentIdGenerator;
-        private Func<string, string> _findIdentityPropertyNameFromEntityName;
+        private Func<string, string> _findIdentityPropertyNameFromCollectionName;
         private Func<Type, string, string, string, string> _findPropertyNameForDynamicIndex;
         private Func<Type, string, string, string, string> _findPropertyNameForIndex;
         private Func<dynamic, string> _findCollectionNameForDynamic;
@@ -364,15 +364,15 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Get or sets the function to get the identity property name from the entity name
+        ///     Get or sets the function to get the identity property name from the collection name
         /// </summary>
-        public Func<string, string> FindIdentityPropertyNameFromEntityName
+        public Func<string, string> FindIdentityPropertyNameFromCollectionName
         {
-            get => _findIdentityPropertyNameFromEntityName;
+            get => _findIdentityPropertyNameFromCollectionName;
             set
             {
                 AssertNotFrozen();
-                _findIdentityPropertyNameFromEntityName = value;
+                _findIdentityPropertyNameFromCollectionName = value;
             }
         }
 
