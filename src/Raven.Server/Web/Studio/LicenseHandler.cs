@@ -27,7 +27,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.UnauthenticatedClients)]
         public Task AcceptEula()
         {
-            if (ServerStore.LicenseManager.CheckEulaAccepted())
+            if (ServerStore.LicenseManager.IsEulaAccepted)
             {
                 NoContent();
                 return Task.CompletedTask;

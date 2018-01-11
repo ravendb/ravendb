@@ -1,18 +1,15 @@
-<h3>Please read the following license agreement carefully</h3>
-
+<h3 class="text-uppercase">Following license agreement needs to be accepted prior to using this software</h3>
 
 <div class="panel padding padding-lg text-center">
-<pre data-bind="text: eula">
-</pre>
-    
+    <pre data-bind="text: eula">
+    </pre>
 </div>
 
-<div class="navigation padding padding-lg flex-horizontal">
+<div class="navigation margin-top flex-horizontal">
+    <div class="text-warning text-uppercase">Usage of this software is forbidden without accepting the license agreement</div>
     <div class="flex-separator"></div>
     <button class="btn btn-primary btn-lg" data-bind="enable: canAccept() && !spinners.accept(), click: accept, css: { 'btn-spinner' : spinners.accept } ">
         <i class="icon-check"></i>
         <span>Accept</span>
     </button>
 </div>
-      
-
