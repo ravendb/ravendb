@@ -7,9 +7,10 @@ services:
       - 8081:8080
       - 38881:38888
     environment:
-      - UNSECURED_ACCESS_ALLOWED=PublicNetwork
-      - PUBLIC_SERVER_URL=http://raven-node1:8080
-      - PUBLIC_TCP_SERVER_URL=tcp://raven-node1:38888
+      - RAVEN_Setup_Mode=None
+      - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
+      - RAVEN_PublicServerUrl=http://raven1:8080
+      - RAVEN_PublicServerUrl_Tcp=tcp://raven1:38888
     env_file: ./license.env
       
   raven2:
@@ -19,9 +20,10 @@ services:
       - 8082:8080
       - 38882:38888
     environment:
-      - UNSECURED_ACCESS_ALLOWED=PublicNetwork
-      - PUBLIC_SERVER_URL=http://raven-node2:8080
-      - PUBLIC_TCP_SERVER_URL=tcp://raven-node2:38888
+      - RAVEN_Setup_Mode=None
+      - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
+      - RAVEN_PublicServerUrl=http://raven2:8080
+      - RAVEN_PublicServerUrl_Tcp=tcp://raven2:38888
     env_file: ./license.env
    
   raven3:
@@ -31,9 +33,10 @@ services:
       - 8083:8080
       - 38883:38888 
     environment:
-      - UNSECURED_ACCESS_ALLOWED=PublicNetwork
-      - PUBLIC_SERVER_URL=http://raven-node3:8080
-      - PUBLIC_TCP_SERVER_URL=tcp://raven-node3:38888
+      - RAVEN_Setup_Mode=None
+      - RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork
+      - RAVEN_PublicServerUrl=http://raven3:8080
+      - RAVEN_PublicServerUrl_Tcp=tcp://raven3:38888
     env_file: ./license.env
     
 

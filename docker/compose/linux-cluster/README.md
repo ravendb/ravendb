@@ -1,4 +1,4 @@
-# Simple docker compose setup for 3 node cluster
+# Simple docker compose setup for *unsecured* 3 node cluster
 
 Note: Please remember to put *license.env* file in this directory. It should contain a line setting `RAVEN_License` environment variable containing license information e.g.
 ```

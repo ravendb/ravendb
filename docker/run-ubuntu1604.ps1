@@ -8,13 +8,13 @@ param(
     $LogsMode = "",
     $CertificatePath = "",
     $CertificatePassword = "",
-    $CertificatePasswordFile = "",
     $Hostname = "",
-    [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
     [switch]$DontScanVmSubnet,
+    [switch]$Unsecured = $False,
     [switch]$UseNightly = $False,
+    [switch]$NoSetup = $False,
     [string]$Memory)
 
 $ErrorActionPreference = "Stop";
@@ -90,6 +90,7 @@ function DetermineServerIp ($serverId, $dockerSubnetAddress, $shouldScan) {
 }
 
 $dockerArgs = @('run')
+$ravenArgs = @('--print-id', '--log-to-console')
 
 # run in detached mode
 $dockerArgs += '-d'
@@ -98,7 +99,7 @@ if ($RemoveOnExit) {
     $dockerArgs += '--rm'
 }
 
-if ($AuthenticationDisabled) {
+if ($Unsecured) {
     $dockerArgs += '-e'
     $dockerArgs += "RAVEN_Security_UnsecuredAccessAllowed=PublicNetwork"
 }
@@ -108,8 +109,6 @@ if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     $dockerArgs += "-v"
     $dockerArgs += "`"$($DataDir):/opt/RavenDB/Server/RavenData`""
 }
-
-$ravenArgs = @()
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     if ($(Test-Path $ConfigPath) -eq $False) {
@@ -147,6 +146,10 @@ if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
 if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
     $dockerArgs += "-e"
     $dockerArgs += "RAVEN_Logs_Mode=$LogsMode"
+}
+
+if ([string]::IsNullOrEmpty($NoSetup) -eq $False) {
+    $ravenArgs += "--Setup.Mode=None"
 }
 
 $serverUrlScheme = 'http'
