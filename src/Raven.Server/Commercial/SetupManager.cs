@@ -1040,7 +1040,7 @@ namespace Raven.Server.Commercial
                             if (node.Value.Addresses.Count != 0)
                             {
                                 jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.Port)));
-                                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToUrl(ip, node.Value.TcpPort)));
+                                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
                             }
 
                             var httpUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
@@ -1128,6 +1128,14 @@ namespace Raven.Server.Commercial
         {
             var url = "https://" + address;
             if (port != 443)
+                url += ":" + port;
+            return url;
+        }
+
+        private static string IpAddressToTcpUrl(string address, int port)
+        {
+            var url = "tcp://" + address;
+            if (port != 38888)
                 url += ":" + port;
             return url;
         }
