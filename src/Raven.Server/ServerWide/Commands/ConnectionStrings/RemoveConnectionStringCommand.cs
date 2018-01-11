@@ -24,14 +24,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class RemoveRavenConnectionString : RemoveConnectionStringCommand<RavenConnectionString>
+    public class RemoveRavenConnectionStringCommand : RemoveConnectionStringCommand<RavenConnectionString>
     {
-        protected RemoveRavenConnectionString()
+        protected RemoveRavenConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public RemoveRavenConnectionString(string connectionStringName, string databaseName) : base(connectionStringName, databaseName)
+        public RemoveRavenConnectionStringCommand(string connectionStringName, string databaseName) : base(connectionStringName, databaseName)
         {
             
         }
@@ -43,14 +43,14 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
         }
     }
 
-    public class RemoveSqlConnectionString : RemoveConnectionStringCommand<SqlConnectionString>
+    public class RemoveSqlConnectionStringCommand : RemoveConnectionStringCommand<SqlConnectionString>
     {
-        protected RemoveSqlConnectionString()
+        protected RemoveSqlConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public RemoveSqlConnectionString(string connectionStringName, string databaseName) : base(connectionStringName, databaseName)
+        public RemoveSqlConnectionStringCommand(string connectionStringName, string databaseName) : base(connectionStringName, databaseName)
         {
 
         }

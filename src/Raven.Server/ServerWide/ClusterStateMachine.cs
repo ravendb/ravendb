@@ -192,10 +192,12 @@ namespace Raven.Server.ServerWide
                     case nameof(DeleteOngoingTaskCommand):
                     case nameof(PutRavenConnectionStringCommand):
                     case nameof(PutSqlConnectionStringCommand):
+                    case nameof(RemoveRavenConnectionStringCommand):
+                    case nameof(RemoveSqlConnectionStringCommand):
                     case "PutRavenConnectionString":   // Legacy
                     case "PutSqlConnectionString":     // Legacy
-                    case nameof(RemoveRavenConnectionString):
-                    case nameof(RemoveSqlConnectionString):
+                    case "RemoveRavenConnectionString":     // Legacy
+                    case "RemoveSqlConnectionString":     // Legacy
                         UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
