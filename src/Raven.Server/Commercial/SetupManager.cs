@@ -1446,7 +1446,9 @@ namespace Raven.Server.Commercial
                 str +=
                      $"An administrator client certificate has been installed on this machine ({Environment.MachineName})." +
                      Environment.NewLine +
-                     $"You can now restart the server and access the studio at {publicServerUrl}. Chrome will let you choose to use the certificate." + 
+                     $"You can now restart the server and access the studio at {publicServerUrl}." +
+                     Environment.NewLine +
+                     "Chrome will let you select this certificate." + 
                      Environment.NewLine;
             }
             else
@@ -1454,12 +1456,12 @@ namespace Raven.Server.Commercial
                 str +=
                     $"An administrator client certificate has been generated and is located in the zip file." + 
                      Environment.NewLine +
-                    $"However, the certificate was not installed on this machine ({Environment.MachineName}) but it can be done manually." +
+                    $"However, the certificate was not installed on this machine ({Environment.MachineName}), this can be done manually." +
                     Environment.NewLine;
             }
 
             str +=
-                "If you are using Firefox (or Chrome under Linux), the certificate must be imported directly to the browser." + 
+                "If you are using Firefox (or Chrome under Linux), the certificate must be imported manually to the browser." + 
                 Environment.NewLine + 
                 "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
                 Environment.NewLine;
@@ -1475,7 +1477,7 @@ namespace Raven.Server.Commercial
 
             str +=
                 Environment.NewLine +
-                "It is recommended to generate additional certificates with reduced access rights for applications and users to use." + 
+                "It is recommended to generate additional certificates with reduced access rights for applications and users." + 
                 Environment.NewLine + 
                 "This can be done using the RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
                 Environment.NewLine;
@@ -1484,19 +1486,24 @@ namespace Raven.Server.Commercial
             {
                 str +=
                     Environment.NewLine +
-                    "You have chosen to setup a cluster. The cluster topology and node addresses have already been configured." +
+                    "You are setting up a cluster. The cluster topology and node addresses have already been configured." +
                     Environment.NewLine +
-                    "The next step is to bring up the other nodes (with a fresh downloaded RavenDB) and complete the setup wizard there." +
+                    "The next step is to download a new RavenDB server for each of the other nodes." +
                     Environment.NewLine +
-                    "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'. This will validate and join the new node to the existing cluster." +
                     Environment.NewLine +
-                    "Please do not try to configure a cluster more than once (on each node seperately) - it is NOT supported." +
+                    "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
                     Environment.NewLine +
-                    "Make sure that the various nodes can talk to each other using the URLs you have defined, and that there is no firewall blocking communication between them." + 
+                    "(Please do not try to start a new setup process again in this new node, it is NOT supported)." +
                     Environment.NewLine +
-                    "When you finish the wizard for a new node and restart it, the cluster will detect it... there is no need to manually add it again." +
+                    "You will be asked to upload the zip file which was just downloaded." +
                     Environment.NewLine +
-                    "Access the leader node through the studio and go to the 'Manage Server' > 'Cluster' page to see the cluster topology graph. There, watch the new nodes become green.";
+                    "The new server node will join the already existing cluster." +
+                    Environment.NewLine +
+                    Environment.NewLine +
+                    "When the wizard is done and the new node was restared, the cluster will automatically detect it... " +
+                    Environment.NewLine +
+                    "There is no need to manually add it again from the studio! Simply access the 'Cluster' view and observe the topology being updated." +
+                    Environment.NewLine;
             }
             return str;
         }
