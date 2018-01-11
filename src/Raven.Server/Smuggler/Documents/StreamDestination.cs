@@ -131,6 +131,10 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WritePropertyName(nameof(databaseRecord.RavenConnectionStrings));
                     WriteRavenConnectionStrings(databaseRecord.RavenConnectionStrings);
                     _writer.WriteComma();
+                    
+                    _writer.WritePropertyName(nameof(databaseRecord.SqlConnectionStrings));
+                    WriteSqlConnectionStrings(databaseRecord.SqlConnectionStrings);
+                    _writer.WriteComma();
                 }
 
                 _writer.WritePropertyName(nameof(databaseRecord.Client));
@@ -259,11 +263,44 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteStartObject();
 
                     var value = ravenConnectionString.Value;
+                    _writer.WritePropertyName(nameof(value.Name));
+                    _writer.WriteString(value.Name);
+                    _writer.WriteComma();
+
                     _writer.WritePropertyName(nameof(value.Database));
                     _writer.WriteString(value.Database);
                     _writer.WriteComma();
                     
                     _writer.WriteArray(nameof(value.TopologyDiscoveryUrls), value.TopologyDiscoveryUrls);
+
+                    _writer.WriteEndObject();
+                }
+
+                _writer.WriteEndObject();
+            }
+            
+            private void WriteSqlConnectionStrings(Dictionary<string, SqlConnectionString> connections)
+            {
+                _writer.WriteStartObject();
+               
+                var first = true;
+                foreach (var sqlConnectionString in connections)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(nameof(sqlConnectionString.Key));
+
+                    _writer.WriteStartObject();
+
+                    var value = sqlConnectionString.Value;
+                    _writer.WritePropertyName(nameof(value.Name));
+                    _writer.WriteString(value.Name);
+                    _writer.WriteComma();
+
+                    _writer.WritePropertyName(nameof(value.ConnectionString));
+                    _writer.WriteString(value.ConnectionString);
 
                     _writer.WriteEndObject();
                 }
