@@ -30,7 +30,7 @@ $ docker run -p 8080:8080 ravendb/ravendb:windows-nanoserver-latest
 
 Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub.docker.com/r/ravendb/ravendb-nightly/)
 
-You can run RavenDB docker container manually invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
+You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
 Run Ubuntu-based image: [run-ubuntu1604.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-ubuntu1604.ps1)
 
@@ -39,7 +39,7 @@ Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
 |Option|Default|Description|
-|------|-------|-----------|
+|------|:-----:|-----------|
 |`-DryRun`| | print `docker run` command and exit |
 |`-LogsMode [log level]`| Operations | set logging level (Operations, Information) |
 |`-ConfigPath [absolute file path]` | | *absolute* path to settings file used by RavenDB inside the container |
@@ -117,7 +117,7 @@ To get logs available when running `docker logs` command, you need to turn that 
 RAVEN_ARGS='--log-to-console'
 ```
 
-##### How to set custom config file
+##### How to set a custom config file?
 
 Mount it as a docker volume and use `--config-path PATH_TO_CONFIG` command line argument in order to use settings file from outside of server directory.
 

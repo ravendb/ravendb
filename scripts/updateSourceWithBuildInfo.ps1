@@ -27,7 +27,6 @@ function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
 }
 
 function UpdateVersionInFile ( $file, $version ) {
-    write-host $file
     $versionPattern = [regex]'(?sm)<Version>[A-Za-z0-9-\.\r\n\s]*</Version>'
     $inputText = [System.IO.File]::ReadAllText($file)
     $result = $versionPattern.Replace($inputText, "<Version>$version</Version>")
