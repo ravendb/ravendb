@@ -10,7 +10,7 @@ namespace Raven.Server.Web.Studio
 {
     public class LicenseHandler : RequestHandler
     {
-        [RavenAction("/license/eula", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        [RavenAction("/license/eula", "GET", AuthorizationStatus.ValidUser)]
         public async Task Eula()
         {
             HttpContext.Response.ContentType = "text/plain; charset=utf-8";
@@ -24,7 +24,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.Operator)]
         public Task AcceptEula()
         {
             if (ServerStore.LicenseManager.IsEulaAccepted)
