@@ -11,8 +11,9 @@ class nodeInfo {
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
     
-    externalIpAddress = ko.observable<string>();
+    externalIpAddress = ko.observable<string>();     
     effectiveIpAddresses: KnockoutComputed<string>;
+    externalTcpPort = ko.observable<string>();
     
     ipsContainHostName: KnockoutComputed<boolean>;
   
@@ -86,6 +87,10 @@ class nodeInfo {
             number: true
         });
         
+        this.externalTcpPort.extend({
+            number: true
+        });
+        
         this.externalIpAddress.extend({
             required: {   
                 onlyIf: () => this.ipsContainHostName() && !this.externalIpAddress(),                
@@ -149,9 +154,9 @@ class nodeInfo {
             Addresses: this.ips().map(x => x.ip()),
             Port: this.port() ? parseInt(this.port(), 10) : null,
             PublicServerUrl: this.getServerUrl(),
-            ExternalIpAddress: this.externalIpAddress() || null,
+            ExternalIpAddress: (this.advancedSettingsCheckBox() && this.externalIpAddress()) ? this.externalIpAddress() : null, 
             TcpPort: this.tcpPort() ? parseInt(this.tcpPort(), 10) : null,
-            ExternalPort: 0 //TODO optional (in LE it is required only if )
+            ExternalPort: (this.advancedSettingsCheckBox() && this.externalTcpPort()) ? parseInt(this.externalTcpPort(), 10) : null
         } as Raven.Server.Commercial.SetupInfo.NodeInfo;
     }
 }
