@@ -743,7 +743,7 @@ namespace Raven.Server.Web.System
                 }
                 if (res.Status == OngoingTaskConnectionStatus.None)
                 {
-                    error = $"The raven etl process'{ravenEtl.Name}' was not found.";
+                    error = $"The raven ETL process '{ravenEtl.Name}' was not found.";
                 }
             }
             else
@@ -808,7 +808,7 @@ namespace Raven.Server.Web.System
                             break;
 
                         case OngoingTaskType.SqlEtl:
-
+                            
                             var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == key);
                             if (sqlEtl == null)
                             {
@@ -821,7 +821,7 @@ namespace Raven.Server.Web.System
                                 TaskId = sqlEtl.TaskId,
                                 TaskName = sqlEtl.Name,
                                 Configuration = sqlEtl,
-                                TaskState = GetEtlTaskState(sqlEtl)
+                                TaskState = GetEtlTaskState(sqlEtl),
                             });
                             break;
 
@@ -833,7 +833,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            var res = GetEtlTaskStatus(record, ravenEtl, out var _, out var _);
+                            var res = GetEtlTaskStatus(record, ravenEtl, out var node, out var error);
 
                             WriteResult(context, new OngoingTaskRavenEtlDetails()
                             {
@@ -841,7 +841,14 @@ namespace Raven.Server.Web.System
                                 TaskName = ravenEtl.Name,
                                 Configuration = ravenEtl,
                                 TaskState = GetEtlTaskState(ravenEtl),
-                                DestinationUrl = res.Url
+                                DestinationUrl = res.Url,
+                                TaskConnectionStatus = res.Status,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = node,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(node)
+                                },
+                                Error = error
                             });
                             break;
 
