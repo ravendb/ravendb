@@ -10,8 +10,8 @@ class nodeInfo {
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
     
-    externalIpAddress = ko.observable<string>();     
-    effectiveIpAddress: KnockoutComputed<string>;
+    externalIpAddress = ko.observable<string>();
+    effectiveIpAddresses: KnockoutComputed<string>;
     
     ipsContainHostName: KnockoutComputed<boolean>;
   
@@ -62,14 +62,14 @@ class nodeInfo {
             return this.advancedSettingsCheckBox();
         });
         
-        this.effectiveIpAddress = ko.pureComputed(() => {
+        this.effectiveIpAddresses = ko.pureComputed(() => {
             const externalIp = this.externalIpAddress();
             if (externalIp && this.showAdvancedSettings()) {
                 return externalIp;
             }
 
             if (this.ips().length) {
-                return this.ips()[0].ip();
+                return this.ips().map(ipItem => ipItem.ip()).join(", ");
             }
 
             return "";
