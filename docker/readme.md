@@ -62,13 +62,13 @@ Each of images above makes use of 2 volumes:
 
     Ubuntu container: `/opt/RavenDB/config`
 
-    Windows container: `C:\ravendb\config`
+    Windows container: `C:\RavenDB\Config`
 
 - databases volume - used for persistence of RavenDB data,
 
     Ubuntu container: `/opt/RavenDB/Server/RavenData`
 
-    Windows container: `c:/ravendb/Server/RavenData`
+    Windows container: `C:/RavenDB/Server/RavenData`
 
 ### Configuration
 

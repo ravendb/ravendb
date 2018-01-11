@@ -51,7 +51,7 @@ if ($Unsecured) {
 if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     write-host "Mounting $DataDir as RavenDB data dir."
     $dockerArgs += "-v"
-    $dockerArgs += "$($DataDir):c:/ravendb/Server/RavenData"
+    $dockerArgs += "$($DataDir):C:/RavenDB/Server/RavenData"
 }
 
 if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
@@ -62,7 +62,7 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
 
     $configDir = Split-Path $ConfigPath 
 
-    $containerConfigDir = "c:\ravendb\config"
+    $containerConfigDir = "C:\RavenDB\Config"
     $containerConfigFile = Split-Path -Path $ConfigPath -Leaf
     $dockerArgs += "-v"
     $dockerArgs += "`"$($configDir):$containerConfigDir`""
@@ -101,7 +101,7 @@ if ([string]::IsNullOrEmpty($CertificatePath) -eq $False) {
 
     $certDir = Split-Path $CertificatePath # we have to share entire dir for windows container
 
-    $containerCertDir = "c:\ravendb\cert"
+    $containerCertDir = "C:\RavenDB\cert"
     $containerCertFile = Split-Path -Path $CertificatePath -Leaf
     $dockerArgs += "-v"
     $dockerArgs += "`"$($certDir):$containerCertDir`""
