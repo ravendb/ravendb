@@ -161,7 +161,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/eula/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetEulaIndexFile()
         {
-            if (ServerStore.LicenseManager.CheckEulaAccepted())
+            if (ServerStore.LicenseManager.IsEulaAccepted)
             {
                 // redirect to studio - if user didn't configured it yet
                 // then studio endpoint redirect to wizard
@@ -184,7 +184,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/wizard/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetSetupIndexFile()
         {
-            if (ServerStore.LicenseManager.CheckEulaAccepted() == false)
+            if (ServerStore.LicenseManager.IsEulaAccepted == false)
             {
                 // redirect to studio - if user didn't configured it yet
                 // then studio endpoint redirect to wizard
@@ -215,7 +215,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/studio/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task GetStudioIndexFile()
         {
-            if (ServerStore.LicenseManager.CheckEulaAccepted() == false)
+            if (ServerStore.LicenseManager.IsEulaAccepted == false)
             {
                 HttpContext.Response.Headers["Location"] = "/eula/index.html";
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;

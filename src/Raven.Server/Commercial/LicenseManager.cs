@@ -55,6 +55,8 @@ namespace Raven.Server.Commercial
         private readonly bool _skipLeasingErrorsLogging;
         private bool _eulaAcceptedButHasPendingRestart;
 
+        private readonly object _locker = new object();
+
         public event Action LicenseChanged;
 
         public event Action LicenseLimitsChanged;
@@ -72,6 +74,8 @@ namespace Raven.Server.Commercial
                 FullVersion = ServerVersion.FullVersion
             };
         }
+
+        public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
 
         private RSAParameters RSAParameters
         {
@@ -675,7 +679,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task<LicenseLimits> UpdateNodesInfoInternal( 
+        private async Task<LicenseLimits> UpdateNodesInfoInternal(
             bool forceFetchingNodeInfo,
             NodeDetails newNodeDetails)
         {
@@ -700,7 +704,7 @@ namespace Raven.Server.Commercial
             {
                 var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
                 var missingNodesAssignment = new List<string>();
-                
+
                 foreach (var node in allNodes)
                 {
                     int numberOfCores;
@@ -785,7 +789,7 @@ namespace Raven.Server.Commercial
                 errorMessage = $"The cluster size is {detailsPerNode.Count}, " +
                               $"while the license limit is {_licenseStatus.MaxClusterSize}";
             }
-            
+
             if (errorMessage != null)
                 _licenseStatus.ErrorMessage = errorMessage;
         }
@@ -807,7 +811,7 @@ namespace Raven.Server.Commercial
         }
 
         private void AssignMissingNodeCores(
-            List<string> missingNodesAssignment, 
+            List<string> missingNodesAssignment,
             Dictionary<string, DetailsPerNode> detailsPerNode)
         {
             if (missingNodesAssignment.Count == 0)
@@ -1213,7 +1217,7 @@ namespace Raven.Server.Commercial
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
-            
+
             AssertCanAssignCores(assignedCores);
 
             if (_licenseStatus.DistributedCluster == false)
@@ -1261,9 +1265,9 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasExternalReplication) 
+            if (_licenseStatus.HasExternalReplication)
                 return;
-            
+
             var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
@@ -1337,9 +1341,9 @@ namespace Raven.Server.Commercial
         }
 
         public string GetLastResponsibleNodeForTask(
-            IDatabaseTaskStatus databaseTaskStatus, 
+            IDatabaseTaskStatus databaseTaskStatus,
             DatabaseTopology databaseTopology,
-            IDatabaseTask databaseTask, 
+            IDatabaseTask databaseTask,
             NotificationCenter.NotificationCenter notificationCenter)
         {
             if (_licenseStatus.HasHighlyAvailableTasks)
@@ -1366,7 +1370,7 @@ namespace Raven.Server.Commercial
                         Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be exceuted " +
                                   $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
                                   $"or by any other node because your current license " +
-                                  $"doesn't include the dynamic nodes distribution feature. " + Environment.NewLine + 
+                                  $"doesn't include the dynamic nodes distribution feature. " + Environment.NewLine +
                                   $"You can choose a different mentor node that will execute the task " +
                                   $"(current mentor node state: {GetMentorNodeState(databaseTask, databaseTopology)}). " +
                                   $"Upgrading the license will allow RavenDB to manage that automatically."
@@ -1445,7 +1449,7 @@ namespace Raven.Server.Commercial
                 licenseLimit = null;
                 return true;
             }
-            
+
             const string message = "Cannot perform operation while the license is in invalid state!";
             licenseLimit = GenerateLicenseLimit(LimitType.InvalidLicense, message);
             return false;
@@ -1489,32 +1493,29 @@ namespace Raven.Server.Commercial
                 return JsonDeserializationServer.LicenseSupportInfo(json);
             }
         }
-        
-        public bool CheckEulaAccepted()
-        {
-            return _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
-        }
-        
+
         public void AcceptEula()
         {
-            lock (typeof(LicenseManager))
+            if (_eulaAcceptedButHasPendingRestart)
+                return;
+
+            lock (_locker)
             {
-                 if (_eulaAcceptedButHasPendingRestart) 
+                if (_eulaAcceptedButHasPendingRestart)
                     return;
-                
+
                 var settingsPath = _serverStore.Configuration.ConfigPath;
                 var originalSettings = File.ReadAllText(settingsPath);
                 dynamic jsonObj = JsonConvert.DeserializeObject(originalSettings);
-                
+
                 // write new setting
                 jsonObj[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
-                
+
                 var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
                 SetupManager.WriteSettingsJsonLocally(settingsPath, jsonString);
-                
+
                 _eulaAcceptedButHasPendingRestart = true;
             }
-           
         }
     }
 }
