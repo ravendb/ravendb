@@ -14,6 +14,7 @@ using Lucene.Net.Store;
 using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Logging;
+using Raven.Database.FileSystem.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -45,6 +46,7 @@ namespace Raven.Database.Indexing
         private readonly Term forceCommitTerm = new Term("__dummy_force_index_write", "forced");
         private readonly Document forceCommitDoc;
         private DateTime lastCommitDataStoreTime;
+        private readonly string indexName;
 
         public Directory Directory
         {
@@ -68,8 +70,9 @@ namespace Raven.Database.Indexing
             }
         }
 
-        public RavenIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, int maximumNumberOfWritesBeforeRecreate, IndexWriter.IndexReaderWarmer indexReaderWarmer)
+        public RavenIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, IndexWriter.MaxFieldLength mfl, int maximumNumberOfWritesBeforeRecreate, IndexWriter.IndexReaderWarmer indexReaderWarmer, string indexName)
         {
+            this.indexName = indexName;
             directory = d;
             analyzer = a;
             indexDeletionPolicy = deletionPolicy;
@@ -193,7 +196,7 @@ namespace Raven.Database.Indexing
                 indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
             }
             using (indexWriter.MergeScheduler) { }
-            indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+            indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler(indexName));
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
@@ -246,7 +249,7 @@ namespace Raven.Database.Indexing
             {
                 indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
             }
-            return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue, _indexReaderWarmer);
+            return new RavenIndexWriter(ramDirectory, analyzer, indexDeletionPolicy, maxFieldLength, int.MaxValue, _indexReaderWarmer, indexName);
         }
 
         public void AddIndexesNoOptimize(Directory[] directories, int count)

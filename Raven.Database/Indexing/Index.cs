@@ -824,7 +824,7 @@ namespace Raven.Database.Indexing
                 IndexWriter.IndexReaderWarmer indexReaderWarmer = context.IndexReaderWarmers != null
                     ? new IndexReaderWarmersWrapper(indexDefinition.Name, context.IndexReaderWarmers)
                     : null;
-                indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer);
+                indexWriter = new RavenIndexWriter(directory, stopAnalyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, context.Configuration.MaxIndexWritesBeforeRecreate, indexReaderWarmer, PublicName);
             }
             catch (Exception e)
             {
