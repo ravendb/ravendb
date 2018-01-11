@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -6,16 +7,19 @@ using System.Threading.Tasks;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.FileSystem;
 using Raven.Abstractions.Smuggler;
+using Raven.Client.Document;
 using Raven.Database.Extensions;
 using Raven.Json.Linq;
 using Raven.Powershell;
 using Raven.Smuggler;
+using Raven.Tests.Bugs;
 using Raven.Tests.Common;
 using Raven.Tests.FileSystem;
 using Raven.Tests.Raft.Client;
 using Raven.Tests.Smuggler;
 using Raven.Tests.Subscriptions;
 using Xunit;
+using Order = Raven.Tests.Common.Dto.Faceted.Order;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -28,39 +32,104 @@ using Raven.Tests.FileSystem.ClientApi;
 
 namespace Raven.Tryouts
 {  
-    
+    public class Order
+    {
+        public string Id { get; set; }
+        public string Company { get; set; }
+        public string Employee { get; set; }
+        public DateTime OrderedAt { get; set; }
+        public DateTime RequireAt { get; set; }
+        public DateTime? ShippedAt { get; set; }
+        public Address ShipTo { get; set; }
+        public string ShipVia { get; set; }
+        public decimal Freight { get; set; }
+        public List<OrderLine> Lines { get; set; }
+    }
+
+    public class Address
+    {
+        public string Line1 { get; set; }
+        public string Line2 { get; set; }
+        public string City { get; set; }
+        public string Region { get; set; }
+        public string PostalCode { get; set; }
+        public string Country { get; set; }
+    }
+
+    public class OrderLine
+    {
+        public string Product { get; set; }
+        public string ProductName { get; set; }
+        public decimal PricePerUnit { get; set; }
+        public int Quantity { get; set; }
+        public decimal Discount { get; set; }
+    }
+
     public class Program
     {
         public static void Main(string[] args)
         {
-            var backupCmdlet = new DatabaseBackupCmdlet();
+            for (int i = 0; i < 1000; i++)
+            {
+                Console.WriteLine(i);
+                InitDBAndDoSomeWork(i);
+                var backupCmdletFull = new DatabaseBackupCmdlet
+                {
+                    ServerUrl = "http://localhost:8080",
+                    BackupLocation = "c:\\temp\\reproBackup\\" + i,
+                    Incremental = false,
+                    DatabaseName = "Northwind"
+                };
 
-            /*
-             
-               [Parameter(ValueFromPipelineByPropertyName = true, Mandatory = true, HelpMessage = "Url of RavenDB server, including the port. Example --> http://localhost:8080")]
-        public string ServerUrl { get; set; }
+                var backupCmdletIncremental = new DatabaseBackupCmdlet
+                {
+                    ServerUrl = "http://localhost:8080",
+                    BackupLocation = "c:\\temp\\reproBackup\\" + i,
+                    Incremental = true,
+                    DatabaseName = "Northwind"
+                };
+                while (backupCmdletFull.Invoke().GetEnumerator().MoveNext());
+                while (backupCmdletIncremental.Invoke().GetEnumerator().MoveNext()) ;
 
-        [Parameter(ValueFromPipelineByPropertyName = true, Mandatory = true, HelpMessage = "Database name in RavenDB server")]
-        public string DatabaseName { get; set; }
+                InitDBAndDoSomeWork(i);
 
-        [Parameter(ValueFromPipelineByPropertyName = true, HelpMessage = "ApiKey to use when connecting to RavenDB Server. It should be full API key. Example --> key1/sAdVA0KLqigQu67Dxj7a")]
-        public string ApiKey { get; set; }       
-
-        [Parameter(ValueFromPipelineByPropertyName = true, HelpMessage = "If true, incremental backup. Otherwise, do a full backup.")]
-        public SwitchParameter Incremental
-        {
-            get { return incremental; }
-            set { incremental = value; }
+                while (backupCmdletIncremental.Invoke().GetEnumerator().MoveNext()) ;
+                InitDBAndDoSomeWork(i);
+                while (backupCmdletIncremental.Invoke().GetEnumerator().MoveNext()) ;
+                InitDBAndDoSomeWork(i);
+            }
         }
 
-        [Parameter(ValueFromPipelineByPropertyName = true, Mandatory = true, HelpMessage = "Where to write the backup")]
-        public string BackupLocation { get; set; }
-             */
-            backupCmdlet.ServerUrl = "http://localhost:8080";
-            backupCmdlet.BackupLocation = "c:\\temp\\reproBackup";
-            backupCmdlet.Incremental = true;
-            backupCmdlet.DatabaseName = "VoronBackup";
-            while (backupCmdlet.Invoke().GetEnumerator().MoveNext());
+        private static void InitDBAndDoSomeWork(int i)
+        {
+            using (var store = new DocumentStore
+            {
+                Url = "http://localhost:8080",
+                DefaultDatabase = "Northwind"
+            })
+            {
+                store.Initialize();
+                DoSomeWork(store, i);
+                DoSomeWork(store, i);
+                DoSomeWork(store, i);
+            }
+        }
+
+        private static void DoSomeWork(DocumentStore store, int i)
+        {
+            for (int k = 0; k < 10; k++)
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int j = 1; j < 30; j++)
+                    {
+                        var order = session.Load<Order>("orders/" + j);
+                        order.Freight = i;
+                    }
+
+                    session.SaveChanges();
+                }
+            }
         }
 
         public static async Task AsyncMain()
