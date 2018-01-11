@@ -445,14 +445,15 @@ namespace Raven.Server.Documents.Replication
             _stream.Flush();
             sw.Stop();
 
-            _parent._lastSentDocumentEtag = _lastEtag;
-
             if (_log.IsInfoEnabled && _orderedReplicaItems.Count > 0)
                 _log.Info($"Finished sending replication batch. Sent {_orderedReplicaItems.Count:#,#;;0} documents and {_replicaAttachmentStreams.Count:#,#;;0} attachment streams in {sw.ElapsedMilliseconds:#,#;;0} ms. Last sent etag = {_lastEtag}");
 
+            _parent.HandleServerResponse();
+
+            _parent._lastSentDocumentEtag = _lastEtag;
+
             _parent._lastDocumentSentTime = DateTime.UtcNow;
 
-            _parent.HandleServerResponse();
         }
 
         private void WriteItemToServer(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)

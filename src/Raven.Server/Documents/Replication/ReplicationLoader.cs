@@ -85,22 +85,23 @@ namespace Raven.Server.Documents.Replication
         {
             get
             {
-
-                if (Destinations == null || Destinations.Count == 0)
+                var replicationNodes = Destinations?.ToList();
+                if (replicationNodes == null || replicationNodes.Count == 0)
                     return long.MaxValue;
-
-                if (Destinations.Count != _lastSendEtagPerDestination.Count)
-                    // if we don't have information from all our destinations, we don't know what tombstones
-                    // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
-                    // us from doing any tombstone cleanup.
-                    return 0;
 
                 long minEtag = long.MaxValue;
                 foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
                 {
+                    replicationNodes.Remove(lastEtagPerDestination.Key);
                     minEtag = Math.Min(lastEtagPerDestination.Value.LastEtag, minEtag);
                 }
-
+                if (replicationNodes.Count > 0)
+                {
+                    // if we don't have information from all our destinations, we don't know what tombstones
+                    // we can remove. Note that this explicitly _includes_ disabled destinations, which prevents
+                    // us from doing any tombstone cleanup.
+                    return 0;
+                }
                 return minEtag;
             }
         }
@@ -137,7 +138,7 @@ namespace Raven.Server.Documents.Replication
             _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
-
+            database.DocumentTombstoneCleaner.Subscribe(this);
         }
 
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
