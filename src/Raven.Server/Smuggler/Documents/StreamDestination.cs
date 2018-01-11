@@ -7,12 +7,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Revisions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -106,7 +108,7 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteStartObject();
             }
 
-            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress)
+            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress, AuthorizationStatus authorizationStatus)
             {
                 _writer.WritePropertyName(nameof(databaseRecord.DatabaseName));
                 _writer.WriteString(databaseRecord.DatabaseName);
@@ -122,6 +124,58 @@ namespace Raven.Server.Smuggler.Documents
                 
                 _writer.WritePropertyName(nameof(databaseRecord.Expiration));
                 WriteExpiration(databaseRecord.Expiration);
+                _writer.WriteComma();
+
+                if (authorizationStatus == AuthorizationStatus.DatabaseAdmin)
+                {
+                    _writer.WritePropertyName(nameof(databaseRecord.RavenConnectionStrings));
+                    WriteRavenConnectionStrings(databaseRecord.RavenConnectionStrings);
+                    _writer.WriteComma();
+                }
+
+                _writer.WritePropertyName(nameof(databaseRecord.Client));
+                WriteClientConfiguration(databaseRecord.Client);
+            }
+
+            private void WriteClientConfiguration(ClientConfiguration clientConfiguration)
+            {
+                if (clientConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                
+                _writer.WriteStartObject();
+
+                _writer.WritePropertyName(nameof(clientConfiguration.Etag));
+                _writer.WriteInteger(clientConfiguration.Etag);
+                _writer.WriteComma();
+               
+                _writer.WritePropertyName(nameof(clientConfiguration.Disabled));
+                _writer.WriteBool(clientConfiguration.Disabled);
+
+                if (clientConfiguration.MaxNumberOfRequestsPerSession.HasValue)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(clientConfiguration.MaxNumberOfRequestsPerSession));
+                    _writer.WriteInteger(clientConfiguration.MaxNumberOfRequestsPerSession.Value);
+                }
+
+                if (clientConfiguration.PrettifyGeneratedLinqExpressions.HasValue)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(clientConfiguration.PrettifyGeneratedLinqExpressions));
+                    _writer.WriteBool(clientConfiguration.PrettifyGeneratedLinqExpressions.Value);
+                }
+
+                if (clientConfiguration.ReadBalanceBehavior.HasValue)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(clientConfiguration.ReadBalanceBehavior));
+                    _writer.WriteString(clientConfiguration.ReadBalanceBehavior.Value.ToString());
+                }
+                
+                _writer.WriteEndObject();
             }
 
             private void WriteExpiration(ExpirationConfiguration expiration)
@@ -133,14 +187,17 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 
                 _writer.WriteStartObject();
+               
                 _writer.WritePropertyName(nameof(expiration.Disabled));
                 _writer.WriteBool(expiration.Disabled);
+                
                 if (expiration.DeleteFrequencyInSec.HasValue)
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(expiration.DeleteFrequencyInSec));
                     _writer.WriteString(expiration.DeleteFrequencyInSec.Value.ToString());
                 }
+                
                 _writer.WriteEndObject();
             }
 
@@ -153,28 +210,75 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 
                 _writer.WriteStartObject();
+                
                 _writer.WritePropertyName(nameof(revisions.Default));
                 WriteRevisionsCollectionConfiguration(revisions.Default);
                 _writer.WriteComma();
+                
                 _writer.WritePropertyName(nameof(revisions.Collections));
+
+                if (revisions.Collections == null)
+                {
+                    _writer.WriteNull();
+                }
+                else
+                {
+                    _writer.WriteStartObject();
+
+                    var first = true;
+                    foreach (var collection in revisions.Collections)
+                    {
+                        if (first == false)
+                            _writer.WriteComma();
+                        first = false;
+
+                        _writer.WritePropertyName(collection.Key);
+                        WriteRevisionsCollectionConfiguration(collection.Value);
+                    }
+                    
+                    _writer.WriteEndObject();
+                }
+
+                
+                _writer.WriteEndObject();
+            }
+
+            private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
+            {
                 _writer.WriteStartObject();
+               
                 var first = true;
-                foreach (var collection in revisions.Collections)
+                foreach (var ravenConnectionString in connections)
                 {
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WritePropertyName(collection.Key);
-                    WriteRevisionsCollectionConfiguration(collection.Value);
+                    _writer.WritePropertyName(nameof(ravenConnectionString.Key));
+
+                    _writer.WriteStartObject();
+
+                    var value = ravenConnectionString.Value;
+                    _writer.WritePropertyName(nameof(value.Database));
+                    _writer.WriteString(value.Database);
+                    _writer.WriteComma();
+                    
+                    _writer.WriteArray(nameof(value.TopologyDiscoveryUrls), value.TopologyDiscoveryUrls);
+
+                    _writer.WriteEndObject();
                 }
 
-                _writer.WriteEndObject();
                 _writer.WriteEndObject();
             }
 
             private void WriteRevisionsCollectionConfiguration(RevisionsCollectionConfiguration collectionConfiguration)
             {
+                if (collectionConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                
                 _writer.WriteStartObject();
 
                 if (collectionConfiguration.MinimumRevisionsToKeep.HasValue)

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -145,7 +144,7 @@ namespace Raven.Server.Smuggler.Documents
             return type;
         }
 
-        public DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus)
+        public DatabaseRecord GetDatabaseRecord()
         {
             return new DatabaseRecord();
         }

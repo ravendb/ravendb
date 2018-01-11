@@ -67,19 +67,9 @@ namespace Raven.Server.Smuggler.Documents
             return _types[_currentTypeIndex++];
         }
 
-        public DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus)
+        public DatabaseRecord GetDatabaseRecord()
         {
-            var databaseRecord = _database.ReadDatabaseRecord();
-            if (authorizationStatus != AuthorizationStatus.DatabaseAdmin)
-            {
-                databaseRecord.PeriodicBackups = null;
-                databaseRecord.ExternalReplications.Clear();
-                databaseRecord.RavenConnectionStrings.Clear();
-                databaseRecord.SqlConnectionStrings.Clear();
-                databaseRecord.RavenEtls = null;
-                databaseRecord.SqlEtls = null;
-            }
-            return databaseRecord;
+            return _database.ReadDatabaseRecord();
         }
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
