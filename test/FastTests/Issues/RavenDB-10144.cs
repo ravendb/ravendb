@@ -59,18 +59,14 @@ namespace FastTests.Issues
 
                 using (var session = store.OpenSession())
                 {                    
-                    var queryData = new QueryData(
-                        new []{"{ Order : o, Company : load(o.Company) }"}, 
-                        Array.Empty<string>(), 
-                        new QueryData.CustomFunction
-                        {
-                            FromAlias = "o"
-                        });
 
                     var docQuery = session.Advanced
                         .DocumentQuery<Order>("OrderByCompanyCountryIndex")
                         .WhereEquals(x => x.ShipTo.Country, "Sweden")
-                        .SelectFields<OrderResult>(queryData);                   
+                        .SelectFields<OrderResult>(QueryData.CustomFunction(
+                            alias: "o", 
+                            func: "{ Order : o, Company : load(o.Company) }")
+                        );                   
                     
                     Assert.Equal("from index 'OrderByCompanyCountryIndex' as o where ShipTo_Country = $p0 " +
                                  "select { Order : o, Company : load(o.Company) }", docQuery.ToString());

@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Session.Tokens;
 
@@ -23,7 +24,7 @@ namespace Raven.Client.Documents.Queries
 
         public bool IsCustomFunction { get; set; }
 
-        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias, DeclareToken declareToken, List<LoadToken> loadTokens, bool isCustomFunction = false)
+        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, DeclareToken declareToken= null, List<LoadToken> loadTokens= null, bool isCustomFunction = false)
         {
             Fields = fields;
             Projections = projections;
@@ -33,6 +34,10 @@ namespace Raven.Client.Documents.Queries
             IsCustomFunction = isCustomFunction;
         }
 
-        
+
+        public static QueryData CustomFunction(string alias, string func)
+        {
+            return new QueryData(new[] {func}, Array.Empty<string>(), alias, isCustomFunction: true);
+        }
     }
 }
