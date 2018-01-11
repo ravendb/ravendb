@@ -14,7 +14,7 @@ namespace Raven.Server.Web.Studio
         public async Task Eula()
         {
             HttpContext.Response.ContentType = "text/plain; charset=utf-8";
-            
+
             using (var stream = typeof(LicenseManager).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Commercial.RavenDB.license.txt"))
             {
                 using (var responseStream = ResponseBodyStream())
@@ -23,8 +23,8 @@ namespace Raven.Server.Web.Studio
                 }
             }
         }
-        
-        [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.UnauthenticatedClients)]
+
+        [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.ValidUser)]
         public Task AcceptEula()
         {
             if (ServerStore.LicenseManager.IsEulaAccepted)
@@ -32,12 +32,12 @@ namespace Raven.Server.Web.Studio
                 NoContent();
                 return Task.CompletedTask;
             }
-            
+
             ServerStore.LicenseManager.AcceptEula();
             return NoContent();
         }
-        
-        
+
+
         [RavenAction("/license/status", "GET", AuthorizationStatus.ValidUser)]
         public Task Status()
         {
@@ -49,7 +49,7 @@ namespace Raven.Server.Web.Studio
 
             return Task.CompletedTask;
         }
- 
+
         [RavenAction("/admin/license/activate", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task Activate()
         {
