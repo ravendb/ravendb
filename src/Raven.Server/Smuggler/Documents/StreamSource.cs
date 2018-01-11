@@ -6,9 +6,12 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -100,6 +103,56 @@ namespace Raven.Server.Smuggler.Documents
             return GetType(type);
         }
 
+        public DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus)
+        {
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
+
+            if (_state.CurrentTokenType != JsonParserToken.StartObject)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
+
+            using (var builder = CreateBuilder(_context, null))
+            {
+                _context.CachedProperties.NewDocument();
+                ReadObject(builder);
+
+                using (var reader = builder.CreateReader())
+                {
+                    var databaseRecord = new DatabaseRecord();
+
+                    if (reader.TryGet(nameof(databaseRecord.Revisions), out BlittableJsonReaderObject revisions) &&
+                        revisions != null)
+                    {
+                        try
+                        {
+                            databaseRecord.Revisions = JsonDeserializationCluster.RevisionsConfiguration(revisions);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to use the reivions configuration from smuggler file. Skiping.", e);
+                        }
+                    }
+
+                    if (reader.TryGet(nameof(databaseRecord.Expiration), out BlittableJsonReaderObject expiration) && 
+                        expiration != null)
+                    {
+                        try
+                        {
+                            databaseRecord.Expiration = JsonDeserializationCluster.ExpirationConfiguration(expiration);
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to use the expiration configuration from smuggler file. Skiping.", e);
+                        }
+                    }
+                    
+                    return databaseRecord;
+                }
+            }
+        }
+
         public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
         {
             compareExchange = InternalGetCompareExchangeValues();
@@ -151,6 +204,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 case DatabaseItemType.None:
                     return 0;
+                case DatabaseItemType.DatabaseRecord:
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Tombstones:
@@ -841,11 +895,11 @@ namespace Raven.Server.Smuggler.Documents
             if (type == null)
                 return DatabaseItemType.None;
 
-            if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.Documents;
+            if (type.Equals(nameof(DatabaseItemType.DatabaseRecord), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.DatabaseRecord;
 
-            // reading from stream/docs endpoint
-            if (type.Equals("Results", StringComparison.OrdinalIgnoreCase))
+            if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase) || 
+                type.Equals("Results", StringComparison.OrdinalIgnoreCase)) // reading from stream/docs endpoint
                 return DatabaseItemType.Documents;
 
             if (type.Equals(nameof(DatabaseItemType.RevisionDocuments), StringComparison.OrdinalIgnoreCase))

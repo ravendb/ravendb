@@ -2,6 +2,7 @@
 using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -12,6 +13,7 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface ISmugglerDestination
     {
         IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, long buildVersion);
+        IDatabaseRecordActions DatabaseRecord();
         IDocumentActions Documents();
         IDocumentActions RevisionDocuments();
         IDocumentActions Tombstones();
@@ -44,5 +46,10 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface IKeyValueActions<in T> : IDisposable
     {
         void WriteKeyValue(string key, T value);
+    }
+
+    public interface IDatabaseRecordActions : IDisposable
+    {
+        void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress);
     }
 }

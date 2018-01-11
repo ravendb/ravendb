@@ -27,6 +27,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Rachis;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Collections;
@@ -413,7 +414,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                         configuration.BackupType == BackupType.Snapshot && isFullBackup == false)
                     {
                         // smuggler backup
-                        var options = new DatabaseSmugglerOptionsServerSide();
+                        var options = new DatabaseSmugglerOptionsServerSide
+                        {
+                            AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
+                        };
                         if (isFullBackup == false)
                             options.OperateOnTypes |= DatabaseItemType.Tombstones;
 

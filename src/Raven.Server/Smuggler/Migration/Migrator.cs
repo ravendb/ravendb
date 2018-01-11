@@ -139,13 +139,10 @@ namespace Raven.Server.Smuggler.Migration
                 if (databases == null)
                     databases = new List<DatabaseMigrationSettings>();
 
-                var defaultOperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Conflicts |
-                                            DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
-                                            DatabaseItemType.Identities | DatabaseItemType.CompareExchange;
-
+                var operateOnTypes = DatabaseSmugglerOptions.DefaultOperateOnTypes;
                 if (_buildMajorVersion != MajorVersion.V4)
                 {
-                    defaultOperateOnTypes |= DatabaseItemType.LegacyAttachments;
+                    operateOnTypes |= DatabaseItemType.LegacyAttachments;
                 }
 
                 foreach (var databaseName in databaseNames)
@@ -153,7 +150,7 @@ namespace Raven.Server.Smuggler.Migration
                     databases.Add(new DatabaseMigrationSettings
                     {
                         DatabaseName = databaseName,
-                        OperateOnTypes = defaultOperateOnTypes,
+                        OperateOnTypes = operateOnTypes,
                         RemoveAnalyzers = false
                     });
                 }

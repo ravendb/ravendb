@@ -17,6 +17,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
@@ -232,6 +233,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var destination = new DatabaseDestination(database);
             var smugglerOptions = new DatabaseSmugglerOptionsServerSide
             {
+                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
             };
             var lastPath = Path.Combine(_restoreConfiguration.BackupLocation, lastFile);
@@ -413,6 +415,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptionsServerSide
             {
+                AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = ~(DatabaseItemType.CompareExchange | DatabaseItemType.Identities)
             };
             var oldOperateOnTypes = options.OperateOnTypes;

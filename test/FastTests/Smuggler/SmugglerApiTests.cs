@@ -279,8 +279,6 @@ namespace FastTests.Smuggler
                     ModifyDatabaseName = s => $"{s}_store2"
                 }))
                 {
-                    await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
-
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());

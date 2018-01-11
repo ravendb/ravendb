@@ -8,6 +8,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -42,6 +43,11 @@ namespace Raven.Server.Smuggler.Documents
         {
             _buildType = BuildVersion.Type(buildVersion);
             return null;
+        }
+
+        public IDatabaseRecordActions DatabaseRecord()
+        {
+            return new DatabaseRecordActions(_database, log: _log);
         }
 
         public IDocumentActions Documents()
@@ -318,6 +324,53 @@ namespace Raven.Server.Smuggler.Documents
                 AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(_database.Name, _identities)));
 
                 _identities.Clear();
+            }
+        }
+        
+        private class DatabaseRecordActions : IDatabaseRecordActions
+        {
+            private readonly DocumentDatabase _database;
+            private readonly Logger _log;
+
+            public DatabaseRecordActions(DocumentDatabase database, Logger log)
+            {
+                _database = database;
+                _log = log;
+            }
+
+            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress)
+            {
+                var currentDatabaseRecord = _database.ReadDatabaseRecord();
+                var tasks = new List<Task>();
+                
+                if (currentDatabaseRecord.Revisions == null &&
+                    databaseRecord.Revisions != null)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring revisions from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditRevisionsConfigurationCommand(databaseRecord.Revisions, _database.Name)));
+                    progress.RevisionsConfigurationUpdated = true;
+                }
+
+                if (currentDatabaseRecord.Expiration == null &&
+                    databaseRecord.Expiration != null)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring expiration from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name)));
+                    progress.ExpirationConfigurationUpdated = true;
+                }
+
+                foreach (var task in tasks)
+                {
+                    AsyncHelpers.RunSync(() => task);    
+                }
+
+                tasks.Clear();
+            }
+
+            public void Dispose()
+            {
             }
         }
 

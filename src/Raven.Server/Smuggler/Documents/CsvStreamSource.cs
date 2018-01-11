@@ -5,8 +5,10 @@ using System.Linq;
 using CsvHelper;
 using Raven.Client;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -141,6 +143,11 @@ namespace Raven.Server.Smuggler.Documents
             var type = _currentType;
             _currentType = DatabaseItemType.None;
             return type;
+        }
+
+        public DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus)
+        {
+            return new DatabaseRecord();
         }
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)

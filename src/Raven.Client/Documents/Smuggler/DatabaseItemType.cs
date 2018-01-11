@@ -16,6 +16,7 @@ namespace Raven.Client.Documents.Smuggler
         Conflicts = 1 << 7,
         CompareExchange = 1 << 8,
         LegacyDocumentDeletions = 1 << 9,
-        LegacyAttachmentDeletions = 1 << 10
+        LegacyAttachmentDeletions = 1 << 10,
+        DatabaseRecord = 1 << 11,
     }
 }
