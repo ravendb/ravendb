@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Queries
             else
                 IndexName = fromToken.FieldValue;
 
-            if (IsDynamic == false || IsGroupBy)
+            if (IsDynamic == false || IsGroupBy || IsDistinct)
                 IsCollectionQuery = false;
 
             Build(parameters);
