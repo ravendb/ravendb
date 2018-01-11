@@ -124,8 +124,9 @@
                         <p class="text-info bg-info padding padding-sm">
                             RavenDB will update the DNS record for:<br/>
                             <strong data-bind="text: (nodeTag() ? nodeTag().toLocaleLowerCase() : '') + '.' + $root.model.createFullNodeNameObservable($data)()"></strong>
-                            to IP Address:
-                            <strong data-bind="text: effectiveIpAddress() || '<Enter IP/Hostname>'"></strong>
+                            <span data-bind="visible: effectiveIpAddresses().length <= 1">to IP Address:</span>
+                            <span data-bind="visible: effectiveIpAddresses().length > 1">to IP Addresses:</span>
+                            <strong data-bind="text: effectiveIpAddresses() || '<Enter IP/Hostname>'"></strong>
                         </p>
                         <div class="checkbox">
                             <input id="customize" type="checkbox" data-bind="checked: advancedSettingsCheckBox, disable: ipsContainHostName">
