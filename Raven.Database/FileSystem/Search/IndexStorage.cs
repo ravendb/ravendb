@@ -151,7 +151,7 @@ namespace Raven.Database.FileSystem.Search
 
                     directory = luceneDirectory;
                     writer = new IndexWriter(directory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED);
-                    writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+                    writer.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler(name));
                     
                     currentIndexSearcherHolder.SetIndexSearcher(new IndexSearcher(directory, true));
 
@@ -242,7 +242,7 @@ namespace Raven.Database.FileSystem.Search
 
                     using (var indexWriter = new IndexWriter(luceneDirectory, analyzer, snapshotter, IndexWriter.MaxFieldLength.UNLIMITED))
                     {
-                        indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler());
+                        indexWriter.SetMergeScheduler(new ErrorLoggingConcurrentMergeScheduler(name));
 
                         filesystem.Storage.Batch(accessor =>
                         {
