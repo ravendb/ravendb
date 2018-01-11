@@ -1048,7 +1048,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    command = new RemoveRavenConnectionString(connectionStringName, databaseName);
+                    command = new RemoveRavenConnectionStringCommand(connectionStringName, databaseName);
                     break;
 
                 case ConnectionStringType.Sql:
@@ -1062,7 +1062,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    command = new RemoveSqlConnectionString(connectionStringName, databaseName);
+                    command = new RemoveSqlConnectionStringCommand(connectionStringName, databaseName);
                     break;
 
                 default:
