@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
@@ -16,7 +17,7 @@ using Xunit;
 
 namespace RachisTests.DatabaseCluster
 {
-    public class EtlFailover : ReplicationTests
+    public class EtlFailover : ReplicationTestBase
     {
         [NightlyBuildFact]
         public async Task ReplicateFromSingleSource()
@@ -124,15 +125,19 @@ namespace RachisTests.DatabaseCluster
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
             var dstDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterDst";
-            var srcRaft = await CreateRaftClusterAndGetLeader(3);
+            var srcRaft = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0);
             var dstRaft = await CreateRaftClusterAndGetLeader(3);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 3, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 3, dstRaft.WebUrl);
 
             using (var src = new DocumentStore
             {
-                Urls = srcNodes.Servers.Select(s => s.WebUrl).ToArray(),
+                Urls = new[]{ srcRaft.WebUrl},
                 Database = srcDb,
+                Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true
+                }
             }.Initialize())
             using (var dest = new DocumentStore
             {
@@ -140,6 +145,7 @@ namespace RachisTests.DatabaseCluster
                 Database = dstDb,
             }.Initialize())
             {
+                var myTag = srcRaft.ServerStore.NodeTag;
                 var connectionStringName = "EtlFailover";
                 var urls = new[] { "http://google.com", "http://localhost:1232", destNode.Servers[0].WebUrl };
                 var conflig = new RavenEtlConfiguration()
@@ -158,7 +164,7 @@ namespace RachisTests.DatabaseCluster
                         }
                     },
                     LoadRequestTimeoutInSec = 10,
-                    MentorNode = "A"
+                    MentorNode = myTag
                 };
                 var connectionString = new RavenConnectionString
                 {
@@ -169,7 +175,7 @@ namespace RachisTests.DatabaseCluster
 
                 src.Maintenance.Send(new PutConnectionStringOperation<RavenConnectionString>(connectionString));
                 var etlResult = src.Maintenance.Send(new AddEtlOperation<RavenConnectionString>(conflig));
-                var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == "A")
+                var database = await srcNodes.Servers.Single(s => s.ServerStore.NodeTag == myTag)
                     .ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDb);
 
                 var etlDone = new ManualResetEventSlim();
@@ -192,7 +198,9 @@ namespace RachisTests.DatabaseCluster
 
                 Assert.True(WaitForDocument<User>(dest, "users/1", u => u.Name == "Joe Doe", 30_000));
                 var taskInfo = (OngoingTaskRavenEtlDetails)src.Maintenance.Send(new GetOngoingTaskInfoOperation(etlResult.TaskId, OngoingTaskType.RavenEtl));
-
+                Assert.Equal(myTag, taskInfo.ResponsibleNode.NodeTag);
+                Assert.Null(taskInfo.Error);
+                Assert.Equal(OngoingTaskConnectionStatus.Active, taskInfo.TaskConnectionStatus);
                 Assert.NotNull(taskInfo.DestinationUrl);
                 etlDone.Reset();
                 DisposeServerAndWaitForFinishOfDisposal(destNode.Servers.Single(s => s.WebUrl == taskInfo.DestinationUrl));
@@ -208,7 +216,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
-                Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 60_000));
+                Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
             }
         }
     }

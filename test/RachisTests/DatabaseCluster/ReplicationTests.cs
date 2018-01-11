@@ -750,10 +750,7 @@ namespace RachisTests.DatabaseCluster
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
             var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
-            {
-                [dbName] = DatabaseAccess.Admin
-            });
+            var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             var userCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName + "otherstuff"] = DatabaseAccess.Admin
