@@ -32,16 +32,18 @@ namespace Raven.Client.Documents.Session.Tokens
             for (var i = 0; i < FieldsToFetch.Length; i++)
             {
                 var fieldToFetch = FieldsToFetch[i];
-                var projection = Projections?[i];
 
                 if (i > 0)
                     writer.Append(", ");
 
                 WriteField(writer, fieldToFetch);
 
-                if (IsCustomFunction || 
-                    projection == null || 
-                    string.Equals(fieldToFetch, projection))
+                if (IsCustomFunction)
+                    continue;
+                
+                var projection = Projections?[i];
+
+                if (projection == null || string.Equals(fieldToFetch, projection))
                     continue;
 
                 writer.Append(" as ");
