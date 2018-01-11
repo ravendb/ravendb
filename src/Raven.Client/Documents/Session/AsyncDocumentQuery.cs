@@ -833,8 +833,8 @@ namespace Raven.Client.Documents.Session
 
         private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
-            var newFieldsToFetch = queryData != null && queryData.Fileds.Length > 0
-                ? FieldsToFetchToken.Create(queryData.Fileds, queryData.Projections.ToArray(), queryData.IsCustomFunction)
+            var newFieldsToFetch = queryData != null && queryData.Fields.Length > 0
+                ? FieldsToFetchToken.Create(queryData.Fields, queryData.Projections.ToArray(), queryData.IsCustomFunction)
                 : null;
 
             if (newFieldsToFetch != null)

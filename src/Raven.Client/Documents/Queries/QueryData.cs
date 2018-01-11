@@ -11,12 +11,7 @@ namespace Raven.Client.Documents.Queries
 {
     public class QueryData
     {
-        public class CustomFunction
-        {
-            public string FromAlias { get; set; }
-        }
-        
-        public string[] Fileds { get; set; }
+        public string[] Fields { get; set; }
 
         public IEnumerable<string> Projections { get; set; }
 
@@ -28,9 +23,9 @@ namespace Raven.Client.Documents.Queries
 
         public bool IsCustomFunction { get; set; }
 
-        public QueryData(string[] fileds, IEnumerable<string> projections, string fromAlias, DeclareToken declareToken, List<LoadToken> loadTokens, bool isCustomFunction = false)
+        public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias, DeclareToken declareToken, List<LoadToken> loadTokens, bool isCustomFunction = false)
         {
-            Fileds = fileds;
+            Fields = fields;
             Projections = projections;
             FromAlias = fromAlias;
             DeclareToken = declareToken;
@@ -38,15 +33,6 @@ namespace Raven.Client.Documents.Queries
             IsCustomFunction = isCustomFunction;
         }
 
-        public QueryData(string[] fileds, IEnumerable<string> projections, CustomFunction customFunction = null, DeclareToken declareToken = null, List<LoadToken> loadTokens = null)
-        {
-            Fileds = fileds;
-            Projections = projections;
-            LoadTokens = loadTokens;
-            DeclareToken = declareToken;
-            FromAlias = customFunction?.FromAlias;
-            IsCustomFunction = customFunction != null;
-        }
         
     }
 }
