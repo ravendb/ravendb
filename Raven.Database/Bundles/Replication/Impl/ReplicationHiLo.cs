@@ -32,15 +32,9 @@ namespace Raven.Bundles.Replication.Impl
             var document = database.Documents.Get(RavenReplicationVersionHiLo, null);
             //we do not have the hilo document (old format), 
             if (document == null) 
-            {
-                Database.TransactionalStorage.Batch(accessor =>
-                {
-                    current = accessor.General.GetNextIdentityValue(RavenReplicationHilo, 0);
-                });
-
-                var nextMax = current + 1;
-                currentMax = new Holder(nextMax);
-
+            {                
+                current = 0;
+                currentMax = new Holder(0);
                 return;
             }
 
