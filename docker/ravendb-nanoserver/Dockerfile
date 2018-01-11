@@ -1,6 +1,6 @@
 FROM microsoft/dotnet:runtime-nanoserver
 
-HEALTHCHECK --start-period=60s CMD powershell -c 'c:\healthcheck.ps1'
+HEALTHCHECK --start-period=60s CMD powershell -c 'C:\healthcheck.ps1'
 
 ENV RAVEN_ARGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
@@ -8,14 +8,14 @@ EXPOSE 8080 38888 161
 
 COPY RavenDB.zip install-raven.ps1 run-raven.ps1 healthcheck.ps1 c:/
 
-RUN powershell -c 'c:\install-raven.ps1'
+RUN powershell -c 'C:\install-raven.ps1'
 
-COPY settings.json c:/ravendb/Server
+COPY settings.json C:/RavenDB/Server
 
-VOLUME c:/ravendb/Server/RavenData c:/ravendb/config
+VOLUME C:/RavenDB/Server/RavenData C:/RavenDB/Config
 
 WORKDIR C:/ravendb/Server
 
-ADD https://ravendb-docker.s3.amazonaws.com/vcruntime140.dll c:/ravendb/server
+ADD https://ravendb-docker.s3.amazonaws.com/vcruntime140.dll C:/RavenDB/Server
 
-CMD powershell -c 'c:\run-raven.ps1'
+CMD powershell -c 'C:\run-raven.ps1'
