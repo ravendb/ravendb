@@ -9,12 +9,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -360,6 +362,39 @@ namespace Raven.Server.Smuggler.Documents
                         _log.Info("Configuring expiration from smuggler");
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditExpirationCommand(databaseRecord.Expiration, _database.Name)));
                     progress.ExpirationConfigurationUpdated = true;
+                }
+
+                if (currentDatabaseRecord.RavenConnectionStrings.Count == 0 &&
+                    databaseRecord.RavenConnectionStrings.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring client configuration from smuggler");
+                    foreach (var connectionString in databaseRecord.RavenConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name)));
+                    }
+                    progress.RavenConnectionStringsUpdated = true;
+                }
+
+                if (currentDatabaseRecord.SqlConnectionStrings.Count == 0 &&
+                    databaseRecord.SqlConnectionStrings.Count > 0)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring client configuration from smuggler");
+                    foreach (var connectionString in databaseRecord.SqlConnectionStrings)
+                    {
+                        tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name)));
+                    }
+                    progress.SqlConnectionStringsUpdated = true;
+                }
+
+                if (currentDatabaseRecord.Client == null &&
+                    databaseRecord.Client != null)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring client configuration from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutClientConfigurationCommand(databaseRecord.Client)));
+                    progress.ClientConfigurationUpdated = true;
                 }
 
                 foreach (var task in tasks)

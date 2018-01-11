@@ -163,18 +163,30 @@ namespace Raven.Client.Documents.Smuggler
             
             public bool ExpirationConfigurationUpdated { get; set; }
             
+            public bool RavenConnectionStringsUpdated { get; set; }
+            
+            public bool SqlConnectionStringsUpdated { get; set; }
+            
+            public bool ClientConfigurationUpdated { get; set; }
+            
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
                 json[nameof(RevisionsConfigurationUpdated)] = RevisionsConfigurationUpdated;
                 json[nameof(ExpirationConfigurationUpdated)] = ExpirationConfigurationUpdated;
+                json[nameof(RavenConnectionStringsUpdated)] = RavenConnectionStringsUpdated;
+                json[nameof(SqlConnectionStringsUpdated)] = SqlConnectionStringsUpdated;
+                json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
                 return json;
             }
 
             public override string ToString()
             {
                 return $"RevisionsConfigurationUpdated: {RevisionsConfigurationUpdated}. " +
-                       $"ExpirationConfigurationUpdated: {ExpirationConfigurationUpdated}.";
+                       $"ExpirationConfigurationUpdated: {ExpirationConfigurationUpdated}. " +
+                       $"RavenConnectionStringsUpdated: {RavenConnectionStringsUpdated}. " +
+                       $"SqlConnectionStringsUpdated: {SqlConnectionStringsUpdated}. " +
+                       $"ClientConfigurationUpdated: {ClientConfigurationUpdated}.";
             }
         }
 
