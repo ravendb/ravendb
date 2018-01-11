@@ -12,39 +12,57 @@ Invoke-Expression -Command "$composeCommand $composeArgs"
 write-host "Containers created."
 
 $nodes = @(
-    "raven-node1",
-    "raven-node2",
-    "raven-node3"
+    "raven1",
+    "raven2",
+    "raven3"
 );
 
+function DoCurl() {
+    param($Method, $Uri)
+    Invoke-WebRequest -Method $Method -Uri $Uri -UseBasicParsing
+}
+
 function AddNodeToCluster() {
-    param($FirstNodeUrl, $OtherNodeUrl, $AssignedCores = 2)
+    param($FirstNodeUrl, $OtherNodeUrl, $AssignedCores = 1)
 
     $otherNodeUrlEncoded = [System.Web.HttpUtility]::UrlEncode($OtherNodeUrl)
-    $uri = "$($FirstNodeUrl)/admin/cluster/node?url=$($otherNodeUrlEncoded)&assignedCores=$AssignedCores"
-    $curlCmd = "write-host `$(try { Invoke-WebRequest -Method PUT -Uri '$uri' } catch { write-host `$_.Exception })"
-    Invoke-Expression "$curlCmd"
-    Start-Sleep -Seconds 1
+    $uri = "$($FirstNodeUrl)/admin/cluster/node?assignedCores=$AssignedCores&url=$($otherNodeUrlEncoded)"
+    DoCurl -Method 'PUT' -Uri $uri
+    Start-Sleep -Seconds 5
 }
 
 Add-Type -AssemblyName System.Web
-
 
 $nodesIps = @{}
 foreach ($node in $nodes) {
     $ip = docker ps -q -f name=$node | % { docker inspect  -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $_ }[0];
     $nodesIps[$node] = $ip
+    if ($ip -eq $null) {
+        throw "Could not determine $node container's IP.";
+    }
     write-host "Node $node URL: http://$($ip):8080"
 }
 
 $firstNodeUrl = "http://$($nodesIps[$nodes[0]]):8080"
 
+$coresReassigned = $false
+function ReassignCoresOnFirstNode() {
+    write-host "Reassign cores on $firstNodeUrl"
+    $uri = "$firstNodeUrl/admin/license/set-limit?nodeTag=A&newAssignedCores=1"
+    DoCurl -Method 'POST' -Uri $uri 
+}
+
 if ($DontSetupCluster -eq $False) {
     write-host "Setting up a cluster..."
+
     Start-Sleep -Seconds 5 # let nodes start
     foreach ($node in $nodes | Select-Object -Skip 1) {
         Write-Host "Add node $node to cluster";
-        AddNodeToCluster -FirstNodeUrl $firstNodeUrl -OtherNodeUrl "http://$($node):8080"
+        AddNodeToCluster -FirstNodeUrl $firstNodeUrl -OtherNodeUrl "http://$($node):8080" -AssignedCores 1
+        if ($coresReassigned -eq $False) {
+            ReassignCoresOnFirstNode
+            $coresReassigned = $true
+        }
     }
 }
 
