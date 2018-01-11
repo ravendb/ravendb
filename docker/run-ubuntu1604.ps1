@@ -190,7 +190,7 @@ if ([string]::IsNullOrEmpty($Hostname) -eq $False) {
 
 if ([string]::IsNullOrEmpty($ravenArgs) -eq $False) {
     $dockerArgs += "-e"
-    $dockerArgs += "`"RAVEN_ARGS='$ravenArgs'`""
+    $dockerArgs += "RAVEN_ARGS='$ravenArgs'"
 }
 
 $dockerArgs += '-p'
