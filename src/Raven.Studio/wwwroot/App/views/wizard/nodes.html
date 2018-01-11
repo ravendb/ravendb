@@ -128,7 +128,7 @@
                             </div>
                         </div>
                     </div>
-                    <div data-bind="if: $root.canCustomizeIp()">
+                    <div data-bind="if: $root.canCustomizeExternalIpsAndPorts()">
                         <p class="text-info bg-info padding padding-sm">
                             RavenDB will update the DNS record for:<br/>
                             <strong data-bind="text: (nodeTag() ? nodeTag().toLocaleLowerCase() : '') + '.' + $root.model.createFullNodeNameObservable($data)()"></strong>
@@ -138,7 +138,7 @@
                         </p>
                         <div class="checkbox">
                             <input id="customize1" type="checkbox" data-bind="checked: advancedSettingsCheckBox, disable: ipsContainHostName">
-                            <label for="customize1">Customize the DNS record and external TCP Port</label>
+                            <label for="customize1">Customize external IP and TCP Ports</label>
                         </div>
                         <div data-bind="collapse: showAdvancedSettings" class="margin-top">
                             <div class="form-group" data-bind="validationElement: externalIpAddress">
@@ -146,6 +146,14 @@
                                 <div class="flex-grow">
                                     <input type="text" autocomplete="off" class="form-control" placeholder="Enter external IP address"
                                            data-bind="textInput: externalIpAddress">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" data-bind="validationElement: externalHttpPort">
+                                <label class="control-label">External HTTP Port</label>
+                                <div class="flex-grow">
+                                    <input type="text" autocomplete="off" class="form-control" placeholder="Enter external HTTP port"
+                                           data-bind="textInput: externalHttpPort">
                                 </div>
                             </div>
                             
@@ -159,12 +167,20 @@
                         </div>
                     </div>
                     
-                    <div data-bind="if: $root.canCustomizeIpAndTcpPort()">
+                    <div data-bind="if: $root.canCustomizeExternalTcpPorts()">
                         <div class="checkbox">
                             <input id="customize2" type="checkbox" data-bind="checked: advancedSettingsCheckBox">
-                            <label for="customize2">Customize external TCP port</label>
+                            <label for="customize2">Customize external ports</label>
                         </div>
                         <div data-bind="collapse: showAdvancedSettings" class="margin-top">
+                            <div class="form-group" data-bind="validationElement: externalHttpPort">
+                                <label class="control-label">External HTTP Port</label>
+                                <div class="flex-grow">
+                                    <input type="text" autocomplete="off" class="form-control" placeholder="Enter external HTTP port"
+                                           data-bind="textInput: externalHttpPort">
+                                </div>
+                            </div>
+                            
                             <div class="form-group" data-bind="validationElement: externalTcpPort">
                                 <label class="control-label">External TCP Port</label>
                                 <div class="flex-grow">
