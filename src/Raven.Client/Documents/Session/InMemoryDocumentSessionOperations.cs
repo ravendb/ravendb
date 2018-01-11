@@ -190,7 +190,7 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
-            SessionInfo = new SessionInfo(_clientSessionId , false);
+            SessionInfo = new SessionInfo(_clientSessionId, false);
         }
 
         /// <summary>
@@ -801,9 +801,9 @@ more responsive application.
                     else
                         changeVector = null;
                 }
-                else if(entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced) 
+                else if (entity.Value.ConcurrencyCheckMode == ConcurrencyCheckMode.Forced)
                     changeVector = entity.Value.ChangeVector;
-                else 
+                else
                     changeVector = null;
 
                 result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document));
@@ -1113,10 +1113,8 @@ more responsive application.
         internal void HandleInternalMetadata(BlittableJsonReaderObject result)
         {
             // Implant a property with "id" value ... if it doesn't exist
-            BlittableJsonReaderObject metadata;
-            string id;
-            if (result.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
+            if (result.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
             {
                 // if the item doesn't have meta data, then nested items might have, so we need to check them
                 var propDetail = new BlittableJsonReaderObject.PropertyDetails();
@@ -1139,11 +1137,10 @@ more responsive application.
                 return;
             }
 
-            string entityName;
-            if (metadata.TryGet(Constants.Documents.Metadata.Collection, out entityName) == false)
+            if (metadata.TryGet(Constants.Documents.Metadata.Collection, out string collectionName) == false)
                 return;
 
-            var idPropName = Conventions.FindIdentityPropertyNameFromEntityName(entityName);
+            var idPropName = Conventions.FindIdentityPropertyNameFromCollectionName(collectionName);
 
             result.Modifications = new DynamicJsonValue
             {
@@ -1169,7 +1166,7 @@ more responsive application.
             HandleInternalMetadata(document);
             return EntityToBlittable.ConvertToEntity(entityType, id, document);
         }
-        
+
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
@@ -1221,7 +1218,7 @@ more responsive application.
             if (documentInfo.Metadata != null)
             {
                 documentInfo.Metadata.TryGetMember(Constants.Documents.Metadata.ChangeVector, out var changeVector);
-                documentInfo.ChangeVector = (LazyStringValue) changeVector;
+                documentInfo.ChangeVector = (LazyStringValue)changeVector;
             }
 
             documentInfo.Document = document;
