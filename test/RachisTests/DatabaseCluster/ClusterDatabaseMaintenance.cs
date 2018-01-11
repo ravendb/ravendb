@@ -10,6 +10,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -310,7 +311,7 @@ namespace RachisTests.DatabaseCluster
         public async Task RemoveNodeFromClusterWhileDeletion()
         {
             var databaseName = "RemoveNodeFromClusterWhileDeletion" + Guid.NewGuid();
-            var leader = await CreateRaftClusterAndGetLeader(3);
+            var leader = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0);
 
             using (var leaderStore = new DocumentStore
             {
@@ -329,7 +330,7 @@ namespace RachisTests.DatabaseCluster
 
                 var node = Servers[1].ServerStore.Engine.Tag;
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
-                await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
+                var res = await leaderStore.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(databaseName, true));
 
                 await WaitForValueAsync(async () =>
                 {
@@ -342,6 +343,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(node, record.DeletionInProgress.First().Key);
                 await leader.ServerStore.RemoveFromClusterAsync(node);
 
+                await leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, res.RaftCommandIndex + 1);
                 record = await leaderStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
                 Assert.Null(record);
@@ -526,7 +528,7 @@ namespace RachisTests.DatabaseCluster
         public async Task ChangeUrlOfMultiNodeCluster()
         {
             var databaseName = "ChangeUrlOfSingleNodeCluster" + Guid.NewGuid();
-            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false, leaderIndex: 0);
             var groupSize = 3;
             using (var leaderStore = new DocumentStore
             {

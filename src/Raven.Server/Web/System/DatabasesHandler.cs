@@ -103,6 +103,13 @@ namespace Raven.Server.Web.System
                     }
 
                     var clusterTopology = ServerStore.GetClusterTopology(context);
+                    if (ServerStore.IsPassive() && clusterTopology.TopologyId != null)
+                    {
+                        // we were kicked-out from the cluster
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        return Task.CompletedTask;
+                    }
+
                     clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
 
                     var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbBlit);

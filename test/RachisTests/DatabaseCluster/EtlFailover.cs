@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
@@ -91,12 +92,17 @@ namespace RachisTests.DatabaseCluster
 
                     session.SaveChanges();
                 }
+
                 Assert.True(WaitForDocument<User>(dest, "users/2", u => u.Name == "Joe Doe2", 30_000));
 
                 using (var originalSrc = new DocumentStore
                 {
                     Urls = new[] {originalTaskNode.WebUrl},
                     Database = srcDb,
+                    Conventions = new DocumentConventions
+                    {
+                        DisableTopologyUpdates = true
+                    }
                 }.Initialize())
                 {
                     using (var session = originalSrc.OpenSession())
@@ -108,8 +114,7 @@ namespace RachisTests.DatabaseCluster
 
                         session.SaveChanges();
                     }
-
-                    Assert.False(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 60_000));
+                    Assert.False(WaitForDocument<User>(dest, "users/3", u => u.Name == "Joe Doe3", 30_000));
                 }
             }
         }

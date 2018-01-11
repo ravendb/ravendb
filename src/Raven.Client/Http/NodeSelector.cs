@@ -70,7 +70,7 @@ namespace Raven.Client.Http
             var len = Math.Min(serverNodes.Count, stateFailures.Length);
             for (int i = 0; i < len; i++)
             {
-                if (stateFailures[i] == 0)
+                if (stateFailures[i] == 0 && string.IsNullOrEmpty(serverNodes[i].Url) == false)
                 {
                     return (i, serverNodes[i]);
                 }
