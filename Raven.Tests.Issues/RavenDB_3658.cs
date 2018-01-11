@@ -15,16 +15,19 @@ using Raven.Tests.Common.Dto;
 using Raven.Tests.Core.Smuggler;
 
 using Xunit;
+using Xunit.Extensions;
 
 namespace Raven.Tests.Issues
 {
     public class RavenDB_3658 : ReplicationBase
     {
-        [Fact]
-        public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed()
+        [Theory]
+        [InlineData("voron")]
+        [InlineData("esent")]
+        public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed(string storage)
         {
-            using (var store1 = CreateStore())
-            using (var store2 = CreateStore())
+            using (var store1 = CreateStore(requestedStorageType:storage))
+            using (var store2 = CreateStore(requestedStorageType:storage))
             {
                 using (var session = store1.OpenSession())
                 {
@@ -95,11 +98,13 @@ namespace Raven.Tests.Issues
             }
         }
 
-        [Fact]
-        public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed_Between()
+        [Theory]
+        [InlineData("voron")]
+        [InlineData("esent")]
+        public async Task ShouldImportHiloWhenRavenEntityNameFilterIsUsed_Between(string storage)
         {
-            using (var store1 = CreateStore())
-            using (var store2 = CreateStore())
+            using (var store1 = CreateStore(requestedStorageType:storage))
+            using (var store2 = CreateStore(requestedStorageType:storage))
             {
                 using (var session = store1.OpenSession())
                 {
