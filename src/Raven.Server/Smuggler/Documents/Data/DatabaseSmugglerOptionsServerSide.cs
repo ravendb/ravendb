@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Routing;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
@@ -17,7 +18,9 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public List<string> Collections { get; set; }
 
-        public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext, JsonOperationContext context)
+        public AuthorizationStatus AuthorizationStatus { get; set; } = AuthorizationStatus.ValidUser;
+
+        public static DatabaseSmugglerOptionsServerSide Create(HttpContext httpContext)
         {
             var result = new DatabaseSmugglerOptionsServerSide();
 

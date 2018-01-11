@@ -100,15 +100,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     else
                     {
                         // no content, we'll use defaults
-                        options = new DatabaseSmugglerOptionsServerSide
-                        {
-                            OperateOnTypes = DatabaseItemType.Documents |
-                                             DatabaseItemType.Indexes |
-                                             DatabaseItemType.Identities |
-                                             DatabaseItemType.Conflicts |
-                                             DatabaseItemType.CompareExchange |
-                                             DatabaseItemType.RevisionDocuments,
-                        };
+                        options = new DatabaseSmugglerOptionsServerSide();
                     }
                 }
 
@@ -167,7 +159,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
        
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
+                var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext);
 
                 using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())

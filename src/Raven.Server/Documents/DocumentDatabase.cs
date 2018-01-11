@@ -27,6 +27,7 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -604,6 +605,7 @@ namespace Raven.Server.Documents
                         var smugglerDestination = new StreamDestination(zipStream, ctx, smugglerSource);
                         var databaseSmugglerOptionsServerSide = new DatabaseSmugglerOptionsServerSide
                         {
+                            AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                             OperateOnTypes = DatabaseItemType.CompareExchange | DatabaseItemType.Identities
                         };
                         var smuggler = new DatabaseSmuggler(this,
@@ -955,6 +957,15 @@ namespace Raven.Server.Documents
 
             var journalSize = storageReport.Journals.Sum(j => j.AllocatedSpaceInBytes);
             return storageReport.DataFile.AllocatedSpaceInBytes + journalSize;
+        }
+
+        public DatabaseRecord ReadDatabaseRecord()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return ServerStore.Cluster.ReadDatabase(context, Name);
+            }
         }
     }
 

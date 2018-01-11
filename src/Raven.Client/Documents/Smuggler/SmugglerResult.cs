@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Smuggler
             _messages = new List<string>();
             _progress = new SmugglerProgress(this);
 
+            DatabaseRecord = new DatabaseRecordProgress();
             Documents = new CountsWithSkippedCountAndLastEtag();
             RevisionDocuments = new CountsWithLastEtag();
             Tombstones = new CountsWithLastEtag();
@@ -125,6 +126,8 @@ namespace Raven.Client.Documents.Smuggler
 
     public abstract class SmugglerProgressBase
     {
+        public virtual DatabaseRecordProgress DatabaseRecord { get; set; }
+        
         public virtual CountsWithSkippedCountAndLastEtag Documents { get; set; }
 
         public virtual CountsWithLastEtag RevisionDocuments { get; set; }
@@ -143,6 +146,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             return new DynamicJsonValue(GetType())
             {
+                [nameof(DatabaseRecordProgress)] = DatabaseRecord.ToJson(),
                 [nameof(Documents)] = Documents.ToJson(),
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
                 [nameof(Tombstones)] = Tombstones.ToJson(),
@@ -151,6 +155,27 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Indexes)] = Indexes.ToJson(),
                 [nameof(CompareExchange)] = CompareExchange.ToJson(),
             };
+        }
+
+        public class DatabaseRecordProgress : Counts
+        {
+            public bool RevisionsConfigurationUpdated { get; set; }
+            
+            public bool ExpirationConfigurationUpdated { get; set; }
+            
+            public override DynamicJsonValue ToJson()
+            {
+                var json = base.ToJson();
+                json[nameof(RevisionsConfigurationUpdated)] = RevisionsConfigurationUpdated;
+                json[nameof(ExpirationConfigurationUpdated)] = ExpirationConfigurationUpdated;
+                return json;
+            }
+
+            public override string ToString()
+            {
+                return $"RevisionsConfigurationUpdated: {RevisionsConfigurationUpdated}. " +
+                       $"ExpirationConfigurationUpdated: {ExpirationConfigurationUpdated}.";
+            }
         }
 
         public class Counts
@@ -176,7 +201,8 @@ namespace Raven.Client.Documents.Smuggler
 
             public override string ToString()
             {
-                return $"Read: {ReadCount}. Errored: {ErroredCount}.";
+                return $"Read: {ReadCount}. " +
+                       $"Errored: {ErroredCount}.";
             }
         }
 

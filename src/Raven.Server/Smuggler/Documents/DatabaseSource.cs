@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -29,6 +31,7 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly DatabaseItemType[] _types =
         {
+            DatabaseItemType.DatabaseRecord,
             DatabaseItemType.Documents,
             DatabaseItemType.RevisionDocuments,
             DatabaseItemType.Tombstones,
@@ -62,6 +65,21 @@ namespace Raven.Server.Smuggler.Documents
         public DatabaseItemType GetNextType()
         {
             return _types[_currentTypeIndex++];
+        }
+
+        public DatabaseRecord GetDatabaseRecord(AuthorizationStatus authorizationStatus)
+        {
+            var databaseRecord = _database.ReadDatabaseRecord();
+            if (authorizationStatus != AuthorizationStatus.DatabaseAdmin)
+            {
+                databaseRecord.PeriodicBackups = null;
+                databaseRecord.ExternalReplications.Clear();
+                databaseRecord.RavenConnectionStrings.Clear();
+                databaseRecord.SqlConnectionStrings.Clear();
+                databaseRecord.RavenEtls = null;
+                databaseRecord.SqlEtls = null;
+            }
+            return databaseRecord;
         }
 
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)

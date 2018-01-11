@@ -2,9 +2,10 @@
 {
     public class DatabaseSmugglerOptions : IDatabaseSmugglerOptions
     {
-        private const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |
+        public const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |
                                                                DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
                                                                DatabaseItemType.Conflicts |
+                                                               DatabaseItemType.DatabaseRecord |
                                                                DatabaseItemType.Identities | DatabaseItemType.CompareExchange;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;

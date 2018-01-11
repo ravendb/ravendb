@@ -6,6 +6,9 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Expiration;
+using Raven.Client.ServerWide.Revisions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -50,6 +53,11 @@ namespace Raven.Server.Smuggler.Documents
             });
         }
 
+        public IDatabaseRecordActions DatabaseRecord()
+        {
+            return new DatabaseRecordActions(_writer);
+        }
+
         public IDocumentActions Documents()
         {
             return new StreamDocumentActions(_writer, _context, _source, "Docs");
@@ -83,6 +91,120 @@ namespace Raven.Server.Smuggler.Documents
         public IIndexActions Indexes()
         {
             return new StreamIndexActions(_writer, _context);
+        }
+        
+        private class DatabaseRecordActions : IDatabaseRecordActions
+        {
+            private readonly BlittableJsonTextWriter _writer;
+
+            public DatabaseRecordActions(BlittableJsonTextWriter writer)
+            {
+                _writer = writer;
+
+                _writer.WriteComma();
+                _writer.WritePropertyName(nameof(DatabaseItemType.DatabaseRecord));
+                _writer.WriteStartObject();
+            }
+
+            public void WriteDatabaseRecord(DatabaseRecord databaseRecord, SmugglerProgressBase.DatabaseRecordProgress progress)
+            {
+                _writer.WritePropertyName(nameof(databaseRecord.DatabaseName));
+                _writer.WriteString(databaseRecord.DatabaseName);
+                _writer.WriteComma();
+                
+                _writer.WritePropertyName(nameof(databaseRecord.Encrypted));
+                _writer.WriteBool(databaseRecord.Encrypted);
+                _writer.WriteComma();
+                
+                _writer.WritePropertyName(nameof(databaseRecord.Revisions));
+                WriteRevisions(databaseRecord.Revisions);
+                _writer.WriteComma();
+                
+                _writer.WritePropertyName(nameof(databaseRecord.Expiration));
+                WriteExpiration(databaseRecord.Expiration);
+            }
+
+            private void WriteExpiration(ExpirationConfiguration expiration)
+            {
+                if (expiration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                
+                _writer.WriteStartObject();
+                _writer.WritePropertyName(nameof(expiration.Disabled));
+                _writer.WriteBool(expiration.Disabled);
+                if (expiration.DeleteFrequencyInSec.HasValue)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(expiration.DeleteFrequencyInSec));
+                    _writer.WriteString(expiration.DeleteFrequencyInSec.Value.ToString());
+                }
+                _writer.WriteEndObject();
+            }
+
+            private void WriteRevisions(RevisionsConfiguration revisions)
+            {
+                if (revisions == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                
+                _writer.WriteStartObject();
+                _writer.WritePropertyName(nameof(revisions.Default));
+                WriteRevisionsCollectionConfiguration(revisions.Default);
+                _writer.WriteComma();
+                _writer.WritePropertyName(nameof(revisions.Collections));
+                _writer.WriteStartObject();
+                var first = true;
+                foreach (var collection in revisions.Collections)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _writer.WritePropertyName(collection.Key);
+                    WriteRevisionsCollectionConfiguration(collection.Value);
+                }
+
+                _writer.WriteEndObject();
+                _writer.WriteEndObject();
+            }
+
+            private void WriteRevisionsCollectionConfiguration(RevisionsCollectionConfiguration collectionConfiguration)
+            {
+                _writer.WriteStartObject();
+
+                if (collectionConfiguration.MinimumRevisionsToKeep.HasValue)
+                {
+                    _writer.WritePropertyName(nameof(collectionConfiguration.MinimumRevisionsToKeep));
+                    _writer.WriteInteger(collectionConfiguration.MinimumRevisionsToKeep.Value);
+                    _writer.WriteComma();
+                }
+
+                if (collectionConfiguration.MinimumRevisionAgeToKeep.HasValue)
+                {
+                    _writer.WritePropertyName(nameof(collectionConfiguration.MinimumRevisionAgeToKeep));
+                    _writer.WriteString(collectionConfiguration.MinimumRevisionAgeToKeep.Value.ToString());
+                    _writer.WriteComma();
+                }
+
+                _writer.WritePropertyName(nameof(collectionConfiguration.Disabled));
+                _writer.WriteBool(collectionConfiguration.Disabled);
+                _writer.WriteComma();
+
+                _writer.WritePropertyName(nameof(collectionConfiguration.PurgeOnDelete));
+                _writer.WriteBool(collectionConfiguration.PurgeOnDelete);
+
+                _writer.WriteEndObject();
+            }
+
+            public void Dispose()
+            {
+                _writer.WriteEndObject();
+            }
         }
 
         private class StreamIndexActions : StreamActionsBase, IIndexActions
@@ -304,7 +426,7 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteEndObject();
             }
         }
-
+        
         private abstract class StreamActionsBase : IDisposable
         {
             protected readonly BlittableJsonTextWriter Writer;

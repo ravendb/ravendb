@@ -11,6 +11,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
+using Raven.Server.Routing;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
@@ -32,7 +33,9 @@ namespace Raven.Server.Smuggler.Documents
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<(string Prefix, long Value)> OnIdentityAction;
 
-        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, 
+            DatabaseSmugglerOptionsServerSide options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, 
+            CancellationToken token = default(CancellationToken))
         {
             _database = database;
             _source = source;
@@ -66,6 +69,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (ensureStepsProcessed)
                 {
+                    EnsureStepProcessed(result.DatabaseRecord);
                     EnsureStepProcessed(result.Documents);
                     EnsureStepProcessed(result.Documents.Attachments);
                     EnsureStepProcessed(result.RevisionDocuments);
@@ -120,6 +124,9 @@ namespace Raven.Server.Smuggler.Documents
             SmugglerProgressBase.Counts counts;
             switch (type)
             {
+                case DatabaseItemType.DatabaseRecord:
+                    counts = ProcessDatabaseRecord(result);
+                    break;
                 case DatabaseItemType.Documents:
                     counts = ProcessDocuments(result, buildType);
                     break;
@@ -171,6 +178,9 @@ namespace Raven.Server.Smuggler.Documents
             SmugglerProgressBase.Counts counts;
             switch (type)
             {
+                case DatabaseItemType.DatabaseRecord:
+                    counts = result.DatabaseRecord;
+                    break;
                 case DatabaseItemType.Documents:
                     counts = result.Documents;
                     break;
@@ -389,6 +399,27 @@ namespace Raven.Server.Smuggler.Documents
 
                 result.AddError(errorMessage);
             }
+        }
+
+        private SmugglerProgressBase.DatabaseRecordProgress ProcessDatabaseRecord(SmugglerResult result)
+        {
+            using (var actions = _destination.DatabaseRecord())
+            {
+                var databaseRecord = _source.GetDatabaseRecord(_options.AuthorizationStatus);
+
+                _token.ThrowIfCancellationRequested();
+                
+                try
+                {
+                    actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord);
+                }
+                catch (Exception e)
+                {
+                    result.AddError($"Could not write database record: {e.Message}");
+                }
+            }
+
+            return result.DatabaseRecord;
         }
 
         private SmugglerProgressBase.Counts ProcessRevisionDocuments(SmugglerResult result)
