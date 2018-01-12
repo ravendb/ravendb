@@ -18,7 +18,12 @@ class checkDomainAvailabilityCommand extends commandBase {
         };
 
         return this.post(url, JSON.stringify(payload), null)
-            .fail((response: JQueryXHR) => this.reportError("Failed to check domain availability", response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => {
+                if (response.status === 400) {
+                    // ignore it will be handled in validator
+                } else {
+                    this.reportError("Failed to check domain availability", response.responseText, response.statusText)}
+                });
     }
 }
 
