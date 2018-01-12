@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Smuggler
              /*
              *  NOTE:
              *
-             *  About to add new/change properly below?
+             *  About to add new/change property below?
              *
              *  Please remember to include this property in SmugglerProgress class
              */
