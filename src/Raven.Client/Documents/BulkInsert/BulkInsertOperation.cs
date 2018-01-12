@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
@@ -134,6 +135,7 @@ namespace Raven.Client.Documents.BulkInsert
                 throw new NotImplementedException();
             }
         }
+
         private readonly RequestExecutor _requestExecutor;
         private Task _bulkInsertExecuteTask;
 
@@ -149,6 +151,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly JsonSerializer _defaultSerializer;
         private readonly Func<object, StreamWriter, bool> _customEntitySerializer;
         private readonly Func<object, StreamWriter, bool> _customMetadataSerializer;
+        private long _concurrentCheck;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
         {
@@ -192,7 +195,10 @@ namespace Raven.Client.Documents.BulkInsert
                         }
                         catch (Exception e)
                         {
-                            var errors = new List<Exception>(3) { e };
+                            var errors = new List<Exception>(3)
+                            {
+                                e
+                            };
                             if (flushEx != null)
                                 errors.Add(flushEx);
                             var error = await GetExceptionFromOperation().ConfigureAwait(false);
@@ -200,9 +206,9 @@ namespace Raven.Client.Documents.BulkInsert
                             {
                                 errors.Add(error);
                             }
+
                             errors.Reverse();
                             throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
-
                         }
                     }
                 }
@@ -214,17 +220,19 @@ namespace Raven.Client.Documents.BulkInsert
             });
 
             _token = token;
+            _conventions = store.Conventions;
             _requestExecutor = store.GetRequestExecutor(database);
+            _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _currentWriter = new StreamWriter(new MemoryStream());
             _backgroundWriter = new StreamWriter(new MemoryStream());
-            _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _streamExposerContent = new StreamExposerContent();
 
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
             _customMetadataSerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeMetadataToJsonStream;
 
-            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
+                entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
         }
 
         private async Task WaitForId()
@@ -247,100 +255,112 @@ namespace Raven.Client.Documents.BulkInsert
             return AsyncHelpers.RunSync(() => StoreAsync(entity, metadata));
         }
 
-        private long _concurrentCheck;
-
         public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
-            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
-            {
-                throw new ConcurrencyException("Store/StoreAsync in bulkInsert concurrently is forbidden");
-            }
+            if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
+                id = GetId(entity);
 
-            string id;
-            try
-            {
-                if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out id) == false)
-                {
-                    id = GetId(entity);
-                }
+            await StoreAsync(entity, id, metadata).ConfigureAwait(false);
 
-                await StoreAsync(entity, id, metadata).ConfigureAwait(false);
-            }
-            finally
-            {
-                Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
-            }
             return id;
         }
 
         public async Task StoreAsync(object entity, string id, IMetadataDictionary metadata = null)
         {
-            VerifyValidId(id);
+            if (Interlocked.CompareExchange(ref _concurrentCheck, 1, 0) == 1)
+                throw new InvalidOperationException("Bulk Insert store methods cannot be executed concurrently.");
 
-            if (_stream == null)
-            {
-                await WaitForId().ConfigureAwait(false);
-                await EnsureStream().ConfigureAwait(false);
-            }
-
-            if (metadata == null)
-            {
-                metadata = new MetadataAsDictionary();
-            }
-            if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
-            {
-                var collection = _requestExecutor.Conventions.GetCollectionName(entity);
-                metadata.Add(Constants.Documents.Metadata.Collection, collection);
-            }
-
-            if (_first == false)
-            {
-                _currentWriter.Write(',');
-            }
-            _first = false;
             try
             {
-                _currentWriter.Write("{'Id':'");
-                _currentWriter.Write(id);
-                _currentWriter.Write("','Type':'PUT','Document':");
+                VerifyValidId(id);
 
-                if (_customEntitySerializer == null || _customEntitySerializer(entity, _currentWriter) == false)
+                if (_stream == null)
                 {
-                    _defaultSerializer.Serialize(_currentWriter, entity);
+                    await WaitForId().ConfigureAwait(false);
+                    await EnsureStream().ConfigureAwait(false);
                 }
 
-                _currentWriter.Flush();
-                _currentWriter.BaseStream.Position--;
-                _currentWriter.Write(",'@metadata':");
+                if (metadata == null)
+                    metadata = new MetadataAsDictionary();
 
-                if (_customMetadataSerializer == null || _customMetadataSerializer(entity, _currentWriter) == false)
+                if (metadata.ContainsKey(Constants.Documents.Metadata.Collection) == false)
                 {
-                    _defaultSerializer.Serialize(_currentWriter, metadata);
+                    var collection = _requestExecutor.Conventions.GetCollectionName(entity);
+                    if (collection != null)
+                        metadata.Add(Constants.Documents.Metadata.Collection, collection);
                 }
 
-                _currentWriter.Write("}}");
-                _currentWriter.Flush();
-                if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
-                    _asyncWrite.IsCompleted)
+                if (metadata.ContainsKey(Constants.Documents.Metadata.RavenClrType) == false)
                 {
-                    await _asyncWrite.ConfigureAwait(false);
+                    var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
+                    if (clrType != null)
+                        metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+                }
 
-                    var tmp = _currentWriter;
-                    _currentWriter = _backgroundWriter;
-                    _backgroundWriter = tmp;
-                    _currentWriter.BaseStream.SetLength(0);
-                    ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
-                    _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                if (_first == false)
+                {
+                    _currentWriter.Write(',');
+                }
+
+                _first = false;
+                try
+                {
+                    _currentWriter.Write("{'Id':'");
+                    _currentWriter.Write(id);
+                    _currentWriter.Write("','Type':'PUT','Document':");
+
+                    if (_customEntitySerializer == null || _customEntitySerializer(entity, _currentWriter) == false)
+                    {
+                        var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context, _defaultSerializer);
+
+                        _currentWriter.Flush();
+                        json.WriteJsonTo(_currentWriter.BaseStream);
+                    }
+                    _currentWriter.Flush();
+                    _currentWriter.BaseStream.Position -= 2;
+                    if (_currentWriter.BaseStream.ReadByte() != '{') // this can happen when we are inserting only '{}'
+                        _currentWriter.Write(',');
+
+                    _currentWriter.Write("'@metadata':");
+
+                    if (_customMetadataSerializer == null || _customMetadataSerializer(metadata, _currentWriter) == false)
+                    {
+                        var json = EntityToBlittable.ConvertEntityToBlittable(metadata, _conventions, _context, _defaultSerializer);
+
+                        _currentWriter.Flush();
+                        json.WriteJsonTo(_currentWriter.BaseStream);
+                    }
+
+                    _currentWriter.Write("}}");
+                    _currentWriter.Flush();
+
+                    if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||
+                        _asyncWrite.IsCompleted)
+                    {
+                        await _asyncWrite.ConfigureAwait(false);
+
+                        var tmp = _currentWriter;
+                        _currentWriter = _backgroundWriter;
+                        _backgroundWriter = tmp;
+                        _currentWriter.BaseStream.SetLength(0);
+                        ((MemoryStream)tmp.BaseStream).TryGetBuffer(out var buffer);
+                        _asyncWrite = _requestBodyStream.WriteAsync(buffer.Array, buffer.Offset, buffer.Count, _token);
+                    }
+                }
+                catch (Exception e)
+                {
+                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                    if (error != null)
+                    {
+                        throw error;
+                    }
+
+                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
                 }
             }
-            catch (Exception e)
+            finally
             {
-                var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                if (error != null)
-                {
-                    throw error;
-                }
-                await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+                Interlocked.CompareExchange(ref _concurrentCheck, 0, 1);
             }
         }
 
@@ -370,7 +390,8 @@ namespace Raven.Client.Documents.BulkInsert
 
         private GZipStream _compressedStream;
         private Stream _requestBodyStream;
-        private StreamWriter _currentWriter, _backgroundWriter;
+        private StreamWriter _currentWriter;
+        private StreamWriter _backgroundWriter;
         private Task _asyncWrite = Task.CompletedTask;
         private int _maxSizeInBuffer = 1024 * 1024;
 
@@ -436,6 +457,9 @@ namespace Raven.Client.Documents.BulkInsert
         /// reason we are using a dispose once.
         /// </summary>
         private readonly DisposeOnceAsync<SingleAttempt> _disposeOnce;
+
+        private readonly DocumentConventions _conventions;
+
         public Task DisposeAsync()
         {
             return _disposeOnce.DisposeAsync();

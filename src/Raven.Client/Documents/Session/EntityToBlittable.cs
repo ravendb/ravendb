@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -22,7 +24,8 @@ namespace Raven.Client.Documents.Session
             _session = session;
         }
 
-        public readonly Dictionary<object, Dictionary<object, object>> MissingDictionary = new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
+        private readonly Dictionary<object, Dictionary<object, object>> _missingDictionary =
+            new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
 
         public BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentInfo documentInfo)
         {
@@ -30,62 +33,79 @@ namespace Raven.Client.Documents.Session
             if (entity is BlittableJsonReaderObject blittable)
                 return blittable;
 
-            using(DefaultRavenContractResolver.RegisterExtensionDataGetter(FillMissingProperties))
+            using (DefaultRavenContractResolver.RegisterExtensionDataGetter(FillMissingProperties))
             using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
             {
                 var serializer = _session.Conventions.CreateSerializer();
 
-                serializer.Serialize(writer, entity);
-                writer.FinalizeDocument();
-                var reader = writer.CreateReader();
-                var type = entity.GetType();
-
-                var changes = TryRemoveIdentityProperty(reader, type, _session.Conventions);
-                changes |= TrySimplifyJson(reader);
-
-                if (changes)
-                    reader = _session.Context.ReadObject(reader, "convert/entityToBlittable");
-
-                return reader;
+                return ConvertEntityToBlittableInternal(entity, _session.Conventions, _session.Context, serializer, writer);
             }
         }
 
         private IEnumerable<KeyValuePair<object, object>> FillMissingProperties(object o)
         {
-            MissingDictionary.TryGetValue(o, out var props);
+            _missingDictionary.TryGetValue(o, out var props);
             return props;
         }
 
-        public static BlittableJsonReaderObject ConvertEntityToBlittable(object entity, DocumentConventions conventions, JsonOperationContext context, DocumentInfo documentInfo = null)
+        internal static BlittableJsonReaderObject ConvertEntityToBlittable(
+            object entity,
+            DocumentConventions conventions,
+            JsonOperationContext context,
+            DocumentInfo documentInfo = null)
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo))
             {
                 var serializer = conventions.CreateSerializer();
 
-                serializer.Serialize(writer, entity);
-                writer.FinalizeDocument();
-                var reader = writer.CreateReader();
-                var type = entity.GetType();
-
-                var changes = TryRemoveIdentityProperty(reader, type, conventions);
-                changes |= TrySimplifyJson(reader);
-
-                if (changes)
-                    reader = context.ReadObject(reader, "convert/entityToBlittable");
-
-                return reader;
+                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer, writer);
             }
         }
         
+        internal static BlittableJsonReaderObject ConvertEntityToBlittable(
+            object entity,
+            DocumentConventions conventions,
+            JsonOperationContext context,
+            JsonSerializer serializer,
+            DocumentInfo documentInfo = null)
+        {
+            using (var writer = new BlittableJsonWriter(context, documentInfo))
+            {
+                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer, writer);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static BlittableJsonReaderObject ConvertEntityToBlittableInternal(
+            object entity,
+            DocumentConventions conventions,
+            JsonOperationContext context,
+            JsonSerializer serializer,
+            BlittableJsonWriter writer)
+        {
+            serializer.Serialize(writer, entity);
+            writer.FinalizeDocument();
+            var reader = writer.CreateReader();
+            var type = entity.GetType();
+
+            var changes = TryRemoveIdentityProperty(reader, type, conventions);
+            changes |= TrySimplifyJson(reader);
+
+            if (changes)
+                reader = context.ReadObject(reader, "convert/entityToBlittable");
+
+            return reader;
+        }
+
         private void RegisterMissingProperties(object o, string id, object value)
         {
-            if (_session.Conventions.PreserveDocumentPropertiesNotFoundOnModel == false || 
+            if (_session.Conventions.PreserveDocumentPropertiesNotFoundOnModel == false ||
                 id == Constants.Documents.Metadata.Key)
                 return;
-            
-            if (MissingDictionary.TryGetValue(o, out var dictionary) == false)
+
+            if (_missingDictionary.TryGetValue(o, out var dictionary) == false)
             {
-                MissingDictionary[o] = dictionary = new Dictionary<object, object>();
+                _missingDictionary[o] = dictionary = new Dictionary<object, object>();
             }
 
             dictionary[id] = value;
@@ -100,7 +120,6 @@ namespace Raven.Client.Documents.Session
         /// <returns>The converted entity</returns>
         public object ConvertToEntity(Type entityType, string id, BlittableJsonReaderObject document)
         {
-            
             try
             {
                 if (entityType == typeof(BlittableJsonReaderObject))
@@ -127,9 +146,8 @@ namespace Raven.Client.Documents.Session
                     {
                         entity = _session.Conventions.DeserializeEntityFromBlittable(entityType, document);
                     }
-
                 }
-                
+
                 if (id != null)
                     _session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
 

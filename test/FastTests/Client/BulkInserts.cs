@@ -43,7 +43,10 @@ namespace FastTests.Client
                 {
                     for (int i = 0; i < 1000; i++)
                     {
-                        await bulkInsert.StoreAsync(new FooBar() { Name = "foobar/" + i }, "FooBars/" + i);
+                        await bulkInsert.StoreAsync(new FooBar()
+                            {
+                                Name = "foobar/" + i
+                            }, "FooBars/" + i);
                     }
                 }
 
@@ -60,10 +63,22 @@ namespace FastTests.Client
         {
             var fooBars = new[]
             {
-                new FooBar { Name = "John Doe" },
-                new FooBar { Name = "Jane Doe" },
-                new FooBar { Name = "Mega John" },
-                new FooBar { Name = "Mega Jane" }
+                new FooBar
+                {
+                    Name = "John Doe"
+                },
+                new FooBar
+                {
+                    Name = "Jane Doe"
+                },
+                new FooBar
+                {
+                    Name = "Mega John"
+                },
+                new FooBar
+                {
+                    Name = "Mega Jane"
+                }
             };
             using (var store = GetDocumentStore())
             {
@@ -77,7 +92,7 @@ namespace FastTests.Client
 
                 store.GetRequestExecutor(store.Database).ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-                var getDocumentCommand = new GetDocumentsCommand(new[] { "FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A" }, includes: null, metadataOnly: false);
+                var getDocumentCommand = new GetDocumentsCommand(new[] {"FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A"}, includes: null, metadataOnly: false);
 
                 store.GetRequestExecutor(store.Database).Execute(getDocumentCommand, context);
 
@@ -123,20 +138,14 @@ namespace FastTests.Client
                     }
 
 
-                    var ae = Assert.Throws<AggregateException>(() =>
-                    {
-                        Parallel.ForEach(localList, element =>
-                        {
-                            bulkInsert.StoreAsync(element).Wait();
-                        });
-                    });
+                    var ae = Assert.Throws<AggregateException>(() => { Parallel.ForEach(localList, element => { bulkInsert.StoreAsync(element).Wait(); }); });
 
 
                     var msg = ae.InnerExceptions
                         .OfType<AggregateException>()
-                        .SelectMany(x=>x.InnerExceptions)
-                        .OfType<ConcurrencyException>().First().Message;
-                    Assert.Contains("Store/StoreAsync in bulkInsert concurrently is forbidden", msg);
+                        .SelectMany(x => x.InnerExceptions)
+                        .OfType<InvalidOperationException>().First().Message;
+                    Assert.Contains("Bulk Insert store methods cannot be executed concurrently", msg);
                 }
             }
         }
@@ -145,7 +154,10 @@ namespace FastTests.Client
         {
             public FooBarIndex()
             {
-                Map = foos => foos.Select(x => new { x.Name });
+                Map = foos => foos.Select(x => new
+                {
+                    x.Name
+                });
             }
         }
 
