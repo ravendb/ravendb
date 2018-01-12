@@ -66,7 +66,7 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                        if (response.IsSuccessStatusCode == false)
+                        if (response.StatusCode == HttpStatusCode.InternalServerError)
                         {
                             error = responseString;
                         }
@@ -134,7 +134,7 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                        if (response.IsSuccessStatusCode == false)
+                        if (response.StatusCode == HttpStatusCode.InternalServerError)
                         {
                             error = responseString;
                         }

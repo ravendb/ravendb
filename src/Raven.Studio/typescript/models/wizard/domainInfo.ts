@@ -25,6 +25,18 @@ class domainInfo {
         this.fullDomain = ko.pureComputed(() => this.domain() + '.' + this.rootDomain());
     }
     
+    private static tryExtractValidationError(result: JQueryXHR) {
+        try {
+            const json = JSON.parse(result.responseText);
+            if (json && json["Error"]) {
+                return json['Error'];
+            }
+        } catch (e) {
+            // ignore
+        }
+        return null;
+    }
+    
     private initValidation() {
 
         const checkDomain = (val: string, params: any, callback: (currentValue: string, result: boolean) => void) => {
@@ -32,6 +44,15 @@ class domainInfo {
                 .execute()
                 .done((result: domainAvailabilityResult) => {
                     callback(this.domain(), result.Available || result.IsOwnedByMe); 
+                })
+                .fail((result: JQueryXHR) => {
+                    if (result.status === 400) {
+                        const error = domainInfo.tryExtractValidationError(result);
+                        if (error) {
+                            callback(this.domain(), false);
+                            this.domain.setError(error);
+                        }
+                    }
                 });
         };
         
