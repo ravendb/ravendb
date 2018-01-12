@@ -53,7 +53,7 @@ namespace Sparrow.Logging
         private readonly Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
             new Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext>();
 
-        private LogMode _logMode;
+        public LogMode LogMode { get; private set; }
         private LogMode _oldLogMode;
 
         public async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
@@ -65,7 +65,7 @@ namespace Sparrow.Logging
             {
                 if (_listeners.IsEmpty)
                 {
-                    _oldLogMode = _logMode;
+                    _oldLogMode = LogMode;
                     SetupLogMode(LogMode.Information, _path);
                 }
                 if (_listeners.TryAdd(source, context) == false)
@@ -125,9 +125,9 @@ namespace Sparrow.Logging
         {
             lock (this)
             {
-                if (_logMode == logMode && path == _path)
+                if (LogMode == logMode && path == _path)
                     return;
-                _logMode = logMode;
+                LogMode = logMode;
                 IsInfoEnabled = (logMode & LogMode.Information) == LogMode.Information;
                 IsOperationsEnabled = (logMode & LogMode.Operations) == LogMode.Operations;
 

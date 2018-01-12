@@ -238,7 +238,9 @@ namespace Raven.Server
 
             //stop dumping logs
             LoggingSource.Instance.DisableConsoleLogging();
-            LoggingSource.Instance.SetupLogMode(LogMode.None, configuration.Logs.Path.FullPath);
+            
+            // set log mode to the previous original mode:
+            LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
 
             return new RavenCli().Start(server, Console.Out, Console.In, true);
         }
@@ -288,8 +290,7 @@ namespace Raven.Server
 
             Console.ReadKey(true);
             Console.WriteLine();
-            Console.WriteLine("Stats halted");
-
+            Console.WriteLine($"Stats halted.");
         }
     }
 }
