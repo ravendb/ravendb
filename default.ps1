@@ -141,7 +141,14 @@ task Test -depends Compile {
             $env:raventest_storage_engine = $null;
             Write-Host "Testing $_ (default)"
         }
-        &"$xUnit" "$_"
+        
+        if ($Env:JENKINS_URL) {
+            $dll_dir = Split-Path $_ -Parent
+            &"$xUnit" "$_" "/nunit" "$dll_dir\testResults.xml"
+        } else {
+            &"$xUnit" "$_"
+        }
+
         if ($lastexitcode -ne 0) {
             $hasErrors = $true
             Write-Host "-------- ---------- -------- ---"
