@@ -296,10 +296,11 @@ namespace Raven.Server.Utils.Cli
             Console.ResetColor();
 
             LoggingSource.Instance.DisableConsoleLogging();
+            var prevLogMode = LoggingSource.Instance.LogMode;
             LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
-
             Program.WriteServerStatsAndWaitForEsc(cli._server);
-
+            LoggingSource.Instance.SetupLogMode(prevLogMode, cli._server.Configuration.Logs.Path.FullPath);
+            Console.WriteLine($"LogMode set back to {prevLogMode}.");
             return true;
         }
 
@@ -401,17 +402,28 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandLog(List<string> args, RavenCli cli)
         {
+            var withConsole = !(args.Count == 2 && args[1].Equals("no-console"));
+                        
             switch (args.First())
             {
                 case "on":
-                    LoggingSource.Instance.EnableConsoleLogging();
+                case "information":
+                    if (withConsole)
+                        LoggingSource.Instance.EnableConsoleLogging();
                     LoggingSource.Instance.SetupLogMode(LogMode.Information, cli._server.Configuration.Logs.Path.FullPath);
-                    WriteText("Logging set to ON", ConsoleColor.Green, cli);
+                    WriteText("Logging set to ON (information)", ConsoleColor.Green, cli);
                     break;
                 case "off":
+                case "none":
                     LoggingSource.Instance.DisableConsoleLogging();
                     LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
-                    WriteText("Logging set to OFF", ConsoleColor.DarkGreen, cli);
+                    WriteText("Logging set to OFF (none)", ConsoleColor.DarkGreen, cli);
+                    break;
+                case "operations":
+                    if (withConsole)
+                        LoggingSource.Instance.EnableConsoleLogging();
+                    LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
+                    WriteText("Logging set to 'operations'", ConsoleColor.DarkGreen, cli);
                     break;
                 case "http-off":
                     WriteText("Setting HTTP logging OFF", ConsoleColor.DarkGreen, cli);
@@ -975,7 +987,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"helpPrompt", "Detailed prompt command usage"},
                 new[] {"clear", "Clear screen"},
                 new[] {"stats", "Online server's memory consumption stats, request ratio and documents count"},
-                new[] {"log [http-]<on|off>", "set log on or off. http-on/off can be selected to filter log output"},
+                new[] {"log [http-]<on|off|information/operations> [no-console]", "set log on/off or to specific mode. filter requests using http-on/offlog. no-console to avoid printing in CLI"},
                 new[] {"info", "Print system info and current stats"},
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
@@ -1055,6 +1067,8 @@ namespace Raven.Server.Utils.Cli
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true }, // test cli
             [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert, Experimental = true }
         };
+
+        private LogMode _previousLogMode;
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {
