@@ -559,10 +559,10 @@ more responsive application.
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
-            var tag = _requestExecutor.Conventions.GetCollectionName(entity);
+            var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = new DynamicJsonValue();
-            if (tag != null)
-                metadata[Constants.Documents.Metadata.Collection] = tag;
+            if (collectionName != null)
+                metadata[Constants.Documents.Metadata.Collection] = collectionName;
 
             var clrType = _requestExecutor.Conventions.GetClrTypeName(entity.GetType());
             if (clrType != null)

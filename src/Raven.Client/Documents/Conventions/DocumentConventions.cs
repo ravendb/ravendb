@@ -41,9 +41,11 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
 
-        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters = new List<(Type, TryConvertValueForQueryDelegate<object>)>();
+        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters =
+            new List<(Type, TryConvertValueForQueryDelegate<object>)>();
 
-        private readonly List<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
+        private readonly List<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
+            new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
         private readonly List<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
 
@@ -54,6 +56,7 @@ namespace Raven.Client.Documents.Conventions
             private readonly DocumentConventions _conventions;
             private Func<object, StreamWriter, bool> _trySerializeEntityToJsonStream;
             private Func<object, StreamWriter, bool> _trySerializeMetadataToJsonStream;
+
             public Func<object, StreamWriter, bool> TrySerializeMetadataToJsonStream
             {
                 get => _trySerializeMetadataToJsonStream;
@@ -95,7 +98,8 @@ namespace Raven.Client.Documents.Conventions
 
             FindClrType = (id, doc) =>
             {
-                if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) && metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out string clrType))
+                if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out string clrType))
                     return clrType;
 
                 return null;
@@ -113,7 +117,7 @@ namespace Raven.Client.Documents.Conventions
             PrettifyGeneratedLinqExpressions = true;
 
             JsonContractResolver = new DefaultRavenContractResolver();
-            CustomizeJsonSerializer = serializer => { }; 
+            CustomizeJsonSerializer = serializer => { };
 
             BulkInsert = new BulkInsertConventions(this);
 
@@ -135,7 +139,7 @@ namespace Raven.Client.Documents.Conventions
                 else
                     httpCacheSizeInMb = 512; // We have enough memory to be aggresive.
             }
-        
+
             MaxHttpCacheSize = new Size(httpCacheSizeInMb, SizeUnit.Megabytes);
         }
 
@@ -491,15 +495,17 @@ namespace Raven.Client.Documents.Conventions
 
             if (t.Name.Contains("<>"))
                 return null;
-            
+
             // we want to reject queries and other operations on abstract types, because you usually
             // want to use them for polymorphic queries, and that require the conventions to be 
             // applied properly, so we reject the behavior and hint to the user explicitly
-            if(t.GetTypeInfo().IsInterface)
-                throw new InvalidOperationException("Cannot find collection name for interface " + t.FullName + ", only concrete classes are supported. Did you forget to customize Conventions.FindCollectionName?");
-            if(t.GetTypeInfo().IsAbstract)
-                throw new InvalidOperationException("Cannot find collection name for abstract class " + t.FullName + ", only concrete class are supported. Did you forget to customize Conventions.FindCollectionName?");
-            
+            if (t.GetTypeInfo().IsInterface)
+                throw new InvalidOperationException("Cannot find collection name for interface " + t.FullName +
+                                                    ", only concrete classes are supported. Did you forget to customize Conventions.FindCollectionName?");
+            if (t.GetTypeInfo().IsAbstract)
+                throw new InvalidOperationException("Cannot find collection name for abstract class " + t.FullName +
+                                                    ", only concrete class are supported. Did you forget to customize Conventions.FindCollectionName?");
+
             if (t.GetTypeInfo().IsGenericType)
             {
                 var name = t.GetGenericTypeDefinition().Name;
@@ -519,6 +525,7 @@ namespace Raven.Client.Documents.Conventions
             {
                 result = Inflector.Pluralize(t.Name);
             }
+
             var temp = new Dictionary<Type, string>(_cachedDefaultTypeCollectionNames)
             {
                 [t] = result
@@ -654,7 +661,7 @@ namespace Raven.Client.Documents.Conventions
             };
 
             CustomizeJsonSerializer(jsonSerializer);
-			
+
             if (SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
@@ -665,7 +672,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
-            
+
             return jsonSerializer;
         }
 
@@ -787,8 +794,8 @@ namespace Raven.Client.Documents.Conventions
                 yield return propertyInfo;
 
             foreach (var @interface in type.GetInterfaces())
-                foreach (var propertyInfo in GetPropertiesForType(@interface))
-                    yield return propertyInfo;
+            foreach (var propertyInfo in GetPropertiesForType(@interface))
+                yield return propertyInfo;
         }
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
@@ -859,7 +866,8 @@ namespace Raven.Client.Documents.Conventions
         internal void AssertNotFrozen()
         {
             if (_frozen)
-                throw new InvalidOperationException($"Conventions has frozen after '{nameof(DocumentStore)}.{nameof(DocumentStore.Initialize)}()' and no changes can be applied to them.");
+                throw new InvalidOperationException(
+                    $"Conventions has frozen after '{nameof(DocumentStore)}.{nameof(DocumentStore.Initialize)}()' and no changes can be applied to them.");
         }
     }
 }

@@ -5,10 +5,9 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
-using Raven.TestDriver;
 using Xunit;
 
-namespace RavenIndexErrorTest
+namespace SlowTests.MailingList
 {
     public class DocumentQueryIncludeAndStreamTest : RavenTestBase
     {
