@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -44,10 +43,11 @@ namespace Raven.Server.Smuggler.Migration
             httpClientHandler.UseDefaultCredentials = hasCredentials == false;
             if (hasCredentials)
             {
+                var domain = string.IsNullOrWhiteSpace(configuration.Domain) ? "\\" : configuration.Domain;
                 httpClientHandler.Credentials = new NetworkCredential(
                     configuration.UserName, 
-                    configuration.Password, 
-                    configuration.Domain ?? string.Empty);
+                    configuration.Password,
+                    domain);
             }
 
             _httpClient = new HttpClient(httpClientHandler);
