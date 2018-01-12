@@ -19,6 +19,15 @@ namespace Raven.Client.Documents.Smuggler
             _messages = new List<string>();
             _progress = new SmugglerProgress(this);
 
+             /*
+             *  NOTE:
+             *
+             *  About to add new/change property below?
+             *
+             *  Please remember to include this property in SmugglerProgress class
+             */
+
+            
             DatabaseRecord = new DatabaseRecordProgress();
             Documents = new CountsWithSkippedCountAndLastEtag();
             RevisionDocuments = new CountsWithLastEtag();
@@ -91,6 +100,7 @@ namespace Raven.Client.Documents.Smuggler
 
             private string Message => _result.Message;
 
+            public override DatabaseRecordProgress DatabaseRecord => _result.DatabaseRecord;
             public override CountsWithSkippedCountAndLastEtag Documents => _result.Documents;
             public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
             public override CountsWithLastEtag Tombstones => _result.Tombstones;
@@ -98,7 +108,7 @@ namespace Raven.Client.Documents.Smuggler
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
             public override Counts CompareExchange => _result.CompareExchange;
-
+            
             public override DynamicJsonValue ToJson()
             {
                 var json = base.ToJson();
@@ -146,7 +156,7 @@ namespace Raven.Client.Documents.Smuggler
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(DatabaseRecordProgress)] = DatabaseRecord.ToJson(),
+                [nameof(DatabaseRecord)] = DatabaseRecord.ToJson(),
                 [nameof(Documents)] = Documents.ToJson(),
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
                 [nameof(Tombstones)] = Tombstones.ToJson(),
