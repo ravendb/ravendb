@@ -423,7 +423,7 @@ namespace Raven.Server.Utils.Cli
                     if (withConsole)
                         LoggingSource.Instance.EnableConsoleLogging();
                     LoggingSource.Instance.SetupLogMode(LogMode.None, cli._server.Configuration.Logs.Path.FullPath);
-                    WriteText("Logging set to 'operations'", ConsoleColor.DarkGreen, cli);
+                    WriteText("Logging set to ON (operations)", ConsoleColor.DarkGreen, cli);
                     break;
                 case "http-off":
                     WriteText("Setting HTTP logging OFF", ConsoleColor.DarkGreen, cli);
