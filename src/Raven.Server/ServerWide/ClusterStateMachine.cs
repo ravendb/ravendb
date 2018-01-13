@@ -23,6 +23,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
@@ -1383,6 +1384,7 @@ namespace Raven.Server.ServerWide
 
             // reload license can send a notification which will open a write tx
             serverStore.LicenseManager.ReloadLicense();
+            AsyncHelpers.RunSync(() => serverStore.LicenseManager.CalculateLicenseLimits());
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }

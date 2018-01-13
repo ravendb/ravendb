@@ -59,8 +59,6 @@ namespace Raven.Server.Commercial
 
         public event Action LicenseChanged;
 
-        public event Action LicenseLimitsChanged;
-
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
@@ -119,6 +117,7 @@ namespace Raven.Server.Commercial
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
                 ReloadLicense(addPerformanceHint: true);
+                AsyncHelpers.RunSync(() => CalculateLicenseLimits());
             }
             catch (Exception e)
             {
@@ -208,10 +207,6 @@ namespace Raven.Server.Commercial
             {
                 Logger.Info("Failed to reload license limits", e);
             }
-
-            AsyncHelpers.RunSync(() => CalculateLicenseLimits());
-
-            LicenseLimitsChanged?.Invoke();
         }
 
         private int GetClusterSize()
