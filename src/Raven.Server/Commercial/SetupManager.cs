@@ -1612,7 +1612,6 @@ namespace Raven.Server.Commercial
                 }
                 catch (Exception e)
                 {
-                    var port = setupInfo.NodeSetupInfos[LocalNodeTag].Port;
                     string linuxMsg = null;
                     if (PlatformDetails.RunningOnPosix && (port == 80 || port == 443))
                     {
