@@ -321,7 +321,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
-                    sort.Add(SortField.FIELD_SCORE);
+                    if(field.Ascending)
+                        sort.Add(SortField.FIELD_SCORE);
+                    else
+                        sort.Add(new SortField((string)null, 0, true));
                     continue;
                 }
 
