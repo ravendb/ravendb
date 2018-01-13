@@ -390,18 +390,38 @@ namespace Raven.Server.Web.Authentication
                 {
                     if (string.IsNullOrEmpty(thumbprint))
                     {
-                        foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
+                        if (ServerStore.CurrentRachisState == RachisState.Passive)
                         {
-                            var def = JsonDeserializationServer.CertificateDefinition(item.Value);
+                            foreach (var localCertKey in ServerStore.Cluster.GetCertificateKeysFromLocalState(context))
+                            {
+                                using (var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey))
+                                {
+                                    var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
 
-                            if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                certificates.Add(item);
+                                    if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                                        certificates.Add((localCertKey, localCertificate));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            foreach (var item in ServerStore.Cluster.ItemsStartingWith(context, Constants.Certificates.Prefix, start, pageSize))
+                            {
+                                var def = JsonDeserializationServer.CertificateDefinition(item.Value);
+
+                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                                    certificates.Add(item);
+                            }
                         }
                     }
                     else
                     {
                         var key = Constants.Certificates.Prefix + thumbprint;
-                        var certificate = ServerStore.Cluster.Read(context, key);
+
+                        var certificate = ServerStore.CurrentRachisState == RachisState.Passive 
+                            ? ServerStore.Cluster.GetLocalState(context, key) 
+                            : ServerStore.Cluster.Read(context, key);
+                        
                         if (certificate == null)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
