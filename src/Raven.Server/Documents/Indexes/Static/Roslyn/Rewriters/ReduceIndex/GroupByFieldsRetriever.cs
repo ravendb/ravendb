@@ -135,64 +135,41 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
         {
             public override SyntaxNode VisitGroupClause(GroupClauseSyntax node)
             {
-                var result = node.GroupExpression.ToFullString().Trim();
-                var by = node.ByExpression.ToFullString();
+                var groupByFields = new List<string>();
 
-                if (by.StartsWith("new"))
+                // by new { ... }
+                if (node.ByExpression is AnonymousObjectCreationExpressionSyntax aoc)
                 {
-                    by = by.Substring(3);
-                    by = by.Trim('{', ' ', '}', '\r', '\n');
+                    foreach (var initializer in aoc.Initializers)
+                    {
+                        if (initializer.NameEquals != null)
+                        {
+                            groupByFields.Add(initializer.NameEquals.Name.Identifier.Text);
+                        }
+                        else if(initializer.Expression is MemberAccessExpressionSyntax mae)
+                        {
+                            groupByFields.Add(mae.Name.Identifier.Text);
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("Unable to understasnd expression " + initializer);
+                        }
+                    }
                 }
-
-                by = by.Replace($"{result}.", string.Empty);
-
-                var fields = by.Split(',');
-
-                var groupByFields = new List<string>(fields.Length);
-
-                for (var i = 0; i < fields.Length; i++)
+                // by f.Bar
+                else if (node.ByExpression is MemberAccessExpressionSyntax mae)
                 {
-                    var parts = fields[i].Split('=');
-
-                    string fieldName;
-
-                    if (parts.Length == 1)
-                        fieldName = parts[0].Trim();
-                    else
-                        fieldName = parts[1].Trim();
-
-                    if (string.IsNullOrWhiteSpace(fieldName))
-                        continue;
-
-                    if (fieldName.StartsWith('"') && fieldName.EndsWith('"'))
-                    {
-                        // group by "constant"
-                        continue;
-                    }
-
-                    if (char.IsNumber(fieldName[0]))
-                    {
-                        // group by 123
-                        continue;
-                    }
-
-                    if ("true".Equals(fieldName) || "false".Equals(fieldName))
-                    {
-                        // group by true
-                        // group by false
-                        continue;
-                    }
-
-                    if (fieldName[0] == '(' && fieldName.Trim(')').EndsWith("null"))
-                    {
-                        // group by (string) null, group by ((string) null), 
-                        // note: grop by null - does not compile
-
-                        continue;
-                    }
-
-                    groupByFields.Add(fieldName);
+                    groupByFields.Add(mae.Name.Identifier.Text);
                 }
+                else if (node.ByExpression is LiteralExpressionSyntax)
+                {
+                    // explicitly ignore, we don't need to do anything here
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unable to understasnd expression " + node.ByExpression);
+                }
+                
 
                 GroupByFields = groupByFields.ToArray();
 
