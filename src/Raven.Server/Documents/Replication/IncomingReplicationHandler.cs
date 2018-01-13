@@ -1038,6 +1038,7 @@ namespace Raven.Server.Documents.Replication
                                         case ConflictStatus.Update:
                                             if (document != null)
                                             {
+#if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
 #endif
                                                 database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, rcvdChangeVector,
