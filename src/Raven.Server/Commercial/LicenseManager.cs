@@ -118,7 +118,7 @@ namespace Raven.Server.Commercial
 
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
-                ReloadLicense();
+                ReloadLicense(addPerformanceHint: true);
             }
             catch (Exception e)
             {
@@ -139,7 +139,7 @@ namespace Raven.Server.Commercial
             return _licenseStatus;
         }
 
-        public void ReloadLicense()
+        public void ReloadLicense(bool addPerformanceHint = false)
         {
             var license = _serverStore.LoadLicense();
             if (license == null)
@@ -179,10 +179,10 @@ namespace Raven.Server.Commercial
 
             LicenseChanged?.Invoke();
 
-            ReloadLicenseLimits();
+            ReloadLicenseLimits(addPerformanceHint);
         }
 
-        public void ReloadLicenseLimits()
+        public void ReloadLicenseLimits(bool addPerformanceHint = false)
         {
             try
             {
@@ -195,7 +195,7 @@ namespace Raven.Server.Commercial
 
                     using (var process = Process.GetCurrentProcess())
                     {
-                        SetAffinity(process, cores);
+                        SetAffinity(process, cores, addPerformanceHint);
 
                         var ratio = (int)Math.Ceiling(_licenseStatus.MaxMemory / (double)_licenseStatus.MaxCores);
                         var clusterSize = GetClusterSize();
@@ -620,7 +620,7 @@ namespace Raven.Server.Commercial
 
                 await CalculateLicenseLimits(forceFetchingNodeInfo: true, waitToUpdate: true);
 
-                ReloadLicenseLimits();
+                ReloadLicenseLimits(addPerformanceHint: true);
             }
             catch (Exception e)
             {
@@ -870,7 +870,7 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Add(alert);
         }
 
-        private void SetAffinity(Process process, int cores)
+        private void SetAffinity(Process process, int cores, bool addPerformanceHint)
         {
             try
             {
@@ -914,7 +914,9 @@ namespace Raven.Server.Commercial
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
-                if (ProcessorInfo.ProcessorCount > cores && currentlyAssignedCores != cores)
+                if (addPerformanceHint && 
+                    ProcessorInfo.ProcessorCount > cores && 
+                    currentlyAssignedCores != cores)
                 {
                     var notification = PerformanceHint.Create(
                         null,
