@@ -757,7 +757,7 @@ namespace Raven.Server.Commercial
                         continue;
                     }
 
-                    nodeDetails.UtilizedCores = Math.Min(numberOfCores, nodeDetails.UtilizedCores);
+                    detailsPerNode[nodeTag].UtilizedCores = Math.Min(numberOfCores, nodeDetails.UtilizedCores);
                 }
 
                 var nodesToRemove = detailsPerNode.Keys.Except(allNodes.Keys).ToList();
