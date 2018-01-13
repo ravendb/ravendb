@@ -156,6 +156,13 @@ namespace Raven.Server.Smuggler.Migration
                         metadata = GetCleanMetadata(metadata, context);
 
                         var dataStream = await GetRavenFsStream(key);
+                        if (dataStream == null)
+                        {
+                            var id = StreamSource.GetLegacyAttachmentId(key);
+                            documentActions.DeleteDocument(id);
+                            continue;
+                        }
+
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
                         Result.Documents.ReadCount++;
@@ -182,6 +189,12 @@ namespace Raven.Server.Smuggler.Migration
             var url = $"{ServerUrl}/fs/{DatabaseName}/files/{key}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                // the file was deleted
+                return null;
+            }
+
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();

@@ -290,7 +290,7 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<string> GetLegacyAttachmentDeletions()
         {
             foreach (var id in ReadLegacyDeletions())
-                yield return $"{DummyDocumentPrefix}{id}";
+                yield return GetLegacyAttachmentId(id);
         }
 
         public IEnumerable<string> GetLegacyDocumentDeletions()
@@ -860,6 +860,11 @@ namespace Raven.Server.Smuggler.Documents
             return GenerateLegacyAttachmentDetails(context, memoryStream, key, metadata, ref attachment);
         }
 
+        public static string GetLegacyAttachmentId(string key)
+        {
+            return $"{DummyDocumentPrefix}{key}";
+        }
+
         public static LegacyAttachmentDetails GenerateLegacyAttachmentDetails(
             DocumentsOperationContext context,
             Stream decodedStream,
@@ -875,7 +880,7 @@ namespace Raven.Server.Smuggler.Documents
             var tag = $"{DummyDocumentPrefix}{key}{RecordSeperator}d{RecordSeperator}{key}{RecordSeperator}{hash}{RecordSeperator}";
             var lazyTag = context.GetLazyString(tag);
             attachment.TagDispose = Slice.External(context.Allocator, lazyTag, out attachment.Tag);
-            var id = $"{DummyDocumentPrefix}{key}";
+            var id = GetLegacyAttachmentId(key);
             var lazyId = context.GetLazyString(id);
 
             attachment.Data = context.ReadObject(metadata, id);
