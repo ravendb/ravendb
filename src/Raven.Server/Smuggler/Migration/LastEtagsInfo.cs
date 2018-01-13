@@ -10,7 +10,12 @@ namespace Raven.Server.Smuggler.Migration
             LastAttachmentsEtag = EtagEmpty;
             LastDocDeleteEtag = EtagEmpty;
             LastAttachmentsDeleteEtag = EtagEmpty;
+            LastRavenFsEtag = EtagEmpty;
         }
+
+        public string ServerUrl { get; set; }
+
+        public string DatabaseName { get; set; }
 
         public string LastDocsEtag { get; set; }
 
@@ -20,8 +25,6 @@ namespace Raven.Server.Smuggler.Migration
 
         public string LastAttachmentsDeleteEtag { get; set; }
 
-        public string ServerUrl { get; set; }
-
-        public string DatabaseName { get; set; }
+        public string LastRavenFsEtag { get; set; }
     }
 }

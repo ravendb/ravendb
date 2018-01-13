@@ -3,13 +3,15 @@ import endpoints = require("endpoints");
 
 class getRemoteServerVersionWithDatabasesCommand extends commandBase {
 
-    constructor(private serverUrl: string) {
+    constructor(private serverUrl: string, private userName: string, private password: string) {
         super();
     }
 
     execute(): JQueryPromise<Raven.Server.Smuggler.Migration.BuildInfoWithDatabaseNames> {
         const args = {
-            serverUrl: this.serverUrl
+            serverUrl: this.serverUrl,
+            userName: this.userName,
+            password: this.password
         };
         
         const url = endpoints.global.databases.adminRemoteServerBuildVersion + this.urlEncodeArgs(args);

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -7,7 +6,6 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Smuggler;
-using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -18,7 +16,7 @@ namespace Raven.Server.Smuggler.Migration
 {
     public class Migrator_V2 : AbstractLegacyMigrator
     {
-        private const int AttachmentsPageSize = 1024;
+        private const int AttachmentsPageSize = 32;
 
         public Migrator_V2(MigratorOptions options) : base(options)
         {
@@ -39,13 +37,19 @@ namespace Raven.Server.Smuggler.Migration
             {
                 await MigrateAttachments(state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty);
                 migratedDocumentsOrAttachments = true;
-            }  
+            }
 
             if (migratedDocumentsOrAttachments)
-                await SaveLastState();
+            {
+                Result.Documents.Processed = true;
+                OnProgress.Invoke(Result.Progress);
+                await SaveLastOperationState(GenerateLastEtagsInfo());
+            }
 
             if (OperateOnTypes.HasFlag(DatabaseItemType.Indexes))
                 await MigrateIndexes();
+
+            DatabaseSmuggler.EnsureProcessed(Result);
         }
 
         private async Task MigrateDocuments(string lastEtag)
@@ -86,17 +90,29 @@ namespace Raven.Server.Smuggler.Migration
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var documentActions = destination.Documents())
             {
+                var sp = Stopwatch.StartNew();
+
                 while (true)
                 {
                     var attatchmentsArray = await GetAttachmentsList(lastEtag, transactionOperationContext);
                     if (attatchmentsArray.Length == 0)
-                        break;
+                    {
+                        var count = Result.Documents.Attachments.ReadCount;
+                        if (count > 0)
+                        {
+                            var message = $"Read {count:#,#;;0} legacy attachment{(count > 1 ? "s" : string.Empty)}.";
+                            Result.AddInfo(message);
+                            OnProgress.Invoke(Result.Progress);
+                        }
+
+                        return;
+                    }
 
                     foreach (var attachmentObject in attatchmentsArray)
                     {
                         var blittable = attachmentObject as BlittableJsonReaderObject;
                         if (blittable == null)
-                            throw new InvalidDataException("attchmentObject isn't an array");
+                            throw new InvalidDataException("attchmentObject isn't a BlittableJsonReaderObject");
 
                         if (blittable.TryGet("Key", out string key) == false)
                             throw new InvalidDataException("Key doesn't exist");
@@ -104,41 +120,17 @@ namespace Raven.Server.Smuggler.Migration
                         if (blittable.TryGet("Metadata", out BlittableJsonReaderObject metadata) == false)
                             throw new InvalidDataException("Metadata doesn't exist");
 
-                        Result.Documents.ReadCount++;
-                        Result.Documents.Attachments.ReadCount++;
+                        var dataStream = await GetAttachmentStream(key);
+                        WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
-                        if (Result.Documents.Attachments.ReadCount % 1000 == 0)
+                        Result.Documents.ReadCount++;
+                        if (Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
                         {
                             var message = $"Read {Result.Documents.Attachments.ReadCount:#,#;;0} legacy attachments.";
                             Result.AddInfo(message);
                             OnProgress.Invoke(Result.Progress);
+                            sp.Restart();
                         }
-
-                        var attachment = new DocumentItem.AttachmentStream
-                        {
-                            Stream = documentActions.GetTempStream()
-                        };
-
-                        var dataStream = await GetAttachmentStream(key);
-                        var attachmentDetails = StreamSource.GenerateLegacyAttachmentDetails(context, dataStream, key, metadata, ref attachment);
-
-                        var dummyDoc = new DocumentItem
-                        {
-                            Document = new Document
-                            {
-                                Data = StreamSource.WriteDummyDocumentForAttachment(context, attachmentDetails),
-                                Id = attachmentDetails.Id,
-                                ChangeVector = string.Empty,
-                                Flags = DocumentFlags.HasAttachments,
-                                NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
-                            },
-                            Attachments = new List<DocumentItem.AttachmentStream>
-                            {
-                                attachment
-                            }
-                        };
-
-                        documentActions.WriteDocument(dummyDoc, Result.Documents);
                     }
 
                     var lastAttachment = attatchmentsArray.Last() as BlittableJsonReaderObject;
@@ -181,7 +173,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to attachment, key: {attachmentKey}, from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get attachment, key: {attachmentKey}, from server: {ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
@@ -216,15 +208,6 @@ namespace Raven.Server.Smuggler.Migration
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
                 smuggler.Execute();
-            }
-        }
-
-        private async Task SaveLastState()
-        {
-            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var operationStateBlittable = GenerateOperationState(context);
-                await SaveLastOperationState(operationStateBlittable);
             }
         }
 

@@ -41,7 +41,7 @@
                         </div>
 
                         <div class="form-group" data-bind="validationElement: databaseName">
-                            <label class="control-label">Database name</label>
+                            <label class="control-label">Database name <i data-bind="visible: isLegacy" id="database-name-info" class="icon-info text-info"></i></label>
                             <div class="flex-grow">
                                 <div class="dropdown btn-block">
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
@@ -66,7 +66,11 @@
                                                 data-bind="click: _.partial(authenticationMethod, 'none'), css: { active: authenticationMethod() === 'none' }">None</button>
                                         <button type="button" class="btn btn-default"
                                                 data-bind="click: _.partial(authenticationMethod, 'windows'), css: { active: authenticationMethod() === 'windows' }">Windows Credentials</button>
+                                        
                                     </div>
+                                    <span data-bind="visible: $root.spinners.getDatabaseNames">
+                                        <i class="global-spinner spinner-sm"></i>
+                                    </span>
                                 </div>
                             </div>
                             <div data-bind="visible: showWindowsCredentialInputs">
@@ -104,6 +108,10 @@
                                 <div class="toggle" data-bind="visible: isLegacy">
                                     <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
                                     <label for="migrate_legacy_attachments">Include Attachments</label>
+                                </div>
+                                <div class="toggle" data-bind="visible: hasRavenFs">
+                                    <input id="migrate_ravenfs" type="checkbox" data-bind="checked: importRavenFs">
+                                    <label for="migrate_ravenfs">Import RavenFS</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
                                     <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">

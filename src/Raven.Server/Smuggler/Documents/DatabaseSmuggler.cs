@@ -69,20 +69,25 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (ensureStepsProcessed)
                 {
-                    EnsureStepProcessed(result.DatabaseRecord);
-                    EnsureStepProcessed(result.Documents);
-                    EnsureStepProcessed(result.Documents.Attachments);
-                    EnsureStepProcessed(result.RevisionDocuments);
-                    EnsureStepProcessed(result.RevisionDocuments.Attachments);
-                    EnsureStepProcessed(result.Tombstones);
-                    EnsureStepProcessed(result.Conflicts);
-                    EnsureStepProcessed(result.Indexes);
-                    EnsureStepProcessed(result.Identities);
-                    EnsureStepProcessed(result.CompareExchange);
+                    EnsureProcessed(result);
                 }
 
                 return result;
             }
+        }
+
+        public static void EnsureProcessed(SmugglerResult result)
+        {
+            EnsureStepProcessed(result.DatabaseRecord);
+            EnsureStepProcessed(result.Documents);
+            EnsureStepProcessed(result.Documents.Attachments);
+            EnsureStepProcessed(result.RevisionDocuments);
+            EnsureStepProcessed(result.RevisionDocuments.Attachments);
+            EnsureStepProcessed(result.Tombstones);
+            EnsureStepProcessed(result.Conflicts);
+            EnsureStepProcessed(result.Indexes);
+            EnsureStepProcessed(result.Identities);
+            EnsureStepProcessed(result.CompareExchange);
         }
 
         private static void EnsureStepProcessed(SmugglerProgressBase.Counts counts)

@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -18,6 +21,8 @@ namespace Raven.Server.Smuggler.Migration
 {
     public class Migrator_V3 : AbstractLegacyMigrator
     {
+        private const int RavenFsHeadersPageSize = 32;
+
         private readonly MajorVersion _majorVersion;
         private readonly int _buildVersion;
 
@@ -30,48 +35,202 @@ namespace Raven.Server.Smuggler.Migration
         public override async Task Execute()
         {
             var state = GetLastMigrationState();
+            var originalState = state;
 
             var operateOnTypes = GenerateOperateOnTypes();
-            if (operateOnTypes == ItemType.None)
+            if (operateOnTypes == ItemType.None && ImportRavenFs == false)
                 throw new BadRequestException("No types to import");
 
-            var databaseMigrationOptions = new DatabaseMigrationOptions
+            if (ImportRavenFs)
             {
-                BatchSize = 1024,
-                OperateOnTypes = operateOnTypes,
-                ExportDeletions = state != null,
-                StartDocsEtag = state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty,
-                StartDocsDeletionEtag = state?.LastDocDeleteEtag ?? LastEtagsInfo.EtagEmpty,
-                StartAttachmentsEtag = state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty,
-                StartAttachmentsDeletionEtag = state?.LastAttachmentsDeleteEtag ?? LastEtagsInfo.EtagEmpty
-            };
+                Result.AddInfo("Strated processing RavenFS files");
+                OnProgress.Invoke(Result.Progress);
 
-            // getting a new operation id was added in v3.5
-            var operationId = _majorVersion == MajorVersion.V30 ? 0 : await GetOperationId();
+                var lastRavenFsEtag = await MigrateRavenFs(state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty);
+                if (state == null)
+                    state = GenerateLastEtagsInfo();
 
-            object exportData;
-            if (_majorVersion == MajorVersion.V30)
+                state.LastRavenFsEtag = lastRavenFsEtag;
+                await SaveLastOperationState(state);
+            }
+
+            if (operateOnTypes != ItemType.None)
             {
-                exportData = new ExportDataV3
+                if (ImportRavenFs && operateOnTypes.HasFlag(DatabaseItemType.Documents) == false)
                 {
-                    SmugglerOptions = JsonConvert.SerializeObject(databaseMigrationOptions)
+                    Result.Documents.Processed = true;
+                    OnProgress.Invoke(Result.Progress);
+                }
+
+                var databaseMigrationOptions = new DatabaseMigrationOptions
+                {
+                    BatchSize = 1024,
+                    OperateOnTypes = operateOnTypes,
+                    ExportDeletions = originalState != null,
+                    StartDocsEtag = state?.LastDocsEtag ?? LastEtagsInfo.EtagEmpty,
+                    StartDocsDeletionEtag = state?.LastDocDeleteEtag ?? LastEtagsInfo.EtagEmpty,
+                    StartAttachmentsEtag = state?.LastAttachmentsEtag ?? LastEtagsInfo.EtagEmpty,
+                    StartAttachmentsDeletionEtag = state?.LastAttachmentsDeleteEtag ?? LastEtagsInfo.EtagEmpty
                 };
+
+                // getting a new operation id was added in v3.5
+                var operationId = _majorVersion == MajorVersion.V30 ? 0 : await GetOperationId();
+
+                object exportData;
+                if (_majorVersion == MajorVersion.V30)
+                {
+                    exportData = new ExportDataV3
+                    {
+                        SmugglerOptions = JsonConvert.SerializeObject(databaseMigrationOptions)
+                    };
+                }
+                else
+                {
+                    exportData = new ExportDataV35
+                    {
+                        DownloadOptions = JsonConvert.SerializeObject(databaseMigrationOptions),
+                        ProgressTaskId = operationId
+                    };
+                }
+
+                var exportOptions = JsonConvert.SerializeObject(exportData);
+                var canGetLastStateByOperationId = _buildVersion >= 35215;
+
+                await MigrateDatabase(exportOptions, readLegacyEtag: canGetLastStateByOperationId == false);
+
+                var lastState = await GetLastState(canGetLastStateByOperationId, operationId);
+                if (lastState != null)
+                {
+                    lastState.LastRavenFsEtag = state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty;
+                    await SaveLastOperationState(lastState);
+                }
             }
             else
             {
-                exportData = new ExportDataV35
+                if (ImportRavenFs)
+                    Result.Documents.Processed = true;
+
+                DatabaseSmuggler.EnsureProcessed(Result);
+            } 
+        }
+
+        private async Task<string> MigrateRavenFs(string lastEtag)
+        {
+            var destination = new DatabaseDestination(Database);
+
+            using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var documentActions = destination.Documents())
+            {
+                var sp = Stopwatch.StartNew();
+
+                while (true)
                 {
-                    DownloadOptions = JsonConvert.SerializeObject(databaseMigrationOptions),
-                    ProgressTaskId = operationId
-                };
+                    var ravenFsHeadersArray = await GetRavenFsHeadersArray(lastEtag, transactionOperationContext);
+                    if (ravenFsHeadersArray.Length == 0)
+                    {
+                        var count = Result.Documents.Attachments.ReadCount;
+                        if (count > 0)
+                        {
+                            var message = $"Read {count:#,#;;0} RavenFS file{(count > 1 ? "s" : string.Empty)}.";
+                            Result.AddInfo(message);
+                            OnProgress.Invoke(Result.Progress);
+                        }
+
+                        return lastEtag;
+                    }
+
+                    foreach (var headerObject in ravenFsHeadersArray)
+                    {
+                        var blittable = headerObject as BlittableJsonReaderObject;
+                        if (blittable == null)
+                            throw new InvalidDataException("headerObject isn't a BlittableJsonReaderObject");
+
+                        if (blittable.TryGet("FullPath", out string fullPath) == false)
+                            throw new InvalidDataException("FullPath doesn't exist");
+
+                        if (blittable.TryGet("Metadata", out BlittableJsonReaderObject metadata) == false)
+                            throw new InvalidDataException("Metadata doesn't exist");
+
+                        var key = fullPath.TrimStart('/');
+                        metadata = GetCleanMetadata(metadata, context);
+
+                        var dataStream = await GetRavenFsStream(key);
+                        WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
+
+                        Result.Documents.ReadCount++;
+                        if (Result.Documents.Attachments.ReadCount % 50 == 0 || sp.ElapsedMilliseconds > 3000)
+                        {
+                            var message = $"Read {Result.Documents.Attachments.ReadCount:#,#;;0} " +
+                                          $"RavenFS file{(Result.Documents.Attachments.ReadCount > 1 ? "s" : string.Empty)}.";
+                            Result.AddInfo(message);
+                            OnProgress.Invoke(Result.Progress);
+                            sp.Restart();
+                        }
+                    }
+
+                    var lastFile = ravenFsHeadersArray.Last() as BlittableJsonReaderObject;
+                    Debug.Assert(lastFile != null, "lastAttachment != null");
+                    if (lastFile.TryGet("Etag", out string etag))
+                        lastEtag = etag;
+                }
+            }
+        }
+
+        private async Task<Stream> GetRavenFsStream(string key)
+        {
+            var url = $"{ServerUrl}/fs/{DatabaseName}/files/{key}";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to file, key: {key}, from server: {ServerUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
             }
 
-            var exportOptions = JsonConvert.SerializeObject(exportData);
-            var canGetLastStateByOperationId = _buildVersion >= 35215;
+            return await response.Content.ReadAsStreamAsync();
+        }
 
-            await MigrateDatabase(exportOptions, readLegacyEtag: canGetLastStateByOperationId == false);
+        private BlittableJsonReaderObject GetCleanMetadata(BlittableJsonReaderObject metadata, DocumentsOperationContext context)
+        {
+            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove("Origin");
+            metadata.Modifications.Remove("Raven-Synchronization-Version");
+            metadata.Modifications.Remove("Raven-Synchronization-Source");
+            metadata.Modifications.Remove("Creation-Date");
+            metadata.Modifications.Remove("Raven-Creation-Date");
+            metadata.Modifications.Remove("Raven-Synchronization-History");
+            metadata.Modifications.Remove("RavenFS-Size");
+            metadata.Modifications.Remove("Last-Modified");
+            metadata.Modifications.Remove("Raven-Last-Modified");
+            metadata.Modifications.Remove("Content-MD5");
+            metadata.Modifications.Remove("ETag");
+            return context.ReadObject(metadata, MigrationStateKey);
+        }
 
-            await SaveLastState(canGetLastStateByOperationId, operationId);
+        private async Task<BlittableJsonReaderArray> GetRavenFsHeadersArray(string lastEtag, TransactionOperationContext context)
+        {
+            var url = $"{ServerUrl}/fs/{DatabaseName}/streams/files?pageSize={RavenFsHeadersPageSize}&etag={lastEtag}";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            var response = await HttpClient.SendAsync(request, CancelToken.Token);
+            if (response.IsSuccessStatusCode == false)
+            {
+                var responseString = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to get RavenFS headers list from server: {ServerUrl}, " +
+                                                    $"status code: {response.StatusCode}, " +
+                                                    $"error: {responseString}");
+            }
+
+            using (var responseStream = await response.Content.ReadAsStreamAsync())
+            {
+                var headersList = await context.ReadForMemoryAsync(responseStream, "ravenfs-headers-list");
+                if (headersList.TryGet("Results", out BlittableJsonReaderArray headers) == false)
+                    throw new InvalidDataException("Response is invalid");
+
+                return headers;
+            }
         }
 
         private ItemType GenerateOperateOnTypes()
@@ -153,22 +312,19 @@ namespace Raven.Server.Smuggler.Migration
             return long.Parse(str);
         }
 
-        private async Task SaveLastState(bool canGetLastStateByOperationId, long operationId)
+        private async Task<LastEtagsInfo> GetLastState(bool canGetLastStateByOperationId, long operationId)
         {
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var operationStateBlittable = canGetLastStateByOperationId
+                var lastEtagsInfo = canGetLastStateByOperationId
                     ? await GetLastStateByOperationId(operationId, context)
-                    : GenerateOperationState(context);
+                    : GenerateLastEtagsInfo();
 
-                if (operationStateBlittable == null)
-                    return;
-
-                await SaveLastOperationState(operationStateBlittable);
+                return lastEtagsInfo;
             }
         }
 
-        private async Task<BlittableJsonReaderObject> GetLastStateByOperationId(long operationId, TransactionOperationContext context)
+        private async Task<LastEtagsInfo> GetLastStateByOperationId(long operationId, TransactionOperationContext context)
         {
             var retries = 0;
             while (true)
@@ -195,13 +351,29 @@ namespace Raven.Server.Smuggler.Migration
                     return null;
                 }
 
-                operationStateBlittable.Modifications = new DynamicJsonValue
+                operationStateBlittable.TryGet(nameof(LastEtagsInfo.LastDocsEtag), out string lastDocsEtag);
+                operationStateBlittable.TryGet(nameof(LastEtagsInfo.LastDocDeleteEtag), out string lastDocsDeleteEtag);
+                operationStateBlittable.TryGet(nameof(LastEtagsInfo.LastAttachmentsEtag), out string lastAttachmentsEtag);
+                operationStateBlittable.TryGet(nameof(LastEtagsInfo.LastAttachmentsDeleteEtag), out string lastAttachmentsDeleteEtag);
+
+                var lastEtagsInfo = new LastEtagsInfo
                 {
-                    [nameof(ImportInfo.ServerUrl)] = ServerUrl,
-                    [nameof(ImportInfo.DatabaseName)] = DatabaseName
+                    ServerUrl = ServerUrl,
+                    DatabaseName = DatabaseName,
+                    LastDocsEtag = lastDocsEtag,
+                    LastDocDeleteEtag = lastDocsDeleteEtag,
+                    LastAttachmentsEtag = lastAttachmentsEtag,
+                    LastAttachmentsDeleteEtag = lastAttachmentsDeleteEtag
                 };
-                var blittableCopy = context.ReadObject(operationStateBlittable, MigrationStateKey);
-                return blittableCopy;
+
+                return lastEtagsInfo;
+                //operationStateBlittable.Modifications = new DynamicJsonValue
+                //{
+                //    [nameof(ImportInfo.ServerUrl)] = ServerUrl,
+                //    [nameof(ImportInfo.DatabaseName)] = DatabaseName
+                //};
+                //var blittableCopy = context.ReadObject(operationStateBlittable, MigrationStateKey);
+                //return blittableCopy;
             }
         }
 

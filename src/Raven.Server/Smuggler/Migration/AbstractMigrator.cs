@@ -18,6 +18,7 @@ namespace Raven.Server.Smuggler.Migration
         protected readonly HttpClient HttpClient;
         protected readonly DatabaseItemType OperateOnTypes;
         protected readonly bool RemoveAnalyzers;
+        protected readonly bool ImportRavenFs;
         protected readonly SmugglerResult Result;
         protected readonly Action<IOperationProgress> OnProgress;
         protected readonly DocumentDatabase Database;
@@ -31,6 +32,7 @@ namespace Raven.Server.Smuggler.Migration
             HttpClient = options.HttpClient;
             OperateOnTypes = options.OperateOnTypes;
             RemoveAnalyzers = options.RemoveAnalyzers;
+            ImportRavenFs = options.ImportRavenFs;
             Result = options.Result;
             OnProgress = options.OnProgress;
             Database = options.Database;

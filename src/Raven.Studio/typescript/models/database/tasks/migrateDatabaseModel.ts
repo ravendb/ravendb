@@ -13,6 +13,7 @@ class migrateDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
+    importRavenFs = ko.observable(false);
     revisionsAreConfigured: KnockoutComputed<boolean>;
 
     authenticationMethod = ko.observable<authenticationMethod>("none");
@@ -63,6 +64,7 @@ class migrateDatabaseModel {
     
     isRavenDb: KnockoutComputed<boolean>;
     isLegacy: KnockoutComputed<boolean>;
+    hasRavenFs: KnockoutComputed<boolean>;
     showWindowsCredentialInputs: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutValidationGroup;
@@ -98,11 +100,17 @@ class migrateDatabaseModel {
             operateOnTypes.push("CompareExchange");
         }
 
+        if (operateOnTypes.length === 0) {
+            operateOnTypes.push("None");
+        }
+
         const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {
             DatabaseName: this.databaseName(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
-            RemoveAnalyzers: this.removeAnalyzers()
+            RemoveAnalyzers: this.removeAnalyzers(),
+            ImportRavenFs: this.importRavenFs()
         };
+
         return {
             ServerUrl: this.serverUrl(),
             MigrationSettings: migrationSettings,
@@ -127,6 +135,11 @@ class migrateDatabaseModel {
         this.isLegacy = ko.pureComputed(() => {
            const version = this.serverMajorVersion();
            return version === "V2" || version === "V30" || version === "V35";
+        });
+
+        this.hasRavenFs = ko.pureComputed(() => {
+            const version = this.serverMajorVersion();
+            return version === "V30" || version === "V35";
         });
 
         this.showWindowsCredentialInputs = ko.pureComputed(() => {
@@ -163,7 +176,12 @@ class migrateDatabaseModel {
                     this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
             }
 
-            return this.includeDocuments() || this.includeIndexes() || this.includeLegacyAttachments();
+            const hasIncludes = this.includeDocuments() || this.includeIndexes() || this.includeLegacyAttachments();
+            if (this.serverMajorVersion() === "V30" || this.serverMajorVersion() === "V35") {
+                return hasIncludes || this.importRavenFs();
+            }
+
+            return hasIncludes;
         });
 
         this.importDefinitionHasIncludes.extend({
