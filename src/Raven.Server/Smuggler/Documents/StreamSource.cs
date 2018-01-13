@@ -148,14 +148,21 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderArray ravenConnectionStrings) && 
+                    if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings) && 
                         ravenConnectionStrings != null)
                     {
                         try
                         {
-                            foreach (BlittableJsonReaderObject ravenConnectionString in ravenConnectionStrings)
+                            foreach (var connectionName in ravenConnectionStrings.GetPropertyNames())
                             {
-                                var connectionString = JsonDeserializationCluster.RavenConnectionString(ravenConnectionString);
+                                if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                                {
+                                    if (_log.IsInfoEnabled)
+                                        _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skiping.");
+                
+                                    continue;
+                                }
+                                var connectionString = JsonDeserializationCluster.RavenConnectionString(connection);
                                 databaseRecord.RavenConnectionStrings[connectionString.Name] = connectionString;
                             }
                         }
@@ -167,14 +174,21 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    if (reader.TryGet(nameof(databaseRecord.SqlConnectionStrings), out BlittableJsonReaderArray sqlConnectionStrings) && 
+                    if (reader.TryGet(nameof(databaseRecord.SqlConnectionStrings), out BlittableJsonReaderObject sqlConnectionStrings) && 
                         sqlConnectionStrings != null)
                     {
                         try
                         {
-                            foreach (BlittableJsonReaderObject sqlConnectionString in sqlConnectionStrings)
+                            foreach (var connectionName in sqlConnectionStrings.GetPropertyNames())
                             {
-                                var connectionString = JsonDeserializationCluster.SqlConnectionString(sqlConnectionString);
+                                if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                                {
+                                    if (_log.IsInfoEnabled)
+                                        _log.Info($"Wasn't able to import the SQL connection string {connectionName} from smuggler file. Skiping.");
+                
+                                    continue;
+                                }
+                                var connectionString = JsonDeserializationCluster.SqlConnectionString(connection);
                                 databaseRecord.SqlConnectionStrings[connectionString.Name] = connectionString;
                             }
                         }
@@ -256,7 +270,6 @@ namespace Raven.Server.Smuggler.Documents
             {
                 case DatabaseItemType.None:
                     return 0;
-                case DatabaseItemType.DatabaseRecord:
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Tombstones:
@@ -267,6 +280,8 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.LegacyDocumentDeletions:
                 case DatabaseItemType.LegacyAttachmentDeletions:
                     return SkipArray(onSkipped);
+                case DatabaseItemType.DatabaseRecord:
+                    return SkipObject(onSkipped);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }
@@ -420,6 +435,27 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return count;
+        }
+
+        private long SkipObject(Action<long> onSkipped = null)
+        {
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
+             
+            if (_state.CurrentTokenType != JsonParserToken.StartObject)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
+
+            using (var builder = CreateBuilder(_context, null))
+            {
+                builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                _context.CachedProperties.NewDocument();
+
+                ReadObject(builder);
+            }
+            onSkipped?.Invoke(1);
+
+            return 1;
         }
 
         private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
