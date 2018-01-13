@@ -180,9 +180,17 @@ namespace Raven.Server.Smuggler.Migration
             if (builMajorVersion == MajorVersion.Unknown)
                 return new List<string>();
 
-            return builMajorVersion == MajorVersion.V4
-                ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
-                : await AbstractLegacyMigrator.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown);
+
+            try
+            {
+                return builMajorVersion == MajorVersion.V4
+                    ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
+                    : await AbstractLegacyMigrator.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return new List<string>();
+            }
         }
 
         public long StartMigratingSingleDatabase(DatabaseMigrationSettings databaseMigrationSettings, DocumentDatabase database)
@@ -221,6 +229,7 @@ namespace Raven.Server.Smuggler.Migration
                                 HttpClient = _httpClient,
                                 OperateOnTypes = databaseMigrationSettings.OperateOnTypes,
                                 RemoveAnalyzers = databaseMigrationSettings.RemoveAnalyzers,
+                                ImportRavenFs = databaseMigrationSettings.ImportRavenFs,
                                 Result = result,
                                 OnProgress = onProgress,
                                 Database = database,

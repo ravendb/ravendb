@@ -171,13 +171,17 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/remote-server/build/version", "GET", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/remote-server/build/version", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetRemoteServerBuildInfoWithDatabases()
         {
             var serverUrl = GetQueryStringValueAndAssertIfSingleAndNotEmpty("serverUrl");
+            var userName = GetStringQueryString("userName", required: false);
+            var password = GetStringQueryString("password", required: false);
             var migrator = new Migrator(new SingleDatabaseMigrationConfiguration
             {
-                ServerUrl = serverUrl
+                ServerUrl = serverUrl,
+                UserName = userName,
+                Password = password
             }, ServerStore);
 
             var buildInfo = await migrator.GetBuildInfo();

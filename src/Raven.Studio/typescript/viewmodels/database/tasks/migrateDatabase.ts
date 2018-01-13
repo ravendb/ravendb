@@ -7,6 +7,7 @@ import getMigratedServerUrlsCommand = require("commands/database/studio/getMigra
 import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
 import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
+import popoverUtils = require("common/popoverUtils");
 
 class migrateDatabase extends viewModelBase {
 
@@ -15,6 +16,7 @@ class migrateDatabase extends viewModelBase {
 
     spinners = {
         versionDetect: ko.observable<boolean>(false),
+        getDatabaseNames: ko.observable<boolean>(false),
         migration: ko.observable<boolean>(false)
     };
 
@@ -23,12 +25,15 @@ class migrateDatabase extends viewModelBase {
         
         this.bindToCurrentInstance("detectServerVersion");
 
-        const debouncedDetection = _.debounce(() => this.detectServerVersion(), 700);
+        const debouncedDetection = _.debounce((showVersionSpinner: boolean) => this.detectServerVersion(showVersionSpinner), 700);
 
         this.model.serverUrl.subscribe(() => {
             this.model.serverMajorVersion(null);
-            debouncedDetection();
+            debouncedDetection(true);
         });
+
+        this.model.userName.subscribe(() => debouncedDetection(false));
+        this.model.password.subscribe(() => debouncedDetection(false));
 
         this.hasRevisionsConfiguration = ko.pureComputed(() => {
             const db = this.activeDatabase();
@@ -60,19 +65,28 @@ class migrateDatabase extends viewModelBase {
         super.attached();
 
         this.updateHelpLink("YD9M1R"); //TODO: this is probably stale!
+
+        popoverUtils.longWithHover($("#database-name-info"),
+            {
+                content:
+                    "You can enter your remote server credentials <br>" +
+                        "in order to see the list of available databases"
+            });
     }
 
-    detectServerVersion() {
+    detectServerVersion(showVersionSpinner: boolean) {
         if (!this.isValid(this.model.versionCheckValidationGroup)) {
             this.model.serverMajorVersion(null);
             return;
         }
-        
-        this.spinners.versionDetect(true);
+
+        this.spinners.getDatabaseNames(true);
+        if (showVersionSpinner) {
+            this.spinners.versionDetect(true);
+        }
 
         const url = this.model.serverUrl();
-
-        new getRemoteServerVersionWithDatabasesCommand(url)
+        new getRemoteServerVersionWithDatabasesCommand(url, this.model.userName(), this.model.password())
             .execute()
             .done(info => {
                 if (info.MajorVersion !== "Unknown") {
@@ -95,7 +109,12 @@ class migrateDatabase extends viewModelBase {
                     this.model.databaseNames([]);
                 }
             })
-            .always(() => this.spinners.versionDetect(false));
+            .always(() => {
+                this.spinners.getDatabaseNames(false);
+                if (showVersionSpinner) {
+                    this.spinners.versionDetect(false);
+                }
+            });
     }
     
     migrateDb() {

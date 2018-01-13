@@ -21,6 +21,8 @@ namespace Raven.Server.Smuggler.Migration
 
         public bool RemoveAnalyzers { get; set; }
 
+        public bool ImportRavenFs { get; set; }
+
         public SmugglerResult Result { get; set; }
 
         public Action<IOperationProgress> OnProgress { get; set; }
