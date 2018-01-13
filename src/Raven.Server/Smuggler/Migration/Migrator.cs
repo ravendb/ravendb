@@ -36,16 +36,13 @@ namespace Raven.Server.Smuggler.Migration
             _buildVersion = configuration.BuildVersion;
 
             var httpClientHandler = RequestExecutor.CreateHttpMessageHandler(_serverStore.Server.Certificate.Certificate, setSslProtocols: false);
-            var hasCredentials =
-                string.IsNullOrWhiteSpace(configuration.UserName) == false &&
-                string.IsNullOrWhiteSpace(configuration.Password) == false;
-
-            httpClientHandler.UseDefaultCredentials = hasCredentials == false;
-            if (hasCredentials)
+            httpClientHandler.UseDefaultCredentials = false;
+            if (string.IsNullOrWhiteSpace(configuration.UserName) == false &&
+                string.IsNullOrWhiteSpace(configuration.Password) == false)
             {
                 var domain = string.IsNullOrWhiteSpace(configuration.Domain) ? "\\" : configuration.Domain;
                 httpClientHandler.Credentials = new NetworkCredential(
-                    configuration.UserName, 
+                    configuration.UserName,
                     configuration.Password,
                     domain);
             }
