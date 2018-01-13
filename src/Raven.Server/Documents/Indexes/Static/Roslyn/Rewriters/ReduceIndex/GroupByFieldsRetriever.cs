@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 {
     public abstract class MethodsInGroupByValidator : CSharpSyntaxWalker
     {
-        protected static string[] ForbiddenMethods = { "Count", "Average" };
+        protected static string[] ForbiddenMethods = {"Count", "Average"};
 
         protected Dictionary<string, string> SearchPatterns = new Dictionary<string, string>();
 
@@ -41,7 +41,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             var exp = node.Expression as MemberAccessExpressionSyntax;
 
             if (exp != null && exp.ToString().EndsWith("Select"))
-            {// find GroupBy(...).Select(root => .. )
+            {
+                // find GroupBy(...).Select(root => .. )
                 var group = exp.Expression as InvocationExpressionSyntax;
                 if (group != null && group.Expression.ToString().EndsWith("GroupBy"))
                 {
@@ -51,6 +52,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                     {
                         throw new IndexCompilationException("Select expression must contain parameter(s)");
                     }
+
                     _root = myLambda.Parameter;
                     SetSearchPatterns();
 
@@ -68,9 +70,11 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                             }
                         }
                     }
+
                     return;
                 }
             }
+
             base.VisitInvocationExpression(node);
         }
     }
@@ -86,6 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 _root = node.Identifier; // get the into object
                 SetSearchPatterns();
             }
+
             base.VisitQueryContinuation(node);
         }
 
@@ -95,6 +100,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
             {
                 base.VisitFromClause(node);
             }
+
             // else skip the from clause
         }
 
@@ -119,6 +125,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                     }
                 }
             }
+
             base.VisitInvocationExpression(node);
         }
     }
@@ -138,42 +145,47 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
                 var groupByFields = new List<string>();
 
                 // by new { ... }
-                if (node.ByExpression is AnonymousObjectCreationExpressionSyntax aoc)
-                {
-                    foreach (var initializer in aoc.Initializers)
-                    {
-                        if (initializer.NameEquals != null)
-                        {
-                            groupByFields.Add(initializer.NameEquals.Name.Identifier.Text);
-                        }
-                        else if(initializer.Expression is MemberAccessExpressionSyntax mae)
-                        {
-                            groupByFields.Add(mae.Name.Identifier.Text);
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException("Unable to understasnd expression " + initializer);
-                        }
-                    }
-                }
-                // by f.Bar
-                else if (node.ByExpression is MemberAccessExpressionSyntax mae)
-                {
-                    groupByFields.Add(mae.Name.Identifier.Text);
-                }
-                else if (node.ByExpression is LiteralExpressionSyntax)
-                {
-                    // explicitly ignore, we don't need to do anything here
-                }
-                else
-                {
-                    throw new InvalidOperationException("Unable to understasnd expression " + node.ByExpression);
-                }
-                
+                FindGroupByFields(node.ByExpression, groupByFields);
+
 
                 GroupByFields = groupByFields.ToArray();
 
                 return base.VisitGroupClause(node);
+            }
+
+            private void FindGroupByFields(ExpressionSyntax expr, List<string> groupByFields)
+            {
+                switch (expr)
+                {
+                    case AnonymousObjectCreationExpressionSyntax aoc:
+                        foreach (var initializer in aoc.Initializers)
+                        {
+                            if (initializer.Expression is MemberAccessExpressionSyntax mae)
+                            {
+                                groupByFields.Add(mae.Name.Identifier.Text);
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException("Unable to understasnd expression " + initializer);
+                            }
+                        }
+
+                        break;
+                    case MemberAccessExpressionSyntax mae:
+                        groupByFields.Add(mae.Name.Identifier.Text);
+                        break;
+                        case ParenthesizedExpressionSyntax pes:
+                            FindGroupByFields(pes.Expression, groupByFields);
+                            break;
+                     case CastExpressionSyntax ces:
+                             FindGroupByFields(ces.Expression, groupByFields);
+                            break;
+                    case LiteralExpressionSyntax _:
+                        // explicitly ignore, we don't need to do anything here
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unable to understasnd expression " + expr);
+                }
             }
         }
 
@@ -209,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex
 
                 if (singleGroupByField != null)
                 {
-                    GroupByFields = new[] { singleGroupByField.Name.Identifier.ValueText };
+                    GroupByFields = new[] {singleGroupByField.Name.Identifier.ValueText};
                 }
                 else if (multipleGroupByFields != null)
                 {
