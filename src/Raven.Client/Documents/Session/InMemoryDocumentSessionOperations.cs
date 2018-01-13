@@ -68,7 +68,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
         /// </summary>
-        protected readonly HashSet<string> KnownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _knownMissingIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private Dictionary<string, object> _externalState;
 
@@ -91,6 +91,7 @@ namespace Raven.Client.Documents.Session
                 default:
                     throw new ArgumentOutOfRangeException(_documentStore.Conventions.ReadBalanceBehavior.ToString());
             }
+
             return result.Node;
         }
 
@@ -107,7 +108,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// hold the data required to manage the data for RavenDB's Unit of Work
         /// </summary>
-        protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity = new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
+        protected internal readonly Dictionary<object, DocumentInfo> DocumentsByEntity =
+            new Dictionary<object, DocumentInfo>(ObjectReferenceEqualityComparer<object>.Default);
 
         protected readonly DocumentStoreBase _documentStore;
 
@@ -121,6 +123,7 @@ namespace Raven.Client.Documents.Session
         public RequestExecutor RequestExecutor => _requestExecutor;
 
         public JsonOperationContext Context => _context;
+
         /// <summary>
         /// Gets the number of requests for this session
         /// </summary>
@@ -165,7 +168,9 @@ namespace Raven.Client.Documents.Session
         public bool UseOptimisticConcurrency { get; set; }
 
         protected readonly List<ICommandData> DeferredCommands = new List<ICommandData>();
-        protected internal readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary = new Dictionary<(string, CommandType, string), ICommandData>();
+
+        protected internal readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary =
+            new Dictionary<(string, CommandType, string), ICommandData>();
 
         public int DeferredCommandsCount => DeferredCommands.Count;
 
@@ -251,7 +256,8 @@ namespace Raven.Client.Documents.Session
             if (DocumentsByEntity.TryGetValue(instance, out DocumentInfo documentInfo))
                 return documentInfo;
 
-            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out string id) == false && (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
+            if (GenerateEntityIdOnTheClient.TryGetIdFromInstance(instance, out string id) == false &&
+                (instance is IDynamicMetaObjectProvider == false || GenerateEntityIdOnTheClient.TryGetIdFromDynamic(instance, out id) == false))
                 throw new InvalidOperationException($"Could not find the document id for {instance}");
 
             AssertNoNonUniqueInstance(instance, id);
@@ -271,8 +277,8 @@ namespace Raven.Client.Documents.Session
         internal bool IsLoadedOrDeleted(string id)
         {
             return DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null ||
-                IsDeleted(id) ||
-                IncludedDocumentsById.ContainsKey(id);
+                   IsDeleted(id) ||
+                   IncludedDocumentsById.ContainsKey(id);
         }
 
         /// <summary>
@@ -281,7 +287,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public bool IsDeleted(string id)
         {
-            return KnownMissingIds.Contains(id);
+            return _knownMissingIds.Contains(id);
         }
 
         /// <summary>
@@ -343,7 +349,8 @@ more responsive application.
                 var actual = typeof(T).Name;
                 var expected = entity.GetType().Name;
                 var message = string.Format("The query results type is '{0}' but you expected to get results of type '{1}'. " +
-"If you want to return a projection, you should use .ProjectFromIndexFieldsInto<{1}>() (for Query) or .SelectFields<{1}>() (for DocumentQuery) before calling to .ToList().", expected, actual);
+                                            "If you want to return a projection, you should use .ProjectFromIndexFieldsInto<{1}>() (for Query) or .SelectFields<{1}>() (for DocumentQuery) before calling to .ToList().",
+                    expected, actual);
                 throw new InvalidOperationException(message, e);
             }
         }
@@ -387,6 +394,7 @@ more responsive application.
                     IncludedDocumentsById.Remove(id);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
+
                 return docInfo.Entity;
             }
 
@@ -401,6 +409,7 @@ more responsive application.
                     DocumentsById.Add(docInfo);
                     DocumentsByEntity[docInfo.Entity] = docInfo;
                 }
+
                 return docInfo.Entity;
             }
 
@@ -451,9 +460,10 @@ more responsive application.
             {
                 throw new InvalidOperationException(entity + " is not associated with the session, cannot delete unknown entity instance");
             }
+
             DeletedEntities.Add(entity);
             IncludedDocumentsById.Remove(value.Id);
-            KnownMissingIds.Add(value.Id);
+            _knownMissingIds.Add(value.Id);
         }
 
         /// <summary>
@@ -480,15 +490,17 @@ more responsive application.
                     throw new InvalidOperationException(
                         "Can't delete changed entity using identifier. Use Delete<T>(T entity) instead.");
                 }
+
                 if (documentInfo.Entity != null)
                 {
                     DocumentsByEntity.Remove(documentInfo.Entity);
                 }
+
                 DocumentsById.Remove(id);
                 changeVector = documentInfo.ChangeVector;
             }
 
-            KnownMissingIds.Add(id);
+            _knownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
         }
@@ -569,7 +581,7 @@ more responsive application.
                 metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
 
             if (id != null)
-                KnownMissingIds.Remove(id);
+                _knownMissingIds.Remove(id);
             StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
         }
 
@@ -590,7 +602,8 @@ more responsive application.
             return StoreAsyncInternal(entity, null, id, ConcurrencyCheckMode.Auto, token: token);
         }
 
-        private async Task StoreAsyncInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck, CancellationToken token = default(CancellationToken))
+        private async Task StoreAsyncInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck,
+            CancellationToken token = default(CancellationToken))
         {
             if (null == entity)
                 throw new ArgumentNullException(nameof(entity));
@@ -631,11 +644,12 @@ more responsive application.
 
         protected abstract Task<string> GenerateIdAsync(object entity);
 
-        protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata, ConcurrencyCheckMode forceConcurrencyCheck)
+        protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
+            ConcurrencyCheckMode forceConcurrencyCheck)
         {
             DeletedEntities.Remove(entity);
             if (id != null)
-                KnownMissingIds.Remove(id);
+                _knownMissingIds.Remove(id);
 
             var documentInfo = new DocumentInfo
             {
@@ -673,8 +687,8 @@ more responsive application.
 
             Task<string> generator =
                 id != null
-                ? Task.FromResult(id)
-                : GenerateIdAsync(entity);
+                    ? Task.FromResult(id)
+                    : GenerateIdAsync(entity);
 
             var result = await generator.ConfigureAwait(false);
             if (result != null && result.StartsWith("/"))
@@ -704,6 +718,7 @@ more responsive application.
             {
                 documentInfo.Metadata.Modifications = new DynamicJsonValue();
             }
+
             foreach (var prop in documentInfo.MetadataInstance.Keys)
             {
                 documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
@@ -748,12 +763,14 @@ more responsive application.
 
                         DocumentsById.Remove(documentInfo.Id);
                     }
+
                     changeVector = UseOptimisticConcurrency ? changeVector : null;
                     var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
                     OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
                     result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
                 }
             }
+
             if (changes == null)
             {
                 DeletedEntities.Clear();
@@ -852,6 +869,7 @@ more responsive application.
                         return true;
                     }
                 }
+
                 return DeletedEntities.Count > 0;
             }
         }
@@ -929,6 +947,7 @@ more responsive application.
                 DocumentsByEntity.Remove(entity);
                 DocumentsById.Remove(documentInfo.Id);
             }
+
             DeletedEntities.Remove(entity);
         }
 
@@ -941,7 +960,7 @@ more responsive application.
             DocumentsByEntity.Clear();
             DeletedEntities.Clear();
             DocumentsById.Clear();
-            KnownMissingIds.Clear();
+            _knownMissingIds.Clear();
             IncludedDocumentsById.Clear();
         }
 
@@ -1036,12 +1055,12 @@ more responsive application.
 
         public void RegisterMissing(string id)
         {
-            KnownMissingIds.Add(id);
+            _knownMissingIds.Add(id);
         }
 
         public void UnregisterMissing(string id)
         {
-            KnownMissingIds.Remove(id);
+            _knownMissingIds.Remove(id);
         }
 
         internal void RegisterIncludes(BlittableJsonReaderObject includes)
@@ -1134,6 +1153,7 @@ more responsive application.
                         HandleInternalMetadata(jsonArray);
                     }
                 }
+
                 return;
             }
 
@@ -1148,7 +1168,7 @@ more responsive application.
             };
         }
 
-        internal void HandleInternalMetadata(BlittableJsonReaderArray values)
+        private void HandleInternalMetadata(BlittableJsonReaderArray values)
         {
             foreach (var nested in values)
             {
@@ -1176,7 +1196,7 @@ more responsive application.
         {
             foreach (var id in ids)
             {
-                if (KnownMissingIds.Contains(id))
+                if (_knownMissingIds.Contains(id))
                     continue;
 
                 // Check if document was already loaded, the check if we've received it through include
@@ -1193,15 +1213,13 @@ more responsive application.
                 foreach (var include in includes)
                 {
                     var hasAll = true;
-                    IncludesUtil.Include(documentInfo.Document, include, s =>
-                    {
-                        hasAll &= IsLoaded(s);
-                    });
+                    IncludesUtil.Include(documentInfo.Document, include, s => { hasAll &= IsLoaded(s); });
 
                     if (hasAll == false)
                         return false;
                 }
             }
+
             return true;
         }
 
@@ -1316,82 +1334,13 @@ more responsive application.
             var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
 
             if (isIndex && isCollection)
-                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
+                throw new InvalidOperationException(
+                    $"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
 
             if (isIndex == false && isCollection == false)
                 collectionName = Conventions.GetCollectionName(type);
 
             return (indexName, collectionName);
-        }
-    }
-
-    /// <summary>
-    /// Information held about an entity by the session
-    /// </summary>
-    public class DocumentInfo
-    {
-        /// <summary>
-        /// Gets or sets the id.
-        /// </summary>
-        /// <value>The id.</value>
-        public string Id { get; set; }
-
-        /// <summary>
-        /// Gets or sets the ChangeVector.
-        /// </summary>
-        /// <value>The ChangeVector.</value>
-        public string ChangeVector { get; set; }
-
-        /// <summary>
-        /// A concurrency check will be forced on this entity 
-        /// even if UseOptimisticConcurrency is set to false
-        /// </summary>
-        public InMemoryDocumentSessionOperations.ConcurrencyCheckMode ConcurrencyCheckMode { get; set; }
-
-        /// <summary>
-        /// If set to true, the session will ignore this document
-        /// when SaveChanges() is called, and won't perform and change tracking
-        /// </summary>
-        public bool IgnoreChanges { get; set; }
-
-        public BlittableJsonReaderObject Metadata { get; set; }
-
-        public BlittableJsonReaderObject Document { get; set; }
-
-        public IMetadataDictionary MetadataInstance { get; set; }
-
-        public object Entity { get; set; }
-
-        public bool IsNewDocument { get; set; }
-
-        public string Collection { get; set; }
-
-        public DateTime GetLastModified()
-        {
-            if (Metadata.TryGet(Constants.Documents.Metadata.LastModified, out DateTime lastModified) == false)
-                throw new InvalidOperationException($"Document {Id} must have a last modified field");
-
-            return lastModified;
-        }
-
-        public static DocumentInfo GetNewDocumentInfo(BlittableJsonReaderObject document)
-        {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                throw new InvalidOperationException("Document must have a metadata");
-            if (metadata.TryGet(Constants.Documents.Metadata.Id, out string id) == false)
-                throw new InvalidOperationException("Document must have an id");
-            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
-                throw new InvalidOperationException($"Document {id} must have a Change Vector");
-
-            var newDocumentInfo = new DocumentInfo
-            {
-                Id = id,
-                Document = document,
-                Metadata = metadata,
-                Entity = null,
-                ChangeVector = changeVector
-            };
-            return newDocumentInfo;
         }
     }
 }
