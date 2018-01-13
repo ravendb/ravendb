@@ -24,7 +24,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/license/eula/accept", "POST", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/license/eula/accept", "POST", AuthorizationStatus.Operator)]
         public Task AcceptEula()
         {
             if (ServerStore.LicenseManager.IsEulaAccepted)
