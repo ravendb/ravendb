@@ -184,10 +184,11 @@ namespace Raven.Server.Commercial
 
                 byte[] zipBytes;
                 byte[] certBytes;
-                byte[] clientCertBytes;
                 string certPassword;
-                dynamic settingsJsonObject;
                 X509Certificate2 cert;
+                byte[] clientCertBytes;
+                string clientCertName;
+                dynamic settingsJsonObject;
 
                 try
                 {
@@ -203,7 +204,7 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
                 try
                 {
-                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out certBytes, out clientCertBytes);
+                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out certBytes, out clientCertBytes, out clientCertName);
                 }
                 catch (Exception e)
                 {
@@ -243,7 +244,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, cert, certBytes, certPassword, clientCertBytes, serverStore);
+                    CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, cert, certBytes, certPassword, clientCertBytes, clientCertName, serverStore);
                 }
                 catch (Exception e)
                 {
@@ -263,10 +264,11 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out byte[] certBytes, out byte[] clientCertBytes)
+        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out byte[] certBytes, out byte[] clientCertBytes, out string clientCertName)
         {
             certBytes = null;
             clientCertBytes = null;
+            clientCertName = null;
             dynamic settingsJson = null; 
             
             using (var msZip = new MemoryStream(zipBytes))
@@ -289,6 +291,10 @@ namespace Raven.Server.Commercial
                         {
                             entry.Open().CopyTo(ms);
                             clientCertBytes = ms.ToArray();
+                            var extIndex = entry.Name.LastIndexOf(".pfx", StringComparison.OrdinalIgnoreCase);
+                            clientCertName = extIndex == -1 
+                                ? "admin.client.certificate" 
+                                : entry.Name.Substring(0, extIndex - 1);
                         }
                     }
 
@@ -1094,6 +1100,7 @@ namespace Raven.Server.Commercial
             byte[] certBytes,
             string certPassword,
             byte[] clientCertBytes,
+            string clientCertName,
             ServerStore serverStore)
         {
             try
@@ -1108,8 +1115,33 @@ namespace Raven.Server.Commercial
 
             serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", cert, certBytes, certPassword);
 
-            // todo I think it will happen anyway on server startup... check this
-            //serverStore.EnsureServerCertificateIsInClusterState("Cluster-Wide Certificate");
+            progress.AddInfo("Registering client certificate in the local server.");
+            onProgress(progress);
+            var certDef = new CertificateDefinition
+            {
+                Name = clientCertName,
+                // this does not include the private key, that is only for the client
+                Certificate = Convert.ToBase64String(clientCertBytes),
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance = SecurityClearance.ClusterAdmin,
+                Thumbprint = cert.Thumbprint,
+                NotAfter = cert.NotAfter
+            };
+
+            try
+            {
+                using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (var certificate = ctx.ReadObject(certDef.ToJson(), "Admin/Client/Certificate/Definition"))
+                using (var tx = ctx.OpenWriteTransaction())
+                {
+                    serverStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + cert.Thumbprint, certificate);
+                    tx.Commit();
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Failed to register client certificate in the local server.", e);
+            }
 
             if (continueSetupInfo.RegisterClientCert)
             {
@@ -1430,44 +1462,45 @@ namespace Raven.Server.Commercial
         {
             var str =
                 string.Format(WelcomeMessage.AsciiHeader, Environment.NewLine) + Environment.NewLine + Environment.NewLine +
-                "Your RavenDB cluster settings, certificate and configuration are contained in this zip file." + Environment.NewLine;
+                "Your RavenDB cluster settings, certificate and configuration are contained in this zip file." 
+                + Environment.NewLine;
 
             str += Environment.NewLine +
                    $"The new server is available at: {publicServerUrl}"
                    + Environment.NewLine;
 
-            
+
             str += $"The current node ('{nodeTag}') has already been configured and requires no further action on your part." +
-                    Environment.NewLine;
-            
+                   Environment.NewLine;
+
             str += Environment.NewLine;
             if (registerClientCert && PlatformDetails.RunningOnPosix == false)
             {
                 str +=
-                     $"An administrator client certificate has been installed on this machine ({Environment.MachineName})." +
-                     Environment.NewLine +
-                     $"You can now restart the server and access the studio at {publicServerUrl}." +
-                     Environment.NewLine +
-                     "Chrome will let you select this certificate." + 
-                     Environment.NewLine;
+                    $"An administrator client certificate has been installed on this machine ({Environment.MachineName})." +
+                    Environment.NewLine +
+                    $"You can now restart the server and access the studio at {publicServerUrl}." +
+                    Environment.NewLine +
+                    "Chrome will let you select this certificate." +
+                    Environment.NewLine;
             }
             else
             {
                 str +=
-                    $"An administrator client certificate has been generated and is located in the zip file." + 
-                     Environment.NewLine +
+                    $"An administrator client certificate has been generated and is located in the zip file." +
+                    Environment.NewLine +
                     $"However, the certificate was not installed on this machine ({Environment.MachineName}), this can be done manually." +
                     Environment.NewLine;
             }
 
             str +=
-                "If you are using Firefox (or Chrome under Linux), the certificate must be imported manually to the browser." + 
-                Environment.NewLine + 
+                "If you are using Firefox (or Chrome under Linux), the certificate must be imported manually to the browser." +
+                Environment.NewLine +
                 "You can do that via: Tools > Options > Advanced > 'Certificates: View Certificates'." +
                 Environment.NewLine;
 
             if (PlatformDetails.RunningOnPosix)
-                str += 
+                str +=
                     "In Linux, importing the client certificate to the browser might fail for 'Unknown Reasons'." +
                     Environment.NewLine +
                     "If you encounter this bug, use the RavenCli command 'generateClientCert' to create a new certificate with a password." +
@@ -1477,8 +1510,8 @@ namespace Raven.Server.Commercial
 
             str +=
                 Environment.NewLine +
-                "It is recommended to generate additional certificates with reduced access rights for applications and users." + 
-                Environment.NewLine + 
+                "It is recommended to generate additional certificates with reduced access rights for applications and users." +
+                Environment.NewLine +
                 "This can be done using the RavenDB Studio, in the 'Manage Server' > 'Certificates' page." +
                 Environment.NewLine;
 
@@ -1493,16 +1526,18 @@ namespace Raven.Server.Commercial
                     Environment.NewLine +
                     "When you enter the setup wizard on a new node, please choose 'Continue Existing Cluster Setup'." +
                     Environment.NewLine +
-                    "(Please do not try to start a new setup process again in this new node, it is NOT supported)." +
+                    "Do not try to start a new setup process again in this new node, it is not supported." +
                     Environment.NewLine +
                     "You will be asked to upload the zip file which was just downloaded." +
                     Environment.NewLine +
                     "The new server node will join the already existing cluster." +
                     Environment.NewLine +
                     Environment.NewLine +
-                    "When the wizard is done and the new node was restared, the cluster will automatically detect it... " +
+                    "When the wizard is done and the new node was restared, the cluster will automatically detect it. " +
                     Environment.NewLine +
-                    "There is no need to manually add it again from the studio! Simply access the 'Cluster' view and observe the topology being updated." +
+                    "There is no need to manually add it again from the studio. Simply access the 'Cluster' view and " +
+                    Environment.NewLine +
+                    "observe the topology being updated." +
                     Environment.NewLine;
             }
             return str;
