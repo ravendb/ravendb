@@ -36,9 +36,7 @@ namespace Raven.Client.Documents.Session
             using (DefaultRavenContractResolver.RegisterExtensionDataGetter(FillMissingProperties))
             using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
             {
-                var serializer = _session.Conventions.CreateSerializer();
-
-                return ConvertEntityToBlittableInternal(entity, _session.Conventions, _session.Context, serializer, writer);
+                return ConvertEntityToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
             }
         }
 
@@ -47,32 +45,16 @@ namespace Raven.Client.Documents.Session
             _missingDictionary.TryGetValue(o, out var props);
             return props;
         }
-
-        internal static BlittableJsonReaderObject ConvertEntityToBlittable(
-            object entity,
-            DocumentConventions conventions,
-            JsonOperationContext context,
-            DocumentInfo documentInfo = null)
-        {
-            using (var writer = new BlittableJsonWriter(context, documentInfo))
-            {
-                var serializer = conventions.CreateSerializer();
-
-                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer, writer);
-            }
-        }
         
         internal static BlittableJsonReaderObject ConvertEntityToBlittable(
             object entity,
             DocumentConventions conventions,
             JsonOperationContext context,
-            JsonSerializer serializer,
+            JsonSerializer serializer = null,
             DocumentInfo documentInfo = null)
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo))
-            {
-                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer, writer);
-            }
+                return ConvertEntityToBlittableInternal(entity, conventions, context, serializer ?? conventions.CreateSerializer(), writer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -230,8 +212,7 @@ namespace Raven.Client.Documents.Session
                 if (propertyObject == null)
                     continue;
 
-                string type;
-                if (propertyObject.TryGet(Constants.Json.Fields.Type, out type) == false)
+                if (propertyObject.TryGet(Constants.Json.Fields.Type, out string type) == false)
                 {
                     simplified |= TrySimplifyJson(propertyObject);
                     continue;
@@ -245,8 +226,7 @@ namespace Raven.Client.Documents.Session
                 if (document.Modifications == null)
                     document.Modifications = new DynamicJsonValue(document);
 
-                BlittableJsonReaderArray values;
-                if (propertyObject.TryGet(Constants.Json.Fields.Values, out values) == false)
+                if (propertyObject.TryGet(Constants.Json.Fields.Values, out BlittableJsonReaderArray values) == false)
                 {
                     if (propertyObject.Modifications == null)
                         propertyObject.Modifications = new DynamicJsonValue(propertyObject);

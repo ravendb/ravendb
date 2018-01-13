@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Conventions
         private static JsonSerializer _serializer;
 
         private Action<JsonSerializer> _customize;
-        private GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
+        private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {

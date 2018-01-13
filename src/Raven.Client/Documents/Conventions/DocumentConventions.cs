@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Conventions
 
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
 
-        internal static DocumentConventions Default = new DocumentConventions();
+        internal static readonly DocumentConventions Default = new DocumentConventions();
 
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 

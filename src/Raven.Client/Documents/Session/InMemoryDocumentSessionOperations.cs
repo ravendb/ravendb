@@ -13,11 +13,13 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -46,9 +48,10 @@ namespace Raven.Client.Documents.Session
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
-        protected internal SessionInfo SessionInfo;
+        protected internal readonly SessionInfo SessionInfo;
         private BatchOptions _saveChangesOptions;
         private bool _isDisposed;
+        private JsonSerializer _jsonSerializer;
 
         /// <summary>
         /// The session id 
@@ -176,6 +179,8 @@ namespace Raven.Client.Documents.Session
 
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
         public EntityToBlittable EntityToBlittable { get; }
+
+        protected internal JsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = _documentStore.Conventions.CreateSerializer());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
