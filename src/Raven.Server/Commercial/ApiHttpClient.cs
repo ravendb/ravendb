@@ -20,12 +20,13 @@ namespace Raven.Server.Commercial
             };
 
             var userAgent = $"RavenDB/{ServerVersion.Version} (" +
-                           $"{RuntimeInformation.OSDescription};" +
-                           $"{RuntimeInformation.OSArchitecture};" +
-                           $"{RuntimeInformation.FrameworkDescription};" +
-                           $"{RuntimeInformation.ProcessArchitecture};" +
-                           $"{CultureInfo.CurrentCulture.Name};" +
-                           $"{CultureInfo.CurrentUICulture.Name})";
+                            $"{RuntimeInformation.OSDescription};" +
+                            $"{RuntimeInformation.OSArchitecture};" +
+                            $"{RuntimeInformation.FrameworkDescription};" +
+                            $"{RuntimeInformation.ProcessArchitecture};" +
+                            $"{CultureInfo.CurrentCulture.Name};" +
+                            $"{CultureInfo.CurrentUICulture.Name};" +
+                            $"{ServerVersion.FullVersion})";
 
             Instance.DefaultRequestHeaders.Add("User-Agent", userAgent);
         }
