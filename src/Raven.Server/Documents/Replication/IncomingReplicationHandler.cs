@@ -961,9 +961,6 @@ namespace Raven.Server.Documents.Replication
 
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
-                                if (_incoming._log.IsInfoEnabled)
-                                    _incoming._log.Info($"AttachmentPUT '{item.Name}' - '{item.Key}', with change vector = {item.ChangeVector}");
-
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
                                     item.ContentType, item.Base64Hash, rcvdChangeVector);
 
@@ -971,9 +968,6 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     using (attachmentStream)
                                     {
-                                        if (_incoming._log.IsInfoEnabled)
-                                            _incoming._log.Info($"AttachmentStreamPUT '{attachmentStream.Base64Hash}' - '{item.Name}' - '{item.Key}', with change vector = {item.ChangeVector}");
-
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
 
                                         _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
@@ -982,14 +976,10 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
                             {
-                                if (_incoming._log.IsInfoEnabled)
-                                    _incoming._log.Info($"AttachmentDELETE '{item.Key}', with change vector = {item.ChangeVector}");
                                 database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                             {
-                                if (_incoming._log.IsInfoEnabled)
-                                    _incoming._log.Info($"RevisionDELETE '{item.Key}', with change vector = {item.ChangeVector}");
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector);
                             }
                             else
@@ -1021,8 +1011,6 @@ namespace Raven.Server.Documents.Replication
                                                 _incoming._log.Operations("Revisions are disabled but the node got a revision from replication.");
                                             continue;
                                         }
-                                        if (_incoming._log.IsInfoEnabled)
-                                            _incoming._log.Info($"RevisionPUT '{item.Id}', with change vector = {item.ChangeVector}");
                                         database.DocumentsStorage.RevisionsStorage.Put(context, item.Id, document, item.Flags,
                                             NonPersistentDocumentFlags.FromReplication, rcvdChangeVector, item.LastModifiedTicks);
                                         continue;
@@ -1038,8 +1026,6 @@ namespace Raven.Server.Documents.Replication
                                                 _incoming._log.Operations("Revisions are disabled but the node got a delete revision from replication.");
                                             continue;
                                         }
-                                        if (_incoming._log.IsInfoEnabled)
-                                            _incoming._log.Info($"RevisionDELETE '{item.Id}', with change vector = {item.ChangeVector}");
                                         database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, 
                                             item.Flags, NonPersistentDocumentFlags.FromReplication, rcvdChangeVector, item.LastModifiedTicks);
                                         continue;
@@ -1052,10 +1038,6 @@ namespace Raven.Server.Documents.Replication
                                         case ConflictStatus.Update:
                                             if (document != null)
                                             {
-                                                if (_incoming._log.IsInfoEnabled)
-                                                    _incoming._log.Info($"Conflict check resolved to Update operation, doing PUT on doc = {item.Id}, " +
-                                                                        $"with change vector = {item.ChangeVector}");
-#if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
 #endif
                                                 database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, rcvdChangeVector,
@@ -1063,10 +1045,6 @@ namespace Raven.Server.Documents.Replication
                                             }
                                             else
                                             {
-                                                if (_incoming._log.IsInfoEnabled)
-                                                    _incoming._log.Info(
-                                                        $"Conflict check resolved to Update operation, writing tombstone for doc = {item.Id}, " +
-                                                        $"with change vector = {item.ChangeVector}");
                                                 using (DocumentIdWorker.GetSliceFromId(context, item.Id, out Slice keySlice))
                                                 {
                                                     database.DocumentsStorage.Delete(
@@ -1087,9 +1065,6 @@ namespace Raven.Server.Documents.Replication
                                             _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, rcvdChangeVector, conflictingVector, item.Flags);
                                             break;
                                         case ConflictStatus.AlreadyMerged:
-                                            if (_incoming._log.IsInfoEnabled)
-                                                _incoming._log.Info(
-                                                    $"Conflict check resolved to AlreadyMerged operation, nothing to do for doc = {item.Id}, with change vector = {item.ChangeVector}");
                                             //nothing to do
                                             break;
                                         default:
