@@ -19,16 +19,16 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
- 
-    public class RavenDB_8464:RavenTestBase
+    public class RavenDB_8464 : RavenTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
+
         [Fact]
         public async Task AfterAckShouldHappenAfterTheEndOfBatchRun()
         {
             using (var store = GetDocumentStore())
             {
-                var subsId = store.Subscriptions.Create<User>(x=>true);
+                var subsId = store.Subscriptions.Create<User>(x => true);
 
                 var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 string cv;
@@ -44,7 +44,7 @@ namespace FastTests.Client.Subscriptions
 
                         return Task.CompletedTask;
                     };
-                    
+
                     using (var session = store.OpenSession())
                     {
                         var entity = new User();
@@ -57,28 +57,25 @@ namespace FastTests.Client.Subscriptions
 
 
                     Assert.True(await amre.WaitAsync(_reasonableWaitTime));
-
                 }
 
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out var context))
                 {
-                    store.GetRequestExecutor().Execute(new CreateSubscriptionCommand(new SubscriptionCreationOptions()
+                    store.GetRequestExecutor().Execute(new CreateSubscriptionCommand(store.Conventions, new SubscriptionCreationOptions()
                     {
                         ChangeVector = "DoNotChange",
                         Name = subsId,
                         Query = "From Shipments"
-                    }, subsId),context);
+                    }, subsId), context);
                 }
 
                 using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                    using (context.OpenReadTransaction())
+                using (context.OpenReadTransaction())
                 {
                     var s = db.SubscriptionStorage.GetSubscription(context, null, subsId, false);
                     Assert.Equal(cv, s.ChangeVectorForNextBatchStartingPoint);
                     Assert.Equal("From Shipments", s.Query);
-
                 }
-                    
             }
         }
     }

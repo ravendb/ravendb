@@ -11,11 +11,13 @@ namespace Raven.Client.Documents.Commands
 {
     public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
     {
+        private readonly DocumentConventions _conventions;
         private readonly SubscriptionCreationOptions _options;
         private readonly string _id;
 
-        public CreateSubscriptionCommand(SubscriptionCreationOptions options, string id = null)
+        public CreateSubscriptionCommand(DocumentConventions conventions, SubscriptionCreationOptions options, string id = null)
         {
+            _conventions = conventions;
             _options = options;
             _id = id;
         }
@@ -31,7 +33,7 @@ namespace Raven.Client.Documents.Commands
                 Content = new BlittableJsonContent(stream =>
                 {
                     ctx.Write(stream, 
-                        EntityToBlittable.ConvertEntityToBlittable(_options, DocumentConventions.Default, ctx));
+                        EntityToBlittable.ConvertEntityToBlittable(_options, _conventions, ctx));
                 })
             };
             return request;
