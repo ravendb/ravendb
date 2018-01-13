@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             var definition = IndexDefinition.Clone();
             definition.Name = Name;
-            definition.Type = IndexType.Map;
+            definition.Type = IndexDefinition.Type;
             definition.LockMode = LockMode;
             definition.Priority = Priority;
             return definition;
