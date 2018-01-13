@@ -159,27 +159,29 @@ namespace Raven.Server.Documents
             {
                 // A delete command was issued while we were in rehabilitation. We need to check if we recieved any new documents while we were in that state.
                 // If so, we can't simply delete the database.
-                DatabasesCache.TryGetValue(dbName, out var dbTask);
-                var db = dbTask.Result;
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
+                if (DatabasesCache.TryGetValue(dbName, out var dbTask))
                 {
-                    var dbChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                    var status = ChangeVectorUtils.GetConflictStatus(mentorsChangeVector, dbChangeVector);
-                    if (mentorsChangeVector.Equals(dbChangeVector) == false && status != ConflictStatus.Update)
+                    var db = dbTask.Result;
+                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
                     {
-                        // raise alert
-                        _serverStore.NotificationCenter.Add(AlertRaised.Create(
-                            dbName,
-                            $"Database '{dbName}' cannot be deleted in order to maintain the replication factor",
-                            "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
-                            "but it may contain documents that are not existing in the rest of the database-group.\n" +
-                            $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
-                            AlertType.DeletionError,
-                            NotificationSeverity.Error
-                        ));
-                        return true;
-                    }
+                        var dbChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                        var status = ChangeVectorUtils.GetConflictStatus(mentorsChangeVector, dbChangeVector);
+                        if (mentorsChangeVector.Equals(dbChangeVector) == false && status != ConflictStatus.Update)
+                        {
+                            // raise alert
+                            _serverStore.NotificationCenter.Add(AlertRaised.Create(
+                                dbName,
+                                $"Database '{dbName}' cannot be deleted in order to maintain the replication factor",
+                                "This node was recently recovered from rehabilitation and should be deleted to maintain the replication factor, " +
+                                "but it may contain documents that are not existing in the rest of the database-group.\n" +
+                                $"The current change-vector is {dbChangeVector}, while issued change-vector for the deletion is {mentorsChangeVector}",
+                                AlertType.DeletionError,
+                                NotificationSeverity.Error
+                            ));
+                            return true;
+                        }
+                    } 
                 }
                 DeleteDatabase(dbName, deletionInProgress, record);
                 return true;
