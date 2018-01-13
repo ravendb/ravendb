@@ -276,7 +276,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            return _searcher.Search(documentQuery, null, minPageSize, _state);
+            try
+            {
+                return _searcher.Search(documentQuery, null, minPageSize, _state);
+            }
+            catch (ArgumentException)
+            {
+                if (_searcher.IndexReader.NumDocs() == 0)
+                    return new TopDocs(0, Array.Empty<ScoreDoc>(), 0);
+                throw;
+            }
         }
 
         private static bool IsBoostedQuery(Query query)
