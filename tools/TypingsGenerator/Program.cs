@@ -202,7 +202,6 @@ namespace TypingsGenerator
             
             // server dashboard
             scripter.AddType(typeof(DashboardNotificationType));
-            scripter.AddType(typeof(ServerInfo));
             scripter.AddType(typeof(TrafficWatch));
             scripter.AddType(typeof(Raven.Server.Dashboard.DatabasesInfo));
             scripter.AddType(typeof(IndexingSpeed));

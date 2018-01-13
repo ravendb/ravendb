@@ -6,7 +6,6 @@
         DatabasesInfo,
         IndexingSpeed,
         MachineResources,
-        DriveUsage,
-        ServerInfo
+        DriveUsage
     }
 }
