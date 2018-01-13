@@ -1,10 +1,7 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Util;
 using Raven.Server.Dashboard;
 using Raven.Server.Routing;
-using Raven.Server.Web;
 
 namespace Raven.Server.NotificationCenter.Handlers
 {
@@ -18,13 +15,6 @@ namespace Raven.Server.NotificationCenter.Handlers
                 using (var writer = new NotificationCenterWebSocketWriter(webSocket, ServerStore.ServerDashboardNotifications, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
                     var isValidFor = GetDatabaseAccessValidationFunc();
-
-                    var serverInfo = new ServerInfo
-                    {
-                        StartUpTime = ServerStore.Server.Statistics.StartUpTime
-                    };
-                    await writer.WriteToWebSocket(serverInfo.ToJson());
-
                     var machineResources = MachineResourcesNotificationSender.GetMachineResources();
                     await writer.WriteToWebSocket(machineResources.ToJson());
 

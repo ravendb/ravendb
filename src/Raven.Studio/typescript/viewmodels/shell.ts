@@ -125,6 +125,9 @@ class shell extends viewModelBase {
     activate(args: any) {
         super.activate(args, true);
 
+        this.fetchClientBuildVersion();
+        this.fetchServerBuildVersion();
+
         const licenseTask = license.fetchLicenseStatus();
         const topologyTask = this.clusterManager.init();
         const clientCertifiateTask = clientCertificateModel.fetchClientCertificate();
@@ -156,10 +159,6 @@ class shell extends viewModelBase {
             .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 
         this.setupRouting();
-
-        //TODO: should we await for api key here? 
-        this.fetchClientBuildVersion();
-        this.fetchServerBuildVersion();
     }
 
     private setupRouting() {
@@ -323,6 +322,7 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto, status: string,  response: JQueryXHR) => {            
                
                 serverTime.default.calcTimeDifference(response.getResponseHeader("Date"));
+                serverTime.default.setStartUpTime(response.getResponseHeader("StartUpTime"));
                 
                 buildInfo.serverBuildVersion(serverBuildResult);
 

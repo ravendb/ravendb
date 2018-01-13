@@ -17,6 +17,7 @@ import serverDashboardWebSocketClient = require("common/serverDashboardWebSocket
 import clusterNode = require("models/database/cluster/clusterNode");
 import databasesManager = require("common/shell/databasesManager");
 import createDatabase = require("viewmodels/resources/createDatabase");
+import serverTime = require("common/helpers/database/serverTime");
 
 class machineResourcesSection {
 
@@ -518,7 +519,6 @@ class serverDashboard extends viewModelBase {
     liveClient = ko.observable<serverDashboardWebSocketClient>();
     
     clusterManager = clusterTopologyManager.default;
-    startUpTime = ko.observable<moment.Moment>();
     formattedUpTime: KnockoutComputed<string>;
     formattedStartTime: KnockoutComputed<string>;
     node: KnockoutComputed<clusterNode>;
@@ -540,7 +540,7 @@ class serverDashboard extends viewModelBase {
         super();
 
         this.formattedUpTime = ko.pureComputed(() => {
-            const startTime = this.startUpTime();
+            const startTime = serverTime.default.startUpTime();
             if (!startTime) {
                 return "a few seconds";
             }
@@ -549,7 +549,7 @@ class serverDashboard extends viewModelBase {
         });
 
         this.formattedStartTime = ko.pureComputed(() => {
-            const start = this.startUpTime();
+            const start = serverTime.default.startUpTime();
             return start ? start.local().format(serverDashboard.dateFormat) : "";
         });
 
@@ -599,10 +599,6 @@ class serverDashboard extends viewModelBase {
 
     private onData(data: Raven.Server.Dashboard.AbstractDashboardNotification) {
         switch (data.Type) {
-            case "ServerInfo":
-                const serverInfoDto = data as Raven.Server.Dashboard.ServerInfo;
-                this.startUpTime(moment.utc(serverInfoDto.StartUpTime));
-                break;
             case "DriveUsage":
                 this.driveUsageSection.onData(data as Raven.Server.Dashboard.DrivesUsage);
                 break;
