@@ -48,13 +48,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection}.");
-
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing map for '{_index.Name}'. LastMappedEtag: {lastMappedEtag}.");
+                        _logger.Info($"Executing map for '{_index.Name}'. Collection: {collection} LastMappedEtag: {lastMappedEtag}.");
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastMappedEtag;
@@ -98,8 +95,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Data.Size);
-                                    if (_logger.IsInfoEnabled && count % 100 > 0)
-                                        _logger.Info($"Executing map for '{_index.Name}'. Proccessed count: {count}.");
+                                    if (_logger.IsInfoEnabled && count % 8192 != 0)
+                                        _logger.Info($"Executing map for '{_index.Name}'. Proccessed count: {count:#,#;;0} etag: {lastEtag}.");
 
                                     lastEtag = current.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombsone: false);
@@ -142,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 }
 
                                 if (_logger.IsInfoEnabled)
-                                    _logger.Info($"Done executing map for '{_index.Name}'. Proccessed count: {count}.");
+                                    _logger.Info($"Done executing map for '{_index.Name}'. Proccessed count: {count:#,#;;0} LastEtag {lastEtag}.");
                             }
                         }
                     }
