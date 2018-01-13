@@ -63,7 +63,9 @@ namespace Raven.Server.Documents.Indexes
             _errorsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
-                IsGlobal = true,
+                // there is just a single instance of this table
+                // but we need it to be local so we'll be able to compact it
+                IsGlobal = false,
                 Name = IndexSchema.ErrorTimestampsSlice
             });
 

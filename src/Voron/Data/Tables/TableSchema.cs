@@ -383,6 +383,13 @@ namespace Voron.Data.Tables
             if (_primaryKey == null && _indexes.Count == 0 && _fixedSizeIndexes.Count == 0)
                 throw new InvalidOperationException($"Cannot create table {name} without a primary key and no indexes");
 
+            if (_primaryKey?.IsGlobal != false &&
+                _indexes.All(x => x.Value.IsGlobal) &&
+                _fixedSizeIndexes.All(x => x.Value.IsGlobal))
+                throw new InvalidOperationException($"Cannot create table {name} with a global primary key and without at least a single local index, " +
+                                                    $"otherwise we can't compact it, this is a bug in the table schema.");
+            
+
             var tableTree = tx.CreateTree(name, RootObjectType.Table);
             if (tableTree.State.NumberOfEntries > 0)
                 return; // this was already created
