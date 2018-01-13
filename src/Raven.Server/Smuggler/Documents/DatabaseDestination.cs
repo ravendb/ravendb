@@ -346,8 +346,8 @@ namespace Raven.Server.Smuggler.Documents
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
                 var tasks = new List<Task>();
                 
-                if (currentDatabaseRecord.Revisions == null &&
-                    databaseRecord.Revisions != null)
+                if (currentDatabaseRecord?.Revisions == null &&
+                    databaseRecord?.Revisions != null)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring revisions from smuggler");
@@ -355,8 +355,8 @@ namespace Raven.Server.Smuggler.Documents
                     progress.RevisionsConfigurationUpdated = true;
                 }
 
-                if (currentDatabaseRecord.Expiration == null &&
-                    databaseRecord.Expiration != null)
+                if (currentDatabaseRecord?.Expiration == null &&
+                    databaseRecord?.Expiration != null)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring expiration from smuggler");
@@ -364,8 +364,8 @@ namespace Raven.Server.Smuggler.Documents
                     progress.ExpirationConfigurationUpdated = true;
                 }
 
-                if (currentDatabaseRecord.RavenConnectionStrings.Count == 0 &&
-                    databaseRecord.RavenConnectionStrings.Count > 0)
+                if (currentDatabaseRecord?.RavenConnectionStrings.Count == 0 &&
+                    databaseRecord?.RavenConnectionStrings.Count > 0)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring client configuration from smuggler");
@@ -376,8 +376,8 @@ namespace Raven.Server.Smuggler.Documents
                     progress.RavenConnectionStringsUpdated = true;
                 }
 
-                if (currentDatabaseRecord.SqlConnectionStrings.Count == 0 &&
-                    databaseRecord.SqlConnectionStrings.Count > 0)
+                if (currentDatabaseRecord?.SqlConnectionStrings.Count == 0 &&
+                    databaseRecord?.SqlConnectionStrings.Count > 0)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring client configuration from smuggler");
@@ -388,8 +388,8 @@ namespace Raven.Server.Smuggler.Documents
                     progress.SqlConnectionStringsUpdated = true;
                 }
 
-                if (currentDatabaseRecord.Client == null &&
-                    databaseRecord.Client != null)
+                if (currentDatabaseRecord?.Client == null &&
+                    databaseRecord?.Client != null)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring client configuration from smuggler");
