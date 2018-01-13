@@ -5,9 +5,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
     public class RandomSortField : SortField
     {
-        private static readonly string DummyValue = "RandomValue-" + Guid.NewGuid();
-
-        public RandomSortField(string field) : base(field ?? DummyValue, INT)
+        public RandomSortField(string field) : base(field ?? "RandomValue-" + Guid.NewGuid(), INT)
         {
         }
 
