@@ -1,6 +1,7 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 
 class importDatabaseModel {
+    includeDatabaseRecord = ko.observable(true);
     includeDocuments = ko.observable(true);
     includeConflicts = ko.observable(true);
     includeIndexes = ko.observable(true);
@@ -24,6 +25,9 @@ class importDatabaseModel {
 
     toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerImportOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
+        if (this.includeDatabaseRecord()) {
+            operateOnTypes.push("DatabaseRecord");
+        }
         if (this.includeDocuments()) {
             operateOnTypes.push("Documents");
         }
@@ -56,7 +60,7 @@ class importDatabaseModel {
 
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
+            return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
                 this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments();
         });
 

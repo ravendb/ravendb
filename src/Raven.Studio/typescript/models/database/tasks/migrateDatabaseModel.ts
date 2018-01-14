@@ -5,6 +5,7 @@ type authenticationMethod = "windows" | "none";
 class migrateDatabaseModel {
     serverUrl = ko.observable<string>();
     databaseName = ko.observable<string>();
+    includeDatabaseRecord = ko.observable(true);
     includeDocuments = ko.observable(true);
     includeConflicts = ko.observable(true);
     includeIndexes = ko.observable(true);
@@ -78,6 +79,9 @@ class migrateDatabaseModel {
 
     toDto(): Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
+        if (this.includeDatabaseRecord()) {
+            operateOnTypes.push("DatabaseRecord");
+        }
         if (this.includeDocuments()) {
             operateOnTypes.push("Documents");
         }
@@ -172,7 +176,7 @@ class migrateDatabaseModel {
 
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
             if (this.serverMajorVersion() === "V4") {
-                return this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
+                return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
                     this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
             }
 
