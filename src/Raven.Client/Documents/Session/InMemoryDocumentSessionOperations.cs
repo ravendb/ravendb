@@ -702,7 +702,7 @@ more responsive application.
             return result;
         }
 
-        public SaveChangesData PrepareForSaveChanges()
+        internal SaveChangesData PrepareForSaveChanges()
         {
             var result = new SaveChangesData(this);
             DeferredCommands.Clear();
@@ -1286,28 +1286,10 @@ more responsive application.
             throw new InvalidCastException($"Unable to cast {result.GetType().Name} to {typeof(T).Name}");
         }
 
-        public enum ConcurrencyCheckMode
-        {
-            /// <summary>
-            /// Automatic optimistic concurrency check depending on UseOptimisticConcurrency setting or provided Change Vector
-            /// </summary>
-            Auto,
-
-            /// <summary>
-            /// Force optimistic concurrency check even if UseOptimisticConcurrency is not set
-            /// </summary>
-            Forced,
-
-            /// <summary>
-            /// Disable optimistic concurrency check even if UseOptimisticConcurrency is set
-            /// </summary>
-            Disabled
-        }
-
         /// <summary>
         /// Data for a batch command to the server
         /// </summary>
-        public class SaveChangesData
+        internal class SaveChangesData
         {
             public readonly List<ICommandData> DeferredCommands;
             public readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary;
