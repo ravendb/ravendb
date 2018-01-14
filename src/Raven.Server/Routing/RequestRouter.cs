@@ -192,7 +192,7 @@ namespace Raven.Server.Routing
 
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
-                    message = "Supplied client certificate '" + name + "' is unknown to the server. In order to register your certificate please contact your system administrator.";
+                    message = "The supplied client certificate '" + name + "' is unknown to the server. In order to register your certificate please contact your system administrator.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {
@@ -204,11 +204,11 @@ namespace Raven.Server.Routing
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
                 {
-                    message = "Supplied client certificate '" + name + "' has expired on " + feature.Certificate.NotAfter.ToString("D") + ". Please contact your system administrator in order to obtain a new one.";
+                    message = "The supplied client certificate '" + name + "' has expired on " + feature.Certificate.NotAfter.ToString("D") + ". Please contact your system administrator in order to obtain a new one.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
                 {
-                    message = "Supplied client certificate '" + name + "'cannot be used before " + feature.Certificate.NotBefore.ToString("D");
+                    message = "The supplied client certificate '" + name + "'cannot be used before " + feature.Certificate.NotBefore.ToString("D");
                 }
                 else
                 {

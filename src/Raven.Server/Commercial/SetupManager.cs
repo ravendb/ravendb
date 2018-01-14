@@ -183,12 +183,10 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
 
                 byte[] zipBytes;
-                byte[] certBytes;
-                string certPassword;
-                X509Certificate2 cert;
-                byte[] clientCertBytes;
-                string clientCertName;
+                X509Certificate2 serverCert;
+                X509Certificate2 clientCert;
                 dynamic settingsJsonObject;
+                Dictionary<string, string> otherNodesUrls;
 
                 try
                 {
@@ -204,24 +202,11 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
                 try
                 {
-                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out certBytes, out clientCertBytes, out clientCertName);
+                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out serverCert, out clientCert, out otherNodesUrls);
                 }
                 catch (Exception e)
                 {
                     throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
-                }
-
-                try
-                {
-                    certPassword = string.IsNullOrEmpty(RavenConfiguration.GetKey(x => x.Security.CertificatePassword))
-                        ? null
-                        : settingsJsonObject[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)];
-
-                    cert = new X509Certificate2(certBytes, certPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Unable to load the supplied certificate.", e);
                 }
 
                 progress.Processed++;
@@ -230,7 +215,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await ValidateServerCanRunOnThisNode(settingsJsonObject, cert, serverStore, continueSetupInfo.NodeTag, token);
+                    await ValidateServerCanRunOnThisNode(settingsJsonObject, serverCert, serverStore, continueSetupInfo.NodeTag, token);
                 }
                 catch (Exception e)
                 {
@@ -244,7 +229,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, cert, certBytes, certPassword, clientCertBytes, clientCertName, serverStore);
+                    await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCert, clientCert, serverStore, otherNodesUrls);
                 }
                 catch (Exception e)
                 {
@@ -264,13 +249,14 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out byte[] certBytes, out byte[] clientCertBytes, out string clientCertName)
+        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls)
         {
-            certBytes = null;
-            clientCertBytes = null;
-            clientCertName = null;
-            dynamic settingsJson = null; 
-            
+            byte[] certBytes = null;
+            byte[] clientCertBytes = null;
+            dynamic currentNodeSettingsJson = null;
+
+            otherNodesUrls = new Dictionary<string, string>();
+
             using (var msZip = new MemoryStream(zipBytes))
             using (var archive = new ZipArchive(msZip, ZipArchiveMode.Read, false))
             {
@@ -291,24 +277,58 @@ namespace Raven.Server.Commercial
                         {
                             entry.Open().CopyTo(ms);
                             clientCertBytes = ms.ToArray();
-                            var extIndex = entry.Name.LastIndexOf(".pfx", StringComparison.OrdinalIgnoreCase);
-                            clientCertName = extIndex == -1 
-                                ? "admin.client.certificate" 
-                                : entry.Name.Substring(0, extIndex - 1);
                         }
                     }
-
-                    if (entry.FullName.StartsWith($"{nodeTag}/") && entry.Name.EndsWith(".json"))
+                    
+                    if (entry.Name.EndsWith(".json"))
                     {
+                        dynamic settingsJson;
                         using (var sr = new StreamReader(entry.Open()))
                         {
                             settingsJson = JsonConvert.DeserializeObject(sr.ReadToEnd());
                         }
+                        
+                        if (entry.FullName.StartsWith($"{nodeTag}/"))
+                        {
+                            currentNodeSettingsJson = settingsJson;
+                        }
+
+                        if (entry.FullName.StartsWith("A/") == false)
+                            otherNodesUrls.Add(entry.FullName[0].ToString(), settingsJson[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)].ToString());
                     }
                 }
             }
 
-            return settingsJson;
+            if (certBytes == null)
+                throw new InvalidOperationException($"Could not extract the server certificate of node '{nodeTag}'. Are you using the correct zip file?");
+            if (clientCertBytes == null)
+                throw new InvalidOperationException($"Could not extract the client certificate. Are you using the correct zip file?");
+            if (currentNodeSettingsJson == null)
+                throw new InvalidOperationException($"Could not extract settings.json of node '{nodeTag}'. Are you using the correct zip file?");
+
+            try
+            {
+                string certPassword = string.IsNullOrEmpty(RavenConfiguration.GetKey(x => x.Security.CertificatePassword))
+                    ? null
+                    : currentNodeSettingsJson[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)];
+
+                serverCert = new X509Certificate2(certBytes, certPassword, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to load the server certificate of node '{nodeTag}'.", e);
+            }
+
+            try
+            {
+                clientCert = new X509Certificate2(clientCertBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Unable to load the client certificate.", e);
+            }
+
+            return currentNodeSettingsJson;
         }
 
         public static async Task<IOperationResult> SetupLetsEncryptTask(Action<IOperationProgress> onProgress, SetupInfo setupInfo, ServerStore serverStore, CancellationToken token)
@@ -1091,17 +1111,15 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static void CompleteConfigurationForNewNode(
+        private static async Task CompleteConfigurationForNewNode(
             Action<IOperationProgress> onProgress,
             SetupProgressAndResult progress,
             ContinueSetupInfo continueSetupInfo,
             dynamic settingsJsonObject,
-            X509Certificate2 cert,
-            byte[] certBytes,
-            string certPassword,
-            byte[] clientCertBytes,
-            string clientCertName,
-            ServerStore serverStore)
+            X509Certificate2 serverCert,
+            X509Certificate2 clientCert,
+            ServerStore serverStore,
+            Dictionary<string, string> otherNodesUrls)
         {
             try
             {
@@ -1113,29 +1131,67 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
             }
 
-            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", cert, certBytes, certPassword);
+            var certPassword = string.IsNullOrEmpty(RavenConfiguration.GetKey(x => x.Security.CertificatePassword))
+                ? null
+                : settingsJsonObject[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)];
+
+            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCert.Export(X509ContentType.Pfx), certPassword);
+
+            string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
+
+            if (continueSetupInfo.NodeTag.Equals("A"))
+            {
+                serverStore.EnsureNotPassive(publicServerUrl);
+
+                await DeleteAllExistingCertificates(serverStore);
+
+                foreach (var url in otherNodesUrls)
+                {
+                    progress.AddInfo($"Adding node '{url.Key}' to the cluster.");
+                    onProgress(progress);
+
+                    try
+                    {
+                        await serverStore.AddNodeToClusterAsync(url.Value, url.Key, validateNotInTopology: false);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to add node '{continueSetupInfo.NodeTag}' to the cluster.", e);
+                    }
+                }
+
+                serverStore.EnsureServerCertificateIsInClusterState("Cluster-Wide Certificate");
+            }
 
             progress.AddInfo("Registering client certificate in the local server.");
             onProgress(progress);
             var certDef = new CertificateDefinition
             {
-                Name = clientCertName,
+                Name = $"{clientCert.SubjectName.Name}",
                 // this does not include the private key, that is only for the client
-                Certificate = Convert.ToBase64String(clientCertBytes),
+                Certificate = Convert.ToBase64String(clientCert.Export(X509ContentType.Cert)),
                 Permissions = new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance = SecurityClearance.ClusterAdmin,
-                Thumbprint = cert.Thumbprint,
-                NotAfter = cert.NotAfter
+                Thumbprint = clientCert.Thumbprint,
+                NotAfter = clientCert.NotAfter
             };
 
             try
             {
-                using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (var certificate = ctx.ReadObject(certDef.ToJson(), "Admin/Client/Certificate/Definition"))
-                using (var tx = ctx.OpenWriteTransaction())
+                if (continueSetupInfo.NodeTag.Equals("A"))
                 {
-                    serverStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + cert.Thumbprint, certificate);
-                    tx.Commit();
+                    var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + clientCert.Thumbprint, certDef));
+                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                }
+                else
+                {
+                    using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (var certificate = ctx.ReadObject(certDef.ToJson(), "Client/Certificate/Definition"))
+                    using (var tx = ctx.OpenWriteTransaction())
+                    {
+                        serverStore.Cluster.PutLocalState(ctx, Constants.Certificates.Prefix + clientCert.Thumbprint, certificate);
+                        tx.Commit();
+                    }
                 }
             }
             catch (Exception e)
@@ -1145,7 +1201,7 @@ namespace Raven.Server.Commercial
 
             if (continueSetupInfo.RegisterClientCert)
             {
-                RegisterClientCertInOs(onProgress, progress, new X509Certificate2(clientCertBytes));
+                RegisterClientCertInOs(onProgress, progress, clientCert);
                 progress.AddInfo("Registering admin client certificate in the OS personal store.");
                 onProgress(progress);
             }
@@ -1155,18 +1211,19 @@ namespace Raven.Server.Commercial
 
             try
             {
-                progress.AddInfo($"Saving certificate at {certPath}.");
+                progress.AddInfo($"Saving server certificate at {certPath}.");
                 onProgress(progress);
 
                 using (var certfile = new FileStream(certPath, FileMode.Create))
                 {
+                    var certBytes = serverCert.Export(X509ContentType.Pfx);
                     certfile.Write(certBytes, 0, certBytes.Length);
                     certfile.Flush(true);
                 }
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to save certificate at {certPath}.", e);
+                throw new InvalidOperationException($"Failed to save server certificate at {certPath}.", e);
             }
 
             try
@@ -1184,7 +1241,6 @@ namespace Raven.Server.Commercial
             
             try
             {
-                string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
                 progress.Readme = CreateReadmeText(continueSetupInfo.NodeTag, publicServerUrl, true, continueSetupInfo.RegisterClientCert); 
             }
             catch (Exception e)
@@ -1211,7 +1267,6 @@ namespace Raven.Server.Commercial
                         X509Certificate2 serverCert;
                         string domainFromCert;
                         string publicServerUrl;
-                        string clientCertificateName;
 
                         try
                         {
@@ -1281,7 +1336,7 @@ namespace Raven.Server.Commercial
                         try
                         {
                             // requires server certificate to be loaded
-                            clientCertificateName = $"{name}.client.certificate";
+                            var clientCertificateName = $"{name}.client.certificate";
                             certBytes = await GenerateCertificateTask(clientCertificateName, serverStore);
                             clientCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
                         }
@@ -1435,7 +1490,7 @@ namespace Raven.Server.Commercial
         private static string IpAddressToTcpUrl(string address, int port)
         {
             var url = "tcp://" + address;
-            if (port != 38888)
+            if (port != 0)
                 url += ":" + port;
             return url;
         }
