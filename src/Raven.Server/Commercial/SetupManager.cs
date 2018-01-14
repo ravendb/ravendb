@@ -186,6 +186,7 @@ namespace Raven.Server.Commercial
                 X509Certificate2 serverCert;
                 X509Certificate2 clientCert;
                 dynamic settingsJsonObject;
+                License license;
                 Dictionary<string, string> otherNodesUrls;
 
                 try
@@ -202,7 +203,7 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
                 try
                 {
-                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out serverCert, out clientCert, out otherNodesUrls);
+                    settingsJsonObject = ExtractCertificatesAndSettingsJsonFromZip(zipBytes, continueSetupInfo.NodeTag, out serverCert, out clientCert, out otherNodesUrls, out license);
                 }
                 catch (Exception e)
                 {
@@ -229,7 +230,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                    await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCert, clientCert, serverStore, otherNodesUrls);
+                    await CompleteConfigurationForNewNode(onProgress, progress, continueSetupInfo, settingsJsonObject, serverCert, clientCert, serverStore, otherNodesUrls, license);
                 }
                 catch (Exception e)
                 {
@@ -249,11 +250,12 @@ namespace Raven.Server.Commercial
             return progress;
         }
 
-        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls)
+        private static dynamic ExtractCertificatesAndSettingsJsonFromZip(byte[] zipBytes, string nodeTag,  out X509Certificate2 serverCert, out X509Certificate2 clientCert, out Dictionary<string, string> otherNodesUrls, out License license)
         {
             byte[] certBytes = null;
             byte[] clientCertBytes = null;
             dynamic currentNodeSettingsJson = null;
+            license = null;
 
             otherNodesUrls = new Dictionary<string, string>();
 
@@ -279,8 +281,17 @@ namespace Raven.Server.Commercial
                             clientCertBytes = ms.ToArray();
                         }
                     }
-                    
-                    if (entry.Name.EndsWith(".json"))
+
+                    if (entry.Name.Equals("license.json"))
+                    {
+                        using (var context = JsonOperationContext.ShortTermSingleUse())
+                        {
+                            var json = context.Read(entry.Open(), "license/json");
+                            license = JsonDeserializationServer.License(json);
+                        }
+                    }
+
+                    if (entry.Name.Equals("settings.json"))
                     {
                         dynamic settingsJson;
                         using (var sr = new StreamReader(entry.Open()))
@@ -302,7 +313,7 @@ namespace Raven.Server.Commercial
             if (certBytes == null)
                 throw new InvalidOperationException($"Could not extract the server certificate of node '{nodeTag}'. Are you using the correct zip file?");
             if (clientCertBytes == null)
-                throw new InvalidOperationException($"Could not extract the client certificate. Are you using the correct zip file?");
+                throw new InvalidOperationException("Could not extract the client certificate. Are you using the correct zip file?");
             if (currentNodeSettingsJson == null)
                 throw new InvalidOperationException($"Could not extract settings.json of node '{nodeTag}'. Are you using the correct zip file?");
 
@@ -1119,7 +1130,8 @@ namespace Raven.Server.Commercial
             X509Certificate2 serverCert,
             X509Certificate2 clientCert,
             ServerStore serverStore,
-            Dictionary<string, string> otherNodesUrls)
+            Dictionary<string, string> otherNodesUrls,
+            License license)
         {
             try
             {
@@ -1138,12 +1150,16 @@ namespace Raven.Server.Commercial
             serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCert.Export(X509ContentType.Pfx), certPassword);
 
             string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
+            SetupMode setupMode = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.SetupMode)];
 
             if (continueSetupInfo.NodeTag.Equals("A"))
             {
                 serverStore.EnsureNotPassive(publicServerUrl);
 
                 await DeleteAllExistingCertificates(serverStore);
+
+                if (setupMode == SetupMode.LetsEncrypt && license != null)
+                    await serverStore.LicenseManager.Activate(license, skipLeaseLicense: false);
 
                 foreach (var url in otherNodesUrls)
                 {
@@ -1362,6 +1378,23 @@ namespace Raven.Server.Commercial
                         catch (Exception e)
                         {
                             throw new InvalidOperationException("Failed to write the certificates to a zip archive.", e);
+                        }
+
+                        try
+                        {
+                            var licenseString = JsonConvert.SerializeObject(setupInfo.License, Formatting.Indented);
+
+                            var entry = archive.CreateEntry("license.json");
+                            using (var entryStream = entry.Open())
+                            using (var writer = new StreamWriter(entryStream))
+                            {
+                                writer.Write(licenseString);
+                                writer.Flush();
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw new InvalidOperationException("Failed to write license.json in zip archive.", e);
                         }
 
                         jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString();
