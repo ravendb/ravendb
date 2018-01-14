@@ -25,9 +25,9 @@ namespace Raven.Client.Documents.Operations.Migration
             return new SqlMigrationSchemaCommand(_connectionStringName);
         }
 
-        public class SqlMigrationSchemaCommand : RavenCommand<SqlMigrationSchemaResult>
+        private class SqlMigrationSchemaCommand : RavenCommand<SqlMigrationSchemaResult>
         {
-            public readonly string ConnectionStringName;
+            protected readonly string ConnectionStringName;
             public override bool IsReadRequest => false;
 
             public SqlMigrationSchemaCommand(string connectionStringName)

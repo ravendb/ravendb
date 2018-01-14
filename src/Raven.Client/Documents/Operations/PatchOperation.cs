@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Operations
             return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation: false, test: false);
         }
 
-        public class PatchCommand : RavenCommand<PatchResult>
+        internal class PatchCommand : RavenCommand<PatchResult>
         {
             private readonly string _id;
             private readonly string _changeVector;

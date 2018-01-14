@@ -21,15 +21,17 @@ namespace Raven.Client.ServerWide.Operations.ETL
 
         public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new AddEtlCommand(_configuration);
+            return new AddEtlCommand(conventions, _configuration);
         }
 
-        public class AddEtlCommand : RavenCommand<AddEtlOperationResult>
+        private class AddEtlCommand : RavenCommand<AddEtlOperationResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly EtlConfiguration<T> _configuration;
 
-            public AddEtlCommand(EtlConfiguration<T> configuration)
+            public AddEtlCommand(DocumentConventions conventions, EtlConfiguration<T> configuration)
             {
+                _conventions = conventions;
                 _configuration = configuration;
             }
 
@@ -44,7 +46,7 @@ namespace Raven.Client.ServerWide.Operations.ETL
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, ctx);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, _conventions, ctx);
                         ctx.Write(stream, config);
                     })
                 };

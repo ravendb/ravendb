@@ -32,7 +32,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             return new GetConnectionStringCommand(_connectionStringName, _type);
         }
 
-        public class GetConnectionStringCommand : RavenCommand<GetConnectionStringsResult>
+        private class GetConnectionStringCommand : RavenCommand<GetConnectionStringsResult>
         {
             private readonly string _connectionStringName;
 

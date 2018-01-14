@@ -8,9 +8,9 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations
+namespace Raven.Client.Documents.Commands
 {
-    public class HeadAttachmentCommand : RavenCommand<string>
+    internal class HeadAttachmentCommand : RavenCommand<string>
     {
         private readonly string _documentId;
         private readonly string _name;

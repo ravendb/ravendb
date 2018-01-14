@@ -17,39 +17,39 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetServerWideOperationStateCommand(DocumentConventions.Default, _id);
-        }
-    }
-
-    public class GetServerWideOperationStateCommand : RavenCommand<OperationState>
-    {
-        public override bool IsReadRequest => true;
-
-        private readonly DocumentConventions _conventions;
-        private readonly long _id;
-
-        public GetServerWideOperationStateCommand(DocumentConventions conventions, long id)
-        {
-            _conventions = conventions;
-            _id = id;
+            return new GetServerWideOperationStateCommand(conventions, _id);
         }
 
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        internal class GetServerWideOperationStateCommand : RavenCommand<OperationState>
         {
-            url = $"{node.Url}/operations/state?id={_id}";
+            public override bool IsReadRequest => true;
 
-            return new HttpRequestMessage
+            private readonly DocumentConventions _conventions;
+            private readonly long _id;
+
+            public GetServerWideOperationStateCommand(DocumentConventions conventions, long id)
             {
-                Method = HttpMethod.Get
-            };
-        }
+                _conventions = conventions;
+                _id = id;
+            }
 
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                return;
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/operations/state?id={_id}";
 
-            Result = (OperationState)_conventions.DeserializeEntityFromBlittable(typeof(OperationState), response);
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    return;
+
+                Result = (OperationState)_conventions.DeserializeEntityFromBlittable(typeof(OperationState), response);
+            }
         }
     }
 }

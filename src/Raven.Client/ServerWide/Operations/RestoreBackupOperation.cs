@@ -20,42 +20,44 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<RestoreBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new RestoreBackupCommand(_restoreConfiguration);
-        }
-    }
-
-    public class RestoreBackupCommand : RavenCommand<RestoreBackupOperationResult>
-    {
-        public override bool IsReadRequest => false;
-        private readonly RestoreBackupConfiguration _restoreConfiguration;
-
-        public RestoreBackupCommand(RestoreBackupConfiguration restoreConfiguration)
-        {
-            _restoreConfiguration = restoreConfiguration;
+            return new RestoreBackupCommand(conventions, _restoreConfiguration);
         }
 
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        private class RestoreBackupCommand : RavenCommand<RestoreBackupOperationResult>
         {
-            url = $"{node.Url}/admin/restore/database";
-            var request = new HttpRequestMessage
+            public override bool IsReadRequest => false;
+            private readonly DocumentConventions _conventions;
+            private readonly RestoreBackupConfiguration _restoreConfiguration;
+
+            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfiguration restoreConfiguration)
             {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(stream =>
+                _conventions = conventions;
+                _restoreConfiguration = restoreConfiguration;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/restore/database";
+                var request = new HttpRequestMessage
                 {
-                    var config = EntityToBlittable.ConvertEntityToBlittable(_restoreConfiguration, DocumentConventions.Default, ctx);
-                    ctx.Write(stream, config);
-                })
-            };
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_restoreConfiguration, _conventions, ctx);
+                        ctx.Write(stream, config);
+                    })
+                };
 
-            return request;
-        }
+                return request;
+            }
 
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if(response == null)
-                ThrowInvalidResponse();
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.RestoreResultOperationResult(response);
+                Result = JsonDeserializationClient.RestoreResultOperationResult(response);
+            }
         }
     }
 

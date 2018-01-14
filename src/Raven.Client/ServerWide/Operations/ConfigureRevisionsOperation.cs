@@ -18,46 +18,49 @@ namespace Raven.Client.ServerWide.Operations
         {
             _configuration = configuration;
         }
+
         public RavenCommand<ConfigureRevisionsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureRevisionsCommand(_configuration);
-        }
-    }
-
-    public class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>
-    {
-        private readonly RevisionsConfiguration _configuration;
-
-        public ConfigureRevisionsCommand(RevisionsConfiguration configuration)
-        {
-            _configuration = configuration;
+            return new ConfigureRevisionsCommand(conventions, _configuration);
         }
 
-        public override bool IsReadRequest => false;
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        private class ConfigureRevisionsCommand : RavenCommand<ConfigureRevisionsOperationResult>
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/revisions/config";
+            private readonly DocumentConventions _conventions;
+            private readonly RevisionsConfiguration _configuration;
 
-            var request = new HttpRequestMessage
+            public ConfigureRevisionsCommand(DocumentConventions conventions, RevisionsConfiguration configuration)
             {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(stream =>
+                _conventions = conventions;
+                _configuration = configuration;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/admin/revisions/config";
+
+                var request = new HttpRequestMessage
                 {
-                    var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, ctx);
-                    ctx.Write(stream, config);
-                })
-            };
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(stream =>
+                    {
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, _conventions, ctx);
+                        ctx.Write(stream, config);
+                    })
+                };
 
-            return request;
-        }
+                return request;
+            }
 
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-                ThrowInvalidResponse();
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
 
-            Result = JsonDeserializationClient.ConfigureRevisionsOperationResult(response);
+                Result = JsonDeserializationClient.ConfigureRevisionsOperationResult(response);
+            }
         }
     }
 

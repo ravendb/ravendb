@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    class GetNextOperationIdCommand : RavenCommand<long>
+    internal class GetNextOperationIdCommand : RavenCommand<long>
     {
         public override bool IsReadRequest => false; // disable caching
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -18,8 +18,7 @@ namespace Raven.Client.Documents.Commands
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
-            long id;
-            response.TryGet("Id", out id);
+            response.TryGet("Id", out long id);
             Result = id;
         }
     }

@@ -23,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.ETL
             return new ResetEtlCommand(_configurationName, _transformationName);
         }
 
-        public class ResetEtlCommand : RavenCommand
+        private class ResetEtlCommand : RavenCommand
         {
             private readonly string _configurationName;
             private readonly string _transformationName;

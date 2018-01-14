@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Commands
 
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetOperationStateCommand(DocumentConventions.Default, _id);
+            return new GetOperationStateCommand(conventions, _id);
         }
     }
 

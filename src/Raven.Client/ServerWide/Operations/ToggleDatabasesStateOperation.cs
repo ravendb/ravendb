@@ -48,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
             return new ToggleDatabaseStateCommand(conventions, context, _parameters, _disable);
         }
 
-        public class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>
+        private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>
         {
             private readonly bool _disable;
             private readonly BlittableJsonReaderObject _parameters;
