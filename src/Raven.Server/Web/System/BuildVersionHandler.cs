@@ -7,10 +7,11 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using Raven.Client;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -43,7 +44,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/build/version", "GET", AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
-            HttpContext.Response.Headers.Add("StartUpTime", ServerStore.Server.Statistics.StartUpTime.ToString("o"));
+            HttpContext.Response.Headers.Add(Constants.Headers.ServerStartupTime, ServerStore.Server.Statistics.StartUpTime.GetDefaultRavenFormat(isUtc: true));
             var versionBuffer = VersionBuffer.Value;
             await ResponseBodyStream().WriteAsync(versionBuffer, 0, versionBuffer.Length);
         }
