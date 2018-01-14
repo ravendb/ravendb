@@ -322,7 +322,7 @@ class shell extends viewModelBase {
             .done((serverBuildResult: serverBuildVersionDto, status: string,  response: JQueryXHR) => {            
                
                 serverTime.default.calcTimeDifference(response.getResponseHeader("Date"));
-                serverTime.default.setStartUpTime(response.getResponseHeader("StartUpTime"));
+                serverTime.default.setStartUpTime(response.getResponseHeader("Server-Startup-Time"));
                 
                 buildInfo.serverBuildVersion(serverBuildResult);
 

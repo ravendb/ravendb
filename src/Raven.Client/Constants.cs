@@ -29,8 +29,10 @@ namespace Raven.Client
             private Headers()
             {
             }
-
-            public const string RequestTime = "Raven-Request-Time";
+            
+            public const string RequestTime = "Request-Time";
+            
+            public const string ServerStartupTime = "Server-Startup-Time";
 
             public const string RefreshTopology = "Refresh-Topology";
 
