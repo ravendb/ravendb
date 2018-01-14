@@ -13,7 +13,7 @@ import togglePauseIndexingCommand = require("commands/database/index/togglePause
 import eventsCollector = require("common/eventsCollector");
 import enableIndexCommand = require("commands/database/index/enableIndexCommand");
 import disableIndexCommand = require("commands/database/index/disableIndexCommand");
-import computeIndexingProgressCommand = require("commands/database/index/computeIndexingProgressCommand");
+import getIndexesProgressCommand = require("commands/database/index/getIndexesProgressCommand");
 import observableMap = require("common/helpers/observableMap");
 import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
@@ -35,7 +35,8 @@ class indexes extends viewModelBase {
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
     indexingProgresses = new observableMap<string, indexProgress>();
-    perIndexProgressRefreshThrottle = new Map<string, Function>();
+    indexesProgressRefreshThrottle: Function;
+    indexProgressInterval: number;
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -49,7 +50,6 @@ class indexes extends viewModelBase {
     globalIndexingStatus = ko.observable<Raven.Client.Documents.Indexes.IndexRunningStatus>();
 
     resetsInProgress = new Set<string>();
-    indexProgressIntervals = new Set<number>();
 
     throttledRefresh: Function;
 
@@ -70,7 +70,24 @@ class indexes extends viewModelBase {
             "deleteSelectedIndexes", "startIndexing", "stopIndexing", "resumeIndexing", "pauseUntilRestart", "toggleSelectAll"
         );
 
-        this.throttledRefresh = _.throttle(() => setTimeout(() => this.fetchIndexes(), 2000), 5000); // refresh not othen then 5 seconds, but delay refresh by 2 seconds
+        // refresh not often then 5 seconds, but delay refresh by 2 seconds
+        this.throttledRefresh = _.throttle(() => setTimeout(() => this.fetchIndexes(), 2000), 5000);
+
+        // refresh every 3 seconds
+        this.indexesProgressRefreshThrottle = _.throttle(() => this.getIndexesProgress(), 3000);
+        this.indexProgressInterval = setInterval(() => {
+            const indexes = this.getAllIndexes();
+            if (indexes.length === 0) {
+                return;
+            }
+
+            const hasStale = indexes.find(x => x.isStale() && !x.isDisabledState());
+            if (!hasStale) {
+                return;
+            }
+
+            this.indexesProgressRefreshThrottle();
+        }, 3000);
     }
 
     private getAllIndexes(): index[] {
@@ -138,9 +155,7 @@ class indexes extends viewModelBase {
     deactivate() {
         super.deactivate();
 
-        this.indexProgressIntervals.forEach(interval => {
-            clearInterval(interval);
-        });
+        clearInterval(this.indexProgressInterval);
     }
 
     private fetchIndexes(): JQueryPromise<void> {
@@ -166,38 +181,14 @@ class indexes extends viewModelBase {
             .forEach(idx => {
                 this.putIndexIntoGroups(idx);
 
-                this.startPerIndexProgressRefresh(idx.name, (indexName: string) => this.findIndexesByName(indexName));
+                if (this.indexingProgresses.get(idx.name)) {
+                    return;
+                }
+
+                this.indexesProgressRefreshThrottle();
             });
 
         this.processReplacements(replacements);
-    }
-
-    private startPerIndexProgressRefresh(indexName: string, getIndexes: (indexName: string) => index[]) {
-        if (this.perIndexProgressRefreshThrottle.get(indexName)) {
-            return;
-        }
-
-        this.perIndexProgressRefreshThrottle.set(indexName, _.throttle(() => {
-            this.computeIndexingProgress(indexName);
-        }, 7000));
-
-        this.perIndexProgressRefreshThrottle.get(indexName)();
-
-        const interval = setInterval(() => {
-            const indexes = getIndexes(indexName);
-            if (indexes.length === 0) {
-                return;
-            }
-
-            const index = indexes[0];
-            if (!index.isStale() || index.isDisabledState()) {
-                return;
-            }
-
-            this.perIndexProgressRefreshThrottle.get(indexName)();
-        }, 5000);
-
-        this.indexProgressIntervals.add(interval);
     }
 
     private processReplacements(replacements: Raven.Client.Documents.Indexes.IndexStats[]) {
@@ -207,7 +198,11 @@ class indexes extends viewModelBase {
             const forIndex = item.Name.substr(index.SideBySideIndexPrefix.length);
             replacementCache.set(forIndex, item);
 
-            this.startPerIndexProgressRefresh(item.Name, (indexName) => this.findIndexesReplacementByName(indexName));
+            if (this.indexingProgresses.get(item.Name)) {
+                return;
+            }
+
+            this.indexesProgressRefreshThrottle();
         });
 
         this.indexGroups().forEach(group => {
@@ -268,10 +263,15 @@ class indexes extends viewModelBase {
         });
     }
     
-    private computeIndexingProgress(indexName: string) {
-        return new computeIndexingProgressCommand(indexName, this.activeDatabase())
+    private getIndexesProgress() {
+        return new getIndexesProgressCommand(this.activeDatabase())
             .execute()
-            .done(progress => this.indexingProgresses.set(indexName, progress));
+            .done(indexesProgressList => {
+                for (let i = 0; i < indexesProgressList.length; i++) {
+                    const dto = indexesProgressList[i];
+                    this.indexingProgresses.set(dto.Name, new indexProgress(dto));
+                }
+            });
     }
 
     resetIndex(indexToReset: index) {
@@ -314,7 +314,7 @@ class indexes extends viewModelBase {
         }
         
         if (e.Type === "BatchCompleted" && this.indexingProgresses.get(e.Name)) {
-            this.perIndexProgressRefreshThrottle.get(e.Name)();
+            this.indexesProgressRefreshThrottle();
         }
     }
 

@@ -169,6 +169,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(IndexDefinition));
             scripter.AddType(typeof(TermsQueryResult));
             scripter.AddType(typeof(IndexProgress));
+            scripter.AddType(typeof(IndexesProgress));
             scripter.AddType(typeof(IndexErrors));
             scripter.AddType(typeof(StudioTasksHandler.FormatedExpression));
 
