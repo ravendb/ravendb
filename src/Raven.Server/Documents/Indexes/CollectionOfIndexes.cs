@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(oldIndex == null || string.Equals(name, oldIndex.Name, StringComparison.OrdinalIgnoreCase));
 
-            _indexesByName.AddOrUpdate(name, oldIndex, (key, oldValue) => newIndex);
+            _indexesByName.AddOrUpdate(name, newIndex, (key, oldValue) => newIndex);
             if (newIndex.Name != name)
                 _indexesByName.TryRemove(newIndex.Name, out Index _);
 
