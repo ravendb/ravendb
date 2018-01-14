@@ -17,7 +17,19 @@ namespace Raven.Server.Rachis
         private readonly string _tag;
         private readonly string _url;
         private readonly X509Certificate2 _certificate;
-        public string StatusMessage;
+        private string _statusMessage;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+               if (_statusMessage == value)
+                   return;
+                
+               _statusMessage = value;
+               _engine.NotifyTopologyChange();
+            }
+        }
         public AmbassadorStatus Status;
         private Thread _thread;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);

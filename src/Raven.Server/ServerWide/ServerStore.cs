@@ -531,7 +531,7 @@ namespace Raven.Server.ServerWide
             return nodesStatuses ?? new Dictionary<string, NodeStatus>();
         }
 
-        private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
+        public void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
             NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag,
                 NodeTag, _engine.CurrentTerm, GetNodesStatuses(), LoadLicenseLimits()?.NodeLicenseDetails));

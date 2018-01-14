@@ -37,11 +37,10 @@ namespace Raven.Server.NotificationCenter.Handlers
                         }
                     }
 
-                    await writer.WriteNotifications(isValidFor);
+                    await writer.WriteNotifications(isValidFor, Server.ServerStore.Engine.NotifyTopologyChange);
                 }
             }
         }
-
      
         [RavenAction("/server/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser)]
         public Task DismissPost()
