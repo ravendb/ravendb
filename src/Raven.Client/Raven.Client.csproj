@@ -28,6 +28,21 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Reference Include="Lambda2Js.Signed.Custom">
+      <HintPath>..\..\libs\Lambda2Js.Signed.Custom.dll</HintPath>
+    </Reference>
+    <!-- this is required for the nuget build to properly include the right files -->
+    <Content Include="..\..\libs\Lambda2Js.Signed.Custom.dll">
+      <PackagePath>lib/netstandard1.3/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <!-- this is required for the nuget build to properly include the right files -->
+    <Content Include="..\..\libs\Lambda2Js.Signed.Custom.dll">
+      <PackagePath>lib/netstandard2.0/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
     <!-- this is required for the nuget build to properly include the right files -->
     <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
       <PackagePath>lib/netstandard1.3/</PackagePath>
@@ -43,7 +58,6 @@
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Lambda2Js.Signed" Version="3.0.1" />
     <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.7">
