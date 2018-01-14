@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Operations
 
         protected virtual RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
         {
-            return new GetOperationStateCommand(conventions, id);
+            return new GetOperationStateOperation.GetOperationStateCommand(conventions, id);
         }
 
         public void OnNext(OperationStatusChange change)

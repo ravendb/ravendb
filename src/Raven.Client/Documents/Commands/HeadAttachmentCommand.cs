@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class HeadAttachmentCommand : RavenCommand<string>
+    public class HeadAttachmentCommand : RavenCommand<string>
     {
         private readonly string _documentId;
         private readonly string _name;

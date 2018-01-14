@@ -46,22 +46,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var requestExecuter = store.GetRequestExecutor(store.Database);
-                using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                {
-                    var getStatsCommand = new GetStatisticsCommand();
-                    if (getStatsCommand != null)
-                    {
-                        requestExecuter.Execute(getStatsCommand, context);
-                    }
-                    var databaseStatistics = getStatsCommand.Result;
-                    while (databaseStatistics.StaleIndexes.Any())
-                    {
-                        Thread.Sleep(10);
-                        requestExecuter.Execute(getStatsCommand, context);
-                        databaseStatistics = getStatsCommand.Result;
-                    }
-                }
+                WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
