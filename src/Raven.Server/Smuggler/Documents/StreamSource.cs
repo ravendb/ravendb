@@ -105,118 +105,112 @@ namespace Raven.Server.Smuggler.Documents
 
         public DatabaseRecord GetDatabaseRecord()
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
-
-            if (_state.CurrentTokenType != JsonParserToken.StartObject)
-                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
-
-            using (var builder = CreateBuilder(_context, null))
+            var databaseRecord = new DatabaseRecord();
+            ReadObject(reader =>
             {
-                _context.CachedProperties.NewDocument();
-                ReadObject(builder);
 
-                using (var reader = builder.CreateReader())
+
+
+
+                if (reader.TryGet(nameof(databaseRecord.Revisions), out BlittableJsonReaderObject revisions) &&
+                    revisions != null)
                 {
-                    var databaseRecord = new DatabaseRecord();
-
-                    if (reader.TryGet(nameof(databaseRecord.Revisions), out BlittableJsonReaderObject revisions) &&
-                        revisions != null)
+                    try
                     {
-                        try
-                        {
-                            databaseRecord.Revisions = JsonDeserializationCluster.RevisionsConfiguration(revisions);
-                        }
-                        catch (Exception e)
-                        {
-                            if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the reivions configuration from smuggler file. Skiping.", e);
-                        }
+                        databaseRecord.Revisions = JsonDeserializationCluster.RevisionsConfiguration(revisions);
                     }
-
-                    if (reader.TryGet(nameof(databaseRecord.Expiration), out BlittableJsonReaderObject expiration) && 
-                        expiration != null)
+                    catch (Exception e)
                     {
-                        try
-                        {
-                            databaseRecord.Expiration = JsonDeserializationCluster.ExpirationConfiguration(expiration);
-                        }
-                        catch (Exception e)
-                        {
-                            if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the expiration configuration from smuggler file. Skiping.", e);
-                        }
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the reivions configuration from smuggler file. Skiping.", e);
                     }
-
-                    if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings) && 
-                        ravenConnectionStrings != null)
-                    {
-                        try
-                        {
-                            foreach (var connectionName in ravenConnectionStrings.GetPropertyNames())
-                            {
-                                if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
-                                {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skiping.");
-                
-                                    continue;
-                                }
-                                var connectionString = JsonDeserializationCluster.RavenConnectionString(connection);
-                                databaseRecord.RavenConnectionStrings[connectionString.Name] = connectionString;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            databaseRecord.RavenConnectionStrings.Clear();
-                            if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the RavenDB connection strings from smuggler file. Skiping.", e);
-                        }
-                    }
-
-                    if (reader.TryGet(nameof(databaseRecord.SqlConnectionStrings), out BlittableJsonReaderObject sqlConnectionStrings) && 
-                        sqlConnectionStrings != null)
-                    {
-                        try
-                        {
-                            foreach (var connectionName in sqlConnectionStrings.GetPropertyNames())
-                            {
-                                if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
-                                {
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info($"Wasn't able to import the SQL connection string {connectionName} from smuggler file. Skiping.");
-                
-                                    continue;
-                                }
-                                var connectionString = JsonDeserializationCluster.SqlConnectionString(connection);
-                                databaseRecord.SqlConnectionStrings[connectionString.Name] = connectionString;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            databaseRecord.SqlConnectionStrings.Clear();
-                            if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the SQL connection strings from smuggler file. Skiping.", e);
-                        }
-                    }
-
-                    if (reader.TryGet(nameof(databaseRecord.Client), out BlittableJsonReaderObject client) && 
-                        client != null)
-                    {
-                        try
-                        {
-                            databaseRecord.Client = JsonDeserializationCluster.ClientConfiguration(expiration);
-                        }
-                        catch (Exception e)
-                        {
-                            if (_log.IsInfoEnabled)
-                                _log.Info("Wasn't able to import the client configuration from smuggler file. Skiping.", e);
-                        }
-                    }
-                    
-                    return databaseRecord;
                 }
-            }
+
+                if (reader.TryGet(nameof(databaseRecord.Expiration), out BlittableJsonReaderObject expiration) &&
+                    expiration != null)
+                {
+                    try
+                    {
+                        databaseRecord.Expiration = JsonDeserializationCluster.ExpirationConfiguration(expiration);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the expiration configuration from smuggler file. Skiping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings) &&
+                    ravenConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in ravenConnectionStrings.GetPropertyNames())
+                        {
+                            if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the RavenDB connection string {connectionName} from smuggler file. Skiping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.RavenConnectionString(connection);
+                            databaseRecord.RavenConnectionStrings[connectionString.Name] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.RavenConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the RavenDB connection strings from smuggler file. Skiping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.SqlConnectionStrings), out BlittableJsonReaderObject sqlConnectionStrings) &&
+                    sqlConnectionStrings != null)
+                {
+                    try
+                    {
+                        foreach (var connectionName in sqlConnectionStrings.GetPropertyNames())
+                        {
+                            if (ravenConnectionStrings.TryGet(connectionName, out BlittableJsonReaderObject connection) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the SQL connection string {connectionName} from smuggler file. Skiping.");
+
+                                continue;
+                            }
+
+                            var connectionString = JsonDeserializationCluster.SqlConnectionString(connection);
+                            databaseRecord.SqlConnectionStrings[connectionString.Name] = connectionString;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.SqlConnectionStrings.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the SQL connection strings from smuggler file. Skiping.", e);
+                    }
+                }
+
+                if (reader.TryGet(nameof(databaseRecord.Client), out BlittableJsonReaderObject client) &&
+                    client != null)
+                {
+                    try
+                    {
+                        databaseRecord.Client = JsonDeserializationCluster.ClientConfiguration(expiration);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the client configuration from smuggler file. Skiping.", e);
+                    }
+                }
+            });
+
+
+            return databaseRecord;
         }
 
         public IDisposable GetCompareExchangeValues(out IEnumerable<(string key, long index, BlittableJsonReaderObject value)> compareExchange)
@@ -401,6 +395,26 @@ namespace Raven.Server.Smuggler.Documents
             _totalObjectsRead.Add(builder.SizeInBytes, SizeUnit.Bytes);
         }
 
+        private void ReadObject(Action<BlittableJsonReaderObject> readAction)
+        {
+            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
+
+            if (_state.CurrentTokenType != JsonParserToken.StartObject)
+                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
+
+            using (var builder = CreateBuilder(_context, null))
+            {
+                _context.CachedProperties.NewDocument();
+                ReadObject(builder);
+
+                using (var reader = builder.CreateReader())
+                {
+                    readAction(reader);
+                }
+            }
+        }
+
         private long ReadBuildVersion()
         {
             var type = ReadType();
@@ -439,23 +453,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private long SkipObject(Action<long> onSkipped = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
-                UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
-             
-            if (_state.CurrentTokenType != JsonParserToken.StartObject)
-                UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, got " + _state.CurrentTokenType, _peepingTomStream, _parser);
-
-            using (var builder = CreateBuilder(_context, null))
-            {
-                builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-                _context.CachedProperties.NewDocument();
-
-                ReadObject(builder);
-            }
-            onSkipped?.Invoke(1);
-
-            return 1;
+            var count = 1;
+            ReadObject(reader => { });
+            onSkipped?.Invoke(count);
+            return count;
         }
 
         private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
