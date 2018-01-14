@@ -21,15 +21,17 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<ConfigureExpirationOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureExpirationCommand(_configuration);
+            return new ConfigureExpirationCommand(conventions, _configuration);
         }
 
-        public class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
+        private class ConfigureExpirationCommand : RavenCommand<ConfigureExpirationOperationResult>
         {
+            private readonly DocumentConventions _conventions;
             private readonly ExpirationConfiguration _configuration;
 
-            public ConfigureExpirationCommand(ExpirationConfiguration configuration)
+            public ConfigureExpirationCommand(DocumentConventions conventions, ExpirationConfiguration configuration)
             {
+                _conventions = conventions;
                 _configuration = configuration;
             }
 
@@ -44,7 +46,7 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, ctx);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, _conventions, ctx);
                         ctx.Write(stream, config);
                     })
                 };

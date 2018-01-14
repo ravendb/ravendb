@@ -11,7 +11,7 @@ namespace Raven.Client.ServerWide.Operations
     public class GetPeriodicBackupStatusOperation : IMaintenanceOperation<GetPeriodicBackupStatusOperationResult>
     {
         private readonly long _taskId;
-        
+
         public GetPeriodicBackupStatusOperation(long taskId)
         {
             _taskId = taskId;
@@ -21,32 +21,32 @@ namespace Raven.Client.ServerWide.Operations
         {
             return new GetPeriodicBackupStatusCommand(_taskId);
         }
-    }
 
-    public class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
-    {
-        public override bool IsReadRequest => true;
-        private readonly long _taskId;
-
-        public GetPeriodicBackupStatusCommand(long taskId)
+        private class GetPeriodicBackupStatusCommand : RavenCommand<GetPeriodicBackupStatusOperationResult>
         {
-            _taskId = taskId;
-        }
+            public override bool IsReadRequest => true;
+            private readonly long _taskId;
 
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/periodic-backup/status?name={node.Database}&taskId={_taskId}";
-            return new HttpRequestMessage
+            public GetPeriodicBackupStatusCommand(long taskId)
             {
-                Method = HttpMethod.Get
-            };
-        }
+                _taskId = taskId;
+            }
 
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if(response == null)
-                ThrowInvalidResponse();
-            Result = JsonDeserializationClient.GetPeriodicBackupStatusOperationResult(response);
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/periodic-backup/status?name={node.Database}&taskId={_taskId}";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+                Result = JsonDeserializationClient.GetPeriodicBackupStatusOperationResult(response);
+            }
         }
     }
 

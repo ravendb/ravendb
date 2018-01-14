@@ -33,16 +33,16 @@ namespace Raven.Client.Documents.Operations.Migration
             return new SqlMigrationImportCommand(_connectionString, _tables, _binaryToAttachment, _trimStrings, _skipUnsupportedTypes, _batchSize);
         }
 
-        public class SqlMigrationImportCommand : RavenCommand<SqlMigrationImportResult>
+        private class SqlMigrationImportCommand : RavenCommand<SqlMigrationImportResult>
         {
             public override bool IsReadRequest => false;
 
-            public readonly string ConnectionStringName;
-            public readonly List<SqlMigrationTable> Tables;
-            public readonly bool BinaryToAttachment;
-            public readonly bool TrimStrings;
-            public readonly bool SkipUnsupportedTypes;
-            public readonly int BatchSize;
+            protected readonly string ConnectionStringName;
+            protected readonly List<SqlMigrationTable> Tables;
+            protected readonly bool BinaryToAttachment;
+            protected readonly bool TrimStrings;
+            protected readonly bool SkipUnsupportedTypes;
+            protected readonly int BatchSize;
 
             public SqlMigrationImportCommand(string connectionStringName, List<SqlMigrationTable> tables, bool binaryToAttachment, bool trimStrings, bool skipUnsupportedTypes, int batchSize)
             {

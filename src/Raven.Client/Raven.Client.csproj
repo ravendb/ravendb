@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version></Version>
+    <Version>
+    </Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFrameworks>netstandard1.3;netstandard2.0</TargetFrameworks>
@@ -28,12 +29,12 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-<!-- this is required for the nuget build to properly include the right files -->
+    <!-- this is required for the nuget build to properly include the right files -->
     <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
       <PackagePath>lib/netstandard1.3/</PackagePath>
       <Pack>true</Pack>
     </Content>
-<!-- this is required for the nuget build to properly include the right files -->
+    <!-- this is required for the nuget build to properly include the right files -->
     <Content Include="..\Sparrow\bin\Release\netstandard2.0\Sparrow.dll">
       <PackagePath>lib/netstandard2.0/</PackagePath>
       <Pack>true</Pack>

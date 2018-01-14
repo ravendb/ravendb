@@ -20,16 +20,16 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<CompareExchangeResult<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new RemoveCompareExchangeCommand(_key, _index, conventions);
+            return new DeleteCompareExchangeValueCommand(_key, _index, conventions);
         }
 
-        private class RemoveCompareExchangeCommand : RavenCommand<CompareExchangeResult<T>>
+        private class DeleteCompareExchangeValueCommand : RavenCommand<CompareExchangeResult<T>>
         {
             private readonly string _key;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
 
-            public RemoveCompareExchangeCommand(string key, long index, DocumentConventions conventions = null)
+            public DeleteCompareExchangeValueCommand(string key, long index, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");

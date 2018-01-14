@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             return new RemoveConnectionStringCommand(_connectionString);
         }
 
-        public class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>
+        private class RemoveConnectionStringCommand : RavenCommand<RemoveConnectionStringResult>
         {
             private readonly T _connectionString;
 

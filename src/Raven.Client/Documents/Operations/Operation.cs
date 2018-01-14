@@ -166,7 +166,7 @@ namespace Raven.Client.Documents.Operations
 
         protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
         {
-            return new GetServerWideOperationStateCommand(conventions, id);
+            return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(conventions, id);
         }
     }
 }

@@ -77,7 +77,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var identities = GetIdentities(store);
+                var identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
                 Assert.Equal(1502, identities.Count);
                 Assert.Equal(2, identities["companies|"]);
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
 
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
 
-                var identities = GetIdentities(store);
+                var identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
                 Assert.Equal(1502, identities.Count);
                 Assert.Equal(2, identities["companies|"]);
@@ -125,7 +125,7 @@ namespace SlowTests.Issues
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile1);
                 await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), exportFile2);
 
-                var identities = GetIdentities(store);
+                var identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
                 Assert.Equal(1502, identities.Count);
                 Assert.Equal(3, identities["companies|"]);
@@ -140,18 +140,6 @@ namespace SlowTests.Issues
                 Assert.Equal(0, Server.ServerStore.Cluster.ReadIdentities(context, dbName1, 0, int.MaxValue).Count());
                 Assert.Equal(0, Server.ServerStore.Cluster.ReadIdentities(context, dbName2, 0, int.MaxValue).Count());
                 Assert.Equal(0, Server.ServerStore.Cluster.ReadIdentities(context, dbName3, 0, int.MaxValue).Count());
-            }
-        }
-
-        private static Dictionary<string, long> GetIdentities(IDocumentStore store)
-        {
-            using (var commands = store.Commands())
-            {
-                var command = new GetIdentitiesCommand();
-
-                commands.RequestExecutor.Execute(command, commands.Context);
-
-                return command.Result;
             }
         }
     }

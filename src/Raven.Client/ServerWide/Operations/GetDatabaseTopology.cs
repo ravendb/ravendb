@@ -19,39 +19,38 @@ namespace Raven.Client.ServerWide.Operations
         {
             return new GetDatabaseRecordCommand(_database);
         }
-    }
 
-
-    public class GetDatabaseRecordCommand : RavenCommand<DatabaseRecord>
-    {
-        private readonly string _database;
-        private readonly DocumentConventions _conventions = new DocumentConventions();
-
-        public override bool IsReadRequest => false;
-
-        public GetDatabaseRecordCommand(string database)
+        private class GetDatabaseRecordCommand : RavenCommand<DatabaseRecord>
         {
-            _database = database;
-        }
+            private readonly string _database;
+            private readonly DocumentConventions _conventions = new DocumentConventions();
 
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/admin/databases?name={_database}";
-            return new HttpRequestMessage
+            public override bool IsReadRequest => false;
+
+            public GetDatabaseRecordCommand(string database)
             {
-                Method = HttpMethod.Get
-            };
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            if (response == null)
-            {
-                Result = null;
-                return;
+                _database = database;
             }
 
-            Result = (DatabaseRecord)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecord), "database-record", response, _conventions);
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/databases?name={_database}";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get
+                };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                {
+                    Result = null;
+                    return;
+                }
+
+                Result = (DatabaseRecord)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecord), "database-record", response, _conventions);
+            }
         }
     }
 }

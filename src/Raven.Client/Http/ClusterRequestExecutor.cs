@@ -30,32 +30,34 @@ namespace Raven.Client.Http
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate,
+            DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public new static ClusterRequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate,
+            DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
-        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate)
+        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions = null)
         {
-            url = ValidateUrls(new[] { url }, certificate)[0];
-            var executor = new ClusterRequestExecutor(certificate, DocumentConventions.Default)
+            url = ValidateUrls(new[] {url}, certificate)[0];
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
                     Etag = -1,
                     Nodes = new List<ServerNode>
+                    {
+                        new ServerNode
                         {
-                            new ServerNode
-                            {
-                                Url = url
-                            }
+                            Url = url
                         }
+                    }
                 }),
                 TopologyEtag = -2,
                 _disableTopologyUpdates = true,
@@ -138,6 +140,7 @@ namespace Raven.Client.Http
             {
                 _clusterTopologySemaphore.Release();
             }
+
             return true;
         }
 
