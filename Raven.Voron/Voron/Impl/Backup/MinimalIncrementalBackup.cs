@@ -80,7 +80,12 @@ namespace Voron.Impl.Backup
                             }
 
                             if (journalNum == backupInfo.LastBackedUpJournal) // continue from last backup
+                            {
+                                if (backupInfo.LastBackedUpJournalPage == -1)
+                                    backupInfo.LastBackedUpJournalPage = 0;
                                 reader.SetStartPage(backupInfo.LastBackedUpJournalPage);
+                            }
+
                             TransactionHeader* lastJournalTxHeader = null;
                             while (reader.ReadOneTransaction(env.Options))
                             {
