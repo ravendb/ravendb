@@ -85,6 +85,11 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        static DocumentConventions()
+        {
+            Default.Freeze();
+        }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
         /// </summary>
@@ -794,8 +799,8 @@ namespace Raven.Client.Documents.Conventions
                 yield return propertyInfo;
 
             foreach (var @interface in type.GetInterfaces())
-            foreach (var propertyInfo in GetPropertiesForType(@interface))
-                yield return propertyInfo;
+                foreach (var propertyInfo in GetPropertiesForType(@interface))
+                    yield return propertyInfo;
         }
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
