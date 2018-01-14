@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter
             _ms.Dispose();
         }
 
-        public async Task WriteNotifications(Func<string, bool> shouldWriteByDb)
+        public async Task WriteNotifications(Func<string, bool> shouldWriteByDb, Action firstTime = null)
         {
             var receiveBuffer = new ArraySegment<byte>(new byte[1024]);
             var receive = _webSocket.ReceiveAsync(receiveBuffer, _resourceShutdown);
@@ -43,6 +43,7 @@ namespace Raven.Server.NotificationCenter
             {
                 using (_notificationsBase.TrackActions(asyncQueue, this))
                 {
+                    firstTime?.Invoke();
                     while (_resourceShutdown.IsCancellationRequested == false)
                     {
                         // we use this to detect client-initialized closure
