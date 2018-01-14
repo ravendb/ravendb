@@ -229,8 +229,9 @@
                 </div>
             </div>
         </div>
-        <div data-bind="with: $root.indexingProgresses.watchFor(name)">
-            <div data-bind="visible: isStale, template: { name: 'indexing-progress-template' }"></div>
+
+        <div data-bind="visible: isStale, with: $root.indexingProgresses.watchFor(name)">
+            <div data-bind="template: { name: 'indexing-progress-template' }"></div>
         </div>
     </div>
 </script>

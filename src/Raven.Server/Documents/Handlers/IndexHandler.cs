@@ -313,21 +313,43 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser)]
         public Task Progress()
         {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
-                var index = Database.IndexStore.GetIndex(name);
-                if (index == null)
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
+
+                var first = true;
+                foreach (var index in Database.IndexStore.GetIndexes())
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return Task.CompletedTask;
+                    try
+                    {
+                        if (index.IsStale(context) == false)
+                            continue;
+
+                        if (first == false)
+                            writer.WriteComma();
+
+                        first = false;
+
+                        var progress = index.GetProgress(context);
+                        writer.WriteIndexProgress(context, progress);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // index was deleted?
+                    }
+                    catch (Exception e)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to get index progress for index name: {index.Name}", e);
+                    }
                 }
 
-                var progress = index.GetProgress(context);
-                writer.WriteIndexProgress(context, progress);
+                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
