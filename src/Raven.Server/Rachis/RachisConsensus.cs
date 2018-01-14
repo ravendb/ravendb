@@ -867,6 +867,9 @@ namespace Raven.Server.Rachis
         
         public void NotifyTopologyChange()
         {
+            if(IsDisposed)
+                return;
+            
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
