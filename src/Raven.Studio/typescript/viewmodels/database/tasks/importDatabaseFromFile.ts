@@ -34,7 +34,6 @@ class importDatabaseFromFile extends viewModelBase {
     uploadStatus = ko.observable<number>();
 
     importCommand: KnockoutComputed<string>;
-    hasRevisionsConfiguration: KnockoutComputed<boolean>;
 
     validationGroup = ko.validatedObservable({
         importedFileName: this.importedFileName,
@@ -59,15 +58,6 @@ class importDatabaseFromFile extends viewModelBase {
             } else {
                 this.model.transformScript("");
             }
-        });
-
-        this.hasRevisionsConfiguration = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return false;
-            }
-
-            return db.hasRevisionsConfiguration();
         });
 
         //TODO: change input file name to be full document path
@@ -103,10 +93,6 @@ class importDatabaseFromFile extends viewModelBase {
     private setupValidation() {
         this.importedFileName.extend({
             required: true
-        });
-
-        this.model.revisionsAreConfigured = ko.pureComputed(() => {
-            return this.activeDatabase().hasRevisionsConfiguration();
         });
     }
 

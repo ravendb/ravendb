@@ -34,8 +34,8 @@
                             <input id="import_conflicts" type="checkbox" data-bind="checked: includeConflicts">
                             <label for="import_conflicts">Include Conflicts</label>
                         </div>
-                        <div class="toggle" data-toggle="tooltip" data-placement="top"  data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
-                            <input id="import_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: $root.activeDatabase() && !$root.activeDatabase().hasRevisionsConfiguration()"/>
+                        <div class="toggle" data-toggle="tooltip" data-placement="top">
+                            <input id="import_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments"/>
                             <label for="import_revisions">Include Document Revisions</label>
                         </div>
                         <div class="toggle">
