@@ -1058,7 +1058,12 @@ namespace Raven.Server.Documents.Indexes
             }
 
             _indexes.ReplaceIndex(oldIndexName, oldIndex, newIndex);
+
+            // stop the indexing to allow renaming the index
+            ExecuteIndexAction(() => newIndex.Stop());
             newIndex.Rename(oldIndexName);
+            ExecuteIndexAction(newIndex.Start);
+
             newIndex.ResetIsSideBySideAfterReplacement();
 
             if (oldIndex != null)
@@ -1118,6 +1123,28 @@ namespace Raven.Server.Documents.Indexes
                 });
 
             return true;
+        }
+
+        private void ExecuteIndexAction(Action action)
+        {
+            while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+            {
+                try
+                {
+                    action();
+                    break;
+                }
+                catch (TimeoutException)
+                {
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Error during index replacement in the new index stop before renaming", e);
+
+                    throw;
+                }
+            }
         }
 
         public async Task SetLock(string name, IndexLockMode mode)
