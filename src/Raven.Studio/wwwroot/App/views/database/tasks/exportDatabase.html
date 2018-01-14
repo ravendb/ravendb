@@ -18,8 +18,12 @@
                     <div class="row" data-bind="with: model">
                         <div class="col-sm-6 col-lg-3">
                             <div class="toggle"> 
-                                <input id="toggle1" type="checkbox" data-bind="checked: includeDocuments">
-                                <label for="toggle1">Include Documents</label>
+                                <input id="toggleDatabaseRecord" type="checkbox" data-bind="checked: includeDatabaseRecord">
+                                <label for="toggleDatabaseRecord">Include Database Record</label>
+                            </div>
+                            <div class="toggle"> 
+                                <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments">
+                                <label for="toggleDocuments">Include Documents</label>
                             </div>
                             <div class="toggle">
                                 <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts">
