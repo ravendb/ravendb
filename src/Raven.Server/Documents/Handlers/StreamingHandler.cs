@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Handlers
         private IStreamDocumentQueryResultWriter GetQueryResultWriter(string format, HttpResponse response, DocumentsOperationContext context, Stream responseBodyStream,
             string[] propertiesArray)
         {
-            if (string.IsNullOrEmpty(format) == false && format.Equals("csv"))
+            if (string.IsNullOrEmpty(format) == false && format.StartsWith("csv"))
             {
                 return new StreamCsvDocumentQueryResultWriter(response, responseBodyStream, context, propertiesArray);
             }
