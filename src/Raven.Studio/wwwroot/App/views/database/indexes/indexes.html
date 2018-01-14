@@ -271,8 +271,8 @@
 </script>
 
 <script type="text/html" id="progress-bar-template">
-    <div data-bind="css: { 'progress-bar-primary': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-         class="progress-bar"  role="progressbar" aria-valuemin="0" aria-valuemax="100">
+    <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+         class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
         <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
     </div>
 </script>

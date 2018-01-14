@@ -166,35 +166,38 @@ class indexes extends viewModelBase {
             .forEach(idx => {
                 this.putIndexIntoGroups(idx);
 
-                const indexName = idx.name;
-                if (this.perIndexProgressRefreshThrottle.get(indexName)) {
-                    return;
-                }
-
-                this.perIndexProgressRefreshThrottle.set(indexName, _.throttle(() => {
-                    this.computeIndexingProgress(indexName);
-                }, 7000));
-
-                this.perIndexProgressRefreshThrottle.get(indexName)();
-
-                const interval = setInterval(() => {
-                    const indexes = this.findIndexesByName(indexName);
-                    if (indexes.length === 0) {
-                        return;
-                    }
-
-                    const index = indexes[0];
-                    if (!index.isStale() || index.isDisabledState()) {
-                        return;
-                    }
-
-                    this.perIndexProgressRefreshThrottle.get(indexName)();
-                }, 5000);
-
-                this.indexProgressIntervals.add(interval);
+                this.startPerIndexProgressRefresh(idx.name, (indexName: string) => this.findIndexesByName(indexName));
             });
 
         this.processReplacements(replacements);
+    }
+
+    private startPerIndexProgressRefresh(indexName: string, getIndexes: (indexName: string) => index[]) {
+        if (this.perIndexProgressRefreshThrottle.get(indexName)) {
+            return;
+        }
+
+        this.perIndexProgressRefreshThrottle.set(indexName, _.throttle(() => {
+            this.computeIndexingProgress(indexName);
+        }, 7000));
+
+        this.perIndexProgressRefreshThrottle.get(indexName)();
+
+        const interval = setInterval(() => {
+            const indexes = getIndexes(indexName);
+            if (indexes.length === 0) {
+                return;
+            }
+
+            const index = indexes[0];
+            if (!index.isStale() || index.isDisabledState()) {
+                return;
+            }
+
+            this.perIndexProgressRefreshThrottle.get(indexName)();
+        }, 5000);
+
+        this.indexProgressIntervals.add(interval);
     }
 
     private processReplacements(replacements: Raven.Client.Documents.Indexes.IndexStats[]) {
@@ -203,6 +206,8 @@ class indexes extends viewModelBase {
         replacements.forEach(item => {
             const forIndex = item.Name.substr(index.SideBySideIndexPrefix.length);
             replacementCache.set(forIndex, item);
+
+            this.startPerIndexProgressRefresh(item.Name, (indexName) => this.findIndexesReplacementByName(indexName));
         });
 
         this.indexGroups().forEach(group => {
@@ -330,6 +335,20 @@ class indexes extends viewModelBase {
             g.indexes().forEach(i => {
                 if (i.name === indexName) {
                     result.push(i);
+                }
+            });
+        });
+
+        return result;
+    }
+
+    private findIndexesReplacementByName(indexName: string): index[] {
+        const result = [] as Array<index>;
+        this.indexGroups().forEach(g => {
+            g.indexes().forEach(i => {
+                const replacement = i.replacement();
+                if (replacement) {
+                    result.push(replacement);
                 }
             });
         });
