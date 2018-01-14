@@ -104,29 +104,42 @@ namespace Raven.Server.Rachis
                             // applying the leader state may take a while, we need to ping
                             // the server and let us know that we are still there
                             var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);;
-                        
-                            bool hasRemovedFromTopology;
-                        
-                            (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp, 
-                                context, 
-                                entries, 
-                                appendEntries);
+                            try
+                            {
 
-                            if (hasRemovedFromTopology)
+                                bool hasRemovedFromTopology;
+
+                                (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
+                                    context,
+                                    entries,
+                                    appendEntries);
+
+                                if (hasRemovedFromTopology)
+                                {
+                                    if (_engine.Log.IsInfoEnabled)
+                                    {
+                                        _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                                    }
+
+                                    _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
+                                        "I was kicked out of the cluster and moved to passive mode");
+                                    return;
+                                }
+                            }
+                            catch (Exception e)
                             {
                                 if (_engine.Log.IsInfoEnabled)
                                 {
-                                    _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                                    _engine.Log.Info($"Failed to apply leader state to local state with {entries.Count:#,#;;0} entries with leader commit: {appendEntries.LeaderCommit}, term: {appendEntries.Term}. Prev log index: {appendEntries.PrevLogIndex}", e);
                                 }
-                                _engine.SetNewState(RachisState.Passive, null, appendEntries.Term,
-                                    "I was kicked out of the cluster and moved to passive mode");
-                                return;
                             }
-
-                            // here we need to wait until the concurrent send pending to leader
-                            // is completed to avoid concurrent writes to the leader
-                            cts.Cancel();
-                            task.Wait(CancellationToken.None);
+                            finally
+                            {
+                                // here we need to wait until the concurrent send pending to leader
+                                // is completed to avoid concurrent writes to the leader
+                                cts.Cancel();
+                                task.Wait(CancellationToken.None);
+                            }
                         }
                     }
 
