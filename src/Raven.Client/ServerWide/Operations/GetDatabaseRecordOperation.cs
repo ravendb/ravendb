@@ -17,18 +17,19 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DatabaseRecord> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new GetDatabaseRecordCommand(_database);
+            return new GetDatabaseRecordCommand(conventions, _database);
         }
 
         private class GetDatabaseRecordCommand : RavenCommand<DatabaseRecord>
         {
+            private readonly DocumentConventions _conventions;
             private readonly string _database;
-            private readonly DocumentConventions _conventions = new DocumentConventions();
 
             public override bool IsReadRequest => false;
 
-            public GetDatabaseRecordCommand(string database)
+            public GetDatabaseRecordCommand(DocumentConventions conventions, string database)
             {
+                _conventions = conventions;
                 _database = database;
             }
 
