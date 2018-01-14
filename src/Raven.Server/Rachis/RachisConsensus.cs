@@ -865,15 +865,23 @@ namespace Raven.Server.Rachis
             return topologyJson;
         }
         
-        public void NotifyTopologyChange()
+        public void NotifyTopologyChange(bool propogateError = false)
         {
-            if(IsDisposed)
-                return;
-            
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            try
             {
-                TopologyChanged?.Invoke(this, GetTopology(ctx));
+                if (IsDisposed)
+                    return;
+                
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    TopologyChanged?.Invoke(this, GetTopology(ctx));
+                }
+            }
+            catch (Exception)
+            {
+                if (propogateError)
+                    throw;
             }
         }
 

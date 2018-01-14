@@ -37,7 +37,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                         }
                     }
 
-                    await writer.WriteNotifications(isValidFor, Server.ServerStore.Engine.NotifyTopologyChange);
+                    await writer.WriteNotifications(isValidFor, () => Server.ServerStore.Engine.NotifyTopologyChange(propogateError: true));
                 }
             }
         }
