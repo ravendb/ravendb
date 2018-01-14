@@ -15,7 +15,6 @@ class migrateDatabaseModel {
     includeLegacyAttachments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
     importRavenFs = ko.observable(false);
-    revisionsAreConfigured: KnockoutComputed<boolean>;
 
     authenticationMethod = ko.observable<authenticationMethod>("none");
     
@@ -176,7 +175,7 @@ class migrateDatabaseModel {
 
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
             if (this.serverMajorVersion() === "V4") {
-                return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
+                return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
                     this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange();
             }
 

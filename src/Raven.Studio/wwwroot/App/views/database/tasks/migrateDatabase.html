@@ -121,8 +121,8 @@
                                     <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
                                     <label for="migrate_conflicts">Include Conflicts</label>
                                 </div>
-                                <div class="toggle" data-toggle="tooltip" data-placement="top" data-bind="visible: !isLegacy(), attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Revisions Configuration must be set in order to use this option' }">
-                                    <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments, disable: $root.activeDatabase() && !$root.activeDatabase().hasRevisionsConfiguration()" />
+                                <div class="toggle" data-toggle="tooltip" data-placement="top">
+                                    <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                     <label for="migrate_revisions">Include Document Revisions</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">

@@ -12,7 +12,6 @@ import popoverUtils = require("common/popoverUtils");
 class migrateDatabase extends viewModelBase {
 
     model = new migrateDatabaseModel();
-    hasRevisionsConfiguration: KnockoutComputed<boolean>;
 
     spinners = {
         versionDetect: ko.observable<boolean>(false),
@@ -34,19 +33,6 @@ class migrateDatabase extends viewModelBase {
 
         this.model.userName.subscribe(() => debouncedDetection(false));
         this.model.password.subscribe(() => debouncedDetection(false));
-
-        this.hasRevisionsConfiguration = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return false;
-            }
-
-            return db.hasRevisionsConfiguration();
-        });
-
-        this.model.revisionsAreConfigured = ko.pureComputed(() => {
-            return this.activeDatabase().hasRevisionsConfiguration();
-        });
     }
 
     activate(args: any) {

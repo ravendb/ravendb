@@ -9,7 +9,6 @@ class importDatabaseModel {
     includeCompareExchange = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     includeLegacyAttachments = ko.observable(false);
-    revisionsAreConfigured: KnockoutComputed<boolean>;
 
     includeExpiredDocuments = ko.observable(true);
     removeAnalyzers = ko.observable(false);
@@ -60,7 +59,7 @@ class importDatabaseModel {
 
     private initValidation() {
         this.importDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDatabaseRecord() || this.includeDocuments() || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) || this.includeConflicts() ||
+            return this.includeDatabaseRecord() || this.includeDocuments() || this.includeRevisionDocuments() || this.includeConflicts() ||
                 this.includeIndexes() || this.includeIdentities() || this.includeCompareExchange() || this.includeLegacyAttachments();
         });
 
