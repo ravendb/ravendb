@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -364,7 +365,7 @@ namespace SlowTests.Cluster
                     for (var sessionId = 0; sessionId < 5; sessionId++)
                     {
                         requestExecutor.Cache.Clear(); //make sure we do not use request cache
-                        await requestExecutor.ExecuteAsync(new GetStatisticsCommand(), tmpContext, new SessionInfo(sessionId, false));
+                        await requestExecutor.ExecuteAsync(new GetStatisticsOperation().GetCommand(DocumentConventions.Default, tmpContext), tmpContext, new SessionInfo(sessionId, false));
                     }
                 }
             }

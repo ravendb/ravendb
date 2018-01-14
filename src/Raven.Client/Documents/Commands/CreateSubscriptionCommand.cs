@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
+    public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
     {
         private readonly DocumentConventions _conventions;
         private readonly SubscriptionCreationOptions _options;

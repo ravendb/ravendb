@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
-    internal class GetNextOperationIdCommand : RavenCommand<long>
+    public class GetNextOperationIdCommand : RavenCommand<long>
     {
         public override bool IsReadRequest => false; // disable caching
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
