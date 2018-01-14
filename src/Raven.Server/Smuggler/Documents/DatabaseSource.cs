@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -163,8 +164,34 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<IndexDefinitionAndType> GetIndexes()
         {
-            foreach (var index in _database.IndexStore.GetIndexes())
+            var allIndexes = _database.IndexStore.GetIndexes().ToList();
+            var sideBySideIndexes = allIndexes.Where(x => x.Name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix)).ToList();
+
+            var originalSideBySideIndexNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var index in sideBySideIndexes)
             {
+                allIndexes.Remove(index);
+
+                if (index.Type == IndexType.Faulty)
+                    continue;
+
+                var indexName = index.Name.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
+                originalSideBySideIndexNames.Add(indexName);
+                var indexDefinition = index.GetIndexDefinition();
+                indexDefinition.Name = indexName;
+
+                yield return new IndexDefinitionAndType
+                {
+                    IndexDefinition = indexDefinition,
+                    Type = index.Type
+                };
+            }
+
+            foreach (var index in allIndexes)
+            {
+                if (originalSideBySideIndexNames.Contains(index.Name))
+                    continue;
+                
                 if (index.Type == IndexType.Faulty)
                     continue;
 
