@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Session
         /// A concurrency check will be forced on this entity 
         /// even if UseOptimisticConcurrency is set to false
         /// </summary>
-        public InMemoryDocumentSessionOperations.ConcurrencyCheckMode ConcurrencyCheckMode { get; set; }
+        public ConcurrencyCheckMode ConcurrencyCheckMode { get; set; }
 
         /// <summary>
         /// If set to true, the session will ignore this document
