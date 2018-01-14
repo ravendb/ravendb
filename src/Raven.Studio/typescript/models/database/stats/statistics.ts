@@ -6,7 +6,7 @@ import generalUtils = require("common/generalUtils");
 class statistics {
     databaseId: string;
     databaseChangeVector: changeVectorItem[];
-    lastDocEtag?: number;
+    lastDocEtag: string;
     countOfIndexes: string;
     countOfDocuments: string;
     countOfAttachments: string;
@@ -24,7 +24,7 @@ class statistics {
         this.databaseId = dbStats.DatabaseId;
 
         this.databaseChangeVector = changeVectorUtils.formatChangeVector(dbStats.DatabaseChangeVector, changeVectorUtils.shouldUseLongFormat([dbStats.DatabaseChangeVector]));
-        this.lastDocEtag = dbStats.LastDocEtag;
+        this.lastDocEtag = dbStats.LastDocEtag.toLocaleString();;
         this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfAttachments = dbStats.CountOfAttachments.toLocaleString();
