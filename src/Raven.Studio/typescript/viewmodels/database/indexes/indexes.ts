@@ -9,6 +9,7 @@ import saveIndexPriorityCommand = require("commands/database/index/saveIndexPrio
 import getIndexesStatsCommand = require("commands/database/index/getIndexesStatsCommand");
 import getIndexesStatusCommand = require("commands/database/index/getIndexesStatusCommand");
 import resetIndexCommand = require("commands/database/index/resetIndexCommand");
+import openFaultyIndexCommand = require("commands/database/index/openFaultyIndexCommand");
 import togglePauseIndexingCommand = require("commands/database/index/togglePauseIndexingCommand");
 import eventsCollector = require("common/eventsCollector");
 import enableIndexCommand = require("commands/database/index/enableIndexCommand");
@@ -60,7 +61,7 @@ class indexes extends viewModelBase {
         this.initObservables();
         this.bindToCurrentInstance(
             "lowPriority", "highPriority", "normalPriority",
-            "resetIndex", "deleteIndex",
+            "openFaultyIndex", "resetIndex", "deleteIndex",
             "forceSideBySide",
             "showStaleReasons",
             "unlockIndex", "lockIndex", "lockErrorIndex",
@@ -274,8 +275,21 @@ class indexes extends viewModelBase {
             });
     }
 
-    resetIndex(indexToReset: index) {
-        this.confirmationMessage("Reset index?", "You're resetting " + indexToReset.name)
+    openFaultyIndex(i: index) {
+        this.confirmationMessage("Open index?", `You're openning a faulty index '${i.name}'`)
+            .done(result => {
+                if (result.can) {
+
+                    eventsCollector.default.reportEvent("indexes", "open");
+
+                    new openFaultyIndexCommand(i.name, this.activeDatabase())
+                        .execute();
+                }
+            });
+    }
+
+    resetIndex(i: index) {
+        this.confirmationMessage("Reset index?", `You're resetting '${i.name}'`)
             .done(result => {
                 if (result.can) {
 
@@ -285,13 +299,13 @@ class indexes extends viewModelBase {
                     // let's issue marker to ignore index delete information for next few seconds because it might be caused by reset.
                     // Unfortunately we can't use resetIndexVm.resetTask.done, because we receive event via changes api before resetTask promise 
                     // is resolved. 
-                    this.resetsInProgress.add(indexToReset.name);
+                    this.resetsInProgress.add(i.name);
 
-                    new resetIndexCommand(indexToReset.name, this.activeDatabase())
+                    new resetIndexCommand(i.name, this.activeDatabase())
                         .execute();
 
                     setTimeout(() => {
-                        this.resetsInProgress.delete(indexToReset.name);
+                        this.resetsInProgress.delete(i.name);
                     }, 30000);
                 }
             });

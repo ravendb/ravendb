@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
+using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries;
@@ -377,6 +378,32 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/index/open-faulty-index", "POST", AuthorizationStatus.ValidUser)]
+        public Task OpenFaultyIndex()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var index = Database.IndexStore.GetIndex(name);
+            if (index == null)
+                IndexDoesNotExistException.ThrowFor(name);
+
+            if (index is FaultyInMemoryIndex == false)
+                throw new InvalidOperationException($"Cannot open non faulty index named: {name}");
+
+            lock (index)
+            {
+                var localIndex = Database.IndexStore.GetIndex(name);
+                if (localIndex == null)
+                    IndexDoesNotExistException.ThrowFor(name);
+
+                if (localIndex is FaultyInMemoryIndex == false)
+                    throw new InvalidOperationException($"Cannot open non faulty index named: {name}");
+
+                Database.IndexStore.OpenFaultyIndex(localIndex);
+            }
+
+            return NoContent();
         }
 
         [RavenAction("/databases/*/indexes", "DELETE", AuthorizationStatus.ValidUser)]
