@@ -97,6 +97,14 @@ class serverSetup {
         return port && port !== "443" ? ":" + port : "";
     }
 
+    toContinueSetupDto() {
+        return {
+            NodeTag: this.continueSetup().nodeTag(),
+            Zip: this.continueSetup().zipFile(),
+            RegisterClientCert: this.registerClientCertificate()
+        } as Raven.Server.Commercial.ContinueSetupInfo;
+    }
+    
     toSecuredDto(): Raven.Server.Commercial.SetupInfo {
         const nodesInfo = {} as dictionary<Raven.Server.Commercial.SetupInfo.NodeInfo>;
         this.nodes().forEach((node, idx) => {

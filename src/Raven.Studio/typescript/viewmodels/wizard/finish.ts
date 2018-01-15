@@ -91,7 +91,7 @@ class finish extends setupStep {
 
         switch (this.model.mode()) {
             case "Continue":
-                this.continueClusterConfiguration(this.model.continueSetup().toDto());
+                this.continueClusterConfiguration(this.model.toContinueSetupDto());
                 break;
             case "Unsecured":
                 this.saveUnsecuredConfiguration();

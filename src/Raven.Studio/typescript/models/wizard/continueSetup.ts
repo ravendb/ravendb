@@ -8,6 +8,7 @@ class continueSetup {
     hasFileSelected = ko.observable(false);
     nodesInfo = ko.observableArray<Raven.Server.Web.System.ConfigurationNodeInfo>([]);
     
+    
     zipFile = ko.observable<string>();
     nodeTag = ko.observable<string>();
     serverUrl = ko.observable<string>();
@@ -71,13 +72,6 @@ class continueSetup {
             .done((nodesInfo) => {
                 this.nodesInfo(nodesInfo);
             });
-    }
-    
-    toDto() {
-        return {
-            NodeTag: this.nodeTag(),
-            Zip: this.zipFile()
-        } as Raven.Server.Commercial.ContinueSetupInfo;
     }
 }
 
