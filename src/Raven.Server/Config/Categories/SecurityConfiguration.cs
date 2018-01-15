@@ -25,7 +25,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Password", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificatePassword { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. Certificate setting priority order: 1) Path 2) Executable")]
+        [Description("A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. The certificate path setting takes precedence over executable configuration option.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateExec { get; set; }
