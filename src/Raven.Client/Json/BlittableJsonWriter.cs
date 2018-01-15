@@ -79,6 +79,19 @@ namespace Raven.Client.Json
                 }
                 _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
             }
+            else if (_documentInfo.MetadataInstance != null)
+            {
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
+                _manualBlittableJsonDocumentBuilder.StartWriteObject();
+
+                foreach (var kvp in _documentInfo.MetadataInstance)
+                {
+                    _manualBlittableJsonDocumentBuilder.WritePropertyName(kvp.Key);
+
+                    WritePropertyValue(kvp.Key, kvp.Value);
+                }
+                _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+            }
             else if (_documentInfo.Collection != null)
             {
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
