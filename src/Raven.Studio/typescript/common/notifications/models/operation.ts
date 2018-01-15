@@ -87,7 +87,6 @@ class operation extends abstractNotification {
             return generalUtils.formatAsTimeSpan(endTime.diff(start));
         });
     }
-
 }
 
 export = operation;

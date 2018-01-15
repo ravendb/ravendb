@@ -16,8 +16,9 @@ class serverTime {
         this.startUpTime(moment.utc(startUpTime));
     }
 
-    getAdjustedTime(date: moment.Moment): moment.Moment {    
-      return date.add(moment.duration(this.serverTimeDifference())); 
+    getAdjustedTime(time: moment.Moment): moment.Moment { 
+      // Note: Must create a clone, since 'add' mutates original value        
+      return time.clone().add(moment.duration(this.serverTimeDifference()));
     }
 }
 
