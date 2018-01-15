@@ -64,7 +64,7 @@ namespace Voron.Impl.Paging
                     }
                     catch 
                     {
-                        // need to restore the sate to the way it way, so we'll dispose the pager state
+                        // need to restore the state to the way it was, so we'll dispose the pager state
                         newState.Release();
                         throw;
                     }
@@ -85,8 +85,10 @@ namespace Voron.Impl.Paging
 
             if (PlatformDetails.RunningOnPosix == false)
             {
-                // let's increase the max size of memory we can lock, on Windows, that is available for all users
-                var nextSize = Bits.NextPowerOf2(currentProcess.MaxWorkingSet.ToInt64() + sum);
+                // From: https://msdn.microsoft.com/en-us/library/windows/desktop/ms686234(v=vs.85).aspx
+                // "The maximum number of pages that a process can lock is equal to the number of pages in its minimum working set minus a small overhead"
+                // let's increase the max size of memory we can lock by increasing the MinWorkingSet. On Windows, that is available for all users
+                var nextSize = Bits.NextPowerOf2(currentProcess.MinWorkingSet.ToInt64() + sum);
                 if (nextSize > int.MaxValue && IntPtr.Size == sizeof(int))
                 {
                     nextSize = int.MaxValue;
@@ -94,12 +96,13 @@ namespace Voron.Impl.Paging
 
                 try
                 {
-                    currentProcess.MaxWorkingSet = new IntPtr(nextSize);
+                    currentProcess.MinWorkingSet = new IntPtr(nextSize);
                 }
                 catch (Exception e)
                 {
-                    throw new InsufficientMemoryException($"Failed to increase the working set size so we can lock {info.Size:#,#;;0} for {FileName}, with encrypted databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error and aborting the current operation.",
-                        e);
+                    throw new InsufficientMemoryException($"Failed to increase the min working set size so we can lock {info.Size:#,#;;0} for {FileName}, with encrypted " +
+                                                          "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
+                                                          "and aborting the current operation.", e);
                 }
 
                 // now we can try again, after we raised the limit, we only do so once, though
@@ -117,7 +120,7 @@ namespace Voron.Impl.Paging
             else
             {
                 msg +=
-                    $"Already tried to raised the limit of the process working set to {currentProcess.MaxWorkingSet.ToInt64():#,#;;0}, but still got a failure.{Environment.NewLine}";
+                    $"Already tried to raise the the process min working set to {currentProcess.MinWorkingSet.ToInt64():#,#;;0} but still got a failure.{Environment.NewLine}";
             }
 
             msg += "This behavior is controlled by the 'Security.DoNotConsiderMemoryLockFailureAsCatastrophicError' setting (expert only, modifications of this setting is not recommended).";
