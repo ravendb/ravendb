@@ -308,6 +308,7 @@ class indexes extends viewModelBase {
         if (e.Type === indexRemovedEvent) {
             if (!this.resetsInProgress.has(e.Name)) {
                 this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
+                this.removeSideBySideIndexesFromAllGroups(e.Name);
             }
         } else {
             this.throttledRefresh();
@@ -320,13 +321,24 @@ class indexes extends viewModelBase {
 
     private removeIndexesFromAllGroups(indexes: index[], skipGroup: string = null) {
         this.indexGroups()
-           .filter(x => skipGroup ? x.entityName !== skipGroup : true)
-           .forEach(g => {
+            .filter(x => skipGroup ? x.entityName !== skipGroup : true)
+            .forEach(g => {
                 g.indexes.removeAll(indexes);
             });
 
         // Remove any empty groups.
         this.indexGroups.remove((item: indexGroup) => item.indexes().length === 0);
+    }
+
+    private removeSideBySideIndexesFromAllGroups(indexName: string) {
+        this.indexGroups().forEach(g => {
+            g.indexes().forEach(i => {
+                const replacement = i.replacement();
+                if (replacement && replacement.name === indexName) {
+                    i.replacement(null);
+                }
+            });
+        });
     }
 
     private findIndexesByName(indexName: string): index[] {
@@ -335,20 +347,6 @@ class indexes extends viewModelBase {
             g.indexes().forEach(i => {
                 if (i.name === indexName) {
                     result.push(i);
-                }
-            });
-        });
-
-        return result;
-    }
-
-    private findIndexesReplacementByName(indexName: string): index[] {
-        const result = [] as Array<index>;
-        this.indexGroups().forEach(g => {
-            g.indexes().forEach(i => {
-                const replacement = i.replacement();
-                if (replacement) {
-                    result.push(replacement);
                 }
             });
         });
