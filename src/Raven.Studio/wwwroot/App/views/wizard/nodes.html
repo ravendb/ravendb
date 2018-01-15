@@ -2,13 +2,11 @@
 <div class="setup-nodes">
     <form class="flex-form" data-bind="submit: save">
         <div class="margin-bottom">
-            Enter the server nodes address information - port and one or more IP addresses. 
-            <div data-bind="visible: showDnsInfo">
-                This information will populate the DNS records of <strong data-bind="text: model.domain().fullDomain"></strong> subdomain.
-            </div>
+            Please enter the server settings - IP addresses and ports.<br/>
+            If you are building a cluster this is the place to add nodes and configure them.
         </div>
         <div class="margin-bottom bg-warning padding" data-bind="visible: $root.model.domain().reusingConfiguration">
-            <i class="icon-warning"></i> Configuration will overwrite existing DNS records for domain <strong data-bind="text: model.domain().fullDomain"></strong>. 
+            <i class="icon-warning"></i> The following configuration will populate (and overwrite) the DNS records for the subdomain <strong data-bind="text: model.domain().fullDomain"></strong>
         </div>
         <div class="margin-bottom">
             <span class="has-disable-reason" data-bind="attr: { 'data-original-title': $root.maxNodesAddedMsg() || '' }" data-placement="right">
@@ -138,7 +136,7 @@
                         </p>
                         <div class="checkbox">
                             <input id="customize1" type="checkbox" data-bind="checked: advancedSettingsCheckBox, disable: ipsContainHostName">
-                            <label for="customize1">Customize external IP and TCP Ports</label>
+                            <label for="customize1">Customize external IP and Ports</label>
                         </div>
                         <div data-bind="collapse: showAdvancedSettings" class="margin-top">
                             <div class="form-group" data-bind="validationElement: externalIpAddress">
