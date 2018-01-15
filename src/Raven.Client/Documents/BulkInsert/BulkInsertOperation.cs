@@ -149,8 +149,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         private readonly JsonSerializer _defaultSerializer;
-        private readonly Func<object, StreamWriter, bool> _customEntitySerializer;
-        private readonly Func<object, StreamWriter, bool> _customMetadataSerializer;
+        private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
         private long _concurrentCheck;
 
         public BulkInsertOperation(string database, IDocumentStore store, CancellationToken token = default(CancellationToken))
@@ -229,7 +228,6 @@ namespace Raven.Client.Documents.BulkInsert
 
             _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
-            _customMetadataSerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeMetadataToJsonStream;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions,
                 entity => AsyncHelpers.RunSync(() => _requestExecutor.Conventions.GenerateDocumentIdAsync(database, entity)));
@@ -309,29 +307,18 @@ namespace Raven.Client.Documents.BulkInsert
                     _currentWriter.Write(id);
                     _currentWriter.Write("','Type':'PUT','Document':");
 
-                    if (_customEntitySerializer == null || _customEntitySerializer(entity, _currentWriter) == false)
+                    if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
-                        var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context, _defaultSerializer);
-
-                        _currentWriter.Flush();
-                        json.WriteJsonTo(_currentWriter.BaseStream);
-                    }
-                    _currentWriter.Flush();
-                    _currentWriter.BaseStream.Position -= 2;
-                    if (_currentWriter.BaseStream.ReadByte() != '{') // this can happen when we are inserting only '{}'
-                        _currentWriter.Write(',');
-
-                    _currentWriter.Write("'@metadata':");
-
-                    if (_customMetadataSerializer == null || _customMetadataSerializer(metadata, _currentWriter) == false)
-                    {
-                        var json = EntityToBlittable.ConvertEntityToBlittable(metadata, _conventions, _context, _defaultSerializer);
+                        var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context, _defaultSerializer, new DocumentInfo
+                        {
+                            MetadataInstance = metadata
+                        });
 
                         _currentWriter.Flush();
                         json.WriteJsonTo(_currentWriter.BaseStream);
                     }
 
-                    _currentWriter.Write("}}");
+                    _currentWriter.Write("}");
                     _currentWriter.Flush();
 
                     if (_currentWriter.BaseStream.Position > _maxSizeInBuffer ||

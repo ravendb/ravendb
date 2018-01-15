@@ -14,6 +14,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
@@ -54,20 +55,9 @@ namespace Raven.Client.Documents.Conventions
         public class BulkInsertConventions
         {
             private readonly DocumentConventions _conventions;
-            private Func<object, StreamWriter, bool> _trySerializeEntityToJsonStream;
-            private Func<object, StreamWriter, bool> _trySerializeMetadataToJsonStream;
+            private Func<object, IMetadataDictionary, StreamWriter, bool> _trySerializeEntityToJsonStream;
 
-            public Func<object, StreamWriter, bool> TrySerializeMetadataToJsonStream
-            {
-                get => _trySerializeMetadataToJsonStream;
-                set
-                {
-                    _conventions.AssertNotFrozen();
-                    _trySerializeMetadataToJsonStream = value;
-                }
-            }
-
-            public Func<object, StreamWriter, bool> TrySerializeEntityToJsonStream
+            public Func<object, IMetadataDictionary, StreamWriter, bool> TrySerializeEntityToJsonStream
             {
                 get => _trySerializeEntityToJsonStream;
                 set
@@ -81,7 +71,6 @@ namespace Raven.Client.Documents.Conventions
             {
                 _conventions = conventions;
                 TrySerializeEntityToJsonStream = null;
-                TrySerializeMetadataToJsonStream = null;
             }
         }
 
