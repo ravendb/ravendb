@@ -556,11 +556,39 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 return false;
 
+            if (name.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
+            {
+                await HandleSideBySideIndexDelete(name);
+                return true;
+            }
+
             var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(index.Name, _documentDatabase.Name));
 
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
 
             return true;
+        }
+
+        private async Task HandleSideBySideIndexDelete(string name)
+        {
+            var originalIndexName = name.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
+            var originalIndex = GetIndex(originalIndexName);
+            if (originalIndex == null)
+            {
+                // we cannot find the original index 
+                // but we need to remove the side by side one by the original name
+                var (etag, _) = await _serverStore.SendToLeaderAsync(new DeleteIndexCommand(originalIndexName, _documentDatabase.Name));
+
+                await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag, _serverStore.Engine.OperationTimeout);
+
+                return;
+            }
+
+            // deleting the side by side index means that we need to save the original one in the database record
+
+            var indexDefinition = originalIndex.GetIndexDefinition();
+            indexDefinition.Name = originalIndexName;
+            await CreateIndex(indexDefinition);
         }
 
         public async Task DeleteIndex(string name)
