@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     count++;
                                     collectionStats.RecordMapAttempt();
                                     stats.RecordDocumentSize(current.Data.Size);
-                                    if (_logger.IsInfoEnabled && count % 8192 != 0)
+                                    if (_logger.IsInfoEnabled && count % 8192 == 0)
                                         _logger.Info($"Executing map for '{_index.Name}'. Proccessed count: {count:#,#;;0} etag: {lastEtag}.");
 
                                     lastEtag = current.Etag;
