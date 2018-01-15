@@ -183,6 +183,7 @@ task Test -depends TestDotNet {
         
         if ($Env:JENKINS_URL) {
             $dll_dir = Split-Path $_ -Parent
+            Write-Host "Executing tests by a jenkins job. 'testResults.xml' file will be written to $dll_dir"
             &"$xUnit" "$_" "/nunit" "$dll_dir\testResults.xml"
         } else {
             &"$xUnit" "$_"
