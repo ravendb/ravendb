@@ -14,7 +14,7 @@
                 <label for="tcpPort" class="control-label">TCP Port</label>
                 <div class="flex-grow">
                     <input type="text" autocomplete="off" class="form-control" id="tcpPort"
-                           placeholder="Default: 38888. Used for inter-servers communication, i.e cluster management, replication"
+                           placeholder="Default: 38888. Used for inter-servers communication and subscriptions."
                            data-bind="textInput: tcpPort, disable: $root.model.fixTcpPortNumberOnLocalNode, attr: { title: $root.model.fixTcpPortNumberOnLocalNode() ? 'Fixed by startup parameter': '' }">
                 </div>
             </div>
