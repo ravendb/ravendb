@@ -24,6 +24,8 @@ namespace Raven.Server.Documents.Indexes.Errors
     {
         private readonly Exception _e;
 
+        private readonly DateTime _createdAt;
+
         public FaultyInMemoryIndex(Exception e, string name, IndexingConfiguration configuration, AutoIndexDefinitionBase definition)
             : this(e, configuration, new FaultyAutoIndexDefinition(name, new HashSet<string> { "@FaultyIndexes" }, IndexLockMode.Unlock, IndexPriority.Normal, new IndexField[0], definition))
         {
@@ -38,6 +40,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             : base(IndexType.Faulty, definition)
         {
             _e = e;
+            _createdAt = DateTime.UtcNow;
             State = IndexState.Error;
             Configuration = configuration;
         }
@@ -79,7 +82,8 @@ namespace Raven.Server.Documents.Indexes.Errors
                 new IndexingError
                 {
                     Error = _e?.ToString(),
-                    Action = $"Index {Name} is in-memory implementation of a faulty index"
+                    Action = $"Index {Name} is in-memory implementation of a faulty index",
+                    Timestamp = _createdAt 
                 }
             };
         }
