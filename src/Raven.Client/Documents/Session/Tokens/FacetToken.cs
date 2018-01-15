@@ -100,29 +100,33 @@ namespace Raven.Client.Documents.Session.Tokens
                 return;
             }
 
+            var firstArgument = false;
+
             if (_aggregateByFieldName != null)
                 writer.Append(_aggregateByFieldName);
-            else
+            else if (_ranges != null)
             {
-                Debug.Assert(_ranges != null);
-
-                var first = true;
+                var firstInRange = true;
 
                 foreach (var range in _ranges)
                 {
-                    if (first == false)
+                    if (firstInRange == false)
                         writer.Append(", ");
 
-                    first = false;
+                    firstInRange = false;
 
                     writer.Append(range);
                 }
             }
+            else
+                firstArgument = true;
 
             foreach (var aggregation in _aggregations)
             {
-                writer.Append(", ");
+                if (firstArgument == false)
+                    writer.Append(", ");
 
+                firstArgument = false;
                 aggregation.WriteTo(writer);
             }
 

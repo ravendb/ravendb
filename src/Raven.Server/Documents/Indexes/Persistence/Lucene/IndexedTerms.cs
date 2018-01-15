@@ -154,39 +154,51 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field, IState state)
         {
-            using (var termDocs = reader.TermDocs(state))
+            var items = new Dictionary<string, int[]>();
+            var docsForTerm = new List<int>();
+
+            if (string.Equals(field, Constants.Documents.Querying.Facet.AllResults, StringComparison.OrdinalIgnoreCase) == false)
             {
-                var items = new Dictionary<string, int[]>();
-                var docsForTerm = new List<int>();
-                using (var termEnum = reader.Terms(new Term(field), state))
+                using (var termDocs = reader.TermDocs(state))
                 {
-                    do
+
+                    using (var termEnum = reader.Terms(new Term(field), state))
                     {
-                        if (termEnum.Term == null || field != termEnum.Term.Field)
-                            break;
-
-                        Term term = termEnum.Term;
-                        if (LowPrecisionNumber(term.Field, term.Text))
-                            continue;
-
-                        var totalDocCountIncludedDeletes = termEnum.DocFreq();
-                        termDocs.Seek(termEnum.Term, state);
-                        while (termDocs.Next(state) && totalDocCountIncludedDeletes > 0)
+                        do
                         {
-                            var curDoc = termDocs.Doc;
-                            totalDocCountIncludedDeletes -= 1;
-                            if (reader.IsDeleted(curDoc))
+                            if (termEnum.Term == null || field != termEnum.Term.Field)
+                                break;
+
+                            Term term = termEnum.Term;
+                            if (LowPrecisionNumber(term.Field, term.Text))
                                 continue;
 
-                            docsForTerm.Add(curDoc + docBase);
-                        }
-                        docsForTerm.Sort();
-                        items[term.Text] = docsForTerm.ToArray();
-                        docsForTerm.Clear();
-                    } while (termEnum.Next(state));
+                            var totalDocCountIncludedDeletes = termEnum.DocFreq();
+                            termDocs.Seek(termEnum.Term, state);
+                            while (termDocs.Next(state) && totalDocCountIncludedDeletes > 0)
+                            {
+                                var curDoc = termDocs.Doc;
+                                totalDocCountIncludedDeletes -= 1;
+                                if (reader.IsDeleted(curDoc))
+                                    continue;
+
+                                docsForTerm.Add(curDoc + docBase);
+                            }
+
+                            docsForTerm.Sort();
+                            items[term.Text] = docsForTerm.ToArray();
+                            docsForTerm.Clear();
+                        } while (termEnum.Next(state));
+                    }
+                    return items;
                 }
-                return items;
             }
+
+            for (var curDoc = 0; curDoc < reader.MaxDoc; curDoc++)
+                docsForTerm.Add(curDoc + docBase);
+
+            items[field] = docsForTerm.ToArray();
+            return items;
         }
 
         private static bool LowPrecisionNumber(string field, string val)

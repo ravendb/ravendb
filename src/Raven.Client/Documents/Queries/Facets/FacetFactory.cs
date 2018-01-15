@@ -26,6 +26,8 @@ namespace Raven.Client.Documents.Queries.Facets
         IFacetOperations<T> ByField(Expression<Func<T, object>> path);
 
         IFacetOperations<T> ByField(string fieldName);
+
+        IFacetOperations<T> AllResults();
     }
 
     internal class FacetBuilder<T> : IFacetBuilder<T>, IFacetOperations<T>
@@ -65,6 +67,16 @@ namespace Raven.Client.Documents.Queries.Facets
                 _default = new Facet();
 
             _default.FieldName = fieldName;
+
+            return this;
+        }
+
+        public IFacetOperations<T> AllResults()
+        {
+            if (_default == null)
+                _default = new Facet();
+
+            _default.FieldName = null;
 
             return this;
         }

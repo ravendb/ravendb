@@ -796,9 +796,6 @@ namespace Raven.Server.Documents.Queries
 
         private FacetField CreateFacet(MethodExpression expression, string alias, BlittableJsonReaderObject parameters)
         {
-            if (expression.Arguments.Count == 0)
-                ThrowFacetMethodMustHaveAtLeastOneArgument(parameters);
-
             QueryFieldName name = null;
             var result = new FacetField();
 
@@ -1116,11 +1113,6 @@ namespace Raven.Server.Documents.Queries
         private void ThrowInvalidNumberOfArgumentsOfFacetAggregation(FacetAggregation method, int expected, int got, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Invalid number of arguments of {method} method in a facet query. Expected {expected}, got {got}", QueryText, parameters);
-        }
-
-        private void ThrowFacetMethodMustHaveAtLeastOneArgument(BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("facet() method must have at least one argument", QueryText, parameters);
         }
 
         private void ThrowInvalidArgumentToIdInFacet(BlittableJsonReaderObject parameters)

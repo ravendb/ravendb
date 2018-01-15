@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Queries.Facets
 {
@@ -120,7 +121,7 @@ namespace Raven.Server.Documents.Queries.Facets
 
             if (facet is Facet aggregationOnlyFacet)
             {
-                result.AggregateBy = aggregationOnlyFacet.FieldName;
+                result.AggregateBy = aggregationOnlyFacet.FieldName ?? Constants.Documents.Querying.Facet.AllResults;
                 fieldName = result.AggregateBy;
             }
             else if (facet is RangeFacet)
@@ -185,7 +186,7 @@ namespace Raven.Server.Documents.Queries.Facets
                         break;
                 }
             }
-            
+
             return result;
         }
 
@@ -303,7 +304,7 @@ namespace Raven.Server.Documents.Queries.Facets
             switch (type)
             {
                 case ValueTokenType.Long:
-                    var lng= QueryBuilder.ParseInt64WithSeparators(value);
+                    var lng = QueryBuilder.ParseInt64WithSeparators(value);
                     return (NumericUtils.DoubleToPrefixCoded(lng), RangeType.Double);
                 case ValueTokenType.Double:
                     var dbl = double.Parse(value, CultureInfo.InvariantCulture);
@@ -401,7 +402,7 @@ namespace Raven.Server.Documents.Queries.Facets
             throw new InvalidQueryException($"Facet ranges must be defined on the same field while we got '{fieldName}' and '{differentField}' used in the same faced",
                 query.Query.Metadata.QueryText, query.Query.QueryParameters);
         }
-        
+
         private static void ThrowInvalidFieldInFacetQuery(FacetQuery query, SelectField field)
         {
             throw new InvalidQueryException(

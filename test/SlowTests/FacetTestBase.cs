@@ -119,7 +119,7 @@ namespace SlowTests
                         "Model5"
                     };
 
-        private static readonly Random random = new Random(1337);
+        private static readonly Random Random = new Random(1337);
 
         protected static IList<Camera> GetCameras(int numCameras)
         {
@@ -130,13 +130,13 @@ namespace SlowTests
                 cameraList.Add(new Camera
                 {
                     Id = i.ToString(),
-                    DateOfListing = new DateTime(1980 + random.Next(1, 30), random.Next(1, 12), random.Next(1, 27)),
-                    Manufacturer = Manufacturers[(int)(random.NextDouble() * Manufacturers.Count)],
-                    Model = Models[(int)(random.NextDouble() * Models.Count)],
-                    Cost = (int)(decimal)((random.NextDouble() * 900.0) + 100.0),    //100.0 to 1000.0
-                    Zoom = (int)(random.NextDouble() * 12) + 2,                 //2.0 to 12.0
-                    Megapixels = (decimal)((random.NextDouble() * 10.0) + 1.0), //1.0 to 11.0
-                    ImageStabilizer = random.NextDouble() > 0.6,
+                    DateOfListing = new DateTime(1980 + Random.Next(1, 30), Random.Next(1, 12), Random.Next(1, 27)),
+                    Manufacturer = Manufacturers[(int)(Random.NextDouble() * Manufacturers.Count)],
+                    Model = Models[(int)(Random.NextDouble() * Models.Count)],
+                    Cost = (int)(decimal)((Random.NextDouble() * 900.0) + 100.0),    //100.0 to 1000.0
+                    Zoom = (int)(Random.NextDouble() * 12) + 2,                 //2.0 to 12.0
+                    Megapixels = (decimal)((Random.NextDouble() * 10.0) + 1.0), //1.0 to 11.0
+                    ImageStabilizer = Random.NextDouble() > 0.6,
                     AdvancedFeatures = new List<string> { "??" }
                 });
             }
