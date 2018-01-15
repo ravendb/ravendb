@@ -8,6 +8,7 @@ using System.Reflection;
 using Lucene.Net.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Exceptions;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -25,8 +26,13 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, int reccursiveLevel = 0)
         {
+            if (reccursiveLevel > MaxAllowedReccursiveLevelForType)
+            {
+                throw new RecursiveTypeNotSupported(
+                    $"Reached recursive level of {MaxAllowedReccursiveLevelForType} for type {value.GetType().Name}, reccursive types that exceed the allowed nesting level are not supported, there is probably a circle of refrences in the instance.");
+            }
             if (value == null || value is DynamicNullObject)
                 return null;
 
@@ -66,7 +72,7 @@ namespace Raven.Server.Utils
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
-                    @object[key.ToString()] = ToBlittableSupportedType(dictionary[key]);
+                    @object[key.ToString()] = ToBlittableSupportedType(dictionary[key], reccursiveLevel: reccursiveLevel+1);
 
                 return @object;
             }
@@ -88,9 +94,9 @@ namespace Raven.Server.Utils
 
                     var objectEnumerable = value as IEnumerable<object>;
                     if (objectEnumerable != null)
-                        items = objectEnumerable.Select(x => ToBlittableSupportedType(x, flattenArrays));
+                        items = objectEnumerable.Select(x => ToBlittableSupportedType(x, flattenArrays, reccursiveLevel: reccursiveLevel + 1));
                     else
-                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, flattenArrays));
+                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, flattenArrays, reccursiveLevel: reccursiveLevel + 1));
 
                     return new DynamicJsonArray(flattenArrays ? Flatten(items) : items);
                 }
@@ -105,15 +111,17 @@ namespace Raven.Server.Utils
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(x)));
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(x, reccursiveLevel: reccursiveLevel + 1)));
                     continue;
                 }
 
-                inner[property.Key] = ToBlittableSupportedType(propertyValue);
+                inner[property.Key] = ToBlittableSupportedType(propertyValue, reccursiveLevel: reccursiveLevel + 1);
             }
 
             return inner;
         }
+
+        public static int MaxAllowedReccursiveLevelForType { get; private set; } = 100;
 
         private static IEnumerable<object> Flatten(IEnumerable items)
         {
