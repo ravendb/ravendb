@@ -318,19 +318,25 @@ class indexes extends viewModelBase {
     }
 
     private processIndexEvent(e: Raven.Client.Documents.Changes.IndexChange) {
-        const indexRemovedEvent = "IndexRemoved" as Raven.Client.Documents.Changes.IndexChangeTypes;
-        if (e.Type === indexRemovedEvent) {
-            if (!this.resetsInProgress.has(e.Name)) {
-                this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
-                this.removeSideBySideIndexesFromAllGroups(e.Name);
-            }
-        } else {
-            this.throttledRefresh();
+        switch (e.Type) {
+            case "IndexRemoved":
+                if (!this.resetsInProgress.has(e.Name)) {
+                    this.removeIndexesFromAllGroups(this.findIndexesByName(e.Name));
+                    this.removeSideBySideIndexesFromAllGroups(e.Name);
+                }
+                break;
+            case "BatchCompleted":
+                if (this.indexingProgresses.get(e.Name)) {
+                    this.indexesProgressRefreshThrottle();
+                }
+                break;
+            case "SideBySideReplace":
+                const sideBySideIndexName = index.SideBySideIndexPrefix + e.Name;
+                this.removeSideBySideIndexesFromAllGroups(sideBySideIndexName);
+                break;
         }
-        
-        if (e.Type === "BatchCompleted" && this.indexingProgresses.get(e.Name)) {
-            this.indexesProgressRefreshThrottle();
-        }
+
+        this.throttledRefresh();
     }
 
     private removeIndexesFromAllGroups(indexes: index[], skipGroup: string = null) {
