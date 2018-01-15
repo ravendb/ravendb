@@ -6,7 +6,7 @@ class domainInfo {
     private licenseProvider: () => Raven.Server.Commercial.License;
     
     domain = ko.observable<string>();     // i.e. "a chosen name" - Create new -or- Select from list
-    rootDomain = ko.observable<string>(); // i.e. ".dbs.local.ravendb.net" - Select from dropdown only    
+    rootDomain = ko.observable<string>(); // i.e. ".ravendb.run", ".development.run", etc - Select from dropdown only    
     userEmail = ko.observable<string>();  // Select from dropdown only
     
     availableDomains = ko.observableArray<string>([]);
