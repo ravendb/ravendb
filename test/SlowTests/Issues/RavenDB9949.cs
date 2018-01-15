@@ -39,13 +39,14 @@ namespace SlowTests.Issues
                         Quantity = 5
                     };
                     
-                    var query = from purchase in session.Query<Purchase>()
-                        let isPrinted = purchase.Events.Where(a => a.Type == EventType.Printed && a.Handled == true)
-                        let isChecked = purchase.Events.Where(a => a.Sort == EventType.Checked).Sum(a => a.Quantity) >= result.Quantity
-                        select new
-                        {
-                            IsPrinted = isPrinted
-                        };
+                    var query = (from purchase in session.Query<Purchase>()
+                                 let isPrinted = purchase.Events.Where(a => a.Type == EventType.Printed && a.Handled == true)
+                                 let isChecked = purchase.Events.Where(a => a.Sort == EventType.Checked).Sum(a => a.Quantity) >= result.Quantity
+                                 select new
+                                 {
+                                     IsPrinted = isPrinted
+                                 }).ToList();
+
                 }
             }
         }
