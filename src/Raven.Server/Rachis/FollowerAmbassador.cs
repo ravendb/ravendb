@@ -741,7 +741,9 @@ namespace Raven.Server.Rachis
                 TopologyId = clusterTopology.TopologyId,
                 InitialMessageType = InitialMessageType.AppendEntries,
                 DebugDestinationIdentifier = _tag,
-                DebugSourceIdentifier = _engine.Tag
+                DebugSourceIdentifier = _engine.Tag,
+                ElectionTimeout = (int)_engine.ElectionTimeout.TotalMilliseconds,
+                SendingThread = Thread.CurrentThread.ManagedThreadId
             });
         }
 
