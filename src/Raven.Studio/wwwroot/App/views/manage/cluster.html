@@ -1,7 +1,6 @@
 <div class="cluster flex-vertical absolute-fill content-margin">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
-
             <div class="flex-header flex-horizontal">
                 <button data-bind="click: addNode, enable: canAddNodes" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
                 <div class="flex-separator"></div>
@@ -24,7 +23,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
                 <div class="panel panel-state">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
@@ -91,7 +89,6 @@
                                         </li>
                                     </ul>
                                 </div>
-                               
                                 <button class="btn btn-danger" 
                                         data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()), css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }" 
                                         title="Remove node from cluster">
@@ -101,33 +98,39 @@
                         </div>
                     </div>
                     <div class="panel-addon">
-                        <div class="padding flex-horizontal info-container">
-                            <div class="address">
-                                <h5>ADDRESS</h5>
-                                <a target="_blank" data-bind="attr: { href: serverUrl }"><span data-bind="text: serverUrl"></span></a>
-                            </div>
-                            <div class="cores" data-bind="if: utilizedCores">
-                                <h5><i class="icon-processor"></i> &nbsp; CORES</h5>
-                                 <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
-                                    <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong></span>
-                                </span>
-                                
-                            </div>
-                            <div class="memory" data-bind="if: installedMemoryInGb">
-                                <h5><i class="icon-memory"></i> &nbsp; MEMORY</h5>
-                                <strong class="text-lighter" data-toggle="tooltip" title="Assigned memory limit"><span data-bind="text: utilizedMemoryInGb"></span>GB</strong>
-                                <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
-                                    / <strong data-toggle="tooltip" title="Total memory installed on machine"><span data-bind="text: installedMemory"></span>GB</strong>
-                                </span>
-                                
-                            </div>
+                        <div class="padding">
+                            <div class="flex-horizontal info-container">
+                                <div class="address">
+                                    <h5>ADDRESS</h5>
+                                    <a target="_blank" data-bind="attr: { href: serverUrl }"><span data-bind="text: serverUrl"></span></a>                                   
+                                </div>
+                                <div class="cores" data-bind="if: utilizedCores">
+                                    <h5><i class="icon-processor"></i> &nbsp; CORES</h5>
+                                     <strong data-bind="text: utilizedCores, css: cssCores" data-toggle="tooltip" title="Assigned CPU cores limit"></strong><span data-bind="if: numberOfCores() && utilizedCores() != -1">
+                                        <span data-bind="numberOfCores() > 0">/ <strong data-bind="text: numberOfCores" data-toggle="tooltip" title="Total CPU cores count"></strong></span>
+                                    </span>
+                                </div>
+                                <div class="memory" data-bind="if: installedMemoryInGb">
+                                    <h5><i class="icon-memory"></i> &nbsp; MEMORY</h5>
+                                    <strong class="text-lighter" data-toggle="tooltip" title="Assigned memory limit"><span data-bind="text: utilizedMemoryInGb"></span>GB</strong>
+                                    <span data-bind="if: installedMemoryInGb() && installedMemoryInGb() != -1">
+                                        / <strong data-toggle="tooltip" title="Total memory installed on machine"><span data-bind="text: installedMemory"></span>GB</strong>
+                                    </span>
+                                </div>
+                            </div> 
                         </div>
-                    </div>
-                    <div class="panel-addon" data-bind="visible: errorDetailsShort">
-                        <div class="padding bg-danger small">
-                            <div data-bind="text: errorDetailsShort"></div>
-                            <div>
-                                <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">show details</a>
+                        <div data-bind="visible: $root.topology().anyErrorsEncountered">
+                            <div class="flex-horizontal bg-danger" data-bind="visible: errorDetailsShort">
+                                <div class="margin margin-left text-danger">
+                                    Error: <span data-bind="text: errorDetailsShort"></span>
+                                </div>
+                                <div class="flex-separator"></div>
+                                <span class="margin margin-right">
+                                    <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">Show details</a>
+                                </span>
+                            </div>
+                            <div data-bind="visible: !errorDetailsShort()">
+                                <div>&nbsp;</div>
                             </div>
                         </div>
                     </div>
