@@ -152,6 +152,8 @@ namespace Raven.Server.Rachis
                                 TopologyId = topology.TopologyId,
                                 DebugSourceIdentifier = _engine.Tag,
                                 DebugDestinationIdentifier = _tag,
+                                ElectionTimeout = (int)_engine.ElectionTimeout.TotalMilliseconds,
+                                SendingThread = Thread.CurrentThread.ManagedThreadId,
                                 InitialMessageType = InitialMessageType.RequestVote
                             });
 

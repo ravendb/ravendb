@@ -902,6 +902,8 @@ namespace Raven.Server.Rachis
                     using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         initialMessage = remoteConnection.InitFollower(context);
+                        ValidateElectionTimeout(initialMessage);
+                        
                         sayHello?.Invoke(initialMessage);
                         using (context.OpenReadTransaction())
                         {
@@ -992,6 +994,18 @@ namespace Raven.Server.Rachis
                 catch (Exception)
                 {
                 }
+            }
+        }
+
+        private void ValidateElectionTimeout(RachisHello initialMessage)
+        {
+            var max = ElectionTimeout.TotalMilliseconds * 1.1;
+            var min = ElectionTimeout.TotalMilliseconds * 0.9;
+            var rcvdTimeout = initialMessage.ElectionTimeout;
+            if (rcvdTimeout < min || rcvdTimeout > max)
+            {
+                throw new TopologyMismatchException(
+                    $"Cannot accept the connection '{initialMessage.InitialMessageType}' from {initialMessage.DebugSourceIdentifier} because his election timeout of {rcvdTimeout} deviates more than 10% from ours {(int)ElectionTimeout.TotalMilliseconds}.");
             }
         }
 

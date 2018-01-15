@@ -24,5 +24,6 @@
 
         public int SendingThread;
 
+        public int ElectionTimeout;
     }
 }
