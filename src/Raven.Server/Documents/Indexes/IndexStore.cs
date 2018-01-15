@@ -602,7 +602,7 @@ namespace Raven.Server.Documents.Indexes
             await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(newEtag, _serverStore.Engine.OperationTimeout);
         }
 
-        private void DeleteIndexInternal(Index index)
+        private void DeleteIndexInternal(Index index, bool raiseNotification = true)
         {
             _indexes.TryRemoveByName(index.Name, index);
 
@@ -616,11 +616,14 @@ namespace Raven.Server.Documents.Indexes
                     _logger.Info($"Could not dispose index '{index.Name}'.", e);
             }
 
-            _documentDatabase.Changes.RaiseNotifications(new IndexChange
+            if (raiseNotification)
             {
-                Name = index.Name,
-                Type = IndexChangeTypes.IndexRemoved
-            });
+                _documentDatabase.Changes.RaiseNotifications(new IndexChange
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexRemoved
+                });
+            }
 
             if (index.Configuration.RunInMemory)
                 return;
@@ -1123,7 +1126,7 @@ namespace Raven.Server.Documents.Indexes
                     try
                     {
                         using (oldIndex.DrainRunningQueries())
-                            DeleteIndexInternal(oldIndex);
+                            DeleteIndexInternal(oldIndex, raiseNotification: false);
 
                         break;
                     }
