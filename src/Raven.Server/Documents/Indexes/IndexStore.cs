@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Indexes
             await CreateIndex(indexDefinition);
         }
 
-        public async Task DeleteIndex(string name)
+        public async Task DeleteAutoIndex(string name)
         {
             var index = GetIndex(name);
             if (index == null)
@@ -890,6 +890,31 @@ namespace Raven.Server.Documents.Indexes
                 throw new AggregateException("Could not load some of the indexes", exceptions);
         }
 
+        public void OpenFaultyIndex(Index index)
+        {
+            Debug.Assert(index is FaultyInMemoryIndex);
+
+            var path = _documentDatabase.Configuration.Indexing.StoragePath;
+            var safeName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
+            var indexPath = path.Combine(safeName).FullPath;
+            var exceptions = new List<Exception>();
+
+            OpenIndex(path, indexPath, exceptions, index.Name, index.GetIndexDefinition(), null);
+
+            if (exceptions.Count > 0)
+            {
+                // there will only one exception here
+                throw exceptions.First();
+            }
+
+            _documentDatabase.Changes.RaiseNotifications(
+                new IndexChange
+                {
+                    Name = index.Name,
+                    Type = IndexChangeTypes.IndexAdded
+                });
+        }
+
         private void OpenIndex(PathSetting path, string indexPath, List<Exception> exceptions, string name, IndexDefinition staticIndexDefinition, AutoIndexDefinition autoIndexDefinition)
         {
             Index index = null;
@@ -905,18 +930,15 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
-                var alreadyFaulted = false;
-                if (index != null && _indexes.TryGetByName(index.Name, out Index i))
-                {
-                    if (i is FaultyInMemoryIndex)
-                    {
-                        alreadyFaulted = true;
-                    }
-                }
+                var alreadyFaulted = _indexes.TryGetByName(name, out var i) && 
+                                     i is FaultyInMemoryIndex;
+
                 index?.Dispose();
                 exceptions?.Add(e);
+
                 if (alreadyFaulted)
                     return;
+
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
 
                 var fakeIndex = autoIndexDefinition != null 

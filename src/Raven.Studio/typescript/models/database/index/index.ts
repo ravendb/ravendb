@@ -100,6 +100,7 @@ class index {
                 this.isAutoIndex(true);
                 return "Auto Map-Reduce";
             default:
+                this.isAutoIndex(this.name.startsWith("Auto"));
                 return this.type;
         }
     }
