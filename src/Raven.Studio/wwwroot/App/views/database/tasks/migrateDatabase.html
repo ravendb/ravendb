@@ -101,7 +101,7 @@
                     <div data-bind="visible: isRavenDb">
                         <div class="form-group flex-horizontal flex-stretch-items">
                             <div>
-                                <div class="toggle">
+                                <div class="toggle" data-bind="visible: !isLegacy()">
                                     <input id="migrate_database_record" type="checkbox" data-bind="checked: includeDatabaseRecord">
                                     <label for="migrate_database_record">Include Database Record</label>
                                 </div>
@@ -121,7 +121,7 @@
                                     <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">
                                     <label for="migrate_conflicts">Include Conflicts</label>
                                 </div>
-                                <div class="toggle" data-toggle="tooltip" data-placement="top">
+                                <div class="toggle" data-bind="visible: !isLegacy()" data-toggle="tooltip" data-placement="top">
                                     <input id="migrate_revisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                     <label for="migrate_revisions">Include Document Revisions</label>
                                 </div>
