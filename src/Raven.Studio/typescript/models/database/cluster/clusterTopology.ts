@@ -12,6 +12,8 @@ class clusterTopology {
     promotablesCount: KnockoutComputed<number>;
     watchersCount: KnockoutComputed<number>;
 
+    anyErrorsEncountered = ko.observable<boolean>(false);
+
     constructor(dto: Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged) {
         this.leader(dto.Leader);
         this.nodeTag(dto.NodeTag);
@@ -55,6 +57,11 @@ class clusterTopology {
             const nodeStatus = status ? status[k] : null;
             const connected = nodeStatus ? nodeStatus.Connected : true;
             const errorDetails = connected ? null : nodeStatus.ErrorDetails;
+
+            if (!this.anyErrorsEncountered() && !!errorDetails) {
+                this.anyErrorsEncountered(true);
+            }
+            
             return clusterNode.for(k, v, type, connected, errorDetails);
         });
     }
