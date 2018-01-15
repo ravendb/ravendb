@@ -8,8 +8,6 @@
         <div class="margin-bottom padding" data-bind="css: { 'bg-warning': $root.model.domain().reusingConfiguration, 'bg-success': !$root.model.domain().reusingConfiguration() }">
             <i class="icon-warning"></i> The following configuration will <span style="margin-left: 0" data-bind="text: $root.model.domain().reusingConfiguration() ? 'overwrite' : 'populate'"></span>
             the DNS records for the subdomain <strong data-bind="text: model.domain().fullDomain"></strong>. <br />
-            
-            You can manage your DNS records on <a href="https://ravendb.net/license/management" target="_blank">https://ravendb.net/license/management</a>. 
         </div>
         <div class="margin-bottom">
             <span class="has-disable-reason" data-bind="attr: { 'data-original-title': $root.maxNodesAddedMsg() || '' }" data-placement="right">
