@@ -945,46 +945,29 @@ namespace Raven.Server.Documents.Replication
 
         public int GetSizeOfMajority()
         {            
-            return _numberOfSiblings / 2 + 1;
+            return (_numberOfSiblings+1) / 2 + 1;
         }
 
         public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
         {            
-            if (_numberOfSiblings == 0)
-            {
-             
-                if (_log.IsInfoEnabled)
-                    _log.Info("Was asked to get write assurance on a database without replication, ignoring the request. " +
-                              $"InternalDestinations: {_internalDestinations.Count}. ");
-
-                return numberOfReplicasToWaitFor;
-            }
-            if (_numberOfSiblings < numberOfReplicasToWaitFor)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info($"Was asked to get write assurance on a database with {numberOfReplicasToWaitFor} servers " +
-                              $"but we have only {_numberOfSiblings} servers, reducing request to {_numberOfSiblings}. " +
-                              $"InternalDestinations: {_internalDestinations.Count}. " );
-
-                numberOfReplicasToWaitFor = _numberOfSiblings;
-            }
             var sp = Stopwatch.StartNew();
             while (true)
             {
+                var internalDestinations = _internalDestinations.Select(x => x.Url).ToHashSet();
                 var waitForNextReplicationAsync = WaitForNextReplicationAsync();
-                var past = ReplicatedPastInternalDestinations(lastChangeVector);
+                var past = ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
                 if (past >= numberOfReplicasToWaitFor)
                     return past;
 
                 var remaining = waitForReplicasTimeout - sp.Elapsed;
                 if (remaining < TimeSpan.Zero)
-                    return ReplicatedPastInternalDestinations(lastChangeVector);
+                    return ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
 
                 var timeout = TimeoutManager.WaitFor(remaining);
                 try
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
-                        return ReplicatedPastInternalDestinations(lastChangeVector);
+                        return ReplicatedPastInternalDestinations(internalDestinations, lastChangeVector);
                 }
                 catch (OperationCanceledException e)
                 {
@@ -992,7 +975,7 @@ namespace Raven.Server.Documents.Replication
                         _log.Info($"Get exception while trying to get write assurance on a database with {numberOfReplicasToWaitFor} servers. " +
                                   $"Written so far to {past} servers only. " +
                                   $"LastChangeVector is: {lastChangeVector}.", e);
-                    return ReplicatedPastInternalDestinations(lastChangeVector);
+                    return ReplicatedPastInternalDestinations(internalDestinations,lastChangeVector);
                 }
             }
         }
@@ -1019,22 +1002,12 @@ namespace Raven.Server.Documents.Replication
             return count;
         }
 
-        private int ReplicatedPastInternalDestinations(string changeVector)
+        private int ReplicatedPastInternalDestinations(HashSet<string> internalUrls,string changeVector)
         {
             var count = 0;
-            foreach (var destination in _outgoing.Where(x=>_internalDestinations.Select(y=>y.Url).Contains(x.Destination.Url)))
+            foreach (var destination in _outgoing)
             {
-                var foundInInternalDestination = false;
-                foreach (var internalDestination in _internalDestinations)
-                {
-                    if (internalDestination.Url == destination.Destination.Url)
-                    {
-                        foundInInternalDestination = true;
-                        break;
-                    }
-                }
-
-                if (foundInInternalDestination == false)
+                if (internalUrls.Contains(destination.Destination.Url) == false)
                     continue;
 
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
