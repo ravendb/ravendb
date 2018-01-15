@@ -80,7 +80,7 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
-            await ServerStore.LicenseManager.LeaseLicense();
+            await ServerStore.LicenseManager.LeaseLicense(forceUpdate: true);
 
             NoContentStatus();
         }

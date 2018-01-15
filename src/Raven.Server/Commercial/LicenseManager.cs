@@ -624,9 +624,9 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task LeaseLicense()
+        public async Task LeaseLicense(bool forceUpdate = false)
         {
-            if (_serverStore.IsLeader() == false)
+            if (forceUpdate == false && _serverStore.IsLeader() == false)
                 return;
 
             if (_leaseLicenseSemaphore.Wait(0) == false)
@@ -667,6 +667,9 @@ namespace Raven.Server.Commercial
                     details: new ExceptionDetails(e));
 
                 _serverStore.NotificationCenter.Add(alert);
+
+                if (forceUpdate)
+                    throw;
             }
             finally
             {
