@@ -24,16 +24,20 @@ namespace FastTests.Issues
                     session.Store(new User
                     {
                         Name = "Grisha",
-                        LoginsByDate = new Dictionary<DateTime, LastAccess>
+                        LoginsByDate = new SortedDictionary<DateTime, LastAccess>
                         {
-                            { now.AddHours(-1), new LastAccess
                             {
-                                Count = 3
-                            }},
-                            { now.AddHours(-2), new LastAccess
+                                now.AddHours(-1), new LastAccess
+                                {
+                                    Count = 3
+                                }
+                            },
                             {
-                                Count = 10
-                            }}
+                                now.AddHours(-2), new LastAccess
+                                {
+                                    Count = 10
+                                }
+                            }
                         }
                     });
 
@@ -74,7 +78,7 @@ namespace FastTests.Issues
                     session.Store(new User
                     {
                         Name = "Grisha",
-                        LoginsByDate = new Dictionary<DateTime, LastAccess>
+                        LoginsByDate = new SortedDictionary<DateTime, LastAccess>
                         {
                             { now.AddHours(-1), new LastAccess
                             {
@@ -90,7 +94,7 @@ namespace FastTests.Issues
                     session.Store(new User
                     {
                         Name = "Karmel",
-                        LoginsByDate = new Dictionary<DateTime, LastAccess>
+                        LoginsByDate = new SortedDictionary<DateTime, LastAccess>
                         {
                             { now.AddHours(-4), new LastAccess()}
                         }
@@ -130,7 +134,7 @@ namespace FastTests.Issues
                     session.Store(new User
                     {
                         Name = "Grisha",
-                        LoginsByDate = new Dictionary<DateTime, LastAccess>
+                        LoginsByDate = new SortedDictionary<DateTime, LastAccess>
                         {
                             { now.AddHours(-1), new LastAccess
                             {
@@ -187,7 +191,7 @@ namespace FastTests.Issues
                     session.Store(new User
                     {
                         Name = "Karmel",
-                        LoginsByTicks = new Dictionary<DateTime, long>
+                        LoginsByTicks = new SortedDictionary<DateTime, long>
                         {
                             { now.AddHours(-1), 12321232},
                             { now.AddHours(-2), 98172832}
@@ -221,9 +225,9 @@ namespace FastTests.Issues
         {
             public string Name { get; set; }
 
-            public Dictionary<DateTime, LastAccess> LoginsByDate { get; set; }
+            public SortedDictionary<DateTime, LastAccess> LoginsByDate { get; set; }
 
-            public Dictionary<DateTime, long> LoginsByTicks { get; set; }
+            public SortedDictionary<DateTime, long> LoginsByTicks { get; set; }
         }
 
         public class LastAccess
