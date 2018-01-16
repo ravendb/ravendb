@@ -68,7 +68,9 @@ namespace Raven.Server.Rachis
                 [nameof(RachisHello.InitialMessageType)] = helloMsg.InitialMessageType,
                 [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId,
                 [nameof(RachisHello.SendingThread)] = Thread.CurrentThread.ManagedThreadId,
-                [nameof(RachisHello.ElectionTimeout)] = helloMsg.ElectionTimeout
+                [nameof(RachisHello.ElectionTimeout)] = helloMsg.ElectionTimeout,
+                [nameof(RachisHello.SourceUrl)] = helloMsg.SourceUrl,
+                [nameof(RachisHello.DestinationUrl)] = helloMsg.DestinationUrl,
             });
         }
 

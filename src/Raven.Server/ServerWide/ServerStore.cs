@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -1630,9 +1631,9 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(rachisState);
         }
 
-        public void ClusterAcceptNewConnection(Stream client)
+        public void ClusterAcceptNewConnection(Stream client, EndPoint remoteEndpoint)
         {
-            _engine.AcceptNewConnection(client);
+            _engine.AcceptNewConnection(client, remoteEndpoint);
         }
 
         public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)

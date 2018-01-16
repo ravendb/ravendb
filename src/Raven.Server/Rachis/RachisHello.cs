@@ -22,6 +22,10 @@
         /// </summary>
         public InitialMessageType InitialMessageType;
 
+        public string DestinationUrl;
+
+        public string SourceUrl;
+        
         public int SendingThread;
 
         public int ElectionTimeout;

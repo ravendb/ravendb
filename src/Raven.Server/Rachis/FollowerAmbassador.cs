@@ -746,7 +746,9 @@ namespace Raven.Server.Rachis
                 DebugDestinationIdentifier = _tag,
                 DebugSourceIdentifier = _engine.Tag,
                 ElectionTimeout = (int)_engine.ElectionTimeout.TotalMilliseconds,
-                SendingThread = Thread.CurrentThread.ManagedThreadId
+                SendingThread = Thread.CurrentThread.ManagedThreadId,
+                DestinationUrl = _url,
+                SourceUrl = _engine.Url
             });
         }
 

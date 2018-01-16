@@ -257,6 +257,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
                     finally
                     {
+                        try
+                        {
+                            internalTaskCancellationToken.Cancel();
+                        }
+                        catch { }
                         internalTaskCancellationToken.Dispose();
                     }
                 }
