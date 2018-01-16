@@ -4,12 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.ComponentModel.Composition;
-using System.IO;
 using System.Threading;
+using Raven.Abstractions;
 using Raven.Abstractions.Data;
 using Raven.Bundles.Replication.Impl;
 using Raven.Database.Bundles.Replication.Impl;
-using Raven.Database.Impl;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
 
@@ -63,6 +62,7 @@ namespace Raven.Bundles.Replication.Triggers
 			var metadata = new RavenJObject
 			{
 				{Constants.RavenDeleteMarker, true},
+                {Constants.LastModified, SystemTime.UtcNow},
 				{Constants.RavenReplicationHistory, deletedHistory.Value},
 				{Constants.RavenReplicationSource, Database.TransactionalStorage.Id.ToString()},
 				{Constants.RavenReplicationVersion, HiLo.NextId()}
