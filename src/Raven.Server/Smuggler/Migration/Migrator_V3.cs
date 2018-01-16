@@ -158,6 +158,7 @@ namespace Raven.Server.Smuggler.Migration
                         var dataStream = await GetRavenFsStream(key);
                         if (dataStream == null)
                         {
+                            Result.Tombstones.ReadCount++;
                             var id = StreamSource.GetLegacyAttachmentId(key);
                             documentActions.DeleteDocument(id);
                             continue;
@@ -186,7 +187,7 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<Stream> GetRavenFsStream(string key)
         {
-            var url = $"{ServerUrl}/fs/{DatabaseName}/files/{key}";
+            var url = $"{ServerUrl}/fs/{DatabaseName}/files/{Uri.EscapeDataString(key)}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -198,7 +199,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to file, key: {key}, from server: {ServerUrl}, " +
+                throw new InvalidOperationException($"Failed to get file, key: {key}, from server: {ServerUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }
