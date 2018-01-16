@@ -43,7 +43,8 @@ namespace Raven.Server.Smuggler.Documents
                 Data = (BlittableJsonReaderObject)translatedResult,
                 Id = document.Id,
                 Flags = document.Flags,
-                NonPersistentFlags = document.NonPersistentFlags
+                NonPersistentFlags = document.NonPersistentFlags,
+                LastModified = document.LastModified,
             };
         }
 

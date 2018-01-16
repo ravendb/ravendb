@@ -20,8 +20,11 @@ namespace Raven.Server.Smuggler.Migration
 {
     public abstract class AbstractLegacyMigrator : AbstractMigrator
     {
-        protected AbstractLegacyMigrator(MigratorOptions options) : base(options)
+        private readonly DocumentDatabase _database;
+
+        protected AbstractLegacyMigrator(DocumentDatabase database, MigratorOptions options) : base(options)
         {
+            _database = database;
         }
 
         protected LastEtagsInfo GetLastMigrationState()
@@ -104,7 +107,8 @@ namespace Raven.Server.Smuggler.Migration
                         Id = attachmentDetails.Id,
                         ChangeVector = string.Empty,
                         Flags = DocumentFlags.HasAttachments,
-                        NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                        NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
+                        LastModified = _database.Time.GetUtcNow(),
                     },
                     Attachments = new List<DocumentItem.AttachmentStream>
                     {

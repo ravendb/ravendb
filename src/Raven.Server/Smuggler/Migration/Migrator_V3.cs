@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -26,7 +27,7 @@ namespace Raven.Server.Smuggler.Migration
         private readonly MajorVersion _majorVersion;
         private readonly int _buildVersion;
 
-        public Migrator_V3(MigratorOptions options, MajorVersion majorVersion, int buildVersion) : base(options)
+        public Migrator_V3(DocumentDatabase database, MigratorOptions options, MajorVersion majorVersion, int buildVersion) : base(database, options)
         {
             _majorVersion = majorVersion;
             _buildVersion = buildVersion;

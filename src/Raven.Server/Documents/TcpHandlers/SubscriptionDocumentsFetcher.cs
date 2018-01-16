@@ -109,7 +109,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                         Etag = doc.Etag,
                                         Data = transformResult,
                                         LowerId = doc.LowerId,
-                                        ChangeVector = doc.ChangeVector
+                                        ChangeVector = doc.ChangeVector,
+                                        LastModified = doc.LastModified,
                                     }, null);
                                 }
                             }
@@ -150,7 +151,8 @@ namespace Raven.Server.Documents.TcpHandlers
                             {
                                 Data = null,
                                 ChangeVector = item.ChangeVector,
-                                Etag = item.Etag
+                                Etag = item.Etag,
+                                LastModified = item.LastModified,
                             }, null);
                         }
                     }
@@ -171,7 +173,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                     Etag = item.Etag,
                                     Data = transformResult,
                                     LowerId = item.LowerId,
-                                    ChangeVector = item.ChangeVector
+                                    ChangeVector = item.ChangeVector,
+                                    LastModified = item.LastModified,
                                 }, null);
                             }
                             if (++size >= _maxBatchSize)

@@ -237,11 +237,11 @@ namespace Raven.Server.Smuggler.Migration
                             switch (_buildMajorVersion)
                             {
                                 case MajorVersion.V2:
-                                    migrator = new Migrator_V2(options);
+                                    migrator = new Migrator_V2(database, options);
                                     break;
                                 case MajorVersion.V30:
                                 case MajorVersion.V35:
-                                    migrator = new Migrator_V3(options, _buildMajorVersion, _buildVersion);
+                                    migrator = new Migrator_V3(database, options, _buildMajorVersion, _buildVersion);
                                     break;
                                 case MajorVersion.V4:
                                     migrator = new Importer(options);
