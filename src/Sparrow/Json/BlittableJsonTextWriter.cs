@@ -10,7 +10,7 @@ namespace Sparrow.Json
 {
     public class AsyncBlittableJsonTextWriter : AbstractBlittableJsonTextWriter
     {
-        private Stream _outputStream;
+        private readonly Stream _outputStream;
         private readonly CancellationToken _cancellationToken;
 
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken) : base(context, context.CheckoutMemoryStream())
@@ -65,14 +65,13 @@ namespace Sparrow.Json
     }
 
     public class BlittableJsonTextWriter : AbstractBlittableJsonTextWriter
-    {        
+    {
         public BlittableJsonTextWriter(JsonOperationContext context, Stream stream) : base(context, stream)
-        {            
+        {
         }
     }
 
-
-    public unsafe abstract class AbstractBlittableJsonTextWriter : IDisposable
+    public abstract unsafe class AbstractBlittableJsonTextWriter : IDisposable
     {
         protected readonly JsonOperationContext _context;
         protected readonly Stream _stream;
@@ -138,7 +137,7 @@ namespace Sparrow.Json
             return Encodings.Utf8.GetString(_pinnedBuffer.Buffer.Array, _pinnedBuffer.Buffer.Offset, _pos);
         }
 
-        public void WriteObjectOrdered(BlittableJsonReaderObject obj)
+        public void WriteObject(BlittableJsonReaderObject obj)
         {
             WriteStartObject();
             var props = obj.GetPropertiesByInsertionOrder();
@@ -153,38 +152,13 @@ namespace Sparrow.Json
                 obj.GetPropertyByIndex(props[i], ref prop);
                 WritePropertyName(prop.Name);
 
-                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value, originalPropertyOrder: true);
+                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
             }
 
             WriteEndObject();
         }
 
-        public void WriteObject(BlittableJsonReaderObject obj)
-        {
-            if (obj == null)
-            {
-                WriteNull();
-                return;
-            }
-            WriteStartObject();
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < obj.Count; i++)
-            {
-                if (i != 0)
-                {
-                    WriteComma();
-                }
-                obj.GetPropertyByIndex(i, ref prop);
-                WritePropertyName(prop.Name);
-
-                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value, originalPropertyOrder: false);
-            }
-
-            WriteEndObject();
-        }
-
-
-        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray, bool originalPropertyOrder)
+        private void WriteArrayToStream(BlittableJsonReaderArray blittableArray)
         {
             WriteStartArray();
             var length = blittableArray.Length;
@@ -197,13 +171,13 @@ namespace Sparrow.Json
                     WriteComma();
                 }
                 // write field value
-                WriteValue(propertyValueAndType.Item2, propertyValueAndType.Item1, originalPropertyOrder);
+                WriteValue(propertyValueAndType.Item2, propertyValueAndType.Item1);
 
             }
             WriteEndArray();
         }
 
-        public void WriteValue(BlittableJsonToken token, object val, bool originalPropertyOrder = false)
+        public void WriteValue(BlittableJsonToken token, object val)
         {
             switch (token)
             {
@@ -214,15 +188,12 @@ namespace Sparrow.Json
                     WriteInteger((long)val);
                     break;
                 case BlittableJsonToken.StartArray:
-                    WriteArrayToStream((BlittableJsonReaderArray)val, originalPropertyOrder);
+                    WriteArrayToStream((BlittableJsonReaderArray)val);
                     break;
                 case BlittableJsonToken.EmbeddedBlittable:
                 case BlittableJsonToken.StartObject:
-                    var blittableJsonReaderObject = ((BlittableJsonReaderObject)val);
-                    if (originalPropertyOrder)
-                        WriteObjectOrdered(blittableJsonReaderObject);
-                    else
-                        WriteObject(blittableJsonReaderObject);
+                    var blittableJsonReaderObject = (BlittableJsonReaderObject)val;
+                    WriteObject(blittableJsonReaderObject);
                     break;
                 case BlittableJsonToken.CompressedString:
                     WriteString((LazyCompressedStringValue)val);
@@ -269,7 +240,7 @@ namespace Sparrow.Json
             }
 
             var size = str.Size;
-            
+
             if (size == 1 && str.IsControlCodeCharacter(out var b))
             {
                 WriteString($@"\u{b:X4}", skipEscaping: true);
