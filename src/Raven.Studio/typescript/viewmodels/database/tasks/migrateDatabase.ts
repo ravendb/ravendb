@@ -7,7 +7,6 @@ import getMigratedServerUrlsCommand = require("commands/database/studio/getMigra
 import getRemoteServerVersionWithDatabasesCommand = require("commands/database/studio/getRemoteServerVersionWithDatabasesCommand");
 import recentError = require("common/notifications/models/recentError");
 import generalUtils = require("common/generalUtils");
-import popoverUtils = require("common/popoverUtils");
 
 class migrateDatabase extends viewModelBase {
 
@@ -51,14 +50,6 @@ class migrateDatabase extends viewModelBase {
         super.attached();
 
         this.updateHelpLink("YD9M1R"); //TODO: this is probably stale!
-
-        popoverUtils.longWithHover($("#database-name-info"),
-            {
-                content:
-                    "To see the list of available databases, " +
-                        "enter your remote server credentials <br>" +
-                        "(for v3.x the list of file systems)"
-            });
     }
 
     detectServerVersion(showVersionSpinner: boolean) {
@@ -82,12 +73,17 @@ class migrateDatabase extends viewModelBase {
                     this.model.fullVersion(info.FullVersion);
                     this.model.databaseNames(info.DatabaseNames);
                     this.model.fileSystemNames(info.FileSystemNames);
+                    this.model.authorized(info.Authorized);
+                    if (!info.Authorized) {
+                        this.model.resourceName.valueHasMutated();
+                    }
                 } else {
                     this.model.serverMajorVersion(null);
                     this.model.buildVersion(null);
                     this.model.fullVersion(null);
                     this.model.databaseNames([]);
                     this.model.fileSystemNames([]);
+                    this.model.authorized(true);
                 }
             })
             .fail((response: JQueryXHR) => {
