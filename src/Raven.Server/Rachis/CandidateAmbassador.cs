@@ -73,7 +73,8 @@ namespace Raven.Server.Rachis
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info(
-                            $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to finish, after the elections were {_candidate.ElectionResult}");
+                            $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_thread.ManagedThreadId} " +
+                            $"({_thread.ThreadState}) to finish, after the elections were {_candidate.ElectionResult}");
                     }
                     DisposeConnectionIfNeeded();
                 }
@@ -182,7 +183,7 @@ namespace Raven.Server.Rachis
 
                                     if (rvr.Term > currentElectionTerm)
                                     {
-                                        var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
+                                        var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";
                                         // we need to abort the current elections
                                         _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, message);
                                         if (_engine.Log.IsInfoEnabled)
@@ -197,7 +198,8 @@ namespace Raven.Server.Rachis
                                     {
                                         if (_engine.Log.IsInfoEnabled)
                                         {
-                                            _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response from {_tag} in {rvr.Term} reason: {rvr.Message}");
+                                            _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
+                                                             $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                         }
                                         // we go a negative response here, so we can't proceed
                                         // we'll need to wait until the candidate has done something, like
@@ -207,7 +209,8 @@ namespace Raven.Server.Rachis
                                     }
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response for trial elections from {_tag} in {rvr.Term}: {rvr.Message}");
+                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
+                                                         $"for trial elections from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                     }
                                     TrialElectionWonAtTerm = rvr.Term;
                                     _candidate.WaitForChangeInState();
@@ -229,7 +232,8 @@ namespace Raven.Server.Rachis
 
                                 if (rvr.Term > currentElectionTerm)
                                 {
-                                    var message = $"CandidateAmbassador for {_tag}: found election term {rvr.Term} that is higher than ours {currentElectionTerm}";
+                                    var message = $"CandidateAmbassador for {_tag}: found election term {rvr.Term:#,#;;0} " +
+                                                  $"that is higher than ours {currentElectionTerm:#,#;;0}";
                                     if (_engine.Log.IsInfoEnabled)
                                     {
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
@@ -244,7 +248,8 @@ namespace Raven.Server.Rachis
                                 {
                                     if (_engine.Log.IsInfoEnabled)
                                     {
-                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response from {_tag} in {rvr.Term} reason: {rvr.Message}");
+                                        _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a negative response " +
+                                                         $"from {_tag} in {rvr.Term:#,#;;0} reason: {rvr.Message}");
                                     }
                                     // we go a negative response here, so we can't proceed
                                     // we'll need to wait until the candidate has done something, like
@@ -254,7 +259,8 @@ namespace Raven.Server.Rachis
                                 }
                                 if (_engine.Log.IsInfoEnabled)
                                 {
-                                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response from {_tag} in {rvr.Term}: {rvr.Message}");
+                                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Got a positive response " +
+                                                     $"from {_tag} in {rvr.Term:#,#;;0}: {rvr.Message}");
                                 }
                                 RealElectionWonAtTerm = rvr.Term;
                                 _candidate.WaitForChangeInState();
@@ -321,7 +327,8 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Send election result '{_candidate.ElectionResult}' at term {RealElectionWonAtTerm}");
+                    _engine.Log.Info($"CandidateAmbassador for {_tag}: Send election result " +
+                                     $"'{_candidate.ElectionResult}' at term {RealElectionWonAtTerm:#,#;;0}");
                 }
                 Connection.Send(context, new RequestVote
                 {
