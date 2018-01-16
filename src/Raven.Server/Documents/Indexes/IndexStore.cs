@@ -591,7 +591,7 @@ namespace Raven.Server.Documents.Indexes
             await CreateIndex(indexDefinition);
         }
 
-        public async Task DeleteAutoIndex(string name)
+        public async Task DeleteIndex(string name)
         {
             var index = GetIndex(name);
             if (index == null)
