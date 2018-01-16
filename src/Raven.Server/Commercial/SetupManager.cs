@@ -1426,8 +1426,8 @@ namespace Raven.Server.Commercial
                                 jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", node.Value.Addresses.Select(ip => IpAddressToTcpUrl(ip, node.Value.TcpPort)));
                             }
 
-                            var httpUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, setupInfo.NodeSetupInfos[LocalNodeTag].Port,
-                                setupInfo.NodeSetupInfos[LocalNodeTag].TcpPort, out var tcpUrl, out var _);
+                            var httpUrl = GetServerUrlFromCertificate(serverCert, setupInfo, node.Key, node.Value.Port,
+                                node.Value.TcpPort, out var tcpUrl, out var _);
 
                             if (string.IsNullOrEmpty(node.Value.ExternalIpAddress) == false)
                                 jsonObj[RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = node.Value.ExternalIpAddress;
