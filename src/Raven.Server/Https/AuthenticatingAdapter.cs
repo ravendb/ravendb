@@ -110,8 +110,8 @@ namespace Raven.Server.Https
             var certificate = tls?.ClientCertificate;
             var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
             var info = context.Features.Get<IHttpConnectionFeature>();
-            if (Logger.IsOperationsEnabled)
-                Logger.Operations($"Received TLS connection request from {info.RemoteIpAddress}:{info.RemotePort} with client certificate: {certificate?.SubjectName?.Name}. Authentication status: {authenticationStatus.Status}.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Received TLS connection request from {info?.RemoteIpAddress}:{info?.RemotePort} with client certificate: {certificate?.SubjectName?.Name}. Authentication status: {authenticationStatus.Status}.");
 
             // build the token
             context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
