@@ -360,7 +360,8 @@ namespace Raven.Database.Raft
                 if (raftEngine.Options.SelfConnection == node)
                 {
                     await raftEngine.StepDownAsync().ConfigureAwait(false);
-                    raftEngine.WaitForLeaderConfirmed();
+                    if (raftEngine.WaitForLeaderConfirmed() == false)
+                        throw new InvalidOperationException("Couldn't find leader in time");
                 }
                 else
                 {
@@ -372,7 +373,7 @@ namespace Raven.Database.Raft
             catch (NotLeadingException)
             {
             }
-
+            
             await SendLeaveClusterInternalAsync(raftEngine.GetLeaderNode(WaitForLeaderTimeoutInSeconds), node).ConfigureAwait(false);
         }
 

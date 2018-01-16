@@ -15,6 +15,7 @@ namespace Rachis.Behaviors
     public class SteppingDownStateBehavior : LeaderStateBehavior
     {
         private readonly Stopwatch _stepdownDuration;
+        private long _lastLogEntryAtTimeOfSteppingDownIndex;
 
         public SteppingDownStateBehavior(RaftEngine engine)
             : base(engine)
@@ -32,6 +33,9 @@ namespace Rachis.Behaviors
                 Message = "Forcing step down evaluation",
                 Success = true
             });
+
+            var lastLogEntry = Engine.PersistentState.LastLogEntry();
+            _lastLogEntryAtTimeOfSteppingDownIndex = lastLogEntry.Index;
         }
 
         public override RaftEngineState State
@@ -39,19 +43,34 @@ namespace Rachis.Behaviors
             get { return RaftEngineState.SteppingDown; }
         }
 
+        public override bool CanHaveConfirmedLeader => false;
+
         public override void Handle(AppendEntriesResponse resp)
         {
             base.Handle(resp);
 
             var maxIndexOnQuorom = GetMaxIndexOnQuorum();
 
-            var lastLogEntry = Engine.PersistentState.LastLogEntry();
-
-            if (maxIndexOnQuorom >= lastLogEntry.Index)
+            if (maxIndexOnQuorom >= _lastLogEntryAtTimeOfSteppingDownIndex)
             {
                 _log.Info("Done sending all events to the cluster, can step down gracefully now");
                 TransferToBestMatch();
+                _lastLogEntryAtTimeOfSteppingDownIndex = long.MaxValue;// only do it once
             }
+        }
+
+        public override void HandleMessage(MessageContext context)
+        {
+            if (_log.IsDebugEnabled)
+            {
+                _log.Debug("SteppingDown: " + context.Message);
+            }            
+            base.HandleMessage(context);
+        }
+
+        public override AppendEntriesResponse Handle(AppendEntriesRequest req)
+        {
+            return base.Handle(req);
         }
 
         private void TransferToBestMatch()
