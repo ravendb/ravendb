@@ -20,6 +20,7 @@ using Raven.Tests.Smuggler;
 using Raven.Tests.Subscriptions;
 using Xunit;
 using Order = Raven.Tests.Common.Dto.Faceted.Order;
+using Raven.Tests.Raft;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -71,32 +72,31 @@ namespace Raven.Tryouts
         {
             for (int i = 0; i < 1000; i++)
             {
-                Console.WriteLine(i);
-                InitDBAndDoSomeWork(i);
-                var backupCmdletFull = new DatabaseBackupCmdlet
+                Console.WriteLine($"{i} started");
+                using (var test = new ClusterLeave())
                 {
-                    ServerUrl = "http://localhost:8080",
-                    BackupLocation = "c:\\temp\\reproBackup\\" + i,
-                    Incremental = false,
-                    DatabaseName = "Northwind"
-                };
-
-                var backupCmdletIncremental = new DatabaseBackupCmdlet
+                    try
+                    {
+                        test.CanLeaveLeaderFromClusterFromNonLeader(3);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+                Console.WriteLine($"for 3 nodes ended");
+                using (var test = new ClusterLeave())
                 {
-                    ServerUrl = "http://localhost:8080",
-                    BackupLocation = "c:\\temp\\reproBackup\\" + i,
-                    Incremental = true,
-                    DatabaseName = "Northwind"
-                };
-                while (backupCmdletFull.Invoke().GetEnumerator().MoveNext());
-                while (backupCmdletIncremental.Invoke().GetEnumerator().MoveNext()) ;
-
-                InitDBAndDoSomeWork(i);
-
-                while (backupCmdletIncremental.Invoke().GetEnumerator().MoveNext()) ;
-                InitDBAndDoSomeWork(i);
-                while (backupCmdletIncremental.Invoke().GetEnumerator().MoveNext()) ;
-                InitDBAndDoSomeWork(i);
+                    try
+                    {
+                        test.CanLeaveLeaderFromClusterFromNonLeader(5);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+                }
+                Console.WriteLine($"for 5 nodes ended");
             }
         }
 

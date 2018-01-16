@@ -29,6 +29,8 @@ namespace Rachis.Behaviors
         }
         public DateTime LastMessageTime { get; set; }
 
+        public virtual bool CanHaveConfirmedLeader => true;
+
         private DateTime lastHeartbeatTime;
         private readonly Dictionary<Type, Action<MessageContext>> _actionDispatch;
 
@@ -55,7 +57,7 @@ namespace Rachis.Behaviors
             return false;
         }
 
-        public void HandleMessage(MessageContext context)
+        public virtual void HandleMessage(MessageContext context)
         {
             try
             {
