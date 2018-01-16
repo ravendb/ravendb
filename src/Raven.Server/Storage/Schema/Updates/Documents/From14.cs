@@ -32,19 +32,19 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         using (writeTable.Allocate(out TableValueBuilder write))
                         {
-                            var flags = TableValueToFlags((int)Columns.Flags, ref read.Reader);
-                            var lastModified = TableValueToDateTime((int)Columns.LastModified, ref read.Reader);
+                            var flags = TableValueToFlags((int)RevisionsTable.Flags, ref read.Reader);
+                            var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref read.Reader);
 
-                            write.Add(read.Reader.Read((int)Columns.ChangeVector, out int size), size);
-                            write.Add(read.Reader.Read((int)Columns.LowerId, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.RecordSeparator, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.Etag, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.Id, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.Document, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.ChangeVector, out int size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.LowerId, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.RecordSeparator, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.Etag, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.Id, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.Document, out size), size);
                             write.Add((int)flags);
-                            write.Add(read.Reader.Read((int)Columns.DeletedEtag, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.DeletedEtag, out size), size);
                             write.Add(lastModified.Ticks);
-                            write.Add(read.Reader.Read((int)Columns.TransactionMarker, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.TransactionMarker, out size), size);
                             if ((flags & DocumentFlags.Resolved) == DocumentFlags.Resolved)
                             {
                                 write.Add((int)DocumentFlags.Resolved);
