@@ -261,7 +261,8 @@ namespace Raven.Server
                 return;
             }
             
-            if (exception is LowMemoryException)
+            if (exception is LowMemoryException || 
+                exception is OutOfMemoryException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
@@ -274,6 +275,7 @@ namespace Raven.Server
                 response.StatusCode = (int)HttpStatusCode.Conflict;
                 return;
             }
+
 
             if (exception is DatabaseDisabledException)
             {
