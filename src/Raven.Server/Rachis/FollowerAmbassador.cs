@@ -652,7 +652,8 @@ namespace Raven.Server.Rachis
                 var llr = _connection.Read<LogLengthNegotiationResponse>(context);
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info($"Got 1st LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} ({llr.MidpointIndex} / {llr.MidpointTerm}) {llr.Status}");
+                    _engine.Log.Info($"Got 1st LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm:#,#;;0} " +
+                                     $"({llr.MidpointIndex:#,#;;0} / {llr.MidpointTerm:#,#;;0}) {llr.Status}");
                 }
                 // need to negotiate
                 do
@@ -660,7 +661,7 @@ namespace Raven.Server.Rachis
                     if (llr.CurrentTerm > engineCurrentTerm)
                     {
                         // we need to abort the current leadership
-                        var msg = $"{ToString()}: found election term {llr.CurrentTerm} that is higher than ours {engineCurrentTerm}";
+                        var msg = $"{ToString()}: found election term {llr.CurrentTerm:#,#;;0} that is higher than ours {engineCurrentTerm:#,#;;0}";
                         _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
                         throw new InvalidOperationException(msg);
@@ -670,7 +671,7 @@ namespace Raven.Server.Rachis
                     {
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"{ToString()}: {_tag} agreed on term={llr.CurrentTerm} index={llr.LastLogIndex}");
+                            _engine.Log.Info($"{ToString()}: {_tag} agreed on term={llr.CurrentTerm:#,#;;0} index={llr.LastLogIndex:#,#;;0}");
                         }
                         return llr.LastLogIndex;
                     }
@@ -715,7 +716,8 @@ namespace Raven.Server.Rachis
                         };
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            _engine.Log.Info($"Sending LogLengthNegotiation to {_tag} with term {lln.Term} ({lln.PrevLogIndex} / {lln.PrevLogTerm}) - Trnuncated {lln.Truncated}");
+                            _engine.Log.Info($"Sending LogLengthNegotiation to {_tag} with term {lln.Term:#,#;;0} " +
+                                             $"({lln.PrevLogIndex:#,#;;0} / {lln.PrevLogTerm:#,#;;0}) - Trnuncated {lln.Truncated}");
                         }
                     }
                     UpdateLastSend("Negotiation 2");
@@ -723,7 +725,8 @@ namespace Raven.Server.Rachis
                     llr = _connection.Read<LogLengthNegotiationResponse>(context);
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Got LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} ({llr.MidpointIndex} / {llr.MidpointTerm}) {llr.Status}");
+                        _engine.Log.Info($"Got LogLengthNegotiationResponse from {_tag} with term {llr.CurrentTerm} " +
+                                         $"({llr.MidpointIndex:#,#;;0} / {llr.MidpointTerm:#,#;;0}) {llr.Status}");
                     }
                 } while (true);
             }
@@ -760,7 +763,7 @@ namespace Raven.Server.Rachis
 
         public override string ToString()
         {
-            return $"Follower Ambassador for {_tag} in term {_term}";
+            return $"Follower Ambassador for {_tag} in term {_term:#,#;;0}";
         }
 
         public void Dispose()
