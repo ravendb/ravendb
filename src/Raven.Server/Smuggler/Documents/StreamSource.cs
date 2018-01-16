@@ -766,7 +766,8 @@ namespace Raven.Server.Smuggler.Documents
                     var tombstone = new DocumentTombstone();
                     if (data.TryGet("Key", out tombstone.LowerId) &&
                         data.TryGet(nameof(DocumentTombstone.Type), out string type) &&
-                        data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection))
+                        data.TryGet(nameof(DocumentTombstone.Collection), out tombstone.Collection) &&
+                        data.TryGet(nameof(DocumentTombstone.LastModified), out tombstone.LastModified))
                     {
                         tombstone.Type = Enum.Parse<DocumentTombstone.TombstoneType>(type);
                         yield return tombstone;
