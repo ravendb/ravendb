@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Smuggler;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -18,7 +19,7 @@ namespace Raven.Server.Smuggler.Migration
     {
         private const int AttachmentsPageSize = 32;
 
-        public Migrator_V2(MigratorOptions options) : base(options)
+        public Migrator_V2(DocumentDatabase database, MigratorOptions options) : base(database, options)
         {
         }
 

@@ -574,7 +574,8 @@ namespace Raven.Server.Smuggler.Documents
                             Id = attachmentInfo.Id,
                             ChangeVector = string.Empty,
                             Flags = DocumentFlags.HasAttachments,
-                            NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                            NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
+                            LastModified = _database.Time.GetUtcNow(),
                         },
                         Attachments = new List<DocumentItem.AttachmentStream>
                         {
