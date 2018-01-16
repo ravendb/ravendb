@@ -260,7 +260,9 @@ namespace Raven.Database.Raft.Controllers
             var nodeName = RaftHelper.GetNodeName(name);
 
             if (ClusterManager.Engine.CurrentTopology.Contains(nodeName) == false)
+            {
                 return GetEmptyMessage(HttpStatusCode.NotModified);
+            }
 
             var node = ClusterManager.Engine.CurrentTopology.GetNodeByName(nodeName);
             await ClusterManager.Client.SendLeaveAsync(node).ConfigureAwait(false);

@@ -275,7 +275,10 @@ namespace Rachis
                 return;
 
             if (State == RaftEngineState.Leader)
+            {
                 _leaderSelectedEvent.Reset();
+                _leaderConfirmedEvent.Reset();
+            }
 
             var oldState = State;
             if (StateBehavior != null)
@@ -514,15 +517,28 @@ namespace Rachis
 
         public bool WaitForLeader(int timeout = 10*1000)
         {
-            var leaderFound = _leaderSelectedEvent.Wait(timeout, CancellationToken);
+            var currentTerm = this.PersistentState.CurrentTerm;
+            var leaderFound = _leaderSelectedEvent.Wait(timeout, CancellationToken);                        
+
             if (leaderFound == false)
                 CurrentLeader = null;
-            return leaderFound;
+            return leaderFound;            
         }
 
         public bool WaitForLeaderConfirmed(int timeout = 10 * 1000)
         {
-            return _leaderConfirmedEvent.Wait(timeout, CancellationToken);
+            var r = _leaderConfirmedEvent.Wait(timeout, CancellationToken);
+            //DO NOT COMMIT
+            if(r )
+            {
+                if(_leaderSelectedEvent.IsSet == false)
+                {                    
+                    if (_log.IsDebugEnabled)
+                        _log.Debug("leader confirmed event set, but selected did not");
+                    Console.WriteLine("WHY?");
+                }
+            }
+            return r;
         }
 
         public void AppendCommand(Command command)
@@ -569,14 +585,17 @@ namespace Rachis
                         // StartTopologyChange(tcc); - not sure why it was needed, see RavenDB-3808 for details
                         CommitTopologyChange(tcc);
                     }
-                    var noop = command as NopCommand;
-                    if (noop != null && entry.Term == PersistentState.CurrentTerm)
+                    if (StateBehavior.CanHaveConfirmedLeader)
                     {
-                        if (_log.IsInfoEnabled)
+                        var noop = command as NopCommand;
+                        if (noop != null && entry.Term == PersistentState.CurrentTerm)
                         {
-                            _log.Info($"Raising leaderConfirmedEvent, Term = {entry.Term}, Index = {entry.Index}, Name = {Name}");
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info($"Raising leaderConfirmedEvent, Term = {entry.Term}, Index = {entry.Index}, Name = {Name}");
+                            }
+                            _leaderConfirmedEvent.Set();
                         }
-                        _leaderConfirmedEvent.Set();
                     }
                     OnCommitIndexChanged(oldCommitIndex, CommitIndex);
                     OnCommitApplied(command);
@@ -603,7 +622,7 @@ namespace Rachis
                 allowFurtherModifications.Wait(CancellationToken);
             }
         }
-
+        
         private void SnapshotAndTruncateLog(long to, ManualResetEventSlim allowFurtherModifications)
         {
             var task = new Task(() =>
@@ -998,7 +1017,7 @@ namespace Rachis
             if (steppingDownCompletionSource == null)
                 return;
             _steppingDownCompletionSource = null;
-            steppingDownCompletionSource.TrySetResult(null);
+            Task.Run(() => steppingDownCompletionSource.TrySetResult(null));
         }
 
         public FollowerLastSentEntries GetFollowerStatistics()
