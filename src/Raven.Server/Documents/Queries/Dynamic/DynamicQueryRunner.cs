@@ -195,7 +195,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         try
                         {
-                            await _indexStore.DeleteAutoIndex(supercededIndex.Name);
+                            await _indexStore.DeleteIndex(supercededIndex.Name);
                         }
                         catch (IndexDoesNotExistException)
                         {

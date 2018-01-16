@@ -2,6 +2,7 @@ import appUrl = require("common/appUrl");
 
 class index {
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
+    static readonly AutoIndexPrefix = "Auto/";
     static readonly TestIndexPrefix = "Test/";
 
     static readonly DefaultIndexGroupName = "Other";
@@ -100,7 +101,7 @@ class index {
                 this.isAutoIndex(true);
                 return "Auto Map-Reduce";
             default:
-                this.isAutoIndex(this.name.startsWith("Auto"));
+                this.isAutoIndex(this.name.startsWith(index.AutoIndexPrefix));
                 return this.type;
         }
     }

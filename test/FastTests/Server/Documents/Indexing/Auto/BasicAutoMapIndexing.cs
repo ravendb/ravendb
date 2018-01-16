@@ -163,7 +163,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(2, database.IndexStore.GetIndexesForCollection("Users").Count());
 
-            await database.IndexStore.DeleteAutoIndex(index1.Name);
+            await database.IndexStore.DeleteIndex(index1.Name);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path1) == false, TimeSpan.FromSeconds(5)));
 
@@ -171,7 +171,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
             Assert.Equal(1, indexes.Count);
 
-            await database.IndexStore.DeleteAutoIndex(index2.Name);
+            await database.IndexStore.DeleteIndex(index2.Name);
 
             Assert.True(SpinWait.SpinUntil(() => Directory.Exists(path2) == false, TimeSpan.FromSeconds(5)));
 
@@ -1130,7 +1130,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(IndexState.Error, index.State);
                 Assert.Equal(indexSafeName, IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name));
 
-                await database.IndexStore.DeleteAutoIndex(index.Name);
+                await database.IndexStore.DeleteIndex(index.Name);
 
                 for (int i = 0; i < 5; i++)
                 {
