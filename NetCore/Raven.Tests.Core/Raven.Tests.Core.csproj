@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <VersionPrefix>3.5.0</VersionPrefix>
-    <TargetFramework>netcoreapp1.0</TargetFramework>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <RuntimeFrameworkVersion>2.0.5</RuntimeFrameworkVersion>
     <AssemblyName>Raven.Tests.Core</AssemblyName>
     <PackageId>Raven.Tests.Core</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
@@ -33,16 +34,19 @@
     <ProjectReference Include="..\Raven.Client.Lightweight\Raven.Client.Lightweight.csproj" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">
     <DefineConstants>$(DefineConstants);DNXCORE50;PORTABLE;DOTNET</DefineConstants>
-    <PackageTargetFallback>$(PackageTargetFallback);netcoreapp1.0</PackageTargetFallback>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp1.0' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.0' ">
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
-    <PackageReference Include="xunit" Version="2.2.0" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
+    <PackageReference Include="xunit" Version="2.3.1" />
     <PackageReference Include="NLog" Version="5.0.0-beta06" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
   </ItemGroup>
 
   <ItemGroup>
