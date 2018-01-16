@@ -4,9 +4,9 @@ using System.Text;
 
 namespace Raven.Server.Exceptions
 {
-    public class RecursiveTypeNotSupportedException : Exception
+    public class SerializationNestedLevelTooDeepException : Exception
     {
-        public RecursiveTypeNotSupportedException(string message) : base(message)
+        public SerializationNestedLevelTooDeepException(string message) : base(message)
         {
         }
     }

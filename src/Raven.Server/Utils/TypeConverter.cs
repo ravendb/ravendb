@@ -26,12 +26,15 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
-        public static object ToBlittableSupportedType(object value, bool flattenArrays = false, int recursiveLevel = 0)
+        public static object ToBlittableSupportedType(object value, bool flattenArrays = false)
+        {
+            return ToBlittableSupportedType(value, value, flattenArrays, 0);
+        }
+        private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel)
         {
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
             {
-                throw new RecursiveTypeNotSupportedException(
-                    $"Reached recursive level of {MaxAllowedRecursiveLevelForType} for type {value.GetType().Name}, reccursive types that exceed the allowed nesting level are not supported, there is probably a circle of refrences in the instance.");
+                NestingLevelTooDeep(root);
             }
             if (value == null || value is DynamicNullObject)
                 return null;
@@ -72,7 +75,7 @@ namespace Raven.Server.Utils
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
-                    @object[key.ToString()] = ToBlittableSupportedType(dictionary[key], recursiveLevel: recursiveLevel+1);
+                    @object[key.ToString()] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel+1);
 
                 return @object;
             }
@@ -94,9 +97,9 @@ namespace Raven.Server.Utils
 
                     var objectEnumerable = value as IEnumerable<object>;
                     if (objectEnumerable != null)
-                        items = objectEnumerable.Select(x => ToBlittableSupportedType(x, flattenArrays, recursiveLevel: recursiveLevel + 1));
+                        items = objectEnumerable.Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
                     else
-                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(x, flattenArrays, recursiveLevel: recursiveLevel + 1));
+                        items = enumerable.Cast<object>().Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1));
 
                     return new DynamicJsonArray(flattenArrays ? Flatten(items) : items);
                 }
@@ -111,14 +114,20 @@ namespace Raven.Server.Utils
                 var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
                 if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
                 {
-                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(x, recursiveLevel: recursiveLevel + 1)));
+                    inner[property.Key] = new DynamicJsonArray(propertyValueAsEnumerable.Select(x => ToBlittableSupportedType(root, x, flattenArrays, recursiveLevel: recursiveLevel + 1)));
                     continue;
                 }
 
-                inner[property.Key] = ToBlittableSupportedType(propertyValue, recursiveLevel: recursiveLevel + 1);
+                inner[property.Key] = ToBlittableSupportedType(root, propertyValue, flattenArrays, recursiveLevel: recursiveLevel + 1);
             }
 
             return inner;
+        }
+
+        private static void NestingLevelTooDeep(object value)
+        {
+            throw new SerializationNestedLevelTooDeepException(
+                                $"Reached nesting level of {MaxAllowedRecursiveLevelForType} for type {value.GetType().Name}, reccursive types that exceed the allowed nesting level are not supported.");
         }
 
         public static int MaxAllowedRecursiveLevelForType { get; private set; } = 100;
