@@ -1568,34 +1568,50 @@ namespace Raven.Server.Documents.Indexes
                         progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
                     }
 
-                    foreach (var collection in Collections)
+                    foreach (var collection in GetCollections(documentsContext, out var isAllDocs))
                     {
-                        var collectionStats = stats.Collections[collection];
+                        var collectionNameForStats = isAllDocs == false ? collection : Constants.Documents.Collections.AllDocumentsCollection;
+                        var collectionStats = stats.Collections[collectionNameForStats];
 
-                        var lastEtags = GetLastEtags(collection,
+                        var lastEtags = GetLastEtags(collectionNameForStats,
                             collectionStats.LastProcessedDocumentEtag,
                             collectionStats.LastProcessedTombstoneEtag);
 
-                        var progressStats = progress.Collections[collection] = new IndexProgress.CollectionStats
+                        if (progress.Collections.TryGetValue(collectionNameForStats, out var progressStats) == false)
                         {
-                            LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
-                            LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
-                        };
+                            progressStats = progress.Collections[collectionNameForStats] = new IndexProgress.CollectionStats
+                            {
+                                LastProcessedDocumentEtag = lastEtags.LastProcessedDocumentEtag,
+                                LastProcessedTombstoneEtag = lastEtags.LastProcessedTombstoneEtag
+                            };
+                        }
 
-                        progressStats.NumberOfDocumentsToProcess =
+                        progressStats.NumberOfDocumentsToProcess +=
                             DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
                                 documentsContext, collection, progressStats.LastProcessedDocumentEtag, out var totalCount);
-                        progressStats.TotalNumberOfDocuments = totalCount;
+                        progressStats.TotalNumberOfDocuments += totalCount;
 
-                        progressStats.NumberOfTombstonesToProcess =
+                        progressStats.NumberOfTombstonesToProcess +=
                             DocumentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(
                                 documentsContext, collection, progressStats.LastProcessedTombstoneEtag, out totalCount);
-                        progressStats.TotalNumberOfTombstones = totalCount;
+                        progressStats.TotalNumberOfTombstones += totalCount;
                     }
 
                     return progress;
                 }
             }
+        }
+
+        private IEnumerable<string> GetCollections(DocumentsOperationContext documentsContext, out bool isAllDocs)
+        {
+            if (Collections.Count == 1 && Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
+            {
+                isAllDocs = true;
+                return DocumentDatabase.DocumentsStorage.GetCollections(documentsContext).Select(x => x.Name);
+            }
+
+            isAllDocs = false;
+            return Collections;
         }
 
         public IndexProgress.CollectionStats GetStats(string collection)
