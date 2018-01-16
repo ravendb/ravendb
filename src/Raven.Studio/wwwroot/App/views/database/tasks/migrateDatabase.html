@@ -40,16 +40,17 @@
                             </div>
                         </div>
 
-                        <div class="form-group" data-bind="validationElement: databaseName">
-                            <label class="control-label">Database name <i data-bind="visible: isLegacy" id="database-name-info" class="icon-info text-info"></i></label>
+                        <div class="form-group" data-bind="validationElement: resourceName">
+                            <label class="control-label"><span data-bind="text: resourceTypeName"></span> name <i data-bind="visible: isLegacy" id="database-name-info" class="icon-info text-info"></i></label>
                             <div class="flex-grow">
                                 <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                           id="database-name"
-                                           data-bind="textInput: databaseName"
-                                           placeholder="Source database name">
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNameAutoCompleter(), autoComplete: '#database-name'">
-                                        <li data-bind="click: $parent.selectDatabaseName.bind($parent, $data)">
+                                    <input type="text" 
+                                           class="form-control dropdown-toggle" 
+                                           data-toggle="dropdown"
+                                           id="resource-name"
+                                           data-bind="textInput: resourceName, attr: { 'placeholder': 'Source ' + resourceTypeName().toLowerCase() + ' name' }">
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createResourceNamesAutoCompleter(), autoComplete: '#resource-name'">
+                                        <li data-bind="click: $parent.selectResourceName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>
                                     </ul>
@@ -58,6 +59,21 @@
                         </div>
                         
                         <div data-bind="visible: isLegacy">
+                            <div class="form-group" data-bind="visible: hasRavenFs">
+                                <label class="control-label">Resource type</label>
+                                <div class="flex-grow" data-bind="validationElement: authenticationMethod">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-default"
+                                                data-bind="click: _.partial(importRavenFs, false), css: { active: !importRavenFs() }">
+                                            Database
+                                        </button>
+                                        <button type="button" class="btn btn-default"
+                                                data-bind="click: _.partial(importRavenFs, true), css: { active: importRavenFs }">
+                                            RavenFS
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-group">
                                 <label class="control-label">Authentication method</label>
                                 <div class="flex-grow" data-bind="validationElement: authenticationMethod">
@@ -66,9 +82,9 @@
                                                 data-bind="click: _.partial(authenticationMethod, 'none'), css: { active: authenticationMethod() === 'none' }">None</button>
                                         <button type="button" class="btn btn-default"
                                                 data-bind="click: _.partial(authenticationMethod, 'windows'), css: { active: authenticationMethod() === 'windows' }">Windows Credentials</button>
-                                        
+
                                     </div>
-                                    <span data-bind="visible: $root.spinners.getDatabaseNames">
+                                    <span data-bind="visible: $root.spinners.getResourceNames">
                                         <i class="global-spinner spinner-sm"></i>
                                     </span>
                                 </div>
@@ -77,19 +93,19 @@
                                 <div class="form-group" data-bind="validationElement: userName">
                                     <label class="control-label">User name</label>
                                     <div class="flex-grow">
-                                        <input data-bind="textInput: userName" type="text" class="form-control" placeholder="User name" />
+                                        <input data-bind="textInput: userName" type="text" class="form-control" placeholder="User name"/>
                                     </div>
                                 </div>
                                 <div class="form-group" data-bind="validationElement: password">
                                     <label class="control-label">Password</label>
                                     <div class="flex-grow">
-                                        <input data-bind="textInput: password" type="password" class="form-control" placeholder="Password" />
+                                        <input data-bind="textInput: password" type="password" class="form-control" placeholder="Password"/>
                                     </div>
                                 </div>
                                 <div class="form-group" data-bind="validationElement: domain">
                                     <label class="control-label">Domain</label>
                                     <div class="flex-grow">
-                                        <input data-bind="textInput: domain" type="text" class="form-control" placeholder="Domain" />
+                                        <input data-bind="textInput: domain" type="text" class="form-control" placeholder="Domain"/>
                                     </div>
                                 </div>
                             </div>
@@ -98,7 +114,7 @@
                 </div>
                 
                 <div data-bind="with: model" style="margin-left: 160px">
-                    <div data-bind="visible: isRavenDb">
+                    <div data-bind="visible: isRavenDb() && !ravenFsImport()">
                         <div class="form-group flex-horizontal flex-stretch-items">
                             <div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
@@ -112,10 +128,6 @@
                                 <div class="toggle" data-bind="visible: isLegacy">
                                     <input id="migrate_legacy_attachments" type="checkbox" data-bind="checked: includeLegacyAttachments">
                                     <label for="migrate_legacy_attachments">Include Attachments</label>
-                                </div>
-                                <div class="toggle" data-bind="visible: hasRavenFs">
-                                    <input id="migrate_ravenfs" type="checkbox" data-bind="checked: importRavenFs">
-                                    <label for="migrate_ravenfs">Import RavenFS</label>
                                 </div>
                                 <div class="toggle" data-bind="visible: !isLegacy()">
                                     <input id="migrate_conflicts" type="checkbox" data-bind="checked: includeConflicts">

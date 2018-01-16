@@ -4,7 +4,7 @@ type authenticationMethod = "windows" | "none";
 
 class migrateDatabaseModel {
     serverUrl = ko.observable<string>();
-    databaseName = ko.observable<string>();
+    resourceName = ko.observable<string>();
     includeDatabaseRecord = ko.observable(true);
     includeDocuments = ko.observable(true);
     includeConflicts = ko.observable(true);
@@ -23,17 +23,92 @@ class migrateDatabaseModel {
     fullVersion = ko.observable<string>();
     serverUrls = ko.observableArray<string>([]);
     databaseNames = ko.observableArray<string>([]);
+    fileSystemNames = ko.observableArray<string>([]);
 
-    serverMajorVersionNumber = ko.pureComputed<string>(() => {
-        let serverMajorVersion = this.serverMajorVersion();
-        let buildVersionInt = this.buildVersion();
-        if (!serverMajorVersion || !buildVersionInt) {
-            return null;
+    userName = ko.observable<string>();
+    password = ko.observable<string>();
+    domain = ko.observable<string>();
+
+    serverMajorVersionNumber: KnockoutComputed<string>;
+    isRavenDb: KnockoutComputed<boolean>;
+    isLegacy: KnockoutComputed<boolean>;
+    hasRavenFs: KnockoutComputed<boolean>;
+    ravenFsImport: KnockoutComputed<boolean>;
+    resourceTypeName: KnockoutComputed<string>;
+    showWindowsCredentialInputs: KnockoutComputed<boolean>;
+
+    validationGroup: KnockoutValidationGroup;
+    importDefinitionHasIncludes: KnockoutComputed<boolean>;
+    versionCheckValidationGroup: KnockoutValidationGroup;
+
+    constructor() {
+        this.initObservables();
+        this.initValidation();
+    }
+
+    toDto(): Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration {
+        const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
+
+        if (!this.ravenFsImport()) {
+            if (this.includeDatabaseRecord()) {
+                operateOnTypes.push("DatabaseRecord");
+            }
+            if (this.includeDocuments()) {
+                operateOnTypes.push("Documents");
+            }
+            if (this.includeConflicts() && !this.isLegacy()) {
+                operateOnTypes.push("Conflicts");
+            }
+            if (this.includeIndexes()) {
+                operateOnTypes.push("Indexes");
+            }
+            if (this.includeRevisionDocuments() && !this.isLegacy()) {
+                operateOnTypes.push("RevisionDocuments");
+            }
+            if (this.includeLegacyAttachments() && this.isLegacy()) {
+                operateOnTypes.push("LegacyAttachments");
+            }
+            if (this.includeIdentities() && !this.isLegacy()) {
+                operateOnTypes.push("Identities");
+            }
+            if (this.includeCompareExchange() && !this.isLegacy()) {
+                operateOnTypes.push("CompareExchange");
+            }
         }
 
-        let majorVersion: string;
-        let buildVersion = buildVersionInt.toString();
-        switch (serverMajorVersion) {
+        if (operateOnTypes.length === 0) {
+            operateOnTypes.push("None");
+        }
+
+        const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {
+            DatabaseName: this.resourceName(),
+            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
+            RemoveAnalyzers: this.removeAnalyzers(),
+            ImportRavenFs: this.importRavenFs()
+        };
+
+        return {
+            ServerUrl: this.serverUrl(),
+            MigrationSettings: migrationSettings,
+            UserName: this.showWindowsCredentialInputs() ? this.userName() : null,
+            Password: this.showWindowsCredentialInputs() ? this.password() : null, 
+            Domain: this.showWindowsCredentialInputs() ? this.domain() : null, 
+            BuildMajorVersion: this.serverMajorVersion(),
+            BuildVersion: this.buildVersion()
+        };
+    }
+
+    private initObservables() {
+        this.serverMajorVersionNumber = ko.pureComputed<string>(() => {
+            const serverMajorVersion = this.serverMajorVersion();
+            const buildVersionInt = this.buildVersion();
+            if (!serverMajorVersion || !buildVersionInt) {
+                return null;
+            }
+
+            let majorVersion: string;
+            let buildVersion = buildVersionInt.toString();
+            switch (serverMajorVersion) {
             case "Unknown":
                 return "Unknown";
             case "V2":
@@ -53,79 +128,11 @@ class migrateDatabaseModel {
                 break;
             default:
                 return null;
-        }
+            }
 
-        return `${majorVersion} (build: ${buildVersion})`; 
-    });
-    
-    userName = ko.observable<string>();
-    password = ko.observable<string>();
-    domain = ko.observable<string>();
-    
-    isRavenDb: KnockoutComputed<boolean>;
-    isLegacy: KnockoutComputed<boolean>;
-    hasRavenFs: KnockoutComputed<boolean>;
-    showWindowsCredentialInputs: KnockoutComputed<boolean>;
+            return `${majorVersion} (build: ${buildVersion})`;
+        });
 
-    validationGroup: KnockoutValidationGroup;
-    importDefinitionHasIncludes: KnockoutComputed<boolean>;
-    versionCheckValidationGroup: KnockoutValidationGroup;
-
-    constructor() {
-        this.initObservables();
-        this.initValidation();
-    }
-
-    toDto(): Raven.Server.Smuggler.Migration.SingleDatabaseMigrationConfiguration {
-        const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
-        if (this.includeDatabaseRecord()) {
-            operateOnTypes.push("DatabaseRecord");
-        }
-        if (this.includeDocuments()) {
-            operateOnTypes.push("Documents");
-        }
-        if (this.includeConflicts() && !this.isLegacy()) {
-            operateOnTypes.push("Conflicts");
-        }
-        if (this.includeIndexes()) {
-            operateOnTypes.push("Indexes");
-        }
-        if (this.includeRevisionDocuments() && !this.isLegacy()) {
-            operateOnTypes.push("RevisionDocuments");
-        }
-        if (this.includeLegacyAttachments() && this.isLegacy()) {
-            operateOnTypes.push("LegacyAttachments");
-        }
-        if (this.includeIdentities() && !this.isLegacy()) {
-            operateOnTypes.push("Identities");
-        }
-        if (this.includeCompareExchange() && !this.isLegacy()) {
-            operateOnTypes.push("CompareExchange");
-        }
-
-        if (operateOnTypes.length === 0) {
-            operateOnTypes.push("None");
-        }
-
-        const migrationSettings: Raven.Server.Smuggler.Migration.DatabaseMigrationSettings = {
-            DatabaseName: this.databaseName(),
-            OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType,
-            RemoveAnalyzers: this.removeAnalyzers(),
-            ImportRavenFs: this.importRavenFs()
-        };
-
-        return {
-            ServerUrl: this.serverUrl(),
-            MigrationSettings: migrationSettings,
-            UserName: this.showWindowsCredentialInputs() ? this.userName() : null,
-            Password: this.showWindowsCredentialInputs() ? this.password() : null, 
-            Domain: this.showWindowsCredentialInputs() ? this.domain() : null, 
-            BuildMajorVersion: this.serverMajorVersion(),
-            BuildVersion: this.buildVersion()
-        };
-    }
-
-    private initObservables() {
         this.isRavenDb = ko.pureComputed(() => {
             const version = this.serverMajorVersion();
             if (!version) {
@@ -145,6 +152,10 @@ class migrateDatabaseModel {
             return version === "V30" || version === "V35";
         });
 
+        this.ravenFsImport = ko.pureComputed(() => this.hasRavenFs() && this.importRavenFs());
+
+        this.resourceTypeName = ko.pureComputed(() => this.ravenFsImport() ? "File system" : "Database");
+
         this.showWindowsCredentialInputs = ko.pureComputed(() => {
             const authMethod = this.authenticationMethod();
             return authMethod === "windows";
@@ -157,7 +168,7 @@ class migrateDatabaseModel {
             validUrl: true
         });
 
-        this.databaseName.extend({
+        this.resourceName.extend({
             required: true
         });
         
@@ -198,7 +209,7 @@ class migrateDatabaseModel {
 
         this.validationGroup = ko.validatedObservable({
             serverUrl: this.serverUrl,
-            databaseName: this.databaseName,
+            databaseName: this.resourceName,
             serverMajorVersion: this.serverMajorVersion, 
             userName: this.userName,
             password: this.password, 
@@ -229,10 +240,10 @@ class migrateDatabaseModel {
         this.serverUrl(serverUrl);
     }
 
-    createDatabaseNameAutoCompleter() {
+    createResourceNamesAutoCompleter() {
         return ko.pureComputed(() => {
-            const options = this.databaseNames();
-            let key = this.databaseName();
+            const options = this.getResourceNames();
+            let key = this.resourceName();
 
             if (key) {
                 key = key.toLowerCase();
@@ -243,8 +254,16 @@ class migrateDatabaseModel {
         });
     }
 
-    selectDatabaseName(databaseName: string) {
-        this.databaseName(databaseName);
+    private getResourceNames(): string[] {
+        if (!this.hasRavenFs()) {
+            return this.databaseNames();
+        }
+
+        return this.importRavenFs() ? this.fileSystemNames() : this.databaseNames();
+    }
+
+    selectResourceName(resourceName: string) {
+        this.resourceName(resourceName);
     }
 }
 

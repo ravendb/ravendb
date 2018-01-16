@@ -13,8 +13,10 @@ namespace Raven.Server.Smuggler.Migration
         public string FullVersion { get; set; }
     }
 
-    public class BuildInfoWithDatabaseNames : BuildInfo
+    public class BuildInfoWithResourceNames : BuildInfo
     {
         public List<string> DatabaseNames { get; set; }
+
+        public List<string> FileSystemNames { get; set; }
     }
 }

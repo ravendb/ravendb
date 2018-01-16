@@ -15,7 +15,7 @@ class migrateDatabase extends viewModelBase {
 
     spinners = {
         versionDetect: ko.observable<boolean>(false),
-        getDatabaseNames: ko.observable<boolean>(false),
+        getResourceNames: ko.observable<boolean>(false),
         migration: ko.observable<boolean>(false)
     };
 
@@ -55,8 +55,9 @@ class migrateDatabase extends viewModelBase {
         popoverUtils.longWithHover($("#database-name-info"),
             {
                 content:
-                    "You can enter your remote server credentials <br>" +
-                        "in order to see the list of available databases"
+                    "To see the list of available databases, " +
+                        "enter your remote server credentials <br>" +
+                        "(for v3.x the list of file systems)"
             });
     }
 
@@ -66,7 +67,7 @@ class migrateDatabase extends viewModelBase {
             return;
         }
 
-        this.spinners.getDatabaseNames(true);
+        this.spinners.getResourceNames(true);
         if (showVersionSpinner) {
             this.spinners.versionDetect(true);
         }
@@ -80,11 +81,13 @@ class migrateDatabase extends viewModelBase {
                     this.model.buildVersion(info.BuildVersion);
                     this.model.fullVersion(info.FullVersion);
                     this.model.databaseNames(info.DatabaseNames);
+                    this.model.fileSystemNames(info.FileSystemNames);
                 } else {
                     this.model.serverMajorVersion(null);
                     this.model.buildVersion(null);
                     this.model.fullVersion(null);
                     this.model.databaseNames([]);
+                    this.model.fileSystemNames([]);
                 }
             })
             .fail((response: JQueryXHR) => {
@@ -93,10 +96,11 @@ class migrateDatabase extends viewModelBase {
                     const message = generalUtils.trimMessage(messageAndOptionalException.message);
                     this.model.serverMajorVersion.setError(message);
                     this.model.databaseNames([]);
+                    this.model.fileSystemNames([]);
                 }
             })
             .always(() => {
-                this.spinners.getDatabaseNames(false);
+                this.spinners.getResourceNames(false);
                 if (showVersionSpinner) {
                     this.spinners.versionDetect(false);
                 }

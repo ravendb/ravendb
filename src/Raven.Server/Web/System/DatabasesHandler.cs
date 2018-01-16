@@ -186,17 +186,19 @@ namespace Raven.Server.Web.System
 
             var buildInfo = await migrator.GetBuildInfo();
             var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion);
+            var fileSystemNames = await migrator.GetFileSystemNames(buildInfo.MajorVersion);
             migrator.DisposeHttpClient(); // the http client isn't needed anymore
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var json = new DynamicJsonValue
                 {
-                    [nameof(BuildInfoWithDatabaseNames.BuildVersion)] = buildInfo.BuildVersion,
-                    [nameof(BuildInfoWithDatabaseNames.ProductVersion)] = buildInfo.ProductVersion,
-                    [nameof(BuildInfoWithDatabaseNames.MajorVersion)] = buildInfo.MajorVersion,
-                    [nameof(BuildInfoWithDatabaseNames.FullVersion)] = buildInfo.FullVersion,
-                    [nameof(BuildInfoWithDatabaseNames.DatabaseNames)] = TypeConverter.ToBlittableSupportedType(databaseNames),
+                    [nameof(BuildInfoWithResourceNames.BuildVersion)] = buildInfo.BuildVersion,
+                    [nameof(BuildInfoWithResourceNames.ProductVersion)] = buildInfo.ProductVersion,
+                    [nameof(BuildInfoWithResourceNames.MajorVersion)] = buildInfo.MajorVersion,
+                    [nameof(BuildInfoWithResourceNames.FullVersion)] = buildInfo.FullVersion,
+                    [nameof(BuildInfoWithResourceNames.DatabaseNames)] = TypeConverter.ToBlittableSupportedType(databaseNames),
+                    [nameof(BuildInfoWithResourceNames.FileSystemNames)] = TypeConverter.ToBlittableSupportedType(fileSystemNames),
                 };
 
                 context.Write(writer, json);

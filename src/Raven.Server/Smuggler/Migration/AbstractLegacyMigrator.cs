@@ -61,9 +61,9 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public static async Task<List<string>> GetDatabasesToMigrate(string serverUrl, HttpClient httpClient, CancellationToken cancelToken)
+        public static async Task<List<string>> GetResourcesToMigrate(string serverUrl, HttpClient httpClient, bool isRavenFs, CancellationToken cancelToken)
         {
-            var url = $"{serverUrl}/databases";
+            var url = $"{serverUrl}/{(isRavenFs ? "fs" : "databases")}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await httpClient.SendAsync(request, cancelToken);
             if (response.StatusCode == HttpStatusCode.Unauthorized)
@@ -72,7 +72,7 @@ namespace Raven.Server.Smuggler.Migration
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Failed to get databases to migrate from server: {serverUrl}, " +
+                throw new InvalidOperationException($"Failed to get {(isRavenFs ? "file systems" : "databases")} to migrate from server: {serverUrl}, " +
                                                     $"status code: {response.StatusCode}, " +
                                                     $"error: {responseString}");
             }

@@ -43,20 +43,18 @@ namespace Raven.Server.Smuggler.Migration
 
             if (ImportRavenFs)
             {
-                Result.AddInfo("Strated processing RavenFS files");
+                Result.AddInfo("Started processing RavenFS files");
                 OnProgress.Invoke(Result.Progress);
 
                 var lastRavenFsEtag = await MigrateRavenFs(state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty);
-                if (state == null)
-                    state = GenerateLastEtagsInfo();
-
+                state = GetLastMigrationState() ?? GenerateLastEtagsInfo();
                 state.LastRavenFsEtag = lastRavenFsEtag;
                 await SaveLastOperationState(state);
             }
 
             if (operateOnTypes != ItemType.None)
             {
-                if (ImportRavenFs && operateOnTypes.HasFlag(DatabaseItemType.Documents) == false)
+                if (ImportRavenFs && operateOnTypes.HasFlag(ItemType.Documents) == false)
                 {
                     Result.Documents.Processed = true;
                     OnProgress.Invoke(Result.Progress);
@@ -101,7 +99,8 @@ namespace Raven.Server.Smuggler.Migration
                 var lastState = await GetLastState(canGetLastStateByOperationId, operationId);
                 if (lastState != null)
                 {
-                    lastState.LastRavenFsEtag = state?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty;
+                    // refresh the migration state, in case we are running here with a RavenFS concurrently
+                    lastState.LastRavenFsEtag = GetLastMigrationState()?.LastRavenFsEtag ?? LastEtagsInfo.EtagEmpty;
                     await SaveLastOperationState(lastState);
                 }
             }
