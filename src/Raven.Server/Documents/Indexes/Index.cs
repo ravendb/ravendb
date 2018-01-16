@@ -1560,6 +1560,14 @@ namespace Raven.Server.Documents.Indexes
                     var stats = _indexStorage.ReadStats(tx);
 
                     progress.Collections = new Dictionary<string, IndexProgress.CollectionStats>();
+                    progress.IndexRunningStatus = Status;
+
+                    var indexingPerformance = _lastStats?.ToIndexingPerformanceLiveStats();
+                    if (indexingPerformance?.DurationInMs > 0)
+                    {
+                        progress.ProcessedPerSecond = indexingPerformance.InputCount / (indexingPerformance.DurationInMs / 1000);
+                    }
+
                     foreach (var collection in Collections)
                     {
                         var collectionStats = stats.Collections[collection];

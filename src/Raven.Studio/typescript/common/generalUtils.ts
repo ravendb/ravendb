@@ -37,32 +37,32 @@ class genUtils {
 
         if (duration.years() >= 1) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(Math.floor(duration.years()), " year ", " years ") :
+                pluralizeHelpers.pluralize(Math.floor(duration.years()), "year ", "years ") :
                 Math.floor(duration.years()) + " y ");
         }
         if (duration.months() >= 1) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(Math.floor(duration.months()), " month ", " months ") :
+                pluralizeHelpers.pluralize(Math.floor(duration.months()), "month ", "months ") :
                 Math.floor(duration.months()) + " m ");
         }
         if (duration.days() >= 1) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(Math.floor(duration.days()), " day ", " days ") :
+                pluralizeHelpers.pluralize(Math.floor(duration.days()), "day ", "days ") :
                 Math.floor(duration.days()) + " d ");
         }
         if (duration.hours() > 0) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(duration.hours(), " hour ", " hours ") :
+                pluralizeHelpers.pluralize(duration.hours(), "hour ", "hours ") :
                 duration.hours() + " h ");
         }
         if (duration.minutes() > 0) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(duration.minutes(), " minute ", " minutes ") :
+                pluralizeHelpers.pluralize(duration.minutes(), "minute ", "minutes ") :
                 duration.minutes() + " m ");
         }
         if (duration.seconds() > 0 && !skipSecondsAndMilliseconds) {
             timeTokens.push(longFormat ?
-                pluralizeHelpers.pluralize(duration.seconds(), " second ", " seconds ") :
+                pluralizeHelpers.pluralize(duration.seconds(), "second ", "seconds ") :
                 duration.seconds() + " s ");
         }
         if (duration.milliseconds() > 0 && !skipSecondsAndMilliseconds) {
