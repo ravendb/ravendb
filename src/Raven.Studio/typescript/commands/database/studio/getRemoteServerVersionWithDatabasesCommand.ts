@@ -7,7 +7,7 @@ class getRemoteServerVersionWithDatabasesCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Smuggler.Migration.BuildInfoWithDatabaseNames> {
+    execute(): JQueryPromise<Raven.Server.Smuggler.Migration.BuildInfoWithResourceNames> {
         const args = {
             serverUrl: this.serverUrl,
             userName: this.userName,

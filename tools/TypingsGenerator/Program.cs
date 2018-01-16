@@ -195,7 +195,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SingleDatabaseMigrationConfiguration));
             scripter.AddType(typeof(OfflineMigrationResult));
             scripter.AddType(typeof(OfflineMigrationProgress));
-            scripter.AddType(typeof(BuildInfoWithDatabaseNames));
+            scripter.AddType(typeof(BuildInfoWithResourceNames));
             scripter.AddType(typeof(MigratedServerUrls));
 
             // revisions

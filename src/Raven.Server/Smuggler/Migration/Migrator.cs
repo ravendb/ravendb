@@ -172,6 +172,21 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
+        public async Task<List<string>> GetFileSystemNames(MajorVersion builMajorVersion)
+        {
+            if (builMajorVersion != MajorVersion.V30 && builMajorVersion != MajorVersion.V35)
+                return new List<string>();
+
+            try
+            {
+                return await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, true ,_serverStore.ServerShutdown);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return new List<string>();
+            }
+        }
+
         public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion)
         {
             if (builMajorVersion == MajorVersion.Unknown)
@@ -182,7 +197,7 @@ namespace Raven.Server.Smuggler.Migration
             {
                 return builMajorVersion == MajorVersion.V4
                     ? await Importer.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown)
-                    : await AbstractLegacyMigrator.GetDatabasesToMigrate(_serverUrl, _httpClient, _serverStore.ServerShutdown);
+                    : await AbstractLegacyMigrator.GetResourcesToMigrate(_serverUrl, _httpClient, false, _serverStore.ServerShutdown);
             }
             catch (UnauthorizedAccessException)
             {
