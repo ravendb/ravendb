@@ -177,29 +177,32 @@ namespace Raven.Database.Bundles.ScriptedIndexResults
 
                             try
                             {
-                                database.TransactionalStorage.Batch(accessor =>
+                                using (database.DocumentLock.Lock())
                                 {
-                                    foreach (var operation in scope.GetOperations())
+                                    database.TransactionalStorage.Batch(accessor =>
                                     {
-                                        switch (operation.Type)
+                                        foreach (var operation in scope.GetOperations())
                                         {
-                                            case ScriptedJsonPatcher.OperationType.Put:
-                                                if (Log.IsDebugEnabled)
-                                                    Log.Debug("Perform PUT on {0} for scripted index results {1}", operation.Document.Key, scriptedIndexResults.Id);
+                                            switch (operation.Type)
+                                            {
+                                                case ScriptedJsonPatcher.OperationType.Put:
+                                                    if (Log.IsDebugEnabled)
+                                                        Log.Debug("Perform PUT on {0} for scripted index results {1}", operation.Document.Key, scriptedIndexResults.Id);
 
-                                                database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson, operation.Document.Metadata, null);
-                                                break;
-                                            case ScriptedJsonPatcher.OperationType.Delete:
-                                                if (Log.IsDebugEnabled)
-                                                    Log.Debug("Perform DELETE on {0} for scripted index results {1}", operation.DocumentKey, scriptedIndexResults.Id);
+                                                    database.Documents.Put(operation.Document.Key, operation.Document.Etag, operation.Document.DataAsJson, operation.Document.Metadata, null);
+                                                    break;
+                                                case ScriptedJsonPatcher.OperationType.Delete:
+                                                    if (Log.IsDebugEnabled)
+                                                        Log.Debug("Perform DELETE on {0} for scripted index results {1}", operation.DocumentKey, scriptedIndexResults.Id);
 
-                                                database.Documents.Delete(operation.DocumentKey, null, null);
-                                                break;
-                                            default:
-                                                throw new ArgumentOutOfRangeException("operation.Type: " + operation.Type);
+                                                    database.Documents.Delete(operation.DocumentKey, null, null);
+                                                    break;
+                                                default:
+                                                    throw new ArgumentOutOfRangeException("operation.Type: " + operation.Type);
+                                            }
                                         }
-                                    }
-                                });
+                                    });
+                                }
 
                                 shouldRetry = false;
                             }
