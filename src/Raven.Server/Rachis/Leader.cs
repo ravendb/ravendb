@@ -15,6 +15,7 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Sparrow.Collections.LockFree;
+using Sparrow.Json;
 using Sparrow.Threading;
 using Voron.Exceptions;
 using Voron.Impl.Extensions;
@@ -31,6 +32,8 @@ namespace Raven.Server.Rachis
         private Task _topologyModification;
         private readonly RachisConsensus _engine;
 
+        public delegate object ConvertResultFromLeader(JsonOperationContext ctx, long index, object result);
+
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries =
@@ -40,6 +43,8 @@ namespace Raven.Server.Rachis
         {
             public long CommandIndex;
             public object Result;
+            public JsonOperationContext Context;
+            public ConvertResultFromLeader ConvertResult;
             public TaskCompletionSource<(long, object)> TaskCompletionSource;
             public Action<TaskCompletionSource<(long, object)>> OnNotify;
         }
@@ -614,7 +619,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task<(long Index, object Result)> PutAsync(CommandBase cmd)
+        public Task<(long Index, object Result)> PutAsync(JsonOperationContext ctx, CommandBase cmd)
         {
             Task<(long Index, object Result)> task;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -625,14 +630,26 @@ namespace Raven.Server.Rachis
 
                 var index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
-                task = AddToEntries(index);
+                task = AddToEntries(index, GetConvertResult(cmd), ctx);
             }
 
             _newEntry.Set();
             return task;
         }
 
-        public Task<(long Index, object Result)> AddToEntries(long index)
+        private ConvertResultFromLeader GetConvertResult(CommandBase cmd)
+        {
+            switch (cmd)
+            {
+                case AddOrUpdateCompareExchangeBatchCommand _:
+                case CompareExchangeCommandBase _:
+                    return CompareExchangeCommandBase.ConvertResult;
+                default:
+                    return null;
+            }
+        }
+
+        public Task<(long Index, object Result)> AddToEntries(long index, ConvertResultFromLeader convertResult, JsonOperationContext ctx)
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
             _entries[index] =
@@ -640,8 +657,10 @@ namespace Raven.Server.Rachis
                     CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
                     {
                         CommandIndex = index,
-                        TaskCompletionSource = tcs
-                    };
+                        TaskCompletionSource = tcs,
+                        ConvertResult = convertResult,
+                        Context = ctx
+                };
             return tcs.Task;
         }
 
@@ -889,7 +908,30 @@ namespace Raven.Server.Rachis
         {
             if (_entries.TryGetValue(index, out CommandState value))
             {
-                value.Result = result;
+                if (value.ConvertResult == null)
+                {
+                    ValidateUsableReturnType(result);
+                    value.Result = result;
+                }
+                else
+                {
+                    value.Result = value.ConvertResult(value.Context, index, result);
+                }
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private void ValidateUsableReturnType(object result)
+        {
+            if (result == null)
+                return;
+
+            if (result is BlittableJsonReaderObject || result is BlittableJsonReaderArray)
+                throw new InvalidOperationException("You cannot return a blittable here, it is bound to the context of the state machine, and cannot leak outside");
+
+            if (TypeConverter.IsSupportedType(result) == false)
+            {
+                throw new InvalidOperationException("We don't support type " + result.GetType().FullName + ".");
             }
         }
     }

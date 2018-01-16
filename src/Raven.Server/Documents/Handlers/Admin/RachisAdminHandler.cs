@@ -36,19 +36,21 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
+
+                var command = CommandBase.CreateFrom(commandJson);
+
+                var isClusterAdmin = IsClusterAdmin();
+
+                command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
+
+                var (etag, result) = await ServerStore.Engine.PutAsync(command);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                HttpContext.Response.Headers["Reached-Leader"] = "true";
+                var ms = context.CheckoutMemoryStream();
                 try
                 {
-                    var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
-
-                    var command = CommandBase.CreateFrom(commandJson);
-
-                    var isClusterAdmin = IsClusterAdmin();
-
-                    command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
-
-                    var (etag, result) = await ServerStore.Engine.PutAsync(command);
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    using (var writer = new BlittableJsonTextWriter(context, ms))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -57,15 +59,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                         });
                         writer.Flush();
                     }
+                    // now that we know that we properly serialized it
+                    ms.Position = 0;
+                    await ms.CopyToAsync(ResponseBodyStream());
                 }
-                catch (NotLeadingException) 
+                finally
                 {
-                    throw;
-                }
-                catch (Exception)
-                {
-                    HttpContext.Response.Headers["Reached-Leader"] = "true";
-                    throw;
+                    context.ReturnMemoryStream(ms);
                 }
             }
         }

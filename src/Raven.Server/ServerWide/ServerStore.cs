@@ -1439,7 +1439,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException("Only the leader can set the license limits!");
 
             var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits);
-            _engine.Put(command);
+            _engine.PutAsync(command).IgnoreUnobservedExceptions();
         }
 
         public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits)

@@ -77,8 +77,6 @@ namespace FastTests.Client
             Assert.Equal("Karmel", res2.Value.Name);
             Assert.True(res2.Successful);
 
-            WaitForUserToContinueTheTest(store);
-
             await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
             await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
 
