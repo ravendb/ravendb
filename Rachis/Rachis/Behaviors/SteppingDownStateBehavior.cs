@@ -59,20 +59,6 @@ namespace Rachis.Behaviors
             }
         }
 
-        public override void HandleMessage(MessageContext context)
-        {
-            if (_log.IsDebugEnabled)
-            {
-                _log.Debug("SteppingDown: " + context.Message);
-            }            
-            base.HandleMessage(context);
-        }
-
-        public override AppendEntriesResponse Handle(AppendEntriesRequest req)
-        {
-            return base.Handle(req);
-        }
-
         private void TransferToBestMatch()
         {
             var bestMatch = _matchIndexes.OrderByDescending(x => x.Value)
