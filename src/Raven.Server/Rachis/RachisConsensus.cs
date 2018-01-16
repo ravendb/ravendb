@@ -717,20 +717,14 @@ namespace Raven.Server.Rachis
             if (leader == null)
                 throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
 
-            var putTask = leader.PutAsync(cmd);
-            if (await putTask.WaitWithTimeout(OperationTimeout) == false)
-                throw new TimeoutException($"Waited for {OperationTimeout} but the command was not applied in this time.");
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var putTask = leader.PutAsync(context, cmd);
+                if (await putTask.WaitWithTimeout(OperationTimeout) == false)
+                    throw new TimeoutException($"Waited for {OperationTimeout} but the command was not applied in this time.");
 
-            return await putTask;
-        }
-
-        public void Put(CommandBase cmd)
-        {
-            var leader = _currentLeader;
-            if (leader == null)
-                throw new NotLeadingException("Not a leader, cannot accept commands. " + _lastStateChangeReason);
-
-            leader.PutAsync(cmd);
+                return await putTask;
+            }
         }
 
         public void SwitchToCandidateStateOnTimeout()

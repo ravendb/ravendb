@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
@@ -22,6 +24,35 @@ namespace RachisTests
                 return -1;
             }
             return res.Topology.Members.Count;
+        }
+
+        [NightlyBuildFact]
+        public async Task PutUniqeValueToDifferentNode()
+        {
+            var clusterSize = 3;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            using (var store = new DocumentStore
+            {
+                Urls = new[] { Servers[1].WebUrl },
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = new DatabaseRecord(databaseName);
+                doc.Topology = new DatabaseTopology
+                {
+                    Members = new List<string>
+                    {
+                        "B"
+                    }
+                };
+                var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
+                Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
+
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
+                var val = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test"));
+                Assert.Equal("Karmel", val.Value);
+            }
         }
 
         [NightlyBuildFact]

@@ -13,13 +13,13 @@ namespace Raven.Server.ServerWide.Commands
         public string Key;
         public long Index;
 
-        protected CompareExchangeCommandBase(){ }
+        protected CompareExchangeCommandBase() { }
 
         protected CompareExchangeCommandBase(string key, long index)
         {
-            if(string.IsNullOrEmpty(key))
-                throw new ArgumentNullException(nameof(key),"The key argument must have value");
-            if(index < 0)
+            if (String.IsNullOrEmpty(key))
+                throw new ArgumentNullException(nameof(key), "The key argument must have value");
+            if (index < 0)
                 throw new InvalidDataException("Index must be a non-negative number");
 
             Key = key;
@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
-        
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var json = base.ToJson(context);
@@ -35,13 +35,51 @@ namespace Raven.Server.ServerWide.Commands
             json[nameof(Index)] = Index;
             return json;
         }
+
+        public override object FromRemote(object remoteResult)
+        {
+            return JsonDeserializationCluster.CompareExchangeResult((BlittableJsonReaderObject)remoteResult);
+        }
+
+        public class CompareExchangeResult : IDynamicJsonValueConvertible
+        {
+            public long Index;
+            public object Value;
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(Index)] = Index,
+                    [nameof(Value)] = Value
+                };
+            }
+        }
+
+        public static object ConvertResult(JsonOperationContext ctx, long index, object result)
+        {
+            if (result is ValueTuple<long, object> tuple)
+            {
+                if (tuple.Item2 is BlittableJsonReaderObject value)
+                    return new CompareExchangeResult
+                    {
+                        Index = tuple.Item1,
+                        Value = ctx.ReadObject(value, "clone-context")
+                    };
+                return new CompareExchangeResult
+                {
+                    Index = tuple.Item1,
+                    Value = tuple.Item2
+                };
+            }
+            throw new InvalidOperationException("Unable to convert result type: " + result?.GetType()?.FullName + ", " + result);
+        }
     }
 
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
-        public RemoveCompareExchangeCommand(){}
-        public RemoveCompareExchangeCommand(string key, long index) : base(key, index){}
-        
+        public RemoveCompareExchangeCommand() { }
+        public RemoveCompareExchangeCommand(string key, long index) : base(key, index) { }
+
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
             var dbKey = Key.ToLowerInvariant();
@@ -64,13 +102,13 @@ namespace Raven.Server.ServerWide.Commands
             return (index, null);
         }
     }
-    
+
     public class AddOrUpdateCompareExchangeCommand : CompareExchangeCommandBase
     {
         public BlittableJsonReaderObject Value;
 
-        public AddOrUpdateCompareExchangeCommand(){}
-        
+        public AddOrUpdateCompareExchangeCommand() { }
+
         public AddOrUpdateCompareExchangeCommand(string key, BlittableJsonReaderObject value, long index) : base(key, index)
         {
             Value = value;

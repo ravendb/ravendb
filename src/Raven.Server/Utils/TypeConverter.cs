@@ -26,6 +26,87 @@ namespace Raven.Server.Utils
 
         private static readonly ConcurrentDictionary<Type, PropertyAccessor> PropertyAccessorCache = new ConcurrentDictionary<Type, PropertyAccessor>();
 
+        public static bool IsSupportedType(object value)
+        {
+            if (value == null || value is DynamicNullObject)
+                return true;
+
+            if (value is DynamicBlittableJson)
+                return true;
+
+            if (value is string)
+                return true;
+
+            if (value is LazyStringValue || value is LazyCompressedStringValue)
+                return true;
+
+            if (value is bool)
+                return true;
+
+            if (value is int || value is long || value is double || value is decimal || value is float)
+                return true;
+
+            if (value is LazyNumberValue)
+                return true;
+
+            if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
+                return true;
+
+            if (value is Guid)
+                return true;
+
+            if (value is Enum)
+                return true;
+
+            if (value is IEnumerable<IFieldable> || value is IFieldable)
+                return true;
+
+            List<bool> supporeted = new List<bool>();
+
+            if (value is IDictionary dictionary)
+            {
+                foreach (var key in dictionary.Keys)
+                    supporeted.Add(IsSupportedType(dictionary[key]));
+
+                return supporeted.All(v => v);
+            }
+
+            if (value is IEnumerable<char>)
+                return true;
+
+            if (value is byte[])
+                return true;
+
+            if (value is IEnumerable enumerable)
+            {
+                if (ShouldTreatAsEnumerable(enumerable))
+                {
+                    var objectEnumerable = value as IEnumerable<object>;
+                    var supporetedEnumerable = objectEnumerable?.Select(IsSupportedType) ?? enumerable.Cast<object>().Select(IsSupportedType);
+
+                    return supporetedEnumerable.All(v => v);
+                }
+            }
+
+            var accessor = GetPropertyAccessor(value);
+
+            foreach (var property in accessor.PropertiesInOrder)
+            {
+                var propertyValue = property.Value.GetValue(value);
+                var propertyValueAsEnumerable = propertyValue as IEnumerable<object>;
+                if (propertyValueAsEnumerable != null && ShouldTreatAsEnumerable(propertyValue))
+                {
+                    supporeted.Add(propertyValueAsEnumerable.Select(IsSupportedType).All(v => v));
+                    continue;
+                }
+
+                supporeted.Add(IsSupportedType(propertyValue));
+            }
+
+            return supporeted.All(v=>v);
+        }
+
+
         public static object ToBlittableSupportedType(object value, bool flattenArrays = false)
         {
             return ToBlittableSupportedType(value, value, flattenArrays, 0);

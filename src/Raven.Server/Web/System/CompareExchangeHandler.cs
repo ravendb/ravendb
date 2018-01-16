@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -133,7 +134,7 @@ namespace Raven.Server.Web.System
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var tuple = ((long Index, object Value))res;
+                        var tuple = (AddOrUpdateCompareExchangeCommand.CompareExchangeResult)res;
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(CompareExchangeResult<object>.Index)] = tuple.Index,
@@ -165,7 +166,7 @@ namespace Raven.Server.Web.System
                     await ServerStore.Cluster.WaitForIndexNotification(raftIndex);
                     using (context.OpenReadTransaction())
                     {
-                        var tuple = ((long Index, object Value))res;
+                        var tuple = (AddOrUpdateCompareExchangeCommand.CompareExchangeResult)res;
                         context.Write(writer, new DynamicJsonValue
                         {
                             [nameof(CompareExchangeResult<object>.Index)] = tuple.Index,

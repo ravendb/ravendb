@@ -750,7 +750,7 @@ namespace Raven.Server.ServerWide
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    _parent.CurrentLeader.AddToEntries(index);
+                    _parent.CurrentLeader.AddToEntries(index, null, null);
                 }
             };
         }
