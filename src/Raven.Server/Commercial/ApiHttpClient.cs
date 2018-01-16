@@ -8,7 +8,7 @@ namespace Raven.Server.Commercial
 {
     public static class ApiHttpClient
     {
-        private const string ApiRavenDbNet = "https://api.ravendb.net";
+        public const string ApiRavenDbNet = "https://api.ravendb.net";
 
         public static HttpClient Instance;
 

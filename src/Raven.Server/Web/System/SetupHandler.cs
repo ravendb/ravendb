@@ -79,6 +79,7 @@ namespace Raven.Server.Web.System
                     catch (Exception e)
                     {
                         result = responseString;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                         error = e.ToString();
                     }
                     
@@ -89,7 +90,6 @@ namespace Raven.Server.Web.System
                             new JsonSerializer().Serialize(streamWriter, new
                             {
                                 Message = GeneralDomainRegistrationServiceError,
-                                HttpContext.Response.StatusCode,
                                 Response = result,
                                 Error = error
                             });
@@ -147,6 +147,7 @@ namespace Raven.Server.Web.System
                     catch (Exception e)
                     {
                         result = responseString;
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                         error = e.ToString();
                     }
 
@@ -157,7 +158,6 @@ namespace Raven.Server.Web.System
                             new JsonSerializer().Serialize(streamWriter, new
                             {
                                 Message = GeneralDomainRegistrationServiceError,
-                                HttpContext.Response.StatusCode,
                                 Response = result,
                                 Error = error
                             });
@@ -684,7 +684,7 @@ namespace Raven.Server.Web.System
             return url;
         }
 
-        private static string GeneralDomainRegistrationServiceError = "The domain registration service is currently down. Please try again later.";
+        private static string GeneralDomainRegistrationServiceError = "The domain registration service (" + ApiHttpClient.ApiRavenDbNet + ") is currently not available. Please try again later.";
     }
 
     public class LicenseInfo
