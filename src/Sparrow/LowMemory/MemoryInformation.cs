@@ -79,6 +79,14 @@ namespace Sparrow.LowMemory
             var path = "/proc/meminfo";
             return GetMemoryUsageByFilter(path, "MemAvailable"); // this is different then sysinfo freeram+buffered (and the closest to the real free memory)
         }
+        
+        public static long GetFreeMemoryFromProcMemInfo()
+        {
+            // MemFree is really different then MemAvailable (while free is usually lower then the real free,
+            // and available is only estimated free which sometimes higher then the real free memory)
+            var path = "/proc/meminfo";
+            return GetMemoryUsageByFilter(path, "MemFree");
+        }
 
         public static long GetMemoryUsageByFilter(string path, string filter)
         {
@@ -140,7 +148,7 @@ namespace Sparrow.LowMemory
             return (installedMemoryInGb, usableMemoryInGb);
         }
 
-        public static unsafe MemoryInfoResult GetMemoryInfo()
+        public static unsafe MemoryInfoResult GetMemoryInfo(bool useFreeInsteadOfAvailable = false)
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -225,7 +233,10 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
-                    availableRamInBytes = (ulong)GetAvailableMemoryFromProcMemInfo();
+                    if (useFreeInsteadOfAvailable)
+                        availableRamInBytes = (ulong)GetFreeMemoryFromProcMemInfo();
+                    else
+                        availableRamInBytes = (ulong)GetAvailableMemoryFromProcMemInfo();
                     totalPhysicalMemoryInBytes = totalram;
                 }
                 else
