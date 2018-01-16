@@ -19,6 +19,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private static readonly string CollectionFullPath = $"{Constants.Documents.Metadata.Key}.{Constants.Documents.Metadata.Collection}";
 
+        private readonly DocumentDatabase _database;
         private readonly Stream _stream;
         private readonly DocumentsOperationContext _context;
         private DatabaseItemType _currentType;
@@ -40,8 +41,9 @@ namespace Raven.Server.Smuggler.Documents
 
         private readonly List<IDisposable> _disposibales = new List<IDisposable>();
 
-        public CsvStreamSource(Stream stream, DocumentsOperationContext context, string collection)
+        public CsvStreamSource(DocumentDatabase database, Stream stream, DocumentsOperationContext context, string collection)
         {
+            _database = database;
             _stream = stream;
             _context = context;
             _currentType = DatabaseItemType.Documents;
@@ -222,7 +224,8 @@ namespace Raven.Server.Smuggler.Documents
                         Id = context.GetLazyString(idStr),
                         ChangeVector = string.Empty,
                         Flags = DocumentFlags.None,
-                        NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler
+                        NonPersistentFlags = NonPersistentDocumentFlags.FromSmuggler,
+                        LastModified = _database.Time.GetUtcNow(),
                     },
                     Attachments = null
                 };

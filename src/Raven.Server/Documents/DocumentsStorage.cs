@@ -1203,12 +1203,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long GetOrCreateLastModifiedTicks(long? lastModifiedTicks)
         {
-            Debug.Assert(lastModifiedTicks.HasValue == false || 
-                         lastModifiedTicks.Value != DateTime.MinValue.Ticks);
+            if (lastModifiedTicks.HasValue)
+            {
+                Debug.Assert(lastModifiedTicks.Value != DateTime.MinValue.Ticks, $"lastModifiedTicks cannot have DateTime.MinValue. {_name}");
+                return lastModifiedTicks.Value;
+            }
 
-            return lastModifiedTicks ?? DocumentDatabase.Time.GetUtcNow().Ticks;
+            return DocumentDatabase.Time.GetUtcNow().Ticks;
         }
 
         public long GenerateNextEtagForReplicatedTombstoneMissingDocument(DocumentsOperationContext context)
