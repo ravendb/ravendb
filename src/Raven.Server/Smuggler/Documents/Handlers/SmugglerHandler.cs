@@ -556,7 +556,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 entity = char.ToUpper(entity[0]) + entity.Substring(1);
 
             result.AddInfo($"Import collection: {entity}");
-            using (var source = new CsvStreamSource(stream, context, entity))
+            using (var source = new CsvStreamSource(Database, stream, context, entity))
             {
                 var destination = new DatabaseDestination(Database);
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, result, onProgress, token.Token);
