@@ -185,7 +185,8 @@ namespace Raven.Server.Web.System
             }, ServerStore);
 
             var buildInfo = await migrator.GetBuildInfo();
-            var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion);
+            var authorized = new Reference<bool>();
+            var databaseNames = await migrator.GetDatabaseNames(buildInfo.MajorVersion, authorized);
             var fileSystemNames = await migrator.GetFileSystemNames(buildInfo.MajorVersion);
             migrator.DisposeHttpClient(); // the http client isn't needed anymore
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -199,6 +200,7 @@ namespace Raven.Server.Web.System
                     [nameof(BuildInfoWithResourceNames.FullVersion)] = buildInfo.FullVersion,
                     [nameof(BuildInfoWithResourceNames.DatabaseNames)] = TypeConverter.ToBlittableSupportedType(databaseNames),
                     [nameof(BuildInfoWithResourceNames.FileSystemNames)] = TypeConverter.ToBlittableSupportedType(fileSystemNames),
+                    [nameof(BuildInfoWithResourceNames.Authorized)] = authorized.Value
                 };
 
                 context.Write(writer, json);

@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 
@@ -132,7 +133,12 @@ namespace Raven.Server.Smuggler.Migration
             if (databases == null || databases.Count == 0)
             {
                 // migrate all databases
-                var databaseNames = await GetDatabaseNames(_buildMajorVersion);
+                var authorized = new Reference<bool>();
+                var databaseNames = await GetDatabaseNames(_buildMajorVersion, authorized);
+                if (authorized.Value == false)
+                    throw new InvalidOperationException($"You are not authorized to fetch " +
+                                                        $"the database names for server: {_serverUrl}");
+
                 if (databases == null)
                     databases = new List<DatabaseMigrationSettings>();
 
@@ -187,11 +193,11 @@ namespace Raven.Server.Smuggler.Migration
             }
         }
 
-        public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion)
+        public async Task<List<string>> GetDatabaseNames(MajorVersion builMajorVersion, Reference<bool> authorized)
         {
+            authorized.Value = true;
             if (builMajorVersion == MajorVersion.Unknown)
                 return new List<string>();
-
 
             try
             {
@@ -201,6 +207,7 @@ namespace Raven.Server.Smuggler.Migration
             }
             catch (UnauthorizedAccessException)
             {
+                authorized.Value = false;
                 return new List<string>();
             }
         }

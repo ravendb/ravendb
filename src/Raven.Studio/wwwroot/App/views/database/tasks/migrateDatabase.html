@@ -39,9 +39,25 @@
                                 </div>
                             </div>
                         </div>
+                        
+                        <div class="form-group" data-bind="visible: hasRavenFs">
+                            <label class="control-label">Resource type</label>
+                            <div class="flex-grow" data-bind="validationElement: authenticationMethod">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default"
+                                            data-bind="click: _.partial(importRavenFs, false), css: { active: !importRavenFs() }">
+                                        Database
+                                    </button>
+                                    <button type="button" class="btn btn-default"
+                                            data-bind="click: _.partial(importRavenFs, true), css: { active: importRavenFs }">
+                                        RavenFS
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="form-group" data-bind="validationElement: resourceName">
-                            <label class="control-label"><span data-bind="text: resourceTypeName"></span> name <i data-bind="visible: isLegacy" id="database-name-info" class="icon-info text-info"></i></label>
+                            <label class="control-label"><span data-bind="text: resourceTypeName"></span> name</label>
                             <div class="flex-grow">
                                 <div class="dropdown btn-block">
                                     <input type="text" 
@@ -59,21 +75,6 @@
                         </div>
                         
                         <div data-bind="visible: isLegacy">
-                            <div class="form-group" data-bind="visible: hasRavenFs">
-                                <label class="control-label">Resource type</label>
-                                <div class="flex-grow" data-bind="validationElement: authenticationMethod">
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(importRavenFs, false), css: { active: !importRavenFs() }">
-                                            Database
-                                        </button>
-                                        <button type="button" class="btn btn-default"
-                                                data-bind="click: _.partial(importRavenFs, true), css: { active: importRavenFs }">
-                                            RavenFS
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                             <div class="form-group">
                                 <label class="control-label">Authentication method</label>
                                 <div class="flex-grow" data-bind="validationElement: authenticationMethod">

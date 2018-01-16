@@ -18,5 +18,7 @@ namespace Raven.Server.Smuggler.Migration
         public List<string> DatabaseNames { get; set; }
 
         public List<string> FileSystemNames { get; set; }
+
+        public bool Authorized { get; set; }
     }
 }

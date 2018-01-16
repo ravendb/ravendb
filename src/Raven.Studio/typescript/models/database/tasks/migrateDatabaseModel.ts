@@ -17,7 +17,8 @@ class migrateDatabaseModel {
     importRavenFs = ko.observable(false);
 
     authenticationMethod = ko.observable<authenticationMethod>("none");
-    
+    authorized = ko.observable(true);
+
     serverMajorVersion = ko.observable<Raven.Server.Smuggler.Migration.MajorVersion>("Unknown");
     buildVersion = ko.observable<number>();
     fullVersion = ko.observable<string>();
@@ -160,6 +161,14 @@ class migrateDatabaseModel {
             const authMethod = this.authenticationMethod();
             return authMethod === "windows";
         });
+
+        this.authenticationMethod.subscribe((newValue) => {
+            if (newValue === "none") {
+                this.userName(null);
+                this.password(null);
+                this.domain(null);
+            }
+        });
     }
     
     private initValidation() {
@@ -169,7 +178,16 @@ class migrateDatabaseModel {
         });
 
         this.resourceName.extend({
-            required: true
+            validation: [
+                {
+                    validator: () => !this.hasRavenFs() || this.authorized(),
+                    message: "Unauthorized access to the server, please enter your credentials"
+                },
+                {
+                    validator: (value: string) => value,
+                    message: "This field is required."
+                }
+            ]
         });
         
         this.userName.extend({
