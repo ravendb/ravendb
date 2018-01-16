@@ -39,24 +39,24 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         using (writeTable.Allocate(out TableValueBuilder write))
                         {
-                            var flags = TableValueToFlags((int)Columns.Flags, ref read.Reader);
-                            write.Add(read.Reader.Read((int)Columns.ChangeVector, out int size), size);
-                            write.Add(read.Reader.Read((int)Columns.LowerId, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.RecordSeparator, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.Etag, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.Id, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.Document, out size), size);
+                            var flags = TableValueToFlags((int)RevisionsTable.Flags, ref read.Reader);
+                            write.Add(read.Reader.Read((int)RevisionsTable.ChangeVector, out int size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.LowerId, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.RecordSeparator, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.Etag, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.Id, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.Document, out size), size);
                             write.Add((int)flags);
                             if ((flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision)
                             {
-                                write.Add(read.Reader.Read((int)Columns.Etag, out size), size); // set the DeletedEtag
+                                write.Add(read.Reader.Read((int)RevisionsTable.Etag, out size), size); // set the DeletedEtag
                             }
                             else
                             {
                                 write.Add(NotDeletedRevisionMarker);
                             }
-                            write.Add(read.Reader.Read((int)Columns.LastModified, out size), size);
-                            write.Add(read.Reader.Read((int)Columns.TransactionMarker, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.LastModified, out size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.TransactionMarker, out size), size);
                             writeTable.Set(write, true);
                         }
                     }

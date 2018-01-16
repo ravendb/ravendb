@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Revisions
         private readonly HashSet<string> _tableCreated = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly Logger _logger;
 
-        public enum Columns
+        public enum RevisionsTable
         {
             /* ChangeVector is the table's key as it's unique and will avoid conflicts (by replication) */
             ChangeVector = 0,
@@ -114,39 +114,39 @@ namespace Raven.Server.Documents.Revisions
 
             RevisionsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)Columns.ChangeVector,
+                StartIndex = (int)RevisionsTable.ChangeVector,
                 Count = 1,
                 Name = changeVectorSlice,
                 IsGlobal = true
             });
             RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)Columns.LowerId,
+                StartIndex = (int)RevisionsTable.LowerId,
                 Count = 3,
                 Name = IdAndEtagSlice,
                 IsGlobal = true
             });
             RevisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = (int)Columns.Etag,
+                StartIndex = (int)RevisionsTable.Etag,
                 Name = AllRevisionsEtagsSlice,
                 IsGlobal = true
             });
             RevisionsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
-                StartIndex = (int)Columns.Etag,
+                StartIndex = (int)RevisionsTable.Etag,
                 Name = CollectionRevisionsEtagsSlice
             });
             RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)Columns.DeletedEtag,
+                StartIndex = (int)RevisionsTable.DeletedEtag,
                 Count = 1,
                 Name = DeleteRevisionEtagSlice,
                 IsGlobal = true
             });
             RevisionsSchema.DefineIndex(new TableSchema.SchemaIndexDef
             {
-                StartIndex = (int)Columns.Resolved,
+                StartIndex = (int)RevisionsTable.Resolved,
                 Count = 2,
                 Name = ResolvedFlagByEtagSlice,
                 IsGlobal = true
@@ -433,14 +433,14 @@ namespace Raven.Server.Documents.Revisions
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
             table.DeleteByPrimaryKey(Slices.BeforeAllKeys, deleted =>
             {
-                var lastModified = TableValueToDateTime((int)Columns.LastModified, ref deleted.Reader);
+                var lastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref deleted.Reader);
                 if (lastModified >= time)
                     return false;
 
                 // We won't create tombstones here as it might create LOTS of tombstones 
                 // with the same transaction marker and the same change vector.
 
-                using (TableValueToSlice(context, (int)Columns.LowerId, ref deleted.Reader, out Slice lowerId))
+                using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref deleted.Reader, out Slice lowerId))
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
                     IncrementCountOfRevisions(context, prefixSlice, -1);
@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.Revisions
             if (tvr == null)
                 return null;
 
-            var ptr = tvr.Reader.Read((int)Columns.Document, out int size);
+            var ptr = tvr.Reader.Read((int)RevisionsTable.Document, out int size);
             var data = new BlittableJsonReaderObject(ptr, size, context);
 
             return _documentsStorage.ExtractCollectionName(context, data);
@@ -496,9 +496,9 @@ namespace Raven.Server.Documents.Revisions
                         _database.Time.GetUtcNow() - revision.LastModified <= minimumTimeToKeep.Value)
                         return false;
 
-                    using (TableValueToSlice(context, (int)Columns.ChangeVector, ref deleted.Reader, out Slice key))
+                    using (TableValueToSlice(context, (int)RevisionsTable.ChangeVector, ref deleted.Reader, out Slice key))
                     {
-                        var revisionEtag = TableValueToEtag((int)Columns.Etag, ref deleted.Reader);
+                        var revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref deleted.Reader);
                         CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
                     }
 
@@ -521,7 +521,7 @@ namespace Raven.Server.Documents.Revisions
             long revisionEtag;
             if (table.ReadByKey(key, out TableValueReader tvr))
             {
-                revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
+                revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr);
                 table.Delete(tvr.Id);
             }
             else
@@ -792,11 +792,11 @@ namespace Raven.Server.Documents.Revisions
                     if (take-- <= 0)
                         yield break;
 
-                    var etag = TableValueToEtag((int)Columns.DeletedEtag, ref tvr.Result.Reader);
+                    var etag = TableValueToEtag((int)RevisionsTable.DeletedEtag, ref tvr.Result.Reader);
                     if (etag == NotDeletedRevisionMarker)
                         yield break;
 
-                    using (TableValueToSlice(context, (int)Columns.LowerId, ref tvr.Result.Reader, out Slice lowerId))
+                    using (TableValueToSlice(context, (int)RevisionsTable.LowerId, ref tvr.Result.Reader, out Slice lowerId))
                     {
                         if (IsRevisionsBinEntry(context, table, lowerId, etag) == false)
                             continue;
@@ -819,8 +819,8 @@ namespace Raven.Server.Documents.Revisions
                     return true;
                 }
 
-                var etag = TableValueToEtag((int)Columns.Etag, ref tvr.Reader);
-                var flags = TableValueToFlags((int)Columns.Flags, ref tvr.Reader);
+                var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Reader);
+                var flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr.Reader);
                 Debug.Assert(revisionsBinEntryEtag <= etag, "Revisions bin entry etag candidate cannot meet a bigger etag.");
                 return (flags & DocumentFlags.DeleteRevision) == DocumentFlags.DeleteRevision && revisionsBinEntryEtag >= etag;
             }
@@ -887,16 +887,16 @@ namespace Raven.Server.Documents.Revisions
             var result = new Document
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)Columns.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)Columns.Id, ref tvr),
-                Etag = TableValueToEtag((int)Columns.Etag, ref tvr),
-                LastModified = TableValueToDateTime((int)Columns.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)Columns.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)Columns.TransactionMarker, out int size),
-                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr)
+                LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
+                Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
+                Etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
+                LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out int size),
+                ChangeVector = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr)
             };
 
-            var ptr = tvr.Read((int)Columns.Document, out size);
+            var ptr = tvr.Read((int)RevisionsTable.Document, out size);
             result.Data = new BlittableJsonReaderObject(ptr, size, context);
 
             return result;
@@ -904,21 +904,21 @@ namespace Raven.Server.Documents.Revisions
 
         public static Document ParseRawDataSectionRevisionWithValidation(JsonOperationContext context, ref TableValueReader tvr, int expectedSize, out long etag)
         {
-            var ptr = tvr.Read((int)Columns.Document, out var size);
+            var ptr = tvr.Read((int)RevisionsTable.Document, out var size);
             if (size > expectedSize || size <= 0)
                 throw new ArgumentException("Data size is invalid, possible corruption when parsing BlittableJsonReaderObject", nameof(size));
 
             var result = new Document
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)Columns.LowerId, ref tvr),
-                Id = TableValueToId(context, (int)Columns.Id, ref tvr),
-                Etag = etag = TableValueToEtag((int)Columns.Etag, ref tvr),
+                LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
+                Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
+                Etag = etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
                 Data = new BlittableJsonReaderObject(ptr, size, context),
-                LastModified = TableValueToDateTime((int)Columns.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)Columns.Flags, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)Columns.TransactionMarker, out size),
-                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr)
+                LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)RevisionsTable.Flags, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)RevisionsTable.TransactionMarker, out size),
+                ChangeVector = TableValueToChangeVector(context, (int)RevisionsTable.ChangeVector, ref tvr)
             };
 
             if (size != sizeof(short))
