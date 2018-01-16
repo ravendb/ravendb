@@ -444,7 +444,6 @@ namespace Raven.Server.Smuggler.Documents
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
 
-                var modifiedTicks = _database.Time.GetUtcNow().Ticks;
                 var idsOfDocumentsToUpdateAfterAttachmentDeletion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var documentType in Documents)
@@ -482,7 +481,7 @@ namespace Raven.Server.Smuggler.Documents
                     var conflict = documentType.Conflict;
                     if (conflict != null)
                     {
-                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, modifiedTicks, conflict.Doc, conflict.ChangeVector, 
+                        _database.DocumentsStorage.ConflictsStorage.AddConflict(context, conflict.Id, conflict.LastModified.Ticks, conflict.Doc, conflict.ChangeVector, 
                             conflict.Collection, conflict.Flags, NonPersistentDocumentFlags.FromSmuggler);
 
                         continue;
@@ -514,12 +513,12 @@ namespace Raven.Server.Smuggler.Documents
                             if (document.Flags.Contain(DocumentFlags.DeleteRevision))
                             {
                                 _database.DocumentsStorage.RevisionsStorage.Delete(context, id, document.Data, document.Flags,
-                                    document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
+                                    document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             }
                             else
                             {
                                 _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
-                                    document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
+                                    document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             }
 
                             continue;
@@ -535,12 +534,12 @@ namespace Raven.Server.Smuggler.Documents
                             var newId = id.Substring(0, endIndex);
 
                             _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags, 
-                                document.NonPersistentFlags, document.ChangeVector, modifiedTicks);
+                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
                             continue;
                         }
 
                         PutAttachments(context, document);
-                        _database.DocumentsStorage.Put(context, id, null, document.Data, modifiedTicks, null, document.Flags, document.NonPersistentFlags);
+                        _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
                     }
                 }
 
