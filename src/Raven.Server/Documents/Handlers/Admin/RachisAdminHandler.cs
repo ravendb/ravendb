@@ -634,6 +634,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 topology = ServerStore.GetClusterTopology(context);
             }
             var url = topology.GetUrlFromTag(ServerStore.LeaderTag);
+            if (string.Equals(url, ServerStore.GetNodeHttpServerUrl(), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new NoLeaderException($"This node is not the leader, but the current toplogy does mark it as the leader. Such confusion is usually an indication of a network or configuration problem.");
+            }
             var leaderLocation = url + HttpContext.Request.Path + HttpContext.Request.QueryString;
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove("Content-Type");

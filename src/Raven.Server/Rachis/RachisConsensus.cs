@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -883,7 +884,7 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(Stream stream, Action<RachisHello> sayHello = null)
+        public void AcceptNewConnection(Stream stream, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
         {
             RemoteConnection remoteConnection = null;
             try
@@ -897,12 +898,17 @@ namespace Raven.Server.Rachis
                     {
                         initialMessage = remoteConnection.InitFollower(context);
                         ValidateElectionTimeout(initialMessage);
-                        
-                        sayHello?.Invoke(initialMessage);
                         using (context.OpenReadTransaction())
                         {
                             clusterTopology = GetTopology(context);
                         }
+                        if (clusterTopology.TopologyId == initialMessage.TopologyId && initialMessage.DebugSourceIdentifier == _tag)
+                        {
+                            throw new TopologyMismatchException($"Connection from ({remoteEndpoint}_ with the same topology id and tag {_tag}. " +
+                                                                "It is possible that you have DNS or routing issues that cause multiple URLs to go to the same node."  +
+                                                                $"Connection from {initialMessage.SourceUrl} and attempted to connect to {initialMessage.DestinationUrl}");
+                        }
+                        sayHello?.Invoke(initialMessage);
                     }
 
                     if (initialMessage.TopologyId != clusterTopology.TopologyId &&

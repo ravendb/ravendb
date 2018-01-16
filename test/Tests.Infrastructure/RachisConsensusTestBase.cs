@@ -174,7 +174,7 @@ namespace Tests.Infrastructure
                     break;
                 }
                 var stream = tcpClient.GetStream();
-                rachis.AcceptNewConnection(stream, hello =>
+                rachis.AcceptNewConnection(stream, tcpClient.Client.RemoteEndPoint, hello =>
                 {
                     lock (this)
                     {

@@ -155,7 +155,9 @@ namespace Raven.Server.Rachis
                                 DebugDestinationIdentifier = _tag,
                                 ElectionTimeout = (int)_engine.ElectionTimeout.TotalMilliseconds,
                                 SendingThread = Thread.CurrentThread.ManagedThreadId,
-                                InitialMessageType = InitialMessageType.RequestVote
+                                InitialMessageType = InitialMessageType.RequestVote,
+                                DestinationUrl = _url,
+                                SourceUrl = _engine.Url
                             });
 
                             while (_candidate.Running)
