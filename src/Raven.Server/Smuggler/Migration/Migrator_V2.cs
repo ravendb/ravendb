@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -121,6 +122,14 @@ namespace Raven.Server.Smuggler.Migration
                             throw new InvalidDataException("Metadata doesn't exist");
 
                         var dataStream = await GetAttachmentStream(key);
+                        if (dataStream == null)
+                        {
+                            Result.Tombstones.ReadCount++;
+                            var id = StreamSource.GetLegacyAttachmentId(key);
+                            documentActions.DeleteDocument(id);
+                            continue;
+                        }
+
                         WriteDocumentWithAttachment(documentActions, context, dataStream, key, metadata);
 
                         Result.Documents.ReadCount++;
@@ -167,9 +176,15 @@ namespace Raven.Server.Smuggler.Migration
 
         private async Task<Stream> GetAttachmentStream(string attachmentKey)
         {
-            var url = $"{ServerUrl}/databases/{DatabaseName}/static/{attachmentKey}";
+            var url = $"{ServerUrl}/databases/{DatabaseName}/static/{Uri.EscapeDataString(attachmentKey)}";
             var request = new HttpRequestMessage(HttpMethod.Get, url);
             var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                // the attachment was deleted
+                return null;
+            }
+
             if (response.IsSuccessStatusCode == false)
             {
                 var responseString = await response.Content.ReadAsStringAsync();
