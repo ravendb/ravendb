@@ -207,7 +207,8 @@ namespace Raven.Server.Documents
                                             ref partialTvr, out Slice existingKey))
                                         {
                                             var existingEtag = TableValueToEtag((int)AttachmentsTable.Etag, ref partialTvr);
-                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector);
+                                            var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                                            DeleteInternal(context, existingKey, existingEtag, existingHash, changeVector, lastModifiedTicks);
                                         }
                                     }
                                 }
@@ -761,7 +762,8 @@ namespace Raven.Server.Documents
                 using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, 
                     AttachmentType.Document, null, out Slice partialKeySlice))
                 {
-                    DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedChangeVector, changeVector);
+                    var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                    DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedChangeVector, changeVector, lastModifiedTicks);
                 }
 
                 if (updateDocument)
@@ -830,11 +832,13 @@ namespace Raven.Server.Documents
                 lowerName.Content.Ptr, lowerName.Size,
                 base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
-                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector);
+                var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
+                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
             }
         }
         
-        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name, string expectedChangeVector, string changeVector)
+        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name, 
+            string expectedChangeVector, string changeVector, long lastModifiedTicks)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
@@ -861,7 +865,7 @@ namespace Raven.Server.Documents
                     attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
                
-                CreateTombstone(context, key, attachmentEtag, changeVector);
+                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks);
                 return;
             }
 
@@ -882,16 +886,16 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                DeleteInternal(context, key, etag, hash, changeVector);
+                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks);
             }
 
             table.Delete(tvr.Id);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector)
+        private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, long lastModifiedTicks)
         {
-            CreateTombstone(context, key, etag, changeVector);
+            CreateTombstone(context, key, etag, changeVector, lastModifiedTicks);
 
             // we are running just before the delete, so we may still have 1 entry there, the one just
             // about to be deleted
@@ -904,10 +908,9 @@ namespace Raven.Server.Documents
             table.DeleteByKey(keySlice);
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, string changeVector)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag, string changeVector, long lastModifiedTicks)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
-            var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsTombstonesSlice);
             using (table.Allocate(out TableValueBuilder tvb))
@@ -926,7 +929,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector)
+        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector, long lastModifiedTicks)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             {
@@ -936,26 +939,26 @@ namespace Raven.Server.Documents
                     using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
                     {
                         var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
-                        DeleteInternal(context, key, etag, hash, changeVector);
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks);
                     }
                 });
             }
         }
 
-        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, string changeVector)
+        public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, string changeVector, long lastModifiedTicks)
         {
             using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
             using (GetAttachmentPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks);
             }
         }
 
-        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector)
+        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector, long lastModifiedTicks)
         {
             using (GetAttachmentPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector);
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks);
             }
         }
 

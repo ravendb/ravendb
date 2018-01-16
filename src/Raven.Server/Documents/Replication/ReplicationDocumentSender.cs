@@ -636,11 +636,12 @@ namespace Raven.Server.Documents.Replication
             fixed (byte* pTemp = _tempBuffer)
             {
                 var requiredSize = sizeof(byte) + // type
-                             sizeof(int) + // # of change vectors
-                             cv.Size +
-                             sizeof(short) + // transaction marker
-                             sizeof(int) + // size of key
-                             item.Id.Size;
+                                   sizeof(int) + // # of change vectors
+                                   cv.Size +
+                                   sizeof(short) + // transaction marker
+                                   sizeof(long) + // last modified
+                                   sizeof(int) + // size of key
+                                   item.Id.Size;
 
                 if (requiredSize > _tempBuffer.Length)
                     ThrowTooManyChangeVectorEntries(item);
@@ -656,6 +657,9 @@ namespace Raven.Server.Documents.Replication
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
+                
+                *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
+                tempBufferPos += sizeof(long);
 
                 *(int*)(pTemp + tempBufferPos) = item.Id.Size;
                 tempBufferPos += sizeof(int);
@@ -673,13 +677,14 @@ namespace Raven.Server.Documents.Replication
             fixed (byte* pTemp = _tempBuffer)
             {
                 var requiredSize = sizeof(byte) + // type
-                               sizeof(int) + // # of change vectors
-                               cv.Size +
-                               sizeof(short) + // transaction marker
-                               sizeof(int) + // size of key
-                               item.Id.Size +
-                               sizeof(int) + // size of collection
-                               item.Collection.Size;
+                                   sizeof(int) + // # of change vectors
+                                   cv.Size +
+                                   sizeof(short) + // transaction marker
+                                   sizeof(long) + // last modified
+                                   sizeof(int) + // size of key
+                                   item.Id.Size +
+                                   sizeof(int) + // size of collection
+                                   item.Collection.Size;
 
                 if (requiredSize > _tempBuffer.Length)
                     ThrowTooManyChangeVectorEntries(item);
@@ -695,6 +700,9 @@ namespace Raven.Server.Documents.Replication
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
+
+                *(long*)(pTemp + tempBufferPos) = item.LastModifiedTicks;
+                tempBufferPos += sizeof(long);
 
                 *(int*)(pTemp + tempBufferPos) = item.Id.Size;
                 tempBufferPos += sizeof(int);

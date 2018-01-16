@@ -54,10 +54,7 @@ namespace Raven.Server.Documents
 #endif
 
             var newEtag = _documentsStorage.GenerateNextEtag();
-            
-            Debug.Assert(lastModifiedTicks.HasValue == false || 
-                         lastModifiedTicks.Value != DateTime.MinValue.Ticks);
-            var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
+            var modifiedTicks = _documentsStorage.GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))

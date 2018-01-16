@@ -1049,7 +1049,7 @@ namespace Raven.Server.Documents
             }
 
             var local = GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
-            var modifiedTicks = lastModifiedTicks ?? DocumentDatabase.Time.GetUtcNow().Ticks;
+            var modifiedTicks = GetOrCreateLastModifiedTicks(lastModifiedTicks);
 
             if (local.Tombstone != null)
             {
@@ -1153,7 +1153,7 @@ namespace Raven.Server.Documents
                 table.Delete(doc.StorageId);
 
                 if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
-                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector);
+                    AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
@@ -1201,6 +1201,14 @@ namespace Raven.Server.Documents
                     Etag = etag
                 };
             }
+        }
+
+        public long GetOrCreateLastModifiedTicks(long? lastModifiedTicks)
+        {
+            Debug.Assert(lastModifiedTicks.HasValue == false || 
+                         lastModifiedTicks.Value != DateTime.MinValue.Ticks);
+
+            return lastModifiedTicks ?? DocumentDatabase.Time.GetUtcNow().Ticks;
         }
 
         public long GenerateNextEtagForReplicatedTombstoneMissingDocument(DocumentsOperationContext context)
