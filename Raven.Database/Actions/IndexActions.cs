@@ -126,6 +126,7 @@ namespace Raven.Database.Actions
             Stopwatch sp = null;
             var count = 0;
 
+            using (Database.DocumentLock.Lock())
             using (Database.TransactionalStorage.DisableBatchNesting())
             {
                 // in external transaction number of references will be >= from current transaction references
@@ -570,26 +571,29 @@ namespace Raven.Database.Actions
 
         private void CreateIndexReplacementDocuments(List<IndexInfo> createdIndexes)
         {
-            Database.TransactionalStorage.Batch(accessor =>
+            using (Database.DocumentLock.Lock())
             {
-                foreach (var createdIndex in createdIndexes)
+                Database.TransactionalStorage.Batch(accessor =>
                 {
-                    if (createdIndex.IsSideBySide == false)
-                        continue;
+                    foreach (var createdIndex in createdIndexes)
+                    {
+                        if (createdIndex.IsSideBySide == false)
+                            continue;
 
-                    Database.Documents.Put(
-                        Constants.IndexReplacePrefix + createdIndex.Name,
-                        null,
-                        RavenJObject.FromObject(new IndexReplaceDocument
-                        {
-                            IndexToReplace = createdIndex.OriginalName,
-                            MinimumEtagBeforeReplace = createdIndex.MinimumEtagBeforeReplace,
-                            ReplaceTimeUtc = createdIndex.ReplaceTimeUtc
-                        }),
-                        new RavenJObject(),
-                        null);
-                }
-            });
+                        Database.Documents.Put(
+                            Constants.IndexReplacePrefix + createdIndex.Name,
+                            null,
+                            RavenJObject.FromObject(new IndexReplaceDocument
+                            {
+                                IndexToReplace = createdIndex.OriginalName,
+                                MinimumEtagBeforeReplace = createdIndex.MinimumEtagBeforeReplace,
+                                ReplaceTimeUtc = createdIndex.ReplaceTimeUtc
+                            }),
+                            new RavenJObject(),
+                            null);
+                    }
+                });
+            }
         }
 
         private IndexLockMode? GetCurrentLockMode(string indexName)
@@ -1145,21 +1149,24 @@ namespace Raven.Database.Actions
                 {
                     Database.IndexStorage.RenameIndex(instance, newIndexName);
 
-                    TransactionalStorage.Batch(actions =>
+                    using (Database.DocumentLock.Lock())
                     {
-                        var scriptedIndexSetup = actions.Documents.DocumentByKey(ScriptedIndexResults.IdPrefix + existingIndexName);
-
-                        if (scriptedIndexSetup != null)
+                        TransactionalStorage.Batch(actions =>
                         {
-                            actions.Documents.AddDocument(ScriptedIndexResults.IdPrefix + newIndexName, null, scriptedIndexSetup.DataAsJson, scriptedIndexSetup.Metadata);
+                            var scriptedIndexSetup = actions.Documents.DocumentByKey(ScriptedIndexResults.IdPrefix + existingIndexName);
 
-                            Etag etag;
-                            RavenJObject metadata;
-                            actions.Documents.DeleteDocument(ScriptedIndexResults.IdPrefix + existingIndexName, scriptedIndexSetup.Etag, out metadata, out etag);
-                        }
+                            if (scriptedIndexSetup != null)
+                            {
+                                actions.Documents.AddDocument(ScriptedIndexResults.IdPrefix + newIndexName, null, scriptedIndexSetup.DataAsJson, scriptedIndexSetup.Metadata);
 
-                        WorkContext.HandleIndexRename(existingIndexName, newIndexName, instance.IndexId, actions);
-                    });
+                                Etag etag;
+                                RavenJObject metadata;
+                                actions.Documents.DeleteDocument(ScriptedIndexResults.IdPrefix + existingIndexName, scriptedIndexSetup.Etag, out metadata, out etag);
+                            }
+
+                            WorkContext.HandleIndexRename(existingIndexName, newIndexName, instance.IndexId, actions);
+                        });
+                    }
                 }
             }
         }
