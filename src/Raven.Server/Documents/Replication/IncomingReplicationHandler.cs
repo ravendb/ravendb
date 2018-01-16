@@ -704,6 +704,8 @@ namespace Raven.Server.Documents.Replication
 
                     using (tombstoneRead.Start())
                     {
+                        item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
+
                         var keySize = *(int*)ReadExactly(sizeof(int));
                         item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
                     }
@@ -714,6 +716,8 @@ namespace Raven.Server.Documents.Replication
 
                     using (tombstoneRead.Start())
                     {
+                        item.LastModifiedTicks = *(long*)ReadExactly(sizeof(long));
+                        
                         var keySize = *(int*)ReadExactly(sizeof(int));
                         item.KeyDispose = Slice.From(context.Allocator, ReadExactly(keySize), keySize, out item.Key);
 
@@ -976,11 +980,11 @@ namespace Raven.Server.Documents.Replication
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
                             {
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector);
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector, item.LastModifiedTicks);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                             {
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector);
+                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector, item.LastModifiedTicks);
                             }
                             else
                             {

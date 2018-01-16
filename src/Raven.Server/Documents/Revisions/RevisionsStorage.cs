@@ -368,13 +368,13 @@ namespace Raven.Server.Documents.Revisions
                 if (configuration == null)
                     configuration = GetRevisionsConfiguration(collectionName.Name);
 
-                DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector);
+                DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice lowerId, CollectionName collectionName,
-            RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, string changeVector)
+            RevisionsCollectionConfiguration configuration, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks)
         {
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -382,12 +382,12 @@ namespace Raven.Server.Documents.Revisions
                 // because in case that MinimumRevisionsToKeep is 3 or lower we may get a revision document from replication
                 // which is old. But because we put it first, we make sure to clean this document, because of the order to the revisions.
                 var revisionsCount = IncrementCountOfRevisions(context, prefixSlice, 1);
-                DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, revisionsCount, nonPersistentFlags, changeVector);
+                DeleteOldRevisions(context, table, prefixSlice, collectionName, configuration, revisionsCount, nonPersistentFlags, changeVector, lastModifiedTicks);
             }
         }
 
         private void DeleteOldRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
-            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, string changeVector)
+            RevisionsCollectionConfiguration configuration, long revisionsCount, NonPersistentDocumentFlags nonPersistentFlags, string changeVector, long lastModifiedTicks)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.FromSmuggler) == NonPersistentDocumentFlags.FromSmuggler)
                 return;
@@ -400,7 +400,7 @@ namespace Raven.Server.Documents.Revisions
             if (numberOfRevisionsToDelete <= 0)
                 return;
 
-            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep, changeVector);
+            var deletedRevisionsCount = DeleteRevisions(context, table, prefixSlice, collectionName, numberOfRevisionsToDelete, configuration.MinimumRevisionAgeToKeep, changeVector, lastModifiedTicks);
             Debug.Assert(numberOfRevisionsToDelete >= deletedRevisionsCount);
             IncrementCountOfRevisions(context, prefixSlice, -deletedRevisionsCount);
         }
@@ -422,7 +422,8 @@ namespace Raven.Server.Documents.Revisions
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
                 context.LastDatabaseChangeVector = changeVector;
-                DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector);
+                var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
+                DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
         }
@@ -482,7 +483,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         private long DeleteRevisions(DocumentsOperationContext context, Table table, Slice prefixSlice, CollectionName collectionName,
-            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector)
+            long numberOfRevisionsToDelete, TimeSpan? minimumTimeToKeep, string changeVector, long lastModifiedTicks)
         {
             long maxEtagDeleted = 0;
 
@@ -499,13 +500,13 @@ namespace Raven.Server.Documents.Revisions
                     using (TableValueToSlice(context, (int)RevisionsTable.ChangeVector, ref deleted.Reader, out Slice key))
                     {
                         var revisionEtag = TableValueToEtag((int)RevisionsTable.Etag, ref deleted.Reader);
-                        CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
+                        CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks);
                     }
 
                     maxEtagDeleted = Math.Max(maxEtagDeleted, revision.Etag);
                     if ((revision.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
                     {
-                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector);
+                        _documentsStorage.AttachmentsStorage.DeleteRevisionAttachments(context, revision, changeVector, lastModifiedTicks);
                     }
                     return true;
                 });
@@ -513,7 +514,7 @@ namespace Raven.Server.Documents.Revisions
             return deletedRevisionsCount;
         }
 
-        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector)
+        public void DeleteRevision(DocumentsOperationContext context, Slice key, string collection, string changeVector, long lastModifiedTicks)
         {
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -539,13 +540,13 @@ namespace Raven.Server.Documents.Revisions
                     revisionEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
             }
-            CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
+            CreateTombstone(context, key, revisionEtag, collectionName, changeVector, lastModifiedTicks);
         }
 
-        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag, CollectionName collectionName, string changeVector)
+        private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag, 
+            CollectionName collectionName, string changeVector, long lastModifiedTicks)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
-            var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
             if (table.VerifyKeyExists(keySlice))
@@ -629,7 +630,7 @@ namespace Raven.Server.Documents.Revisions
             {
                 using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
-                    DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector);
+                    DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector, lastModifiedTicks);
                     DeleteCountOfRevisions(context, prefixSlice);
                 }
 
@@ -696,7 +697,7 @@ namespace Raven.Server.Documents.Revisions
                     return;
             }
 
-            DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector);
+            DeleteOldRevisions(context, table, lowerId, collectionName, configuration, nonPersistentFlags, changeVector, lastModifiedTicks);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

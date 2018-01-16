@@ -458,7 +458,7 @@ namespace Raven.Server.Smuggler.Documents
                             switch (tombstone.Type)
                             {
                                 case DocumentTombstone.TombstoneType.Document:
-                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, null, changeVector, new CollectionName(tombstone.Collection));
+                                    _database.DocumentsStorage.Delete(context, key, tombstone.LowerId, null, tombstone.LastModified.Ticks, changeVector, new CollectionName(tombstone.Collection));
                                     break;
                                 case DocumentTombstone.TombstoneType.Attachment:
                                     var idEnd = key.Content.IndexOf(SpecialChars.RecordSeparator);
@@ -467,10 +467,10 @@ namespace Raven.Server.Smuggler.Documents
                                     var id = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(id);
 
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector);
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector, tombstone.LastModified.Ticks);
                                     break;
                                 case DocumentTombstone.TombstoneType.Revision:
-                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector);
+                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, changeVector, tombstone.LastModified.Ticks);
                                     break;
                             }
                         }
