@@ -29,6 +29,7 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly PeepingTomStream _peepingTomStream;
         private readonly DocumentsOperationContext _context;
+        private readonly DocumentDatabase _database;
         private readonly Logger _log;
 
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
@@ -50,6 +51,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             _peepingTomStream = new PeepingTomStream(stream, context);
             _context = context;
+            _database = database;
             _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
         }
 
@@ -711,7 +713,8 @@ namespace Raven.Server.Smuggler.Documents
                             Id = modifier.Id,
                             ChangeVector = modifier.ChangeVector,
                             Flags = modifier.Flags,
-                            NonPersistentFlags = modifier.NonPersistentFlags
+                            NonPersistentFlags = modifier.NonPersistentFlags,
+                            LastModified = modifier.LastModified ?? _database.Time.GetUtcNow(),
                         },
                         Attachments = attachments
                     };

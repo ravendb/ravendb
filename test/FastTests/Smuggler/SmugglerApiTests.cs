@@ -202,7 +202,6 @@ namespace FastTests.Smuggler
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(11);
 
                     await exportStore.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions { IncludeExpired = false }, file).ConfigureAwait(false);
-
                 }
 
                 using (var importStore = GetDocumentStore(new Options

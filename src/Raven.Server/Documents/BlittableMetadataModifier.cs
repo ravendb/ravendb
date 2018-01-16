@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -27,6 +28,7 @@ namespace Raven.Server.Documents
         public string ChangeVector;
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
+        public DateTime? LastModified;
 
         // Change vector is null when importing from v3.5.
         // We'll generate a new change vector in this format: "RV:{revisionsCount}-{firstEtagOfLegacyRevision}"
@@ -53,6 +55,14 @@ namespace Raven.Server.Documents
             return flags;
         }
 
+        private DateTime ReadDateTime(JsonParserState state)
+        {
+            var str = CreateLazyStringValueFromParserState(state);
+            if (DateTime.TryParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time) == false)
+                ThrowInvalidLastModifiedProperty(str);
+            return time;
+        }
+
         private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
         {
             int escapePositionsCount = state.EscapePositions.Count;
@@ -76,6 +86,7 @@ namespace Raven.Server.Documents
             None,
             ReadingId,
             ReadingFlags,
+            ReadingLastModified,
             ReadingChangeVector,
             ReadingFirstEtagOfLegacyRevision,
             ReadingEtag,
@@ -377,7 +388,18 @@ namespace Raven.Server.Documents
                             *(int*)(state.StringBuffer + 1 + sizeof(long)) == 1701406313 &&
                             state.StringBuffer[1 + sizeof(long) + sizeof(int)] == (byte)'d')
                         {
-                            goto case -1;
+                            if (reader.Read() == false)
+                            {
+                                _state = State.ReadingLastModified;
+                                {
+                                    aboutToReadPropertyName = false;
+                                    return true;
+                                }
+                            }
+                            if (state.CurrentTokenType != JsonParserToken.String)
+                                ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state);
+                            LastModified = ReadDateTime(state);
+                            break;
                         }
                     }
 
@@ -419,8 +441,17 @@ namespace Raven.Server.Documents
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 25961 ||
                         state.StringBuffer[18] != (byte)'d')
                     {
-                        aboutToReadPropertyName = true;
-                        return true;
+                        if (reader.Read() == false)
+                        {
+                            _state = State.ReadingLastModified;
+                            {
+                                aboutToReadPropertyName = false;
+                                return true;
+                            }
+                        }
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                            ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state);
+                        LastModified = ReadDateTime(state);
                     }
 
                     goto case -1;
@@ -654,6 +685,14 @@ namespace Raven.Server.Documents
                         ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.Flags, state);
                     Flags = ReadFlags(state);
                     break;
+                case State.ReadingLastModified:
+                    if (reader.Read() == false)
+                        return false;
+
+                    if (state.CurrentTokenType != JsonParserToken.String)
+                        ThrowExpectedFieldTypeOfString(Constants.Documents.Metadata.LastModified, state);
+                    LastModified = ReadDateTime(state);
+                    break;
                 case State.ReadingChangeVector:
                     if (reader.Read() == false)
                         return false;
@@ -698,6 +737,11 @@ namespace Raven.Server.Documents
         private static void ThrowInvalidFlagsProperty(LazyStringValue str)
         {
             throw new InvalidDataException($"Cannot parse the value of property @metadata.@flags: {str}");
+        }
+
+        private static void ThrowInvalidLastModifiedProperty(LazyStringValue str)
+        {
+            throw new InvalidDataException($"Cannot parse the value of property @metadata.@last-modified: {str}");
         }
 
         private static void ThrowInvalidEtagType(JsonParserState state)
