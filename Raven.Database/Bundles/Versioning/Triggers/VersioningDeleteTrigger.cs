@@ -56,6 +56,7 @@ namespace Raven.Bundles.Versioning.Triggers
     
             
             using (Database.DisableAllTriggersForCurrentThread())
+            using (Database.DocumentLock.Lock())
             {
                 Database.TransactionalStorage.Batch(accessor =>
                 {
