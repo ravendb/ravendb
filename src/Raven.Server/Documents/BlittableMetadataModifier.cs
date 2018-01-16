@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
@@ -55,12 +54,15 @@ namespace Raven.Server.Documents
             return flags;
         }
 
-        private DateTime ReadDateTime(JsonParserState state)
+        private unsafe DateTime ReadDateTime(JsonParserState state)
         {
             var str = CreateLazyStringValueFromParserState(state);
-            if (DateTime.TryParseExact(str, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time) == false)
+            
+            var result = LazyStringParser.TryParseDateTime(str.Buffer, str.Size, out DateTime dt, out DateTimeOffset _);
+            if (result != LazyStringParser.Result.DateTime)
                 ThrowInvalidLastModifiedProperty(str);
-            return time;
+
+            return dt;
         }
 
         private unsafe LazyStringValue CreateLazyStringValueFromParserState(JsonParserState state)
