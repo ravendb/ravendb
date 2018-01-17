@@ -321,6 +321,7 @@ namespace Raven.Server.Rachis
                 {
                     engine.Log.Info($"The incoming term { logLength.Term} is from a valid leader (From thread: {logLength.SendingThread})");
                 }
+                engine.FoundAboutHigherTerm(logLength.Term, "Setting the term of the new leader");
                 engine.Timeout.Defer(connection.Source);
                 negotiation = logLength;
             }
