@@ -178,11 +178,12 @@ namespace Raven.Server.ServerWide
                             .WithCancellation(_shutdownNotification.Token);
                         continue;
                     }
-                    using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
+                    var term = _engine.CurrentTerm;
+                    using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, term))
                     using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
-                        while (_engine.LeaderTag == NodeTag)
+                        while (_engine.LeaderTag == NodeTag && term == _engine.CurrentTerm)
                         {
                             var topologyChangedTask = _engine.GetTopologyChanged();
                             ClusterTopology clusterTopology;
