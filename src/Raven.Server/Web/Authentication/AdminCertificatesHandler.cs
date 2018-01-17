@@ -137,8 +137,24 @@ namespace Raven.Server.Web.Authentication
         {
             var a = new Pkcs12Store();
             a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
-            var entry = a.GetCertificate(a.Aliases.Cast<string>().First());
-            var key = a.Aliases.Cast<string>().Select(a.GetKey).First(x => x != null);
+            
+            X509CertificateEntry entry = null;
+            AsymmetricKeyEntry key = null;
+            foreach (var alias in a.Aliases)
+            {
+                var aliasKey = a.GetKey(alias.ToString());
+                if (aliasKey != null)
+                {
+                    entry = a.GetCertificate(alias.ToString());
+                    key = aliasKey;
+                    break;
+                }
+            }
+
+            if (entry == null)
+            {
+                throw new InvalidOperationException("Could not find private key.");
+            }
 
             using (var stream = s.CreateEntry(name + ".crt").Open())
             using(var writer = new StreamWriter(stream))
@@ -165,6 +181,7 @@ namespace Raven.Server.Web.Authentication
                 {
                     privateKey = key.Key;
                 }
+
                 pw.WriteObject(privateKey);
 
                 writer.Flush();
