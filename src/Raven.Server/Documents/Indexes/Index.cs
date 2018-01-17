@@ -149,6 +149,7 @@ namespace Raven.Server.Documents.Indexes
         private bool _allocationCleanupNeeded;
 
         private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
+        private long _lowMemoryPressure;
         private bool _batchStopped;
 
         private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
@@ -915,6 +916,9 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OutOfMemoryException oome)
                                 {
+                                    Interlocked.Add(ref _lowMemoryPressure, 10);
+                                    _lowMemoryFlag.Raise();
+
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Out of memory occurred for '{Name}'.", oome);
 
@@ -2510,11 +2514,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public int GetPageSize()
-        {
-            return _lowMemoryFlag.IsRaised() ? MinBatchSize + 1 : int.MaxValue;
-        }
-
         public bool CanContinueBatch(
             IndexingStatsScope stats,
             DocumentsOperationContext documentsOperationContext,
@@ -2798,7 +2797,12 @@ namespace Raven.Server.Documents.Indexes
 
         public void LowMemoryOver()
         {
-            _lowMemoryFlag.Lower();
+            var oldValue = _lowMemoryPressure;
+            var newValue = Math.Max(0, oldValue - 1);
+            if (Interlocked.CompareExchange(ref _lowMemoryPressure, newValue, oldValue) == 0)
+            {
+                _lowMemoryFlag.Lower();
+            }
         }
 
         private Regex GetOrAddRegex(string arg)
