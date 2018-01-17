@@ -581,7 +581,8 @@ namespace Rachis
                         // StartTopologyChange(tcc); - not sure why it was needed, see RavenDB-3808 for details
                         CommitTopologyChange(tcc);
                     }
-                    if (StateBehavior.CanHaveConfirmedLeader)
+                    var state = StateBehavior;
+                    if (state == null || state.CanHaveConfirmedLeader)
                     {
                         var noop = command as NopCommand;
                         if (noop != null && entry.Term == PersistentState.CurrentTerm)
