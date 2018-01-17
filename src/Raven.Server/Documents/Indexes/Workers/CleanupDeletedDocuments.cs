@@ -49,15 +49,11 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
                 {
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index.Name}'. Collection: {collection}.");
-
                     var lastMappedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
-                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction,
-                        collection);
+                    var lastTombstoneEtag = _indexStorage.ReadLastProcessedTombstoneEtag(indexContext.Transaction, collection);
 
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
+                        _logger.Info($"Executing cleanup for '{_index} ({_index.Name})'. Collection: {collection}. LastMappedEtag: {lastMappedEtag}. LastTombstoneEtag: {lastTombstoneEtag}.");
 
                     var inMemoryStats = _index.GetStats(collection);
                     var lastEtag = lastTombstoneEtag;
