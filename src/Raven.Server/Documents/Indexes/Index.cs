@@ -912,9 +912,6 @@ namespace Raven.Server.Documents.Indexes
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name}'.'");
-
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Finished indexing for '{Name}'.'");
                                 }
                                 catch (OutOfMemoryException oome)
                                 {
