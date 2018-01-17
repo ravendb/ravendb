@@ -915,8 +915,8 @@ namespace Raven.Client.Http
                     return true;
                 case HttpStatusCode.Forbidden:
                     throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url + ", " +
-                        (Certificate == null ? "a certificate is required." : Certificate.FriendlyName + " does not have permission to access it or is unknown.") +
-                        request.Method + " " + request.RequestUri);
+                        (Certificate == null ? "a certificate is required." : Certificate.FriendlyName + " does not have permission to access it or is unknown. ") +
+                        $"Method: {request.Method}, Request: {request.RequestUri}");
                 case HttpStatusCode.Gone: // request not relevant for the chosen node - the database has been moved to a different one
                     if (shouldRetry == false)
                         return false;
