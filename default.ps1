@@ -129,7 +129,12 @@ task TestDotNet -depends Compile {
 
     Push-Location "$base_dir\NetCore\Raven.Tests.Core"
 
-    Start-Process -FilePath "$dotnet" -ArgumentList "xunit -configuration $global:configuration" -NoNewWindow -Wait
+    if ($Env:JENKINS_URL) {
+        Write-Host "Executing Raven.Tests.Core by a jenkins job."
+        Start-Process -FilePath "$dotnet" -ArgumentList "xunit -configuration $global:configuration -nunit testResults.xml" -NoNewWindow -Wait
+    } else {
+        Start-Process -FilePath "$dotnet" -ArgumentList "xunit -configuration $global:configuration" -NoNewWindow -Wait
+    }
 
     Pop-Location
 }
