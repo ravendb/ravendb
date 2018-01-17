@@ -59,8 +59,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var statusBlittable =
-                ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
+            using (var statusBlittable = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
