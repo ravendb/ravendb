@@ -540,12 +540,6 @@ namespace Raven.Server.Web.Authentication
                     ServerStore.Cluster.DeleteLocalState(ctx, key);
                 }
 
-                var deleteResult = await ServerStore.SendToLeaderAsync(new DeleteCertificateFromClusterCommand
-                {
-                    Name = Constants.Certificates.Prefix + existingCertificate.Thumbprint
-                });
-                await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Index);
-
                 var putResult = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newCertificate.Thumbprint,
                     new CertificateDefinition
                     {
