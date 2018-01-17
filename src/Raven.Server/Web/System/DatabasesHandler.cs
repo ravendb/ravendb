@@ -317,7 +317,8 @@ namespace Raven.Server.Web.System
                     {
                         [nameof(DatabaseInfo.Disabled)] = disabled,
                         [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
-                        [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson()
+                        [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
+                        [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress)
                     };
 
                     context.Write(writer, databaseInfoJson);
