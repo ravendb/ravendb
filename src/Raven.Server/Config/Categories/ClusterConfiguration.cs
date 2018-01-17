@@ -57,7 +57,7 @@ namespace Raven.Server.Config.Categories
         [Description("Tcp connection read/write timeout.")]
         [DefaultValue(15 * 1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
-        [ConfigurationEntry("Cluster.TcpTimeout", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Cluster.TcpTimeoutInMs", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting TcpConnectionTimeout { get; set; }
 
         [Description("Set hard/soft delete for a database that was removed by the observer form the cluster topology in order to maintain the replication factor.")]
