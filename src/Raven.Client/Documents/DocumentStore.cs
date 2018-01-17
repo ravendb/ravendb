@@ -326,6 +326,7 @@ namespace Raven.Client.Documents
             var databaseName = options.Database ?? Database;
             var requestExecutor = options.RequestExecutor ?? GetRequestExecutor(databaseName);
             var session = new AsyncDocumentSession(databaseName, this, requestExecutor, sessionId);
+            RegisterEvents(session);
             //AfterSessionCreated(session);
             return session;
         }
