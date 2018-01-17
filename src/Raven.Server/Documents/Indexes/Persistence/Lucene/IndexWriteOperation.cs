@@ -146,9 +146,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             using (Stats.DeleteStats.Start())
                 _writer.DeleteDocuments(_documentId.CreateTerm(key), _state);
-
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Deleted document for '{_indexName}'. Key: {key}.");
         }
 
         public virtual void DeleteReduceResult(LazyStringValue reduceKeyHash, IndexingStatsScope stats)
