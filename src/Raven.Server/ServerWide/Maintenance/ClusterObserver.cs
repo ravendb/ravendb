@@ -644,6 +644,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                    continue; 
                 }
+                if (record.DeletionInProgress?.ContainsKey(node) == true)
+                {
+                    continue;
+                }
                 nodesToDelete.Add(node);
                 mentorChangeVector.Add(node, dbReport.DatabaseChangeVector);
             }
