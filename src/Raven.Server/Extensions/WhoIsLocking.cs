@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Sparrow.Platform;
 using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
 namespace Raven.Server.Extensions
@@ -30,9 +31,20 @@ namespace Raven.Server.Extensions
         public static IList<Process> GetProcessesUsingFile(string filePath)
         {
             var processes = new List<Process>();
+            if (PlatformDetails.RunningOnPosix)
+                return processes;
 
             // Create a restart manager session
-            int rv = RmStartSession(out uint sessionHandle, 0, Guid.NewGuid().ToString());
+            int rv;
+            uint sessionHandle;
+            try
+            {
+                rv = RmStartSession(out sessionHandle, 0, Guid.NewGuid().ToString());
+            }
+            catch (DllNotFoundException)
+            {
+                return processes;
+            }
             if (rv != 0)
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmStartSession");
             try
