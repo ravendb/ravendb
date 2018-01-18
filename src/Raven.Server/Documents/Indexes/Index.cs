@@ -1188,6 +1188,7 @@ namespace Raven.Server.Documents.Indexes
         {
             try
             {
+                scope.AddMemoryError(oome);
                 Interlocked.Add(ref _lowMemoryPressure, 10);
                 _lowMemoryFlag.Raise();
 
@@ -1208,7 +1209,6 @@ namespace Raven.Server.Documents.Indexes
                     });
 
                 DocumentDatabase.NotificationCenter.Add(alert);
-                scope.AddMemoryError(oome);
             }
             catch (Exception e)
             {
