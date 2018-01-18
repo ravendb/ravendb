@@ -25,31 +25,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         .GroupBy(x => x.UnmanagedThreadId)
                         .ToDictionary(g => g.Key, x => x.First().Name);
 
-                    
-                    Exception error = null;
                     context.Write(write,
                         new DynamicJsonValue
                         {
                             ["Runaway Threads"] = new DynamicJsonArray(GetCurrentProcessThreads()
-                                .OrderByDescending(thread =>
-                                {
-                                    try
-                                    {
-                                        return thread.TotalProcessorTime.TotalMilliseconds;
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        error = e;
-                                        return double.MaxValue;
-                                    }
-                                })
                                 .Select(thread =>
                                 {
                                     try
                                     {
-                                        if (error == null)
-                                        {
-                                            return new DynamicJsonValue
+                                        return (thread.TotalProcessorTime.TotalMilliseconds,
+                                            new DynamicJsonValue
                                             {
                                                 [nameof(ThreadInfo.Id)] = thread.Id,
                                                 [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName)
@@ -62,21 +47,19 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                                 [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
                                                 [nameof(ThreadInfo.PrivilegedProcessorTime)] = thread.PrivilegedProcessorTime,
                                                 [nameof(ThreadInfo.UserProcessorTime)] = thread.UserProcessorTime
-                                            };
-                                        }
+                                            });
                                     }
                                     catch (Exception e)
                                     {
-                                        error = e;
+                                        return (-1,
+                                            new DynamicJsonValue
+                                            {
+                                                ["Error"] = e.ToString()
+                                            });
                                     }
-                                    
-                                    var errorString = error?.ToString();
-                                    error = null;
-                                    return new DynamicJsonValue
-                                    {
-                                        [nameof(Exception)] = errorString ?? "Unknown error"                                       
-                                    };
-                                }))
+                                })
+                                .OrderByDescending(thread => thread.Item1)
+                                .Select(thread => thread.Item2))
                         });
                     write.Flush();
                 }
