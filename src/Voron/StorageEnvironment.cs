@@ -659,6 +659,7 @@ namespace Voron
                 {
                     if (txLockTaken)
                     {
+                        _currentWriteTransactionHolder = null;
                         _transactionWriter.Release();
                     }
                     if (flushInProgressReadLockTaken)
