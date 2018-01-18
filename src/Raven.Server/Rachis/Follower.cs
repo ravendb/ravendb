@@ -19,17 +19,22 @@ namespace Raven.Server.Rachis
     public class Follower : IDisposable
     {
         private readonly RachisConsensus _engine;
-        private long _term;
+        private readonly long _term;
         private readonly RemoteConnection _connection;
         private Thread _thread;
 
-        private string _debugName;
-        private RachisLogRecorder _debugRecorder;
+        private readonly string _debugName;
+        private readonly RachisLogRecorder _debugRecorder;
 
-        public Follower(RachisConsensus engine, RemoteConnection remoteConnection)
+        public Follower(RachisConsensus engine, long term, RemoteConnection remoteConnection)
         {
             _engine = engine;
             _connection = remoteConnection;
+            _term = term;
+            
+            _debugName = $"Follower in term {_term}";
+            _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
+            _debugRecorder.Start();
         }
 
         public override string ToString()
@@ -65,7 +70,7 @@ namespace Raven.Server.Rachis
                             Message = "The current term that I have " + _engine.CurrentTerm + " doesn't match " + appendEntries.Term,
                             Success = false
                         });
-                        if (_engine.Log.IsInfoEnabled && entries.Count > 0)
+                        if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info($"{ToString()}: Got invalid term {appendEntries.Term} while the current term is {_engine.CurrentTerm}, aborting connection...");
                         }
@@ -103,10 +108,9 @@ namespace Raven.Server.Rachis
                         {
                             // applying the leader state may take a while, we need to ping
                             // the server and let us know that we are still there
-                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);;
+                            var task = Concurrent_SendAppendEntriesPendingToLeaderAsync(cts, _term, lastLogIndex);
                             try
                             {
-
                                 bool hasRemovedFromTopology;
 
                                 (hasRemovedFromTopology, lastLogIndex, lastTruncate, lastCommit) = ApplyLeaderStateToLocalState(sp,
@@ -334,24 +338,20 @@ namespace Raven.Server.Rachis
             // only the leader can send append entries, so if we accepted it, it's the leader
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"{ToString()}: Got a negotiation request for term {negotiation.Term} where our term is {_engine.CurrentTerm}");
+                _engine.Log.Info($"{ToString()}: Got a negotiation request for term {negotiation.Term} where our term is {_term}");
             }
-            if (negotiation.Term < _engine.CurrentTerm)
+            if (negotiation.Term != _term)
             {
                 //  Our leader is no longer a valid one
-                var msg = $"My term is higher then yours {_engine.CurrentTerm} > {negotiation.Term}, so you are no longer a valid leader";
+                var msg = $"My term is different then yours {_term} != {negotiation.Term}, so you are no longer a valid leader";
                 _connection.Send(context, new LogLengthNegotiationResponse
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
                     Message = msg,
-                    CurrentTerm = _engine.CurrentTerm,
+                    CurrentTerm = _term,
                     LastLogIndex = negotiation.PrevLogIndex
                 });
                 throw new InvalidOperationException($"We close this follower because: {msg}");
-            }
-            if (negotiation.Term > _engine.CurrentTerm)
-            {
-                _engine.FoundAboutHigherTerm(negotiation.Term, "Leader has higher term, updating...");
             }
             long prevTerm;
             using (context.OpenReadTransaction())
@@ -380,7 +380,7 @@ namespace Raven.Server.Rachis
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                     Message = $"Found a log index / term match at {negotiation.PrevLogIndex} with term {prevTerm}",
-                    CurrentTerm = _engine.CurrentTerm,
+                    CurrentTerm = _term,
                     LastLogIndex = negotiation.PrevLogIndex
                 });
             }
@@ -461,7 +461,7 @@ namespace Raven.Server.Rachis
             _connection.Send(context, new InstallSnapshotResponse
             {
                 Done = true,
-                CurrentTerm = _engine.CurrentTerm,
+                CurrentTerm = _term,
                 LastLogIndex = snapshot.LastIncludedIndex
             });
 
@@ -658,7 +658,7 @@ namespace Raven.Server.Rachis
                     {
                         Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                         Message = "No entries at all here, give me everything from the start",
-                        CurrentTerm = _engine.CurrentTerm,
+                        CurrentTerm = _term,
                         LastLogIndex = 0
                     });
 
@@ -680,12 +680,14 @@ namespace Raven.Server.Rachis
             {
                 _engine.Timeout.Defer(_connection.Source);
 
+                _engine.ValidateTerm(_term);
+                
                 connection.Send(context, new LogLengthNegotiationResponse
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Negotiation,
                     Message =
                         $"Term/Index mismatch from leader, need to figure out at what point the logs match, range: {maxIndex} - {minIndex} | {midpointIndex} in term {midpointTerm}",
-                    CurrentTerm = _engine.CurrentTerm,
+                    CurrentTerm = _term,
                     MaxIndex = maxIndex,
                     MinIndex = minIndex,
                     MidpointIndex = midpointIndex,
@@ -705,7 +707,7 @@ namespace Raven.Server.Rachis
                     {
                         Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                         Message = "We have entries that are already truncated at the leader, will ask for full snapshot",
-                        CurrentTerm = _engine.CurrentTerm,
+                        CurrentTerm = _term,
                         LastLogIndex = 0
                     });
                     return;
@@ -727,13 +729,13 @@ namespace Raven.Server.Rachis
             }
             if (_engine.Log.IsInfoEnabled)
             {
-                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {_engine.CurrentTerm}");
+                _engine.Log.Info($"{ToString()}: agreed upon last matched index = {midpointIndex} on term = {_term}");
             }
             connection.Send(context, new LogLengthNegotiationResponse
             {
                 Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                 Message = $"Found a log index / term match at {midpointIndex} with term {midpointTerm}",
-                CurrentTerm = _engine.CurrentTerm,
+                CurrentTerm = _term,
                 LastLogIndex = midpointIndex
             });
         }
@@ -743,15 +745,12 @@ namespace Raven.Server.Rachis
         public void AcceptConnection(LogLengthNegotiation negotiation)
         {
             // if leader / candidate, this remove them from play and revert to follower mode
-            _engine.SetNewState(RachisState.Follower, this, _engine.CurrentTerm,
+            _engine.SetNewState(RachisState.Follower, this, _term,
                 $"Accepted a new connection from {_connection.Source} in term {negotiation.Term}");
             _engine.LeaderTag = _connection.Source;
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             
-            _term = _engine.CurrentTerm;
-            _debugName = $"Follower in term {_term}";
-            _debugRecorder = _engine.InMemoryDebug.GetNewRecorder(_debugName);
-            _debugRecorder.Start();
+            _debugRecorder.Record("Follower connection accepted");
             
             _thread = new Thread(Run)
             {

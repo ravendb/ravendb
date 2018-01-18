@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
@@ -8,7 +7,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Sparrow.Threading;
-using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Rachis
 {
@@ -28,12 +26,9 @@ namespace Raven.Server.Rachis
         public Candidate(RachisConsensus engine)
         {
             _engine = engine;
-            _currentCandidateTerm = engine.CurrentTerm;
         }
 
         public long ElectionTerm { get; private set; }
-
-        private long _currentCandidateTerm;
 
         private void Run()
         {
@@ -43,7 +38,7 @@ namespace Raven.Server.Rachis
                 {
                     // Operation may fail, that's why we don't RaiseOrDie
                     _running.Raise();
-                    ElectionTerm = _currentCandidateTerm;
+                    ElectionTerm = _engine.CurrentTerm;
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
@@ -68,7 +63,7 @@ namespace Raven.Server.Rachis
                     }
                     else
                     {
-                        ElectionTerm = _currentCandidateTerm + 1;
+                        ElectionTerm = ElectionTerm + 1;
                     }
 
                     foreach (var voter in clusterTopology.Members)
@@ -84,6 +79,10 @@ namespace Raven.Server.Rachis
                         }
                         catch (ConcurrencyException)
                         {
+                            foreach (var ambassador in _voters)
+                            {
+                                ambassador.Dispose();
+                            }
                             return; // we lost the election, because someone else changed our state to follower
                         }
                         candidateAmbassador.Start();
@@ -92,6 +91,8 @@ namespace Raven.Server.Rachis
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                         {
+                            ElectionTerm = _engine.CurrentTerm;
+
                             // timeout? 
                             if (IsForcedElection)
                             {
@@ -99,7 +100,7 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                ElectionTerm = _currentCandidateTerm + 1;
+                                ElectionTerm = ElectionTerm + 1;
                             }
                             _engine.RandomizeTimeout(extend: true);
 
@@ -133,10 +134,10 @@ namespace Raven.Server.Rachis
                         {
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"Candidate {_engine.Tag}: A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
+                                _engine.Log.Info(
+                                    $"Candidate {_engine.Tag}: A leader node has indicated that I'm not in their topology, I was probably kicked out. Moving to passive mode");
                             }
-                            var engineCurrentTerm = _engine.CurrentTerm;
-                            _engine.SetNewState(RachisState.Passive, this, engineCurrentTerm,
+                            _engine.SetNewState(RachisState.Passive, this, _engine.CurrentTerm,
                                 "I just learned from the leader that I'm not in their topology, moving to passive state");
                             break;
                         }
@@ -167,12 +168,16 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Candidate {_engine.Tag}:Failure during candidacy run", e);
+                        _engine.Log.Info($"Candidate {_engine.Tag}: Failure during candidacy run with current state of {_engine.CurrentState}", e);
                     }
                     if (_engine.CurrentState == RachisState.Candidate)
                     {
                         // if we are still a candidate, start the candidacy again.
                         _engine.SwitchToCandidateState("An error occured during the last candidacy: " + e);
+                    }
+                    else if (_engine.CurrentState != RachisState.Passive)
+                    {
+                        _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
                     }
                 }
             }
@@ -185,7 +190,7 @@ namespace Raven.Server.Rachis
             {
                 _engine.CastVoteInTerm(context, electionTerm, _engine.Tag, reason);
 
-                _currentCandidateTerm = ElectionTerm = RunRealElectionAtTerm = electionTerm;
+                ElectionTerm = RunRealElectionAtTerm = electionTerm;
                 
                 tx.Commit();
             }

@@ -739,13 +739,14 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
             var djv = new RemoveNodeFromClusterCommand
             {
                 RemovedNode = nodeTag
             }.ToJson(context);
-            var index = _parent.InsertToLeaderLog(context, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
+            
+            var index = _parent.InsertToLeaderLog(context, term, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)

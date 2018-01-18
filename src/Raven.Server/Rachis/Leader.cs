@@ -66,7 +66,7 @@ namespace Raven.Server.Rachis
 
         private Thread _thread;
 
-        private int _previousPeersWereDisposed = 0;
+        private int _previousPeersWereDisposed;
         
         public long LowestIndexInEntireCluster
         {
@@ -74,9 +74,10 @@ namespace Raven.Server.Rachis
             set { Interlocked.Exchange(ref _lowestIndexInEntireCluster, value); }
         }
 
-        public long Term;
-        public Leader(RachisConsensus engine)
+        public readonly long Term;
+        public Leader(RachisConsensus engine, long term)
         {
+            Term = term;
             _engine = engine;
         }
 
@@ -86,7 +87,6 @@ namespace Raven.Server.Rachis
         public void Start(Dictionary<string, RemoteConnection> connections = null)
         {
             _running.Raise();
-            Term = _engine.CurrentTerm;
 
             ClusterTopology clusterTopology;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -304,7 +304,7 @@ namespace Raven.Server.Rachis
                 using (var tx = context.OpenWriteTransaction())
                 using (var cmd = context.ReadObject(noopCmd, "noop-cmd"))
                 {
-                    _engine.InsertToLeaderLog(context, cmd, RachisEntryFlags.Noop);
+                    _engine.InsertToLeaderLog(context, Term, cmd, RachisEntryFlags.Noop);
                     tx.Commit();
                 }
                 _newEntry.Set(); //This is so the noop would register right away
@@ -443,7 +443,7 @@ namespace Raven.Server.Rachis
                 if (clusterTopology.Contains(_engine.LeaderTag) == false)
                 {
                     TaskExecutor.CompleteAndReplace(ref _newEntriesArrived);
-                    _engine.SetNewState(RachisState.Passive, this, _engine.CurrentTerm,
+                    _engine.SetNewState(RachisState.Passive, this, Term,
                         "I was kicked out of the cluster and moved to passive mode");
                     return;
                 }
@@ -466,7 +466,7 @@ namespace Raven.Server.Rachis
                     maxIndexOnQuorum == 0)
                     return; // nothing to do here
 
-                if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < _engine.CurrentTerm)
+                if (_engine.GetTermForKnownExisting(context, maxIndexOnQuorum) < Term)
                     return;// can't commit until at least one entry from our term has been published
 
                 changedFromLeaderElectToLeader = _engine.TakeOffice();
@@ -628,7 +628,7 @@ namespace Raven.Server.Rachis
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
-                var index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
+                var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
                 task = AddToEntries(index, GetConvertResult(cmd), ctx);
             }
@@ -847,11 +847,11 @@ namespace Raven.Server.Rachis
                 );
 
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
-                var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
+                var index = _engine.InsertToLeaderLog(context, Term, topologyJson, RachisEntryFlags.Topology);
  
                 if (modification == TopologyModification.Remove)
                 {
-                    _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context,nodeTag);
+                    _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, Term, nodeTag);
                 }
 
                 context.Transaction.Commit();
