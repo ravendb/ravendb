@@ -21,28 +21,24 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
-using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Voron;
-using Voron.Platform.Posix;
-using Size = Sparrow.Size;
 
 namespace Raven.Server.Commercial
 {
     public class LicenseManager : IDisposable
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("LicenseManager");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
         private readonly BuildNumber _buildInfo;
@@ -941,117 +937,16 @@ namespace Raven.Server.Commercial
             return (((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56;
         }
 
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", EntryPoint = "SetProcessWorkingSetSize", SetLastError = true, CallingConvention = CallingConvention.StdCall)]
-        internal static extern bool SetProcessWorkingSetSizeEx(IntPtr pProcess,
-            long dwMinimumWorkingSetSize, long dwMaximumWorkingSetSize, QuotaLimit flags);
-
-        [Flags]
-        internal enum QuotaLimit
-        {
-            QUOTA_LIMITS_HARDWS_MIN_DISABLE = 0x00000002,
-            QUOTA_LIMITS_HARDWS_MIN_ENABLE = 0x00000001,
-            QUOTA_LIMITS_HARDWS_MAX_DISABLE = 0x00000008,
-            QUOTA_LIMITS_HARDWS_MAX_ENABLE = 0x00000004
-        }
-
         private static void SetMaxWorkingSet(Process process, double ramInGb)
         {
             try
             {
-                var memoryInfo = MemoryInformation.GetMemoryInfoInGb();
-                if (memoryInfo.UsableMemory < ramInGb)
-                {
-                    ramInGb = memoryInfo.UsableMemory;
-                }
-
-                var maxWorkingSetInBytes = (long)Size.ConvertToBytes(ramInGb, SizeUnit.Gigabytes);
-                var minWorkingSetInBytes = process.MinWorkingSet.ToInt64();
-                if (minWorkingSetInBytes > maxWorkingSetInBytes)
-                {
-                    minWorkingSetInBytes = maxWorkingSetInBytes;
-                }
-
-                if (PlatformDetails.RunningOnPosix == false)
-                {
-                    // windows
-                    const QuotaLimit flags = QuotaLimit.QUOTA_LIMITS_HARDWS_MAX_ENABLE;
-                    var result = SetProcessWorkingSetSizeEx(process.Handle, minWorkingSetInBytes, maxWorkingSetInBytes, flags);
-                    if (result == false)
-                    {
-                        Logger.Info($"Failed to set max working set to {ramInGb}, error code: {Marshal.GetLastWin32Error()}");
-                    }
-                    return;
-                }
-
-                if (PlatformDetails.RunningOnMacOsx)
-                {
-                    // macOS
-                    process.MinWorkingSet = new IntPtr(minWorkingSetInBytes);
-                    process.MaxWorkingSet = new IntPtr(maxWorkingSetInBytes);
-                    return;
-                }
-
-                const string groupName = "ravendb";
-                var basePath = $"/sys/fs/cgroup/memory/{groupName}";
-                var fd = Syscall.open(basePath, 0, 0);
-                if (fd == -1)
-                {
-                    if (Syscall.mkdir(basePath, (ushort)FilePermissions.S_IRWXU) == -1)
-                    {
-                        Logger.Info($"Failed to create directory path: {basePath}, error code: {Marshal.GetLastWin32Error()}");
-                        return;
-                    }
-                }
-
-                Syscall.close(fd);
-
-                var str = maxWorkingSetInBytes.ToString();
-                if (WriteValue($"{basePath}/memory.limit_in_bytes", str) == false)
-                    return;
-
-                WriteValue($"{basePath}/cgroup.procs", str);
+                MemoryExtensions.SetWorkingSet(process, ramInGb, Logger);
             }
             catch (Exception e)
             {
                 Logger.Info($"Failed to set max working set to {ramInGb}GB, error code: {Marshal.GetLastWin32Error()}", e);
             }
-        }
-
-        private static unsafe bool WriteValue(string path, string str)
-        {
-            var fd = Syscall.open(path, OpenFlags.O_WRONLY, FilePermissions.S_IWUSR);
-            if (fd == -1)
-            {
-                Logger.Info($"Failed to open path: {path}");
-                return false;
-            }
-
-            fixed (char* x = str)
-            {
-                var length = str.Length;
-                while (length > 0)
-                {
-                    var written = Syscall.write(fd, x, (ulong)length);
-                    if (written <= 0)
-                    {
-                        // -1 or 0 is error when not regular file, 
-                        // and this is a case of non-regular file
-                        Logger.Info($"Failed to write to path: {path}, value: {str}");
-                        Syscall.close(fd);
-                        return false;
-                    }
-                    length -= (int)written;
-                }
-
-                if (Syscall.close(fd) == -1)
-                {
-                    Logger.Info($"Failed to close: {path}");
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         public void Dispose()
