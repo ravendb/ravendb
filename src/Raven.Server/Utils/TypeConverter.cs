@@ -300,6 +300,18 @@ namespace Raven.Server.Utils
                 return lazyString; // ensure that the decompressed lazy string value is returned
             }
 
+            if (value is string str)
+            {
+                if (DateTime.TryParse(str, out var dateTime))
+                    return dateTime;
+
+                if (DateTimeOffset.TryParse(str, out var dateTimeOffset))
+                    return dateTimeOffset;
+
+                if (TimeSpan.TryParse(str, out var timeSpan))
+                    return timeSpan;
+            }
+
             return value;
         }
 
