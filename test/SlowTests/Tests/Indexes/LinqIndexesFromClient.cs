@@ -244,7 +244,7 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine) },
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
-    Count = Enumerable.Sum(g, x => ((int) x.Count))
+    Count = Enumerable.Sum(g, x => ((long) x.Count))
 })".Replace("\r\n", Environment.NewLine)
             };
 
@@ -267,7 +267,7 @@ namespace SlowTests.Tests.Indexes
                 Maps = { expectedIndexString },
                 Reduce = @"results.GroupBy(agg => agg.Location).Select(g => new {
     Location = g.Key,
-    Count = Enumerable.Sum(g, x => ((int) x.Count))
+    Count = Enumerable.Sum(g, x => ((long) x.Count))
 })".Replace("\r\n", Environment.NewLine)
             };
 
