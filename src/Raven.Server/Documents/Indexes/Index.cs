@@ -916,13 +916,7 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OutOfMemoryException oome)
                                 {
-                                    Interlocked.Add(ref _lowMemoryPressure, 10);
-                                    _lowMemoryFlag.Raise();
-
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Out of memory occurred for '{Name}'.", oome);
-
-                                    scope.AddMemoryError(oome);
+                                    HandleOutOfMemoryException(oome, scope);
                                 }
                                 catch (VoronUnrecoverableErrorException ide)
                                 {
@@ -1188,6 +1182,54 @@ namespace Raven.Server.Documents.Indexes
 
             _errorStateReason = $"State was changed due to excessive number of write errors ({writeErrors}).";
             SetState(IndexState.Error);
+        }
+
+        private void HandleOutOfMemoryException(OutOfMemoryException oome, IndexingStatsScope scope)
+        {
+            try
+            {
+                Interlocked.Add(ref _lowMemoryPressure, 10);
+                _lowMemoryFlag.Raise();
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Out of memory occurred for '{Name}'.", oome);
+
+                var message = $"Error message: {oome.Message}";
+                var alert = AlertRaised.Create(
+                    null,
+                    $"Out of memory occurred for index '{Name}'.",
+                    message,
+                    AlertType.OutOfMemoryException,
+                    NotificationSeverity.Error,
+                    key: message,
+                    details: new MessageDetails
+                    {
+                        Message = OutOfMemoryDetails(oome)
+                    });
+
+                DocumentDatabase.NotificationCenter.Add(alert);
+                scope.AddMemoryError(oome);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed out of memory exception handling for index '{Name}'", e);
+            }
+        }
+
+        private static string OutOfMemoryDetails(OutOfMemoryException oome)
+        {
+            using (var process = Process.GetCurrentProcess())
+            {
+                var minWorkingSet = process.MinWorkingSet.ToInt64();
+                var maxWorkingSet = process.MaxWorkingSet.ToInt64();
+                var memoryInfo = MemoryInformation.GetMemoryInfo();
+                return $"MinWorkingSet: {new Size(minWorkingSet, SizeUnit.Bytes)}, " +
+                       $"MaxWorkingSet: {new Size(maxWorkingSet, SizeUnit.Bytes)}, " +
+                       $"Available memory: {memoryInfo.AvailableMemory}, " +
+                       $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" + 
+                       $"Error: {oome}";
+            }
         }
 
         private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)
