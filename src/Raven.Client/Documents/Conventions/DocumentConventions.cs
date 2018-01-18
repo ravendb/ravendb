@@ -610,34 +610,6 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Register an id convention for a single type (and all its derived types) to be used when calling
-        ///     session.Load{TEntity}(TId id)
-        ///     It is used by the default implementation of FindFullDocumentIdFromNonStringIdentifier.
-        /// </summary>
-        public DocumentConventions RegisterIdLoadConvention<TEntity>(Func<ValueType, string> func)
-        {
-            AssertNotFrozen();
-
-            var type = typeof(TEntity);
-            var entryToRemove = _listOfRegisteredIdLoadConventions.FirstOrDefault(x => x.Item1 == type);
-            if (entryToRemove != null)
-                _listOfRegisteredIdLoadConventions.Remove(entryToRemove);
-
-            int index;
-            for (index = 0; index < _listOfRegisteredIdLoadConventions.Count; index++)
-            {
-                var entry = _listOfRegisteredIdLoadConventions[index];
-                if (entry.Item1.IsAssignableFrom(type))
-                    break;
-            }
-
-            var item = new Tuple<Type, Func<ValueType, string>>(typeof(TEntity), func);
-            _listOfRegisteredIdLoadConventions.Insert(index, item);
-
-            return this;
-        }
-
-        /// <summary>
         ///     Creates the serializer.
         /// </summary>
         /// <returns></returns>

@@ -85,7 +85,6 @@ namespace SlowTests.Core.Session
                 ModifyDocumentStore = s =>
                 {
                     s.Conventions.RegisterAsyncIdConvention<TShirt>((databaseName, entity) => Task.FromResult("ts/" + entity.ReleaseYear));
-                    s.Conventions.RegisterIdLoadConvention<TShirt>(id => "ts/" + id);
                 }
             }))
             {
