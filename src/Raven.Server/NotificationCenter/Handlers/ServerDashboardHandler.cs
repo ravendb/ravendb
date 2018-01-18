@@ -36,8 +36,8 @@ namespace Raven.Server.NotificationCenter.Handlers
                     }
                     catch (Exception e)
                     {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations("Failed to send the initial server dashboard data", e);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failed to send the initial server dashboard data", e);
                     }
 
                     await writer.WriteNotifications(isValidFor);

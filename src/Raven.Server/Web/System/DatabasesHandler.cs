@@ -372,8 +372,8 @@ namespace Raven.Server.Web.System
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to get database info for: {databaseName}", e);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Failed to get database info for: {databaseName}", e);
 
                 WriteFaultedDatabaseInfo(databaseName, e, context, writer);
             }
