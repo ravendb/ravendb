@@ -439,6 +439,7 @@ namespace Voron.Impl.Journal
             // for testing pupose:
             public bool TestingNowWaitingSignal = false;
             public ManualResetEvent TestingWait = null;
+            private readonly Stopwatch _timeSinceLastImmediateSync = Stopwatch.StartNew();
             public bool TestingSkippedUpdateDatabaseStateAfterSync { get; set; }
             public bool TestingDoNotWait { get; set; }
 
@@ -580,10 +581,12 @@ namespace Voron.Impl.Journal
                     var needImmediateFsync =
                         _pendingSync.IsCompleted &&
                         (_forceDataSync.Lower() ||
-                         Interlocked.Read(ref _totalWrittenButUnsyncedBytes) > 32 * Constants.Size.Megabyte);
+                         Interlocked.Read(ref _totalWrittenButUnsyncedBytes) > 32 * Constants.Size.Megabyte ||
+                         _timeSinceLastImmediateSync.ElapsedMilliseconds > 3 * 60 * 1000);
 
                     if (needImmediateFsync)
                     {
+                        _timeSinceLastImmediateSync.Restart();
                         // will never wait, we ensure that we have completed the task
                         // we call Wait() here to ensure that if there was an error in 
                         // the previous sync, we'll propagate it out and mark the env
