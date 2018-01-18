@@ -21,6 +21,7 @@ using Raven.Tests.Subscriptions;
 using Xunit;
 using Order = Raven.Tests.Common.Dto.Faceted.Order;
 using Raven.Tests.Raft;
+using Raven.Tests.Faceted;
 #if !DNXCORE50
 using Raven.Tests.Sorting;
 using Raven.SlowTests.RavenThreadPool;
@@ -70,34 +71,12 @@ namespace Raven.Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 1000; i++)
+            
+            using (var test = new DistinctAggregation())
             {
-                Console.WriteLine($"{i} started");
-                using (var test = new ClusterLeave())
-                {
-                    try
-                    {
-                        test.CanLeaveLeaderFromClusterFromNonLeader(3);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
-                }
-                Console.WriteLine($"for 3 nodes ended");
-                using (var test = new ClusterLeave())
-                {
-                    try
-                    {
-                        test.CanLeaveLeaderFromClusterFromNonLeader(5);
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                    }
-                }
-                Console.WriteLine($"for 5 nodes ended");
+                test.GetDistinctValuesForRangeFacets().Wait();
             }
+            
         }
 
         private static void InitDBAndDoSomeWork(int i)

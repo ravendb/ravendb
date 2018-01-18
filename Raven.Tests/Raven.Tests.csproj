@@ -267,6 +267,7 @@
     <Compile Include="Conflicts\ShouldntCreateConflictIfIdentical.cs" />
     <Compile Include="DistinctFacets\DistinctAndFacets.cs" />
     <Compile Include="DistinctFacets\FromUser.cs" />
+    <Compile Include="Faceted\DistinctAggregation.cs" />
     <Compile Include="Faceted\LargeFacets.cs" />
     <Compile Include="Indexes\IndexReplacement.cs" />
     <Compile Include="Indexes\TransformerParameterTest.cs" />
