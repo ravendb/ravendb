@@ -1015,8 +1015,7 @@ namespace Raven.Server.Rachis
         {
             Debug.Assert(context.Transaction != null);
             
-            if(term != CurrentTerm)
-                throw new ConcurrencyException();
+            ValidateTerm(term);
             
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 

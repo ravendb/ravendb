@@ -343,7 +343,7 @@ namespace Raven.Server.Rachis
             if (negotiation.Term != _term)
             {
                 //  Our leader is no longer a valid one
-                var msg = $"My term is different then yours {_term} != {negotiation.Term}, so you are no longer a valid leader";
+                var msg = $"The term was changed after leader validation from {_term} to {negotiation.Term}, so you are no longer a valid leader";
                 _connection.Send(context, new LogLengthNegotiationResponse
                 {
                     Status = LogLengthNegotiationResponse.ResponseStatus.Rejected,
