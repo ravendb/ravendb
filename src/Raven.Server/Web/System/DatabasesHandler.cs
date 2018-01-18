@@ -19,12 +19,15 @@ using Raven.Server.Smuggler.Migration;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
     public sealed class DatabasesHandler : RequestHandler
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<DatabasesHandler>("DatabasesHandler");
+
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()
         {
@@ -248,121 +251,132 @@ namespace Raven.Server.Web.System
         private void WriteDatabaseInfo(string databaseName, BlittableJsonReaderObject dbRecordBlittable,
             TransactionOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
-            var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
-                         dbTask != null &&
-                         dbTask.IsCompleted;
-
-            // Check for exceptions
-            if (dbTask != null && dbTask.IsFaulted)
+            try
             {
-                WriteFaultedDatabaseInfo(context, writer, dbTask, databaseName);
-                return;
-            }
+                var online = ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out Task<DocumentDatabase> dbTask) &&
+                             dbTask != null &&
+                             dbTask.IsCompleted;
 
-            var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
-            var db = online ? dbTask.Result : null;
-
-            var indexingStatus = db?.IndexStore?.Status ?? IndexRunningStatus.Running;
-            // Looking for disabled indexing flag inside the database settings for offline database status
-            if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
-                indexingStatus = IndexRunningStatus.Disabled;
-
-            var disabled = dbRecord.Disabled;
-            var topology = dbRecord.Topology;
-            var clusterTopology = ServerStore.GetClusterTopology(context);
-            clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
-
-            var nodesTopology = new NodesTopology();
-
-            var statuses = ServerStore.GetNodesStatuses();
-            if (topology != null)
-            {
-                foreach (var member in topology.Members)
+                // Check for exceptions
+                if (dbTask != null && dbTask.IsFaulted)
                 {
-                    var url = clusterTopology.GetUrlFromTag(member);
-                    var node = new InternalReplication
-                    {
-                        Database = databaseName,
-                        NodeTag = member,
-                        Url = url
-                    };
-                    nodesTopology.Members.Add(GetNodeId(node));
-                    SetNodeStatus(topology, member, nodesTopology, statuses);
-                }
-
-                foreach (var promotable in topology.Promotables)
-                {
-                    topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
-                    var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
-                    nodesTopology.Promotables.Add(GetNodeId(node, mentor));
-                    SetNodeStatus(topology, promotable, nodesTopology, statuses);
-                }
-
-                foreach (var rehab in topology.Rehabs)
-                {
-                    var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
-                    var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
-                    nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
-                    SetNodeStatus(topology, rehab, nodesTopology, statuses);
-                }
-            }
-
-            if (online == false)
-            {
-                // if state of database is found in the cache we can continue
-                if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
-                {
-                    databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
-                    {
-                        [nameof(DatabaseInfo.Disabled)] = disabled,
-                        [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
-                        [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
-                        [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress)
-                    };
-
-                    context.Write(writer, databaseInfoJson);
-                }))
-                {
+                    var exception = dbTask.Exception.ExtractSingleInnerException();
+                    WriteFaultedDatabaseInfo(databaseName, exception, context, writer);
                     return;
                 }
 
-                // we won't find it if it is a new database or after a dirty shutdown, 
-                // so just report empty values then
+                var dbRecord = JsonDeserializationCluster.DatabaseRecord(dbRecordBlittable);
+                var db = online ? dbTask.Result : null;
+
+                var indexingStatus = db?.IndexStore?.Status ?? IndexRunningStatus.Running;
+                // Looking for disabled indexing flag inside the database settings for offline database status
+                if (dbRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Indexing.Disabled), out var val) && bool.TryParse(val, out var indexingDisabled) && indexingDisabled)
+                    indexingStatus = IndexRunningStatus.Disabled;
+
+                var disabled = dbRecord.Disabled;
+                var topology = dbRecord.Topology;
+                var clusterTopology = ServerStore.GetClusterTopology(context);
+                clusterTopology.ReplaceCurrentNodeUrlWithClientRequestedNodeUrlIfNecessary(ServerStore, HttpContext);
+
+                var nodesTopology = new NodesTopology();
+
+                var statuses = ServerStore.GetNodesStatuses();
+                if (topology != null)
+                {
+                    foreach (var member in topology.Members)
+                    {
+                        var url = clusterTopology.GetUrlFromTag(member);
+                        var node = new InternalReplication
+                        {
+                            Database = databaseName,
+                            NodeTag = member,
+                            Url = url
+                        };
+                        nodesTopology.Members.Add(GetNodeId(node));
+                        SetNodeStatus(topology, member, nodesTopology, statuses);
+                    }
+
+                    foreach (var promotable in topology.Promotables)
+                    {
+                        topology.PredefinedMentors.TryGetValue(promotable, out var mentorCandidate);
+                        var node = GetNode(databaseName, clusterTopology, promotable, mentorCandidate, out var promotableTask);
+                        var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
+                        nodesTopology.Promotables.Add(GetNodeId(node, mentor));
+                        SetNodeStatus(topology, promotable, nodesTopology, statuses);
+                    }
+
+                    foreach (var rehab in topology.Rehabs)
+                    {
+                        var node = GetNode(databaseName, clusterTopology, rehab, null, out var promotableTask);
+                        var mentor = topology.WhoseTaskIsIt(ServerStore.Engine.CurrentState, promotableTask, null);
+                        nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
+                        SetNodeStatus(topology, rehab, nodesTopology, statuses);
+                    }
+                }
+
+                if (online == false)
+                {
+                    // if state of database is found in the cache we can continue
+                    if (ServerStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
+                    {
+                        databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
+                        {
+                            [nameof(DatabaseInfo.Disabled)] = disabled,
+                            [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
+                            [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
+                            [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress)
+                        };
+
+                        context.Write(writer, databaseInfoJson);
+                    }))
+                    {
+                        return;
+                    }
+
+                    // we won't find it if it is a new database or after a dirty shutdown, 
+                    // so just report empty values then
+                }
+
+                var size = new Size(GetTotalSize(db));
+
+                var databaseInfo = new DatabaseInfo
+                {
+                    Name = databaseName,
+                    Disabled = disabled,
+                    TotalSize = size,
+
+                    IsAdmin = true, 
+                    IsEncrypted = dbRecord.Encrypted,
+                    UpTime = online ? (TimeSpan?)GetUptime(db) : null,
+                    BackupInfo = GetBackupInfo(db),
+
+                    Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
+                    RejectClients = false,
+                    LoadError = null,
+                    IndexingErrors = db?.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0,
+
+                    DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
+                    HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
+                    HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
+                    IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
+                    IndexingStatus = indexingStatus,
+
+                    NodesTopology = nodesTopology,
+                    ReplicationFactor = topology?.ReplicationFactor ?? -1,
+                    DynamicNodesDistribution = topology?.DynamicNodesDistribution ?? false,
+                    DeletionInProgress = dbRecord.DeletionInProgress
+                };
+
+                var doc = databaseInfo.ToJson();
+                context.Write(writer, doc);
             }
-
-            var size = new Size(GetTotalSize(db));
-
-            var databaseInfo = new DatabaseInfo
+            catch (Exception e)
             {
-                Name = databaseName,
-                Disabled = disabled,
-                TotalSize = size,
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to get database info for: {databaseName}", e);
 
-                IsAdmin = true, 
-                IsEncrypted = dbRecord.Encrypted,
-                UpTime = online ? (TimeSpan?)GetUptime(db) : null,
-                BackupInfo = GetBackupInfo(db),
-
-                Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
-                RejectClients = false,
-                LoadError = null,
-                IndexingErrors = db?.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0,
-
-                DocumentsCount = db?.DocumentsStorage.GetNumberOfDocuments() ?? 0,
-                HasRevisionsConfiguration = db?.DocumentsStorage.RevisionsStorage.Configuration != null,
-                HasExpirationConfiguration = db?.ExpiredDocumentsCleaner != null,
-                IndexesCount = db?.IndexStore?.GetIndexes()?.Count() ?? 0,
-                IndexingStatus = indexingStatus,
-
-                NodesTopology = nodesTopology,
-                ReplicationFactor = topology?.ReplicationFactor ?? -1,
-                DynamicNodesDistribution = topology?.DynamicNodesDistribution ?? false,
-                DeletionInProgress = dbRecord.DeletionInProgress
-            };
-
-            var doc = databaseInfo.ToJson();
-            context.Write(writer, doc);
+                WriteFaultedDatabaseInfo(databaseName, e, context, writer);
+            }
         }
 
         private static void SetNodeStatus(
@@ -408,14 +422,16 @@ namespace Raven.Server.Web.System
             return node;
         }
 
-        private void WriteFaultedDatabaseInfo(JsonOperationContext context, AbstractBlittableJsonTextWriter writer, Task<DocumentDatabase> dbTask, string databaseName)
+        private void WriteFaultedDatabaseInfo(
+            string databaseName,
+            Exception exception,
+            JsonOperationContext context, 
+            AbstractBlittableJsonTextWriter writer)
         {
-            var exception = dbTask.Exception;
-
             var doc = new DynamicJsonValue
             {
                 [nameof(DatabaseInfo.Name)] = databaseName,
-                [nameof(DatabaseInfo.LoadError)] = exception.ExtractSingleInnerException().Message
+                [nameof(DatabaseInfo.LoadError)] = exception.Message
             };
 
             context.Write(writer, doc);
@@ -444,11 +460,7 @@ namespace Raven.Server.Web.System
                     {
                         return env.Environment.Stats().AllocatedDataFileSizeInBytes;
                     }
-                    catch (OperationCanceledException)
-                    {
-                        return 0;
-                    }
-                    catch (ObjectDisposedException)
+                    catch (Exception)
                     {
                         return 0;
                     }
