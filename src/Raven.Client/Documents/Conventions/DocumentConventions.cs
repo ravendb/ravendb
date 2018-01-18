@@ -48,8 +48,6 @@ namespace Raven.Client.Documents.Conventions
         private readonly List<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
             new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
-        private readonly List<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
-
         public readonly BulkInsertConventions BulkInsert;
 
         public class BulkInsertConventions
