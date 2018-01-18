@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -23,8 +22,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     var threadAllocations = NativeMemory.ThreadAllocations.Values
                         .GroupBy(x => x.UnmanagedThreadId)
-                        .ToDictionary(g => g.Key, x => x.First().Name);
+                        .ToDictionary(g => g.Key, x => x.First());
 
+                    const string unmanagedThreadName = "Unmanaged Thread";
                     context.Write(write,
                         new DynamicJsonValue
                         {
@@ -33,13 +33,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 {
                                     try
                                     {
+                                        int? managedThreadId = null;
+                                        string threadName = null;
+                                        if (threadAllocations.TryGetValue(thread.Id, out var threadAllocation))
+                                        {
+                                            managedThreadId = threadAllocation.Id;
+                                            threadName = threadAllocation.Name ?? "Thread Pool Thread";
+                                        }
+
                                         return (thread.TotalProcessorTime.TotalMilliseconds,
                                             new DynamicJsonValue
                                             {
                                                 [nameof(ThreadInfo.Id)] = thread.Id,
-                                                [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName)
-                                                    ? (threadName ?? "Thread Pool Thread")
-                                                    : "Unmanaged Thread",
+                                                [nameof(ThreadInfo.ManagedThreadId)] = managedThreadId,
+                                                [nameof(ThreadInfo.Name)] = threadName ?? unmanagedThreadName,
                                                 [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
                                                 [nameof(ThreadInfo.Duration)] = thread.TotalProcessorTime.TotalMilliseconds,
                                                 [nameof(ThreadInfo.State)] = thread.ThreadState,
@@ -77,6 +84,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private class ThreadInfo
         {
             public int Id { get; set; }
+            public int ManagedThreadId { get; set; }
             public string Name { get; set; }
             public DateTime StartingTime { get; set; }
             public DateTime Duration { get; set; }
