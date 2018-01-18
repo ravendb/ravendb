@@ -134,7 +134,7 @@ namespace Raven.Server.Rachis
                         StatusMessage = $"Connected to {_tag}";
 
                         Stopwatch sp;
-                        var connection = new RemoteConnection(_tag, _engine.Tag, _engine.CurrentTerm, stream);
+                        var connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream);
                         Interlocked.Exchange(ref Connection, connection);//publish the new connection
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
@@ -187,7 +187,7 @@ namespace Raven.Server.Rachis
                                     {
                                         var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";
                                         // we need to abort the current elections
-                                        _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, message);
+                                        //_engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm2, message);
                                         if (_engine.Log.IsInfoEnabled)
                                         {
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
@@ -216,6 +216,8 @@ namespace Raven.Server.Rachis
                                     }
                                     TrialElectionWonAtTerm = rvr.Term;
                                     _candidate.WaitForChangeInState();
+                                    if (currentElectionTerm != _candidate.ElectionTerm)
+                                        continue;
                                 }
                                 sp = Stopwatch.StartNew();
                                 connection.Send(context, new RequestVote
@@ -241,7 +243,7 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                     }
                                     // we need to abort the current elections
-                                    _engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm, message);
+                                    //_engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm2, message);
                                     _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     throw new InvalidOperationException(message);
                                 }
@@ -266,6 +268,7 @@ namespace Raven.Server.Rachis
                                 }
                                 RealElectionWonAtTerm = rvr.Term;
                                 _candidate.WaitForChangeInState();
+                               
                             }
                             SendElectionResult(currentElectionTerm);
                         }

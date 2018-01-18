@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -101,7 +100,7 @@ namespace Raven.Server.Rachis
         public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate, RemoteConnection connection = null)
         {
             _engine = engine;
-            _term = _engine.CurrentTerm;
+            _term = leader.Term;
             _leader = leader;
             _wakeLeader = wakeLeader;
             _tag = tag;
@@ -132,6 +131,7 @@ namespace Raven.Server.Rachis
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
                 {
+                    _engine.ValidateTerm(_term);
                     _debugRecorder.Start();
                     try
                     {
@@ -147,7 +147,7 @@ namespace Raven.Server.Rachis
                                 {
                                     _connection?.Dispose();
                                     var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
-                                    var con = new RemoteConnection(_tag, _engine.Tag, _engine.CurrentTerm, stream);
+                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream);
                                     Interlocked.Exchange(ref _connection, con);
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
@@ -201,6 +201,8 @@ namespace Raven.Server.Rachis
                         while (_leader.Running && _running)
                         {
                             entries.Clear();
+                            _engine.ValidateTerm(_term);
+                            
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
                                 AppendEntries appendEntries;
@@ -226,7 +228,7 @@ namespace Raven.Server.Rachis
                                             ForceElections = ForceElectionsNow,
                                             EntriesCount = entries.Count,
                                             LeaderCommit = _engine.GetLastCommitIndex(context),
-                                            Term = _engine.CurrentTerm,
+                                            Term = _term,
                                             TruncateLogBefore = _leader.LowestIndexInEntireCluster,
                                             PrevLogTerm = _engine.GetTermFor(context, _followerMatchIndex) ?? 0,
                                             PrevLogIndex = _followerMatchIndex,
@@ -290,7 +292,7 @@ namespace Raven.Server.Rachis
                                     }
                                     throw new InvalidOperationException(msg);
                                 }
-                                if (aer.CurrentTerm != _engine.CurrentTerm)
+                                if (aer.CurrentTerm != _term)
                                     ThrowInvalidTermChanged(aer);
 
                                 UpdateLastMatchFromFollower(aer.LastLogIndex);
@@ -392,7 +394,7 @@ namespace Raven.Server.Rachis
         private void ThrowInvalidTermChanged(AppendEntriesResponse aer)
         {
             throw new ConcurrencyException($"The current engine term has changed " +
-                                           $"({aer.CurrentTerm:#,#;;0} -> {_engine.CurrentTerm:#,#;;0}), " +
+                                           $"({aer.CurrentTerm:#,#;;0} -> {_term:#,#;;0}), " +
                                            $"this ambassador term is no longer valid");
         }
 
@@ -634,13 +636,12 @@ namespace Raven.Server.Rachis
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 LogLengthNegotiation lln;
-                var engineCurrentTerm = _engine.CurrentTerm;
                 using (context.OpenReadTransaction())
                 {
                     var lastIndexEntry = _engine.GetLastEntryIndex(context);
                     lln = new LogLengthNegotiation
                     {
-                        Term = engineCurrentTerm,
+                        Term = _term,
                         PrevLogIndex = lastIndexEntry,
                         PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry)
                     };
@@ -658,11 +659,11 @@ namespace Raven.Server.Rachis
                 // need to negotiate
                 do
                 {
-                    if (llr.CurrentTerm > engineCurrentTerm)
+                    if (llr.CurrentTerm > _term)
                     {
                         // we need to abort the current leadership
-                        var msg = $"{ToString()}: found election term {llr.CurrentTerm:#,#;;0} that is higher than ours {engineCurrentTerm:#,#;;0}";
-                        _engine.SetNewState(RachisState.Follower, null, engineCurrentTerm, msg);
+                        var msg = $"{ToString()}: found election term {llr.CurrentTerm:#,#;;0} that is higher than ours {_term:#,#;;0}";
+                        _engine.SetNewState(RachisState.Follower, null, _term, msg);
                         _engine.FoundAboutHigherTerm(llr.CurrentTerm, "Append entries response with higher term");
                         throw new InvalidOperationException(msg);
                     }
@@ -709,7 +710,7 @@ namespace Raven.Server.Rachis
                         Debug.Assert(termFor != 0);
                         lln = new LogLengthNegotiation
                         {
-                            Term = engineCurrentTerm,
+                            Term = _term,
                             PrevLogIndex = midIndex,
                             PrevLogTerm = termFor ?? 0,
                             Truncated = truncated || termFor == null

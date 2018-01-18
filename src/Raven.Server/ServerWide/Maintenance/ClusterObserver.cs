@@ -42,6 +42,7 @@ namespace Raven.Server.ServerWide.Maintenance
             ServerStore server,
             ClusterMaintenanceSupervisor maintenance,
             RachisConsensus<ClusterStateMachine> engine,
+            long term,
             TransactionContextPool contextPool,
             CancellationToken token)
         {
@@ -49,6 +50,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _nodeTag = server.NodeTag;
             _server = server;
             _engine = engine;
+            _term = term;
             _contextPool = contextPool;
             _logger = LoggingSource.Instance.GetLogger<ClusterObserver>(_nodeTag);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -65,6 +67,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
         private long _iteration;
+        private readonly long _term;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
@@ -74,7 +77,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public async Task Run(CancellationToken token)
         {
             var prevStats = new Dictionary<string, ClusterNodeStatusReport>();
-            while (token.IsCancellationRequested == false)
+            while (_term == _engine.CurrentTerm && token.IsCancellationRequested == false)
             {
                 var delay = TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
                 try
@@ -86,8 +89,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         await AnalyzeLatestStats(newStats, prevStats);
                         prevStats = newStats;
                     }
-
-                    await delay;
                 }
                 catch (Exception e)
                 {
@@ -103,7 +104,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        public async Task AnalyzeLatestStats(
+        private async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
             Dictionary<string, ClusterNodeStatusReport> prevStats
             )
@@ -136,8 +137,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             LeadersTicks = -1,
                             Term = -1
                         };
-                        var graceIfLeaderChanged = _engine.CurrentTerm > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTime;
-                        var letStatsBecomeStable = _engine.CurrentTerm == topologyStamp.Term &&
+                        var graceIfLeaderChanged = _term > topologyStamp.Term && currentLeader.LeaderShipDuration < _stabilizationTime;
+                        var letStatsBecomeStable = _term == topologyStamp.Term &&
                             (currentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTime);
                         if (graceIfLeaderChanged || letStatsBecomeStable)
                         {

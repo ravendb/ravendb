@@ -3,7 +3,6 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Logging;
 
 namespace Raven.Server.Rachis
 {
@@ -41,7 +40,7 @@ namespace Raven.Server.Rachis
 
                         if (_engine.Log.IsInfoEnabled)
                         {
-                            var election = rv.IsTrialElection ? "Trail" : "Real";
+                            var election = rv.IsTrialElection ? "Trial" : "Real";
                             _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
                                              $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
                         }
@@ -61,6 +60,7 @@ namespace Raven.Server.Rachis
                             clusterTopology = _engine.GetTopology(context);
                         }
 
+                        // this should be only the case when we where once in a cluster, then we were brought down and our data was wiped.
                         if (clusterTopology.TopologyId == null)
                         {
                             _connection.Send(context, new RequestVoteResponse
@@ -89,12 +89,13 @@ namespace Raven.Server.Rachis
                             return;
                         }
 
-                        if (rv.Term == _engine.CurrentTerm && rv.ElectionResult == ElectionResult.Won)
+                        var currentTerm = _engine.CurrentTerm;
+                        if (rv.Term == currentTerm && rv.ElectionResult == ElectionResult.Won)
                         {
                             _electionWon = true;
                             if (Follower.CheckIfValidLeader(_engine, _connection,out var negotiation))
                             {
-                                var follower = new Follower(_engine, _connection);
+                                var follower = new Follower(_engine, negotiation.Term, _connection);
                                 follower.AcceptConnection(negotiation);
                             }
                             return;
@@ -127,7 +128,7 @@ namespace Raven.Server.Rachis
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
-                                Term = _engine.CurrentTerm,
+                                Term = _engine.CurrentLeader.Term,
                                 VoteGranted = false,
                                 Message = "I'm a leader in good standing, coup will be resisted"
                             });
@@ -202,10 +203,11 @@ namespace Raven.Server.Rachis
                         }
 
                         bool alreadyVoted = false;
+                        long votedTerm;
+
                         using (context.OpenWriteTransaction())
                         {
-                            long votedTerm;
-                            (whoGotMyVoteIn,votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
+                            (whoGotMyVoteIn, votedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
                             if (whoGotMyVoteIn != null && whoGotMyVoteIn != rv.Source)
                             {
                                 alreadyVoted = true;
@@ -225,7 +227,7 @@ namespace Raven.Server.Rachis
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
-                                Term = _engine.CurrentTerm,
+                                Term = votedTerm,
                                 VoteGranted = false,
                                 Message = $"Already voted in {rv.LastLogTerm}, for {whoGotMyVoteIn}"
                             });
@@ -234,7 +236,7 @@ namespace Raven.Server.Rachis
                         {
                             _connection.Send(context, new RequestVoteResponse
                             {
-                                Term = _engine.CurrentTerm,
+                                Term = rv.Term,
                                 VoteGranted = true,
                                 Message = "I've voted for you"
                             });

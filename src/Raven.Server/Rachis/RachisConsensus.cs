@@ -9,7 +9,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
@@ -73,9 +72,9 @@ namespace Raven.Server.Rachis
             return StateMachine.Apply(context, uptoInclusive, leader, _serverStore, duration);
         }
 
-        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, long term, string nodeTag)
         {
-            StateMachine.EnsureNodeRemovalOnDeletion(context, nodeTag);
+            StateMachine.EnsureNodeRemovalOnDeletion(context, term, nodeTag);
         }
 
         public override X509Certificate2 ClusterCertificate => _serverStore.Server.Certificate?.Certificate;
@@ -450,7 +449,7 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to leader state");
             }
-            var leader = new Leader(this);
+            var leader = new Leader(this, electionTerm);
             SetNewStateInTx(context, RachisState.LeaderElect, leader, electionTerm, "I'm the only one in the cluster, so I'm the leader" , () => _currentLeader = leader);
             Candidate = null;
             context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
@@ -707,7 +706,7 @@ namespace Raven.Server.Rachis
             {
                 Log.Info("Switching to leader state");
             }
-            var leader = new Leader(this);
+            var leader = new Leader(this, electionTerm);
             SetNewState(RachisState.LeaderElect, leader, electionTerm, reason, () => _currentLeader = leader);
             leader.Start(connections);
         }
@@ -735,6 +734,7 @@ namespace Raven.Server.Rachis
 
         public void SwitchToCandidateState(string reason, bool forced = false)
         {
+            var currentTerm = CurrentTerm;
             try
             {
                 Timeout.DisableTimeout();
@@ -766,21 +766,20 @@ namespace Raven.Server.Rachis
                 {
                     Log.Info($"Switching to candidate state because {reason} forced: {forced}");
                 }
-
                 var candidate = new Candidate(this)
                 {
                     IsForcedElection = forced
                 };
 
                 Candidate = candidate;
-                SetNewState(RachisState.Candidate, candidate, CurrentTerm, reason);
+                SetNewState(RachisState.Candidate, candidate, currentTerm, reason);
                 candidate.Start();
             }
             catch (Exception e)
             {
                 if (Log.IsInfoEnabled)
                 {
-                    Log.Info($"An error occured during switching to candidate state in term {CurrentTerm}.", e);
+                    Log.Info($"An error occured during switching to candidate state in term {currentTerm}.", e);
                 }
                 Timeout.Start(SwitchToCandidateStateOnTimeout);
             }
@@ -948,7 +947,7 @@ namespace Raven.Server.Rachis
                         case InitialMessageType.AppendEntries:
                             if (Follower.CheckIfValidLeader(this, remoteConnection, out var negotiation))
                             {
-                                var follower = new Follower(this, remoteConnection);
+                                var follower = new Follower(this, negotiation.Term, remoteConnection);
                                 follower.AcceptConnection(negotiation);
                             }
                             break;
@@ -985,6 +984,7 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
 
                 try
@@ -993,6 +993,7 @@ namespace Raven.Server.Rachis
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
             }
         }
@@ -1009,10 +1010,14 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public unsafe long InsertToLeaderLog(TransactionOperationContext context, BlittableJsonReaderObject cmd,
+        public unsafe long InsertToLeaderLog(TransactionOperationContext context, long term, BlittableJsonReaderObject cmd,
             RachisEntryFlags flags)
         {
             Debug.Assert(context.Transaction != null);
+            
+            if(term != CurrentTerm)
+                throw new ConcurrencyException();
+            
             var table = context.Transaction.InnerTransaction.OpenTable(LogsTable, EntriesSlice);
 
             long lastIndex;
@@ -1030,7 +1035,7 @@ namespace Raven.Server.Rachis
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(Bits.SwapBytes(lastIndex));
-                tvb.Add(CurrentTerm);
+                tvb.Add(term);
                 tvb.Add(cmd.BasePointer, cmd.Size);
                 tvb.Add((int)flags);
                 table.Insert(tvb);
@@ -1456,6 +1461,14 @@ namespace Raven.Server.Rachis
             }
         }
 
+        public void ValidateTerm(long term)
+        {
+            if (term != CurrentTerm)
+            {
+                throw new ConcurrencyException($"The term was changed from {term} to {CurrentTerm}");
+            }
+        }
+        
         public unsafe void CastVoteInTerm(TransactionOperationContext context, long term, string votedFor, string reason)
         {
             Debug.Assert(context.Transaction != null);
@@ -1522,7 +1535,7 @@ namespace Raven.Server.Rachis
 
             var votedTerm = read?.Reader.ReadLittleEndianInt64();
 
-            if (votedTerm != term)
+            if (votedTerm != term && votedTerm.HasValue)
                 return (null, votedTerm.Value);
 
             read = state.Read(VotedForSlice);
