@@ -856,7 +856,8 @@ namespace Raven.Client.Documents.Indexes
             }
             if (type == typeof(Guid) || type == typeof(Guid?))
             {
-                return "string"; // on the server, Guids are represented as strings
+                // on the server, Guids are represented as strings
+                return "string";
             }
             if (type == typeof(char))
             {
@@ -895,37 +896,15 @@ namespace Raven.Client.Documents.Indexes
                 return "float?";
             }
 
-            if (type == typeof(long))
+            if (type == typeof(long) || type == typeof(int) || type == typeof(short) || type == typeof(byte))
             {
+                // on the server, int, short and byte are represented as long
                 return "long";
             }
-            if (type == typeof(long?))
+            if (type == typeof(long?) || type == typeof(int?) || type == typeof(short?) || type == typeof(byte?))
             {
+                // on the server, int?, short? and byte? are represented as long?
                 return "long?";
-            }
-            if (type == typeof(int))
-            {
-                return "int";
-            }
-            if (type == typeof(int?))
-            {
-                return "int?";
-            }
-            if (type == typeof(short))
-            {
-                return "short";
-            }
-            if (type == typeof(short?))
-            {
-                return "short?";
-            }
-            if (type == typeof(byte))
-            {
-                return "byte";
-            }
-            if (type == typeof(byte?))
-            {
-                return "byte?";
             }
             if (type.GetTypeInfo().IsEnum)
             {

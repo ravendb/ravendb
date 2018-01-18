@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var propertyName in BlittableJson.GetPropertyNames())
             {
-                yield return new KeyValuePair<object, object>(propertyName, TypeConverter.ToDynamicType(BlittableJson[propertyName]));
+                yield return new KeyValuePair<object, object>(TypeConverter.ToDynamicType(propertyName), TypeConverter.ToDynamicType(BlittableJson[propertyName]));
             }
         }
 
