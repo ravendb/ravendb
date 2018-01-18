@@ -279,8 +279,10 @@ namespace Raven.Server
                 return;
             }
 
-
-            if (exception is DatabaseDisabledException)
+            if (exception is DatabaseDisabledException ||
+                exception is DatabaseLoadFailureException ||
+                exception is DatabaseLoadTimeoutException ||
+                exception is DatabaseConcurrentLoadTimeoutException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
