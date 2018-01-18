@@ -55,8 +55,21 @@ namespace Raven.Server.NotificationCenter
             {
                 if (notification.IsPersistent)
                 {
-                    if (_notificationsStorage.Store(notification) == false)
-                        return;
+                    try
+                    {
+                        if (_notificationsStorage.Store(notification) == false)
+                            return;
+                    }
+                    catch (Exception e)
+                    {
+                        // if we fail to save the persistent notification in the storage,
+                        // (OOME or any other storage error)
+                        // we still want to send it to any of the connected watchers
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Failed to save a persistent notification '{notification.Id}' " +
+                                        $"to the notification center. " +
+                                        $"Title: {notification.Title}, message: {notification.Message}", e);
+                    }
                 }
 
                 if (Watchers.Count == 0)
