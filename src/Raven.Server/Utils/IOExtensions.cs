@@ -101,13 +101,16 @@ namespace Raven.Server.Utils
                     {
                         File.Delete(path);
                     }
-                    catch (UnauthorizedAccessException)
+                    catch (UnauthorizedAccessException ex)
                     {
-                        throw new IOException(WhoIsLocking.ThisFile(path));
+                        throw new IOException(WhoIsLocking.ThisFile(path), ex);
                     }
-                    catch (IOException)
+                    catch (IOException ex)
                     {
                         var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
+                        if (processesUsingFiles.Count == 0)
+                            throw new IOException("Unable to figure out who is locking " + path, ex);
+
                         var stringBuilder = new StringBuilder();
                         stringBuilder.Append("The following processes are locking ").Append(path).AppendLine();
                         foreach (var processesUsingFile in processesUsingFiles)
@@ -115,7 +118,7 @@ namespace Raven.Server.Utils
                             stringBuilder.Append(" ").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
                                 AppendLine();
                         }
-                        throw new IOException(stringBuilder.ToString());
+                        throw new IOException(stringBuilder.ToString(), ex);
                     }
                 }
                 throw new IOException("Could not delete " + Path.GetFullPath(directory), e);

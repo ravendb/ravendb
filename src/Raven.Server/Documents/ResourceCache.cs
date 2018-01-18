@@ -122,7 +122,7 @@ namespace Raven.Server.Documents
         }
         public IDisposable RemoveLockAndReturn(string databaseName, Action<TResource> onSuccess, out TResource resource, [CallerMemberName] string caller = null)
         {
-            Task<TResource> current;
+            Task<TResource> current = null;
             lock (this)
             {
                 var task = Task.FromException<TResource>(new DatabaseDisabledException("The database " + databaseName + " has been unloaded and locked by " + caller)
@@ -133,16 +133,23 @@ namespace Raven.Server.Documents
                         ["Source"] = caller
                     }
                 });
-               
-                if (_caseInsensitive.TryGetValue(databaseName, out  current) == false)
+
+                bool found = false;
+                while (found == false)
                 {
-                    resource = default(TResource);
-                    _caseInsensitive.TryAdd(databaseName, task);
-                    return new DisposableAction(() =>
+                    found = _caseInsensitive.TryGetValue(databaseName, out current);
+                    if (found == false)
                     {
-                        TryRemove(databaseName, out _);
-                    });
+                        resource = default(TResource);
+                        if (_caseInsensitive.TryAdd(databaseName, task) == false)
+                            continue;
+                        return new DisposableAction(() =>
+                        {
+                            TryRemove(databaseName, out _);
+                        });
+                    }
                 }
+                
                 if(current.IsCompleted == false)
                     throw new DatabaseConcurrentLoadTimeoutException($"Attempting to unload database {databaseName} that is loading is not allowed (by {caller})");
                 if (current.IsCompletedSuccessfully)
