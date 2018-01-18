@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -920,13 +921,14 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
+        private unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
         {
             private readonly IncomingReplicationHandler _incoming;
 
             private readonly long _lastEtag;
             private readonly byte* _buffer;
             private readonly int _totalSize;
+            private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
             public MergedDocumentReplicationCommand(IncomingReplicationHandler incoming, byte* buffer, int totalSize, long lastEtag)
             {
@@ -970,12 +972,9 @@ namespace Raven.Server.Documents.Replication
 
                                 if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
-                                    using (attachmentStream)
-                                    {
-                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
-
-                                        _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
-                                    }
+                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
+                                    _disposables.Add(attachmentStream);
+                                    _incoming._replicatedAttachmentStreams.Remove(item.Base64Hash);
                                 }
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
@@ -1079,7 +1078,7 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 finally
                                 {
-                                    document?.Dispose();
+                                    _disposables.Add(document);
                                 }
                             }
                         }
@@ -1102,6 +1101,14 @@ namespace Raven.Server.Documents.Replication
                 finally
                 {
                     IsIncomingReplication = false;
+                }
+            }
+
+            public void Dispose()
+            {
+                foreach (var disposable in _disposables)
+                {
+                    disposable?.Dispose();
                 }
             }
         }
