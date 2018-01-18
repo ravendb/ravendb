@@ -66,7 +66,7 @@ namespace Raven.Abstractions.Data
         /// </summary>
         /// <value>FacetTermSortMode.ValueAsc by default.</value>
         public FacetTermSortMode TermSortMode { get; set; }
-
+        
         /// <summary>
         /// Indicates if remaining terms should be included in results.
         /// </summary>

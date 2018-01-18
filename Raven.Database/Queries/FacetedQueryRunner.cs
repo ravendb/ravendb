@@ -293,9 +293,9 @@ namespace Raven.Database.Queries
                             {
                                 facetsByName[facet.DisplayName] = facetValues = new Dictionary<string, FacetValue>();
                             }
-
+                            
                             foreach (var kvp in termsForField)
-                            {
+                            {                                
                                 if (isDistinct)
                                 {
                                     if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
@@ -306,27 +306,55 @@ namespace Raven.Database.Queries
                                 }
 
                                 var needToApplyAggregation = (facet.Aggregation == FacetAggregation.None || facet.Aggregation == FacetAggregation.Count) == false;
-                                var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
-                                var intersectCount = intersectedDocuments.Count;
-                                if (intersectCount == 0)
-                                    continue;
 
-                                FacetValue facetValue;
-                                if (facetValues.TryGetValue(kvp.Key, out facetValue) == false)
+                                if (facet.Aggregation == FacetAggregation.Distinct)
                                 {
-                                    facetValue = new FacetValue
+                                    FacetValue facetValue = null;
+                                    facetValues.TryGetValue(kvp.Key, out facetValue);
+
+                                    if (facetValue != null)
+                                        continue;
+
+                                    var anyDoc = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation, stopOnFirstResult:true);
+
+                                    if (anyDoc.Count > 0)
                                     {
-                                        Range = GetRangeName(facet.Name, kvp.Key)
-                                    };
-                                    facetValues.Add(kvp.Key, facetValue);
+                                        
+                                        if (facetValue == null)
+                                        {
+                                            facetValue = new FacetValue
+                                            {
+                                                Range = GetRangeName(facet.Name, kvp.Key)
+                                            };
+                                            facetValues.Add(kvp.Key, facetValue);                                            
+                                        }
+                                    }
                                 }
-                                facetValue.Hits += intersectCount;
-                                facetValue.Count = facetValue.Hits;
-
-                                if (needToApplyAggregation)
+                                else
                                 {
-                                    var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                                    ApplyAggregation(facet, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+                                    var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
+                                    var intersectCount = intersectedDocuments.Count;
+                                    if (intersectCount == 0)
+                                        continue;
+
+                                    FacetValue facetValue;
+                                    if (facetValues.TryGetValue(kvp.Key, out facetValue) == false)
+                                    {
+                                        facetValue = new FacetValue
+                                        {
+                                            Range = GetRangeName(facet.Name, kvp.Key)
+                                        };
+                                        facetValues.Add(kvp.Key, facetValue);
+                                        facetValue.Exists = true;
+                                    }
+                                    facetValue.Hits += intersectCount;
+                                    facetValue.Count = facetValue.Hits;
+
+                                    if (needToApplyAggregation)
+                                    {
+                                        var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
+                                        ApplyAggregation(facet, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+                                    }
                                 }
                             }
                         }
@@ -365,20 +393,33 @@ namespace Raven.Database.Queries
                                     {
                                         var facetValue = facetResult.Values[i];
 
-                                        var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
-                                        var intersectCount = intersectedDocuments.Count;
-                                        if (intersectCount == 0)
-                                            continue;
-
-                                        facetValue.Hits += intersectCount;
-                                        facetValue.Count = facetValue.Hits;
-
-                                        if (needToApplyAggregation)
+                                        if (facet.Aggregation == FacetAggregation.Distinct)
                                         {
-                                            var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
-                                            ApplyAggregation(facet, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase);
-                                            IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
-                                            intersectedDocuments.Documents = null;
+                                            var anyDoc = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation, stopOnFirstResult: true);
+
+                                            if (anyDoc.Count > 0)
+                                            {
+                                                facetValue.Exists = true;                                                
+                                            }
+                                        }
+                                        else
+                                        {
+                                            var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, alreadySeen, needToApplyAggregation);
+                                            var intersectCount = intersectedDocuments.Count;
+                                            if (intersectCount == 0)
+                                                continue;
+
+                                            facetValue.Hits += intersectCount;
+                                            facetValue.Count = facetValue.Hits;
+                                            facetValue.Exists = true;
+
+                                            if (needToApplyAggregation)
+                                            {
+                                                var docsInQuery = new ArraySegment<int>(intersectedDocuments.Documents, 0, intersectedDocuments.Count);
+                                                ApplyAggregation(facet, facetValue, docsInQuery, readerFacetInfo.Reader, readerFacetInfo.DocBase);
+                                                IntArraysPool.Instance.FreeArray(intersectedDocuments.Documents);
+                                                intersectedDocuments.Documents = null;
+                                            }
                                         }
                                     }
                                 }
@@ -394,7 +435,7 @@ namespace Raven.Database.Queries
                         IntArraysPool.Instance.FreeArray(readerFacetInfo.Results.Array);
                     }
                 }
-            }
+            }            
 
             private List<ReaderFacetInfo> GetQueryMatchingDocuments(IndexSearcher currentIndexSearcher, Query baseQuery)
             {
@@ -435,12 +476,17 @@ namespace Raven.Database.Queries
                     IntArraysPool.Instance.FreeArray(Documents);
                     Documents = newDocumentsArray;
                 }
-            }
+            }         
 
             /// <summary>
             /// This method expects both lists to be sorted
             /// </summary>
-            private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, bool needToApplyAggregation)
+            private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, 
+                ArraySegment<int> b, 
+                HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, 
+                bool needToApplyAggregation,
+                bool stopOnFirstResult = false
+                )                
             {
                 ArraySegment<int> n, m;
                 if (a.Count > b.Count)
@@ -482,6 +528,11 @@ namespace Raven.Database.Queries
                         else if (nVal < mVal)
                         {
                             ni++;
+                        }          
+                        else if (stopOnFirstResult)
+                        {
+                            result.AddIntersection(nVal);
+                            return result;
                         }
                         else
                         {
@@ -503,7 +554,11 @@ namespace Raven.Database.Queries
                         int docId = m.Array[i];
                         if (Array.BinarySearch(n.Array, n.Offset, n.Count, docId) >= 0)
                         {
-
+                            if (stopOnFirstResult)
+                            {
+                                result.AddIntersection(docId);
+                                return result;
+                            }
                             if (isDistinct == false || IsDistinctValue(docId, alreadySeen))
                             {
                                 result.AddIntersection(docId);

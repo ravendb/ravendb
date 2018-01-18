@@ -16,6 +16,7 @@ namespace Raven.Abstractions.Data
         Max = 2,
         Min = 4,
         Average = 8,
-        Sum = 16
+        Sum = 16,
+        Distinct = 32
     }
 }

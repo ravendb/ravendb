@@ -10,6 +10,11 @@ namespace Raven.Abstractions.Data
         public string Range { get; set; }
 
         /// <summary>
+        /// Indicates whether facet value/range were encountered during query. Used when Facet's FacetAggregation value is <c>FacetAggregation.Distinct</c>
+        /// </summary>
+        public bool Exists { get; set; }
+
+        /// <summary>
         /// Number of terms that are covered by this facet.
         /// </summary>
         public int Hits { get; set; }
