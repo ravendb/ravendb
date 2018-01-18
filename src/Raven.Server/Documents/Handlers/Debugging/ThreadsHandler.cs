@@ -25,23 +25,57 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         .GroupBy(x => x.UnmanagedThreadId)
                         .ToDictionary(g => g.Key, x => x.First().Name);
 
+                    
+                    Exception error = null;
                     context.Write(write,
                         new DynamicJsonValue
                         {
                             ["Runaway Threads"] = new DynamicJsonArray(GetCurrentProcessThreads()
-                                .OrderByDescending(thread => thread.TotalProcessorTime.TotalMilliseconds)
-                                .Select(thread => new DynamicJsonValue
+                                .OrderByDescending(thread =>
                                 {
-                                    [nameof(ThreadInfo.Id)] = thread.Id,
-                                    [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName) ?
-                                        (threadName ?? "Thread Pool Thread") : "Unmanaged Thread",
-                                    [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
-                                    [nameof(ThreadInfo.Duration)] = thread.TotalProcessorTime.TotalMilliseconds,
-                                    [nameof(ThreadInfo.State)] = thread.ThreadState,
-                                    [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,
-                                    [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
-                                    [nameof(ThreadInfo.PrivilegedProcessorTime)] = thread.PrivilegedProcessorTime,
-                                    [nameof(ThreadInfo.UserProcessorTime)] = thread.UserProcessorTime
+                                    try
+                                    {
+                                        return thread.TotalProcessorTime.TotalMilliseconds;
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        error = e;
+                                        return double.MaxValue;
+                                    }
+                                })
+                                .Select(thread =>
+                                {
+                                    try
+                                    {
+                                        if (error == null)
+                                        {
+                                            return new DynamicJsonValue
+                                            {
+                                                [nameof(ThreadInfo.Id)] = thread.Id,
+                                                [nameof(ThreadInfo.Name)] = threadAllocations.TryGetValue(thread.Id, out var threadName)
+                                                    ? (threadName ?? "Thread Pool Thread")
+                                                    : "Unmanaged Thread",
+                                                [nameof(ThreadInfo.StartingTime)] = thread.StartTime,
+                                                [nameof(ThreadInfo.Duration)] = thread.TotalProcessorTime.TotalMilliseconds,
+                                                [nameof(ThreadInfo.State)] = thread.ThreadState,
+                                                [nameof(ThreadInfo.WaitReason)] = thread.ThreadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null,
+                                                [nameof(ThreadInfo.TotalProcessorTime)] = thread.TotalProcessorTime,
+                                                [nameof(ThreadInfo.PrivilegedProcessorTime)] = thread.PrivilegedProcessorTime,
+                                                [nameof(ThreadInfo.UserProcessorTime)] = thread.UserProcessorTime
+                                            };
+                                        }
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        error = e;
+                                    }
+                                    
+                                    var errorString = error?.ToString();
+                                    error = null;
+                                    return new DynamicJsonValue
+                                    {
+                                        [nameof(Exception)] = errorString ?? "Unknown error"                                       
+                                    };
                                 }))
                         });
                     write.Flush();
