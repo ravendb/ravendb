@@ -2,14 +2,12 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
@@ -134,8 +132,16 @@ namespace Voron.Platform.Win32
             }
 
             if (writeSuccess == false)
-                throw new IOException("Could not write to journal " + _filename,
-                    new Win32Exception(Marshal.GetLastWin32Error()));
+            {
+                ThrowOnWriteFileFailure();
+            }   
+        }
+
+        private void ThrowOnWriteFileFailure()
+        {
+            var errorCode = Marshal.GetLastWin32Error();
+            throw new IOException($"Could not write to journal {_filename}, error code: {errorCode}",
+                new Win32Exception(errorCode));
         }
 
         public int NumberOfAllocated4Kb { get; }
@@ -181,8 +187,9 @@ namespace Voron.Platform.Win32
                             return false;
                         if (lastWin32Error == Win32NativeFileMethods.ErrorInvalidHandle)
                             _readHandle = null;
-                        throw new Win32Exception(lastWin32Error, "Unable to read from " + _filename);
+                        throw new Win32Exception(lastWin32Error, $"Unable to read from {_filename}, error code: {lastWin32Error}");
                     }
+
                     numOfBytes -= read;
                     buffer += read;
                     offsetInFile += read;
