@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -27,6 +28,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Voron.Exceptions;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 
 namespace Raven.Server
@@ -262,7 +264,10 @@ namespace Raven.Server
             }
             
             if (exception is LowMemoryException || 
-                exception is OutOfMemoryException)
+                exception is OutOfMemoryException ||
+                exception is VoronUnrecoverableErrorException ||
+                exception is IOException ||
+                exception is Win32Exception)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
