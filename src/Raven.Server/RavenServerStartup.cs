@@ -265,9 +265,7 @@ namespace Raven.Server
             
             if (exception is LowMemoryException || 
                 exception is OutOfMemoryException ||
-                exception is VoronUnrecoverableErrorException ||
-                exception is IOException ||
-                exception is Win32Exception)
+                exception is VoronUnrecoverableErrorException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
