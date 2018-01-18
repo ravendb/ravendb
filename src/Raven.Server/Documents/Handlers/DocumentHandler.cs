@@ -254,26 +254,27 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                var cmd = new MergedPutCommand(doc, id, changeVector, Database);
-
-                await Database.TxMerger.Enqueue(cmd);
-
-                cmd.ExceptionDispatchInfo?.Throw();
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var cmd = new MergedPutCommand(doc, id, changeVector, Database))
                 {
-                    writer.WriteStartObject();
+                    await Database.TxMerger.Enqueue(cmd);
 
-                    writer.WritePropertyName(nameof(PutResult.Id));
-                    writer.WriteString(cmd.PutResult.Id);
-                    writer.WriteComma();
+                    cmd.ExceptionDispatchInfo?.Throw();
 
-                    writer.WritePropertyName(nameof(PutResult.ChangeVector));
-                    writer.WriteString(cmd.PutResult.ChangeVector);
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                    writer.WriteEndObject();
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(PutResult.Id));
+                        writer.WriteString(cmd.PutResult.Id);
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(PutResult.ChangeVector));
+                        writer.WriteString(cmd.PutResult.ChangeVector);
+
+                        writer.WriteEndObject();
+                    }
                 }
             }
         }
@@ -422,12 +423,13 @@ namespace Raven.Server.Documents.Handlers
         }
     }
 
-    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class MergedPutCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
         private readonly DocumentDatabase _database;
+        private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public ExceptionDispatchInfo ExceptionDispatchInfo;
         public DocumentsStorage.PutOperationResults PutResult;
@@ -445,12 +447,21 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
+                _disposables.Add(_document);
             }
             catch (ConcurrencyException e)
             {
                 ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
             }
             return 1;
+        }
+
+        public void Dispose()
+        {
+            foreach (var disposable in _disposables)
+            {
+                disposable?.Dispose();
+            }
         }
     }
 }

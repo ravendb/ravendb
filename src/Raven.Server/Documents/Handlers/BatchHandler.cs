@@ -20,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -264,6 +265,7 @@ namespace Raven.Server.Documents.Handlers
             public long LastTombstoneEtag;
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             public HashSet<string> ModifiedCollections;
+            private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
             public override string ToString()
             {
@@ -374,27 +376,27 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case CommandType.AttachmentPUT:
                             var attachmentStream = AttachmentStreams.Dequeue();
-                            using (var stream = attachmentStream.Stream)
+                            var stream = attachmentStream.Stream;
+                            _disposables.Add(stream);
+
+                            var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
+                                cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
+                            LastChangeVector = attachmentPutResult.ChangeVector;
+
+                            if (_documentsToUpdateAfterAttachmentChange == null)
+                                _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                            _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
+
+                            Reply.Add(new DynamicJsonValue
                             {
-                                var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                    cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
-                                LastChangeVector = attachmentPutResult.ChangeVector;
-
-                                if (_documentsToUpdateAfterAttachmentChange == null)
-                                    _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                                _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
-
-                                Reply.Add(new DynamicJsonValue
-                                {
-                                    [nameof(BatchRequestParser.CommandData.Id)] = attachmentPutResult.DocumentId,
-                                    [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentPUT),
-                                    [nameof(BatchRequestParser.CommandData.Name)] = attachmentPutResult.Name,
-                                    [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentPutResult.ChangeVector,
-                                    [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
-                                    [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentPutResult.ContentType,
-                                    [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size
-                                });
-                            }
+                                [nameof(BatchRequestParser.CommandData.Id)] = attachmentPutResult.DocumentId,
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.AttachmentPUT),
+                                [nameof(BatchRequestParser.CommandData.Name)] = attachmentPutResult.Name,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentPutResult.ChangeVector,
+                                [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
+                                [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentPutResult.ContentType,
+                                [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size
+                            });
 
                             break;
                         case CommandType.AttachmentDELETE:
@@ -431,6 +433,11 @@ namespace Raven.Server.Documents.Handlers
             {
                 if (ParsedCommands.Count == 0)
                     return;
+
+                foreach (var disposable in _disposables)
+                {
+                    disposable?.Dispose();
+                }
 
                 foreach (var cmd in ParsedCommands)
                 {

@@ -43,8 +43,10 @@ namespace Raven.Server.Smuggler.Migration
 
         protected async Task SaveLastOperationState(BlittableJsonReaderObject blittable)
         {
-            var cmd = new MergedPutCommand(blittable, MigrationStateKey, null, Database);
-            await Database.TxMerger.Enqueue(cmd);
+            using (var cmd = new MergedPutCommand(blittable, MigrationStateKey, null, Database))
+            {
+                await Database.TxMerger.Enqueue(cmd);
+            }
         }
     }
 }

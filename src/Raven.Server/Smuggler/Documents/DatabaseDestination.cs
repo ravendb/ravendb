@@ -464,8 +464,8 @@ namespace Raven.Server.Smuggler.Documents
                                     var idEnd = key.Content.IndexOf(SpecialChars.RecordSeparator);
                                     if (idEnd < 1)
                                         throw new InvalidOperationException("Cannot find a document ID inside the attachment key");
-                                    var id = key.Content.Substring(idEnd);
-                                    idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(id);
+                                    var attachmentId = key.Content.Substring(idEnd);
+                                    idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
                                     _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, changeVector, tombstone.LastModified.Ticks);
                                     break;
@@ -491,61 +491,57 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         foreach (var attachment in documentType.Attachments)
                         {
-                            using (attachment)
-                            {
-                                _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Tag, attachment.Base64Hash, attachment.Stream);
-                            }
+                            _database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Tag, attachment.Base64Hash, attachment.Stream);
                         }
                     }
 
                     var document = documentType.Document;
-                    using (document.Data)
+                    
+                    var id = document.Id;
+
+                    if (IsRevision)
                     {
-                        var id = document.Id;
-
-                        if (IsRevision)
-                        {
-                            if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
-                                ThrowRevisionsDisabled();
-
-                            PutAttachments(context, document);
-
-                            if (document.Flags.Contain(DocumentFlags.DeleteRevision))
-                            {
-                                _database.DocumentsStorage.RevisionsStorage.Delete(context, id, document.Data, document.Flags,
-                                    document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
-                            }
-                            else
-                            {
-                                _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
-                                    document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
-                            }
-
-                            continue;
-                        }
-
-                        if (IsPreV4Revision(id, document))
-                        {
-                            // handle old revisions
-                            if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
-                                ThrowRevisionsDisabled();
-
-                            var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
-                            var newId = id.Substring(0, endIndex);
-
-                            _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags, 
-                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
-                            continue;
-                        }
+                        if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
+                            ThrowRevisionsDisabled();
 
                         PutAttachments(context, document);
-                        _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
+
+                        if (document.Flags.Contain(DocumentFlags.DeleteRevision))
+                        {
+                            _database.DocumentsStorage.RevisionsStorage.Delete(context, id, document.Data, document.Flags,
+                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                        }
+                        else
+                        {
+                            _database.DocumentsStorage.RevisionsStorage.Put(context, id, document.Data, document.Flags,
+                                document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                        }
+
+                        continue;
                     }
+
+                    if (IsPreV4Revision(id, document))
+                    {
+                        // handle old revisions
+                        if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
+                            ThrowRevisionsDisabled();
+
+                        var endIndex = id.IndexOf(PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
+                        var newId = id.Substring(0, endIndex);
+
+                        _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags, 
+                            document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+                        continue;
+                    }
+
+                    PutAttachments(context, document);
+                    _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, null, document.Flags, document.NonPersistentFlags);
+                    
                 }
 
-                foreach (var id in idsOfDocumentsToUpdateAfterAttachmentDeletion)
+                foreach (var idToUpdate in idsOfDocumentsToUpdateAfterAttachmentDeletion)
                 {
-                    _database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, id);
+                    _database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, idToUpdate);
                 }
 
                 return Documents.Count;
@@ -606,7 +602,22 @@ namespace Raven.Server.Smuggler.Documents
                     return;
 
                 _isDisposed = true;
+                
+                foreach (var doc in Documents)
+                {
+                    if (doc.Document != null)
+                    {
+                        doc.Document.Data.Dispose();
 
+                        if (doc.Attachments != null)
+                        {
+                            foreach (var attachment in doc.Attachments)
+                            {
+                                attachment.Dispose();
+                            }
+                        }
+                    }
+                }
                 Documents.Clear();
                 _resetContext?.Dispose();
                 _resetContext = null;
