@@ -28,9 +28,12 @@ namespace Raven.Server.Rachis
         public Candidate(RachisConsensus engine)
         {
             _engine = engine;
+            _currentCandidateTerm = engine.CurrentTerm;
         }
 
         public long ElectionTerm { get; private set; }
+
+        private long _currentCandidateTerm;
 
         private void Run()
         {
@@ -40,8 +43,7 @@ namespace Raven.Server.Rachis
                 {
                     // Operation may fail, that's why we don't RaiseOrDie
                     _running.Raise();
-                    ElectionTerm = _engine.CurrentTerm;
-                    
+                    ElectionTerm = _currentCandidateTerm;
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
@@ -66,7 +68,7 @@ namespace Raven.Server.Rachis
                     }
                     else
                     {
-                        ElectionTerm = ElectionTerm + 1;
+                        ElectionTerm = _currentCandidateTerm + 1;
                     }
 
                     foreach (var voter in clusterTopology.Members)
@@ -97,7 +99,7 @@ namespace Raven.Server.Rachis
                             }
                             else
                             {
-                                ElectionTerm = ElectionTerm + 1;
+                                ElectionTerm = _currentCandidateTerm + 1;
                             }
                             _engine.RandomizeTimeout(extend: true);
 
@@ -183,7 +185,7 @@ namespace Raven.Server.Rachis
             {
                 _engine.CastVoteInTerm(context, electionTerm, _engine.Tag, reason);
 
-                ElectionTerm = RunRealElectionAtTerm = electionTerm;
+                _currentCandidateTerm = ElectionTerm = RunRealElectionAtTerm = electionTerm;
                 
                 tx.Commit();
             }
