@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var res = ServerStore.Observer.ReadDecisionsForDatabase();
                     var json = new DynamicJsonValue{
                         [nameof(ClusterObserverDecisions.LeaderNode)] = Server.ServerStore.NodeTag,
-                        [nameof(ClusterObserverDecisions.Term)] = Server.ServerStore.Engine.CurrentLeader.Term,
+                        [nameof(ClusterObserverDecisions.Term)] = Server.ServerStore.Engine.CurrentLeader?.Term,
                         [nameof(ClusterObserverDecisions.Suspended)] = Server.ServerStore.Observer.Suspended,
                         [nameof(ClusterObserverDecisions.Iteration)] = res.Iteration,
                         [nameof(ClusterObserverDecisions.ObserverLog)] = new DynamicJsonArray(res.List)
