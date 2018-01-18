@@ -242,6 +242,9 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
+
+                // delete the cache info
+                DeleteDatabaseCachedInfo(dbName, _serverStore);
             }
             finally
             {
@@ -537,7 +540,7 @@ namespace Raven.Server.Documents
                 var documentDatabase = new DocumentDatabase(config.ResourceName, config, _serverStore, AddToInitLog);
                 documentDatabase.Initialize();
                 AddToInitLog("Finish database initialization");
-                DeleteDatabaseCachedInfo(documentDatabase, _serverStore);
+                DeleteDatabaseCachedInfo(documentDatabase.Name, _serverStore);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Started database {config.ResourceName} in {sp.ElapsedMilliseconds:#,#;;0}ms");
 
@@ -563,9 +566,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void DeleteDatabaseCachedInfo(DocumentDatabase database, ServerStore serverStore)
+        private static void DeleteDatabaseCachedInfo(string databaseName, ServerStore serverStore)
         {
-            serverStore.DatabaseInfoCache.Delete(database.Name);
+            serverStore.DatabaseInfoCache.Delete(databaseName);
         }
 
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)

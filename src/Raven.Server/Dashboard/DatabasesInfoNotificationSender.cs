@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Background;
 using Raven.Server.Documents;
@@ -86,20 +87,30 @@ namespace Raven.Server.Dashboard
                     if (cts.IsCancellationRequested)
                         yield break;
 
-                    if(isValidFor != null && isValidFor(databaseName) == false)
+                    if (isValidFor != null && isValidFor(databaseName) == false)
                         continue;
+
+                    var databaseRecord = serverStore.LoadDatabaseRecord(databaseName, out var _);
+                    if (databaseRecord == null)
+                        continue;
+
+                    if (databaseRecord.Topology.AllNodes.Contains(serverStore.NodeTag) == false)
+                    {
+                        // this database doesn't exist on this server
+                        continue;
+                    }
 
                     if (serverStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var databaseTask) == false)
                     {
                         // database does not exist on this server or disabled
-                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo, drivesUsage, disabled: true);
+                        SetOfflineDatabaseInfo(databaseRecord, serverStore, databaseName, databasesInfo, drivesUsage, disabled: true);
                         continue;
                     }
 
                     var databaseOnline = IsDatabaseOnline(databaseTask, out var database);
                     if (databaseOnline == false)
                     {
-                        SetOfflineDatabaseInfo(serverStore, databaseName, databasesInfo, drivesUsage, disabled: false);
+                        SetOfflineDatabaseInfo(databaseRecord, serverStore, databaseName, databasesInfo, drivesUsage, disabled: false);
                         continue;
                     }
 
@@ -194,13 +205,13 @@ namespace Raven.Server.Dashboard
         }
 
         private static void SetOfflineDatabaseInfo(
+            DatabaseRecord databaseRecord,
             ServerStore serverStore, 
             string databaseName, 
             DatabasesInfo existingDatabasesInfo, 
             DrivesUsage existingDrivesUsage, 
             bool disabled)
         {
-            var databaseRecord = serverStore.LoadDatabaseRecord(databaseName, out var _);
             if (databaseRecord == null)
             {
                 // database doesn't exist
