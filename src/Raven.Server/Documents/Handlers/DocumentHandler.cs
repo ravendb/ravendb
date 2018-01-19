@@ -429,7 +429,6 @@ namespace Raven.Server.Documents.Handlers
         private readonly LazyStringValue _expectedChangeVector;
         private readonly BlittableJsonReaderObject _document;
         private readonly DocumentDatabase _database;
-        private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
         public ExceptionDispatchInfo ExceptionDispatchInfo;
         public DocumentsStorage.PutOperationResults PutResult;
@@ -447,7 +446,6 @@ namespace Raven.Server.Documents.Handlers
             try
             {
                 PutResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _document);
-                _disposables.Add(_document);
             }
             catch (ConcurrencyException e)
             {
@@ -458,10 +456,7 @@ namespace Raven.Server.Documents.Handlers
 
         public void Dispose()
         {
-            foreach (var disposable in _disposables)
-            {
-                disposable?.Dispose();
-            }
+            _document?.Dispose();
         }
     }
 }

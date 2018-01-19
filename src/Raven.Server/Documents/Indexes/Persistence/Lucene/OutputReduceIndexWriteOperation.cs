@@ -73,7 +73,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private readonly List<OutputReduceDocument> _reduceDocuments = new List<OutputReduceDocument>();
             private readonly JsonOperationContext _jsonContext;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
-
             public OutputReduceToCollectionCommand(DocumentDatabase database, string outputReduceToCollection, MapReduceIndex index)
             {
                 _database = database;
@@ -103,7 +102,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var document = reduceDocument.Document;
                     _database.DocumentsStorage.Put(context, key, null, document, flags: DocumentFlags.Artificial | DocumentFlags.FromIndex);
                     context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(key, document.Size);
-                    _disposables.Add(document);
                 }
                 return _reduceDocuments.Count;
             }
@@ -146,9 +144,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void Dispose()
             {
-                foreach (var disposable in _disposables)
+                foreach (var r in _reduceDocuments)
                 {
-                    disposable.Dispose();
+                    r.Document.Dispose();
                 }
                 _jsonContext?.Dispose();
             }

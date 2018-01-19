@@ -942,6 +942,7 @@ namespace Raven.Server.Documents.Replication
             {
                 try
                 {
+                    _disposables.Clear();
                     IsIncomingReplication = true;
 
                     var operationsCount = 0;
