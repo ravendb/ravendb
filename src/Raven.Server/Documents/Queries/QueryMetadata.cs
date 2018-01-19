@@ -1449,6 +1449,9 @@ namespace Raven.Server.Documents.Queries
 
             private void HandleMoreLikeThis(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
             {
+                if (_metadata.IsDynamic)
+                    throw new InvalidQueryException($"Method {methodName}() cannot be used in dynamic queries", QueryText, parameters);
+
                 if (arguments.Count == 0 || arguments.Count > 2)
                     throw new InvalidQueryException($"Method {methodName}() expects to have one or two arguments", QueryText, parameters);
 
@@ -1465,7 +1468,7 @@ namespace Raven.Server.Documents.Queries
                 if (secondArgument is ValueExpression)
                     return;
 
-                throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a paramter name or value", QueryText, parameters);
+                throw new InvalidQueryException($"Method {methodName}() expects that second argument will be a parameter name or value", QueryText, parameters);
             }
 
             private void HandleSpatial(string methodName, List<QueryExpression> arguments, BlittableJsonReaderObject parameters)
