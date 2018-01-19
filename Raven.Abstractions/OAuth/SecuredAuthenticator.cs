@@ -1,9 +1,7 @@
 using Raven.Abstractions.Connection;
 using Raven.Abstractions.Extensions;
-
 using System;
 using System.Collections.Generic;
-
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -203,7 +201,7 @@ namespace Raven.Abstractions.OAuth
                     httpClient.DefaultRequestHeaders.TryAddWithoutValidation("grant_type", "client_credentials");
                     httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json") { CharSet = "UTF-8" });
 
-                    string data = null;
+                    var data = string.Empty;
                     if (!string.IsNullOrEmpty(serverRSAExponent) && !string.IsNullOrEmpty(serverRSAModulus) && !string.IsNullOrEmpty(challenge))
                     {
                         var exponent = OAuthHelper.ParseBytes(serverRSAExponent);
@@ -223,8 +221,7 @@ namespace Raven.Abstractions.OAuth
                     }
 
                     var requestUri = oauthSource;
-
-                    var response = await httpClient.PostAsync(requestUri, data != null ? (HttpContent)new CompressedStringContent(data, true) : new StringContent("")).AddUrlIfFaulting(new Uri(requestUri)).ConvertSecurityExceptionToServerNotFound().ConfigureAwait(false);
+                    var response = await httpClient.PostAsync(requestUri, new StringContent(data)).AddUrlIfFaulting(new Uri(requestUri)).ConvertSecurityExceptionToServerNotFound().ConfigureAwait(false);
 
                     if (response.IsSuccessStatusCode == false)
                     {

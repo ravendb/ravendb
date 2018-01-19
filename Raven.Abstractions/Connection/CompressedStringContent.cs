@@ -23,7 +23,7 @@ namespace Raven.Abstractions.Connection
                 Headers.ContentEncoding.Add("gzip");
             }
 
-            if(string.IsNullOrWhiteSpace(contentType) == false)
+            if (string.IsNullOrWhiteSpace(contentType) == false)
                 Headers.ContentType = new MediaTypeHeaderValue(contentType);
         }
 
