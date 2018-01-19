@@ -61,9 +61,9 @@ namespace Raven.Client.Documents.Session
         public IMetadataDictionary DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
-    public class BeforeQueryExecutedEventArgs : EventArgs
+    public class BeforeQueryEventArgs : EventArgs
     {
-        public BeforeQueryExecutedEventArgs(InMemoryDocumentSessionOperations session, IDocumentQueryCustomization queryCustomization)
+        public BeforeQueryEventArgs(InMemoryDocumentSessionOperations session, IDocumentQueryCustomization queryCustomization)
         {
             Session = session;
             QueryCustomization = queryCustomization;

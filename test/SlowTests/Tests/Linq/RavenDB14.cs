@@ -22,13 +22,13 @@ namespace SlowTests.Tests.Linq
 
             using (var store = GetDocumentStore())
             {
-                void RecordQueries(object sender, BeforeQueryExecutedEventArgs args)
+                void RecordQueries(object sender, BeforeQueryEventArgs args)
                 {
                     queries.Add(args.QueryCustomization.ToString());
-                    store.OnBeforeQueryExecuted -= RecordQueries;
+                    store.OnBeforeQuery -= RecordQueries;
                 }
 
-                store.OnBeforeQueryExecuted += RecordQueries;
+                store.OnBeforeQuery += RecordQueries;
                 var documentSession = store.OpenSession();
 
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").FirstOrDefault(x => x.Active);
@@ -45,13 +45,13 @@ namespace SlowTests.Tests.Linq
 
             using (var store = GetDocumentStore())
             {
-                void RecordQueries(object sender, BeforeQueryExecutedEventArgs args)
+                void RecordQueries(object sender, BeforeQueryEventArgs args)
                 {
                     queries.Add(args.QueryCustomization.ToString());
-                    store.OnBeforeQueryExecuted -= RecordQueries;
+                    store.OnBeforeQuery -= RecordQueries;
                 }
 
-                store.OnBeforeQueryExecuted += RecordQueries;
+                store.OnBeforeQuery += RecordQueries;
                 var documentSession = store.OpenSession();
 
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").SingleOrDefault(x => x.Active);

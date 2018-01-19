@@ -812,8 +812,8 @@ namespace Raven.Client.Documents.Session
             if (QueryOperation != null)
                 return;
 
-            var beforeQueryExecutedEventArgs = new BeforeQueryExecutedEventArgs(TheSession, this);
-            TheSession.OnBeforeQueryExecutedInvoke(beforeQueryExecutedEventArgs);
+            var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
+            TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
 
             QueryOperation = InitializeQueryOperation();
             await ExecuteActualQueryAsync(token).ConfigureAwait(false);

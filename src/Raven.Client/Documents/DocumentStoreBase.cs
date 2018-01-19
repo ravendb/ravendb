@@ -160,7 +160,7 @@ namespace Raven.Client.Documents
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-        public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
+        public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         /// <summary>
         /// Gets or sets the default database name.
@@ -199,7 +199,7 @@ namespace Raven.Client.Documents
             session.OnBeforeStore += OnBeforeStore;
             session.OnAfterSaveChanges += OnAfterSaveChanges;
             session.OnBeforeDelete += OnBeforeDelete;
-            session.OnBeforeQueryExecuted += OnBeforeQueryExecuted;
+            session.OnBeforeQuery += OnBeforeQuery;
         }
 
         public abstract MaintenanceOperationExecutor Maintenance { get; }
