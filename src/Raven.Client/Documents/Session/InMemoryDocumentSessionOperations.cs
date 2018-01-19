@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-        public event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
+        public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         /// <summary>
         /// Entities whose id we already know do not exists, because they are a missing include, or a missing load, etc.
@@ -1310,9 +1310,9 @@ more responsive application.
             OnAfterSaveChanges?.Invoke(this, afterSaveChangesEventArgs);
         }
 
-        public void OnBeforeQueryExecutedInvoke(BeforeQueryExecutedEventArgs beforeQueryExecutedEventArgs)
+        public void OnBeforeQueryInvoke(BeforeQueryEventArgs beforeQueryEventArgs)
         {
-            OnBeforeQueryExecuted?.Invoke(this, beforeQueryExecutedEventArgs);
+            OnBeforeQuery?.Invoke(this, beforeQueryEventArgs);
         }
 
         protected (string IndexName, string CollectionName) ProcessQueryParameters(Type type, string indexName, string collectionName, DocumentConventions conventions)

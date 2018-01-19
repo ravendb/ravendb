@@ -43,7 +43,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Query event
         /// </summary>
-        event EventHandler<BeforeQueryExecutedEventArgs> OnBeforeQueryExecuted;
+        event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         /// <summary>
         /// Subscribe to change notifications from the server
