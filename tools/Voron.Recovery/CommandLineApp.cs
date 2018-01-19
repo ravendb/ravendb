@@ -24,7 +24,7 @@ namespace Voron.Recovery
             _app = new CommandLineApplication
             {
                 Name = "Voron.Recovery",
-                Description = "Recovery utility for voron."
+                Description = "Recovery utility for Voron."
             };
 
             _app.HelpOption(HelpOptionString);
@@ -116,7 +116,7 @@ namespace Voron.Recovery
                     {
                         if (int.TryParse(initialContextSizeInMbArg.Value(), out var contextSize) == false ||
                             contextSize < 1)
-                            return ExitWithError($"{nameof(config.InitialContextSizeInMB)} argumnet value ({contextSize}) is invalid", cmd);
+                            return ExitWithError($"{nameof(config.InitialContextSizeInMB)} argument value ({contextSize}) is invalid", cmd);
                         config.InitialContextSizeInMB = contextSize;
                     }
 
@@ -124,7 +124,7 @@ namespace Voron.Recovery
                     {
                         if (int.TryParse(initialContextLongLivedSizeInKbArg.Value(), out var longLivedContextSize) == false ||
                             longLivedContextSize < 1)
-                            return ExitWithError($"{nameof(config.InitialContextLongLivedSizeInKB)} argumnet value ({longLivedContextSize}) is invalid", cmd);
+                            return ExitWithError($"{nameof(config.InitialContextLongLivedSizeInKB)} argument value ({longLivedContextSize}) is invalid", cmd);
                         config.InitialContextLongLivedSizeInKB = longLivedContextSize;
                     }
 
@@ -132,7 +132,7 @@ namespace Voron.Recovery
                     {
                         if (int.TryParse(progressIntervalInSecArg.Value(), out var refreshRate) == false ||
                             refreshRate < 1)
-                            return ExitWithError($"{nameof(config.ProgressIntervalInSec)} argumnet value ({refreshRate}) is invalid", cmd);
+                            return ExitWithError($"{nameof(config.ProgressIntervalInSec)} argument value ({refreshRate}) is invalid", cmd);
                         config.ProgressIntervalInSec = refreshRate;
                     }
 
@@ -140,7 +140,7 @@ namespace Voron.Recovery
                     {
                         var value = disableCopyOnWriteModeArg.Value();
                         if (bool.TryParse(value, out var disableCopyOnWriteMode) == false)
-                            return ExitWithError($"{nameof(config.DisableCopyOnWriteMode)} argumnet value ({value}) is invalid", cmd);
+                            return ExitWithError($"{nameof(config.DisableCopyOnWriteMode)} argument value ({value}) is invalid", cmd);
                         config.DisableCopyOnWriteMode = disableCopyOnWriteMode;
                     }
 
@@ -148,7 +148,7 @@ namespace Voron.Recovery
                     {
                         var value = loggingModeArg.Value();
                         if (Enum.TryParse(value, out LogMode mode) == false)
-                            return ExitWithError($"{nameof(config.LoggingMode)} argumnet value ({value}) is invalid", cmd);
+                            return ExitWithError($"{nameof(config.LoggingMode)} argument value ({value}) is invalid", cmd);
                         config.LoggingMode = mode;
                     }
 
