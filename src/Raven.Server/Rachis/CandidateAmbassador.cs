@@ -187,7 +187,7 @@ namespace Raven.Server.Rachis
                                     {
                                         var message = $"Candidate ambassador for {_tag}: found election term {rvr.Term:#,#;;0} that is higher than ours {currentElectionTerm:#,#;;0}";
                                         // we need to abort the current elections
-                                        //_engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm2, message);
+                                        
                                         if (_engine.Log.IsInfoEnabled)
                                         {
                                             _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
@@ -243,7 +243,6 @@ namespace Raven.Server.Rachis
                                         _engine.Log.Info($"CandidateAmbassador for {_tag}: {message}");
                                     }
                                     // we need to abort the current elections
-                                    //_engine.SetNewState(RachisState.Follower, null, _engine.CurrentTerm2, message);
                                     _engine.FoundAboutHigherTerm(rvr.Term, "Got higher term from node: " + Tag);
                                     throw new InvalidOperationException(message);
                                 }
