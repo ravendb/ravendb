@@ -252,9 +252,11 @@ namespace Raven.Server.Documents.Indexes
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
             var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
-            var stats = new IndexStats();
-            stats.CreatedTimestamp = DateTime.FromBinary(statsTree.Read(IndexSchema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64());
-            stats.ErrorsCount = (int)table.NumberOfEntries;
+            var stats = new IndexStats
+            {
+                CreatedTimestamp = DateTime.FromBinary(statsTree.Read(IndexSchema.CreatedTimestampSlice).Reader.ReadLittleEndianInt64()),
+                ErrorsCount = (int)(table?.NumberOfEntries ?? 0)
+            };
 
             var lastIndexingTime = statsTree.Read(IndexSchema.LastIndexingTimeSlice);
 

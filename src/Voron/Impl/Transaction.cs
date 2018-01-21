@@ -54,8 +54,7 @@ namespace Voron.Impl
         [MethodImpl(MethodImplOptions.NoInlining)]
         public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            Slice treeNameSlice;
-            Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
+            Slice.From(Allocator, treeName, ByteStringType.Immutable, out var treeNameSlice);
             return ReadTree(treeNameSlice, type, isIndexTree, newPageAllocator);
         }
 
@@ -63,8 +62,7 @@ namespace Voron.Impl
         {
             EnsureTrees();
 
-            Tree tree;
-            if (_trees.TryGetValue(treeName, out tree))
+            if (_trees.TryGetValue(treeName, out var tree))
             {
                 if (newPageAllocator == null)
                     return tree;
@@ -75,7 +73,7 @@ namespace Voron.Impl
                 return tree;
             }
 
-            TreeRootHeader* header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
+            var header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
             if (header != null)
             {
                 if (header->RootObjectType != type)
