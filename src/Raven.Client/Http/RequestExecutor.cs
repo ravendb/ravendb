@@ -641,8 +641,8 @@ namespace Raven.Client.Http
                                     if (sessionInfo != null)
                                         sessionInfo.AsyncCommandRunning = false;
 
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
-                                        ThrowFailedToContactAllNodes(command, request, e, timeoutException);
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, timeoutException, sessionInfo).ConfigureAwait(false) == false)
+                                        ThrowFailedToContactAllNodes(command, request);
 
                                     return;
                                 }
@@ -677,7 +677,7 @@ namespace Raven.Client.Http
                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionInfo).ConfigureAwait(false) == false)
                     {
                         ThrowIfClientException(response, e);
-                        ThrowFailedToContactAllNodes(command, request, e, null);
+                        ThrowFailedToContactAllNodes(command, request);
                     }
 
                     return;
@@ -716,18 +716,16 @@ namespace Raven.Client.Http
                                     DatabaseDoesNotExistException.Throw(name);
                             }
 
-                            if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
-                                throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
-
+                            ThrowFailedToContactAllNodes(command, request);
                             if (command.FailedNodes.Count == 1)
                             {
                                 var node = command.FailedNodes.First();
                                 throw node.Value;
                             }
 
-                            throw new AllTopologyNodesDownException("Received unsuccessful response from all servers and couldn't recover from it.",
-                                new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));
-                        }
+
+
+                                                   }
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
@@ -762,18 +760,40 @@ namespace Raven.Client.Http
             }
         }
 
-        private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request, Exception e, Exception timeoutException)
+        private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request)
         {
-            var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, all of them seem to be down or not responding. " +
-                          $"I've tried to access the following nodes: {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0])}.";
+            if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
+                throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
+
+            if (command.FailedNodes.Count == 1)
+                throw command.FailedNodes.First().Value;
+
+            var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, none of the attempt succeeded. ";                          
 
             if (_topologyTakenFromNode != null)
             {
                 message += $"{Environment.NewLine}I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}" +
-                           $"fetched topology : {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
+                           $"Fetched topology : {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
+            }
+            else
+            {
+                message += $"I've tried to access the following nodes: {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0])}.";
             }
 
-            throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology, timeoutException ?? e);
+            var firstException = command.FailedNodes.Values.First();
+            
+            // this means that all exception has the same type
+            if (command.FailedNodes.All(x=>x.Value.GetType() == firstException.GetType() && x.Value.Message == firstException.Message))
+            {
+                throw new AllTopologyNodesDownException(message,
+                    _nodeSelector?.Topology,
+                    firstException);
+            }
+
+            throw new AllTopologyNodesDownException(message,
+                _nodeSelector?.Topology,
+                new AggregateException(command.FailedNodes.Select(x =>
+                new UnsuccessfulRequestException(x.Key.Url, x.Value))));            
         }
 
         private static void ThrowInvalidConcurrentSessionUsage(string command, SessionInfo sessionInfo)
@@ -1053,7 +1073,7 @@ namespace Raven.Client.Http
             if (response != null)
             {
                 var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                var ms = new MemoryStream();
+                var ms = new MemoryStream(); // todo: have a pool of those
                 await stream.CopyToAsync(ms).ConfigureAwait(false);
                 try
                 {
