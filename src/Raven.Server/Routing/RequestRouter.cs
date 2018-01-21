@@ -28,13 +28,16 @@ namespace Raven.Server.Routing
         private readonly RavenServer _ravenServer;
         private readonly MetricCounters _serverMetrics;
 
+        public List<RouteInformation> AllRoutes;
+
         public RequestRouter(Dictionary<string, RouteInformation> routes, RavenServer ravenServer)
         {
             _trie = Trie<RouteInformation>.Build(routes);
             _ravenServer = ravenServer;
             _serverMetrics = ravenServer.Metrics;
-
+            AllRoutes = new List<RouteInformation>(routes.Values);
         }
+
 
         public RouteInformation GetRoute(string method, string path, out RouteMatch match)
         {
