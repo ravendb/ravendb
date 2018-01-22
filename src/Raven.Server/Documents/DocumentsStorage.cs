@@ -1297,6 +1297,11 @@ namespace Raven.Server.Documents
                     lowerId,
                     newEtag,
                     docChangeVector);
+
+                if (string.IsNullOrEmpty(changeVector))
+                    throw new InvalidOperationException($"Tried to update the change vector '{docChangeVector}' but the new etag '{newEtag}' is smaller than " +
+                                                        $"the etag in the change vector. DocumentId= '{lowerId}', DatabaseId='{Environment.Base64Id}', NodeTag='{DocumentDatabase.ServerStore.NodeTag}'.");
+
                 context.LastDatabaseChangeVector = changeVector;
             }
             else
