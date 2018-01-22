@@ -766,7 +766,7 @@ namespace Raven.Client.Http
                 throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
 
             if (command.FailedNodes.Count == 1)
-                throw command.FailedNodes.First().Value;
+                ExceptionDispatchInfo.Capture(command.FailedNodes.First().Value).Throw();                
 
             var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, none of the attempt succeeded. ";                          
 
