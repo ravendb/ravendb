@@ -139,35 +139,21 @@ namespace Raven.Client.ServerWide
             var list = new List<string>();
             var destinations = new List<ReplicationNode>();
             
-            if (Rehabs.Contains(myTag))
-            {
-                // if we are in rehab, but now are back online. We need to send all the new documents that we might have.
-                var url = clusterTopology.GetUrlFromTag(myTag);
-                var mentor = WhoseTaskIsIt(state, new PromotableTask(myTag, url, databaseName), null);
-                if (mentor != null)
-                {
-                    destinations.Add(new InternalReplication
-                    {
-                        NodeTag = mentor,
-                        Url = clusterTopology.GetUrlFromTag(mentor),
-                        Database = databaseName
-                    });
-                }
-                return destinations;
-            }
-            
-            if (Members.Contains(myTag) == false) // if we are not a member we can't have any destinations
+            if (Promotables.Contains(myTag)) // if we are a promotable we can't have any destinations
                 return destinations;
 
-            foreach (var member in Members)
+            var nodes = Members.Concat(Rehabs);
+
+            foreach (var node in nodes)
             {
-                if (member == myTag) //skip me
+                if (node == myTag) // skip me
                     continue;
-                if (deletionInProgress != null && deletionInProgress.ContainsKey(member))
+                if (deletionInProgress != null && deletionInProgress.ContainsKey(node))
                     continue;
-                list.Add(clusterTopology.GetUrlFromTag(member));
+                list.Add(clusterTopology.GetUrlFromTag(node));
             }
-            foreach (var promotable in Promotables.Concat(Rehabs))
+          
+            foreach (var promotable in Promotables)
             {
                 if (deletionInProgress != null && deletionInProgress.ContainsKey(promotable))
                     continue;

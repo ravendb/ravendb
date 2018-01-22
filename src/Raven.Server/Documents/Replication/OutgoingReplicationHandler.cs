@@ -149,8 +149,6 @@ namespace Raven.Server.Documents.Replication
                     using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
-                        _streamReadTimeout = _stream.ReadTimeout;
-
                         var documentSender = new ReplicationDocumentSender(_stream, this, _log);
 
                         WriteHeaderToRemotePeer();
@@ -826,7 +824,6 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
-        private volatile int _streamReadTimeout;
 
         public void Dispose()
         {
@@ -834,7 +831,7 @@ namespace Raven.Server.Documents.Replication
             if (!_disposed.Raise())
                 return;
 
-            var timeout = TimeSpan.FromMilliseconds(_streamReadTimeout);
+            var timeout = _parent._server.Engine.TcpConnectionTimeout;
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString}) [Timeout:{timeout}]");
 
