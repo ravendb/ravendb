@@ -179,7 +179,7 @@ namespace Raven.Client.Documents
             return lazy.Value;
         }
 
-        public override IDisposable SetRequestsTimeout(TimeSpan timeout, string database = null)
+        public override IDisposable SetRequestTimeout(TimeSpan timeout, string database = null)
         {
             AssertInitialized();
 

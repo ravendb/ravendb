@@ -148,7 +148,7 @@ namespace Raven.Client.Http
 
             ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
-
+            DefaultTimeout = Conventions.RequestTimeout;
 
             string thumbprint = string.Empty;
             if (certificate != null)

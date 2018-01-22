@@ -25,7 +25,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                using (store.SetRequestsTimeout(TimeSpan.FromMilliseconds(100)))
+                using (store.SetRequestTimeout(TimeSpan.FromMilliseconds(100)))
                 {
                     using (var commands = store.Commands())
                     {

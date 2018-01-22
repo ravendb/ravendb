@@ -158,11 +158,22 @@ namespace Raven.Client.Documents.Conventions
         private bool _throwIfQueryPageSizeIsNotSet;
         private int _maxNumberOfRequestsPerSession;
         private Action<JsonSerializer> _customizeJsonSerializer;
+        private TimeSpan? _requestTimeout;
 
         private ReadBalanceBehavior _readBalanceBehavior;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
+
+        public TimeSpan? RequestTimeout
+        {
+            get => _requestTimeout;
+            set
+            {
+                AssertNotFrozen();
+                _requestTimeout = value;
+            }
+        }
 
         public bool PreserveDocumentPropertiesNotFoundOnModel
         {
