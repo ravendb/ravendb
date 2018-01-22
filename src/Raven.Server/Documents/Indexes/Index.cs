@@ -1192,13 +1192,14 @@ namespace Raven.Server.Documents.Indexes
                 Interlocked.Add(ref _lowMemoryPressure, 10);
                 _lowMemoryFlag.Raise();
 
+                var title = $"Out of memory occurred for '{Name}'";
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Out of memory occurred for '{Name}'.", oome);
+                    _logger.Info(title, oome);
 
                 var message = $"Error message: {oome.Message}";
                 var alert = AlertRaised.Create(
                     null,
-                    $"Out of memory occurred for index '{Name}'.",
+                    title,
                     message,
                     AlertType.OutOfMemoryException,
                     NotificationSeverity.Error,
@@ -1210,6 +1211,10 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.NotificationCenter.Add(alert);
             }
+            catch (OutOfMemoryException)
+            {
+                // nothing to do here
+            }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
@@ -1219,17 +1224,16 @@ namespace Raven.Server.Documents.Indexes
 
         private static string OutOfMemoryDetails(OutOfMemoryException oome)
         {
-            using (var process = Process.GetCurrentProcess())
-            {
-                var minWorkingSet = process.MinWorkingSet.ToInt64();
-                var maxWorkingSet = process.MaxWorkingSet.ToInt64();
-                var memoryInfo = MemoryInformation.GetMemoryInfo();
-                return $"MinWorkingSet: {new Size(minWorkingSet, SizeUnit.Bytes)}, " +
-                       $"MaxWorkingSet: {new Size(maxWorkingSet, SizeUnit.Bytes)}, " +
-                       $"Available memory: {memoryInfo.AvailableMemory}, " +
-                       $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" + 
-                       $"Error: {oome}";
-            }
+            var stats = MemoryInformation.MemoryStats();
+            var memoryInfo = MemoryInformation.GetMemoryInfo();
+
+            return $"Managed memory: {new Size(stats.ManagedMemory, SizeUnit.Bytes)}, " +
+                   $"Unmanaged allocations: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
+                   $"Mapped temp: {new Size(stats.MappedTemp, SizeUnit.Bytes)}, " +
+                   $"Working set: {new Size(stats.TotalUnmanagedAllocations, SizeUnit.Bytes)}, " +
+                   $"Available memory: {memoryInfo.AvailableMemory}, " +
+                   $"Total memory: {memoryInfo.TotalPhysicalMemory} {Environment.NewLine}" +
+                   $"Error: {oome}";
         }
 
         private void HandleIndexCorruption(IndexingStatsScope stats, Exception e)

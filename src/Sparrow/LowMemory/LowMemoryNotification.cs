@@ -132,7 +132,7 @@ namespace Sparrow.LowMemory
 
             var stats = MemoryInformation.MemoryStats();
 
-            var sharedMemory = stats.WorkingSet - stats.TotalUnmanagedAllocations - stats.ManagedMemory;
+            var sharedMemory = stats.WorkingSet - stats.TotalUnmanagedAllocations - stats.ManagedMemory - stats.MappedTemp;
 
             // if this is negative, we'll just ignore this
             var mappedShared = new Size(Math.Max(0, sharedMemory), SizeUnit.Bytes);

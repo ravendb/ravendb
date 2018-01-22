@@ -918,10 +918,13 @@ namespace Raven.Server.Utils.Cli
             long totalMemoryMapped = 0;
             foreach (var mapping in NativeMemory.FileMapping)
             {
+                var maxMapped = 0L;
                 foreach (var singleMapping in mapping.Value)
                 {
-                    totalMemoryMapped += singleMapping.Value;
+                    maxMapped = Math.Max(maxMapped, singleMapping.Value);
                 }
+
+                totalMemoryMapped += maxMapped;
             }
 
             return (
