@@ -115,6 +115,107 @@ namespace Sparrow.Json
             }                
             return true;
         }
+        
+        public static bool TryParseTimeSpan(char* buffer, int len, out TimeSpan ts)
+        {
+            ts = default(TimeSpan);
+
+            if (len < 8)
+                return false;
+
+            bool negate = false;
+            if (buffer[0] == '-')
+            {
+                negate = true;
+                buffer++;
+                len--;
+            }
+
+            int indexOfDays = -1, indexOfMilliseconds = -1;
+
+            for (int i = 0; i < len; i++)
+            {
+                if (buffer[i] == ':')
+                    break;
+                if (buffer[i] == '.')
+                {
+                    indexOfDays = i;
+                    break;
+                }
+            }
+
+            if (len < indexOfDays + 1 + 8)
+                return false;
+
+            for (int i = indexOfDays + 1 + 8; i < len; i++)
+            {
+                if (buffer[i] == '.')
+                {
+                    indexOfMilliseconds = i;
+                    break;
+                }
+            }
+
+            if (indexOfMilliseconds == -1) // if we have ms then it will be validated below
+            {
+                if (indexOfDays == -1)
+                {
+                    if (len > 8)
+                        return false;
+                }
+                else
+                {
+                    if (len - indexOfDays - 1 - 8 > 0)
+                        return false;
+                }
+            }
+
+            int days = 0, hours, minutes, seconds, ticks = 0;
+
+            if (indexOfDays != -1)
+            {
+                if (TryParseNumber(buffer, indexOfDays, out days) == false)
+                    return false;
+                buffer += indexOfDays + 1;
+            }
+
+            if (buffer[2] != ':' || buffer[5] != ':')
+                return false;
+
+            if (TryParseNumber2(buffer, out hours) == false)
+                return false;
+
+            if (TryParseNumber2(buffer + 3, out minutes) == false)
+                return false;
+
+            if (TryParseNumber2(buffer + 6, out seconds) == false)
+                return false;
+
+            if (indexOfMilliseconds != -1)
+            {
+                var remainingLen = len - indexOfMilliseconds - 1;
+                if (remainingLen > 7)
+                    return false;
+                if (TryParseNumber(buffer + 9, remainingLen, out ticks) == false)
+                    return false;
+
+                for (int i = remainingLen; i < 7; i++)
+                {
+                    ticks *= 10;
+                }
+            }
+
+            
+            if (negate)
+            {
+                ts = new TimeSpan(days*-1, hours * -1, minutes * -1, seconds * -1).Add(TimeSpan.FromTicks(ticks * -1));
+            }
+            else
+            {
+                ts = new TimeSpan(days, hours, minutes, seconds).Add(TimeSpan.FromTicks(ticks));
+            }                
+            return true;
+        }
 
         public static Result TryParseDateTime(char* buffer, int len, out DateTime dt, out DateTimeOffset dto)
         {
