@@ -2578,7 +2578,21 @@ namespace Raven.Server.Documents.Indexes
                     stats.RecordMapCompletedReason(msg);
                     if (_logger.IsInfoEnabled)
                         _logger.Info(msg);
-                    DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(_indexingProcessCancellationTokenSource.Token);
+                    var timeout = _indexStorage.DocumentDatabase.Configuration.Indexing.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan;
+
+                    while (true)
+                    {
+                        if (DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(
+                            timeout,
+                            _indexingProcessCancellationTokenSource.Token))
+                            break;
+
+                        if (_lowMemoryFlag.IsRaised() == false)
+                            break;
+
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"{Name} is still waiting for other indexes to complete their batches because there is a low memory condition in action...");
+                    };
                 }
 
                 _batchStopped = true;
