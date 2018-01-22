@@ -142,84 +142,97 @@ namespace Sparrow.LowMemory
         private void MonitorMemoryUsage()
         {
             NativeMemory.EnsureRegistered();
-            int clearInactiveHandlersCounter = 0;
-            var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
-            var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
-            var timeout = 5 * 1000;
-            while (true)
+
+            try
             {
-                long totalUnmanagedAllocations = 0;
-
-                var handles = SelectWaitMode(paranoidModeHandles, memoryAvailableHandles);
-                switch (WaitHandle.WaitAny(handles, timeout))
+                int clearInactiveHandlersCounter = 0;
+                var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
+                var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
+                var timeout = 5 * 1000;
+                while (true)
                 {
-                    case WaitHandle.WaitTimeout:
-                        if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
-                        {
-                            clearInactiveHandlersCounter = 0;
-                            ClearInactiveHandlers();
-                        }
-                        foreach (var stats in NativeMemory.ThreadAllocations.Values)
-                        {
-                            if (stats.ThreadInstance.IsAlive == false)
-                                continue;
+                    long totalUnmanagedAllocations = 0;
 
-                            totalUnmanagedAllocations += stats.TotalAllocated;
-                        }
-
-                        var memInfo = MemoryInformation.GetMemoryInfo();
-
-                        var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
-                        var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared).GetValue(SizeUnit.Bytes);
-
-                        if (availableMem < _lowMemoryThreshold &&
-                            // at all times, we want 2% or 1 GB, the lowest of the two
-                            memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)))
-                        {
-                            if (LowMemoryState == false)
+                    var handles = SelectWaitMode(paranoidModeHandles, memoryAvailableHandles);
+                    switch (WaitHandle.WaitAny(handles, timeout))
+                    {
+                        case WaitHandle.WaitTimeout:
+                            if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
                             {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info("Low memory detected, will try to reduce memory usage...");
-                                AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk, availableMem, totalUnmanagedAllocations,
-                                    memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                                clearInactiveHandlersCounter = 0;
+                                ClearInactiveHandlers();
                             }
-                            LowMemoryState = true;
-                            clearInactiveHandlersCounter = 0;
-                            RunLowMemoryHandlers(true);
-                            timeout = 500;
-                        }
-                        else
-                        {
-                            if (LowMemoryState)
+                            foreach (var stats in NativeMemory.ThreadAllocations.Values)
                             {
-                                if (_logger.IsInfoEnabled)
-                                    _logger.Info("Back to normal memory usage detected");
-                                AddLowMemEvent(LowMemReason.BackToNormal, availableMem, totalUnmanagedAllocations, memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                                if (stats.ThreadInstance.IsAlive == false)
+                                    continue;
+
+                                totalUnmanagedAllocations += stats.TotalAllocated;
                             }
-                            LowMemoryState = false;
-                            RunLowMemoryHandlers(false);
-                            timeout = availableMem < _lowMemoryThreshold * 2 ? 1000 : 5000;
-                        }
-                        break;
-                    case 0:
-                        _simulatedLowMemory.Reset();
-                        LowMemoryState = !LowMemoryState;
-                        var memInfoForLog = MemoryInformation.GetMemoryInfo();
-                        var availableMemForLog = memInfoForLog.AvailableMemory.GetValue(SizeUnit.Bytes);
-                        AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation, availableMemForLog,
-                            totalUnmanagedAllocations, memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
-                        RunLowMemoryHandlers(LowMemoryState);
-                        break;
-                    case 2: // check allocations
-                        _warnAllocation.Reset();
-                        goto case WaitHandle.WaitTimeout;
-                    case 1: // shutdown requested
-                        return;
-                    default:
-                        return;
+
+                            var memInfo = MemoryInformation.GetMemoryInfo();
+
+                            var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
+                            var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared).GetValue(SizeUnit.Bytes);
+
+                            if (availableMem < _lowMemoryThreshold &&
+                                // at all times, we want 2% or 1 GB, the lowest of the two
+                                memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)))
+                            {
+                                if (LowMemoryState == false)
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info("Low memory detected, will try to reduce memory usage...");
+                                    AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk, availableMem, totalUnmanagedAllocations,
+                                        memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                                }
+                                LowMemoryState = true;
+                                clearInactiveHandlersCounter = 0;
+                                RunLowMemoryHandlers(true);
+                                timeout = 500;
+                            }
+                            else
+                            {
+                                if (LowMemoryState)
+                                {
+                                    if (_logger.IsInfoEnabled)
+                                        _logger.Info("Back to normal memory usage detected");
+                                    AddLowMemEvent(LowMemReason.BackToNormal, availableMem, totalUnmanagedAllocations, memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                                }
+                                LowMemoryState = false;
+                                RunLowMemoryHandlers(false);
+                                timeout = availableMem < _lowMemoryThreshold * 2 ? 1000 : 5000;
+                            }
+                            break;
+                        case 0:
+                            _simulatedLowMemory.Reset();
+                            LowMemoryState = !LowMemoryState;
+                            var memInfoForLog = MemoryInformation.GetMemoryInfo();
+                            var availableMemForLog = memInfoForLog.AvailableMemory.GetValue(SizeUnit.Bytes);
+                            AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation, availableMemForLog,
+                                totalUnmanagedAllocations, memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes));
+                            if (_logger.IsInfoEnabled)
+                                _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
+                            RunLowMemoryHandlers(LowMemoryState);
+                            break;
+                        case 2: // check allocations
+                            _warnAllocation.Reset();
+                            goto case WaitHandle.WaitTimeout;
+                        case 1: // shutdown requested
+                            return;
+                        default:
+                            return;
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"Catastrophic failure in low memory notification: {e.Message}", e);
+                }
+
+                throw;
             }
         }
 

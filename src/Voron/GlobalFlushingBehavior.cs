@@ -56,38 +56,50 @@ namespace Voron
             // We want this to always run, even if we dispose / create new storage env, this is 
             // static for the life time of the process, and environments will register / unregister from
             // it as needed
-            while (true)
+
+            try
             {
-                _avoidDuplicates.Clear();
-                var maybeNeedSync = _maybeNeedToSync.Count;
-                var millisecondsTimeout = 15000 - maybeNeedSync;
-                if (millisecondsTimeout <= 0 ||
-                    _flushWriterEvent.Wait(millisecondsTimeout) == false)
+                while (true)
                 {
-                    if (_maybeNeedToSync.Count == 0)
-                        continue;
-
-                    if (_log.IsInfoEnabled)
+                    _avoidDuplicates.Clear();
+                    var maybeNeedSync = _maybeNeedToSync.Count;
+                    var millisecondsTimeout = 15000 - maybeNeedSync;
+                    if (millisecondsTimeout <= 0 ||
+                        _flushWriterEvent.Wait(millisecondsTimeout) == false)
                     {
-                        _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync after {millisecondsTimeout:#,#} ms with no activity");
+                        if (_maybeNeedToSync.Count == 0)
+                            continue;
+
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Starting desired sync with {_maybeNeedToSync.Count:#,#} items to sync after {millisecondsTimeout:#,#} ms with no activity");
+                        }
+
+                        // sync after 5 seconds if no flushing occurred, or if there has been a LOT of
+                        // writes that we would like to run
+                        SyncDesiredEnvironments();
+                        continue;
                     }
+                    _flushWriterEvent.Reset();
 
-                    // sync after 5 seconds if no flushing occurred, or if there has been a LOT of
-                    // writes that we would like to run
-                    SyncDesiredEnvironments();
-                    continue;
+                    FlushEnvironments();
+
+                    SyncRequiredEnvironments();
                 }
-                _flushWriterEvent.Reset();
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info($"Catastrophic failure in voron environment flushing: {e.Message}", e);
+                }
 
-                FlushEnvironments();
-
-                SyncRequiredEnvironments();
+                // Note that we intentionally don't have error handling here.
+                // If this code throws an exception that bubbles up to here, we WANT the process
+                // to die, since we can't recover from the flusher thread dying.
+                throw;
             }
             // ReSharper disable once FunctionNeverReturns
-
-            // Note that we intentionally don't have error handling here.
-            // If this code throw an exception that bubbles up to here, we WANT the process
-            // to die, since we can't recover from the flusher thread dying.
         }
 
         private void SyncDesiredEnvironments()
