@@ -2572,7 +2572,8 @@ namespace Raven.Server.Documents.Indexes
 
             if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
-                if (DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0) == false)
+                _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0);
+                if (_batchStopped == false)
                 {
                     var msg = $"Halting processing of batch after {count:#,#;;0} and waiting because of low memory, other indexes are currently completing and index {Name} will wait for them to complete";
                     stats.RecordMapCompletedReason(msg);
@@ -2582,9 +2583,10 @@ namespace Raven.Server.Documents.Indexes
 
                     while (true)
                     {
-                        if (DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(
+                        _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(
                             timeout,
-                            _indexingProcessCancellationTokenSource.Token))
+                            _indexingProcessCancellationTokenSource.Token);
+                        if (_batchStopped)
                             break;
 
                         if (_lowMemoryFlag.IsRaised() == false)
@@ -2595,7 +2597,6 @@ namespace Raven.Server.Documents.Indexes
                     };
                 }
 
-                _batchStopped = true;
                 stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
                 return false;
             }
