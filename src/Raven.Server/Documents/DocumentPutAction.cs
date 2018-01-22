@@ -112,8 +112,7 @@ namespace Raven.Server.Documents
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
 
                 if (string.IsNullOrEmpty(result.ChangeVector))
-                    throw new InvalidOperationException($"Tried to update the change vector '{changeVector}' but the new etag '{newEtag}' is smaller than " +
-                                                        $"the etag in the change vector. DocumentId= '{id}', DatabaseId='{_documentsStorage.Environment.Base64Id}', NodeTag='{_documentDatabase.ServerStore.NodeTag}'.");
+                    ChangeVectorUtils.ThrowConflictingEtag(id, changeVector, newEtag, _documentsStorage.Environment.Base64Id, _documentDatabase.ServerStore.NodeTag);
 
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
