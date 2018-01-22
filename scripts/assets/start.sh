@@ -23,5 +23,8 @@ pushd $EXECUTABLE_DIR > /dev/null
 
 sleep 2 # avoid Firefox already open warning preventing from launching the Studio tab
 eval "./$EXECUTABLE --browser";
+EXITCODE=$?
 
 popd > /dev/null
+
+exit ${EXITCODE}
