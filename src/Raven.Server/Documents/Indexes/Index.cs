@@ -2570,10 +2570,19 @@ namespace Raven.Server.Documents.Indexes
                 return false;
             }
 
-            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize && DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0))
+            if (_lowMemoryFlag.IsRaised() && count > MinBatchSize)
             {
+                if (DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(0) == false)
+                {
+                    var msg = $"Halting processing of batch after {count:#,#;;0} and waiting because of low memory, other indexes are currently completing and index {Name} will wait for them to complete";
+                    stats.RecordMapCompletedReason(msg);
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info(msg);
+                    DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(_indexingProcessCancellationTokenSource.Token);
+                }
+
                 _batchStopped = true;
-                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#0} documents because of low memory");
+                stats.RecordMapCompletedReason($"The batch was stopped after processing {count:#,#;;0} documents because of low memory");
                 return false;
             }
 
@@ -2614,7 +2623,14 @@ namespace Raven.Server.Documents.Indexes
             }
 
             var currentBudget = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
-            if (_threadAllocations.TotalAllocated > currentBudget)
+            var allocated = _threadAllocations.TotalAllocated +
+                // this is the number of modified pages in the transaction, we multiple that by the page 
+                // size to get the number in bytes and then multiple it by two again to take into account
+                // additional work that will need to be done during the commit phase of the index
+                (2 * (indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
+                      Voron.Global.Constants.Storage.PageSize));
+
+            if (allocated > currentBudget)
             {
                 var canContinue = true;
 

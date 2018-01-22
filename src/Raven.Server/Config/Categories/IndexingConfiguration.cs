@@ -91,7 +91,7 @@ namespace Raven.Server.Config.Categories
         public int MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory { get; protected set; }
 
         [Description("EXPERT ONLY")]
-        [DefaultValue(3)]
+        [DefaultValue(2)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int NumberOfConcurrentStoppedBatchesIfRunningLowOnMemory { get; protected set; }
