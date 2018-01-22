@@ -711,6 +711,20 @@ more responsive application.
             PrepareForEntitiesDeletion(result, null);
             PrepareForEntitiesPuts(result);
 
+            if(DeferredCommands.Count > 0)
+            {
+                // this allow OnBeforeStore to call Defer during the call to include
+                // additional values during the same SaveChanges call
+                result.DeferredCommands.AddRange(DeferredCommands);
+                foreach (var item in DeferredCommandsDictionary)
+                {
+                    result.DeferredCommandsDictionary[item.Key] = item.Value;
+                }
+
+                DeferredCommands.Clear();
+                DeferredCommandsDictionary.Clear();
+            }
+
             return result;
         }
 
