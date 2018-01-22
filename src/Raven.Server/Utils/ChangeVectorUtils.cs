@@ -144,8 +144,7 @@ namespace Raven.Server.Utils
                 // compare the strings instead of parsing to int
                 if (existingEtag >= etag)
                 {
-                    //nothing to do
-                    return (false, null);
+                    ThrowConflictingEtag(etag, oldChangeVector, existingEtag, dbIdInBase64, nodeTag);
                 }
                 // we clone the string because others might hold a reference to it and consider it immutable
                 vectorBuffer.Append(oldChangeVector);
@@ -158,8 +157,7 @@ namespace Raven.Server.Utils
 
             if (diff < 0)
             {
-                // nothing to do, already known to be smaller
-                return (false, null);
+                ThrowConflictingEtag(etag, oldChangeVector, existingEtag, dbIdInBase64, nodeTag);
             }
 
             // allocate new string
@@ -168,6 +166,12 @@ namespace Raven.Server.Utils
                 .Append(oldChangeVector, existingEtagEndIndex, oldChangeVector.Length - existingEtagEndIndex);
  
             return (true, vectorBuffer.ToString());
+        }
+
+        private static void ThrowConflictingEtag(long etag, string oldChangeVector, long existingEtag, string dbIdInBase64, string nodeTag)
+        {
+            throw new InvalidOperationException($"Tried to update the change vector '{oldChangeVector}' with the new etag '{etag}' " +
+                                                                $"but the new etag is smaller than the etag in the change vector '{existingEtag}'. DatabaseId='{dbIdInBase64}', NodeTag='{nodeTag}'.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
