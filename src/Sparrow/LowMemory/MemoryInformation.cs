@@ -317,7 +317,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory) MemoryStats()
+        public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory, long MappedTemp) MemoryStats()
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
@@ -333,9 +333,24 @@ namespace Sparrow.LowMemory
                         totalUnmanagedAllocations += stats.TotalAllocated;
                 }
 
-                var managedMemory = GC.GetTotalMemory(false);
+                // scratch buffers, compression buffers
+                var totalMappedTemp = 0L;
+                foreach (var mapping in NativeMemory.FileMapping)
+                {
+                    if (mapping.Key.EndsWith(".buffers", StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
 
-                return (workingSet, totalUnmanagedAllocations, managedMemory);
+                    var maxMapped = 0L;
+                    foreach (var singleMapping in mapping.Value)
+                    {
+                        maxMapped = Math.Max(maxMapped, singleMapping.Value);
+                    }
+
+                    totalMappedTemp += maxMapped;
+                }
+
+                var managedMemory = GC.GetTotalMemory(false);
+                return (workingSet, totalUnmanagedAllocations, managedMemory, totalMappedTemp);
             }
         }
 
