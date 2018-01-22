@@ -1223,13 +1223,18 @@ namespace Raven.Client.Http
 
             private void TimerCallback(object state)
             {
+                if (_requestExecutor.Disposed)
+                {
+                    Dispose();
+                    return;
+                }
                 GC.KeepAlive(_requestExecutor.CheckNodeStatusCallback(this));
             }
 
             public void UpdateTimer()
             {
                 Debug.Assert(_timer != null);
-                _timer.Change(NextTimerPeriod(), Timeout.InfiniteTimeSpan);
+                _timer?.Change(NextTimerPeriod(), Timeout.InfiniteTimeSpan);
             }
 
             public void Dispose()
