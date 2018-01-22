@@ -89,10 +89,13 @@ namespace Voron
             }
             catch (Exception e)
             {
-                if (_log.IsInfoEnabled)
+                if (_log.IsOperationsEnabled)
                 {
-                    _log.Info($"Catastrophic failure in voron environment flushing: {e.Message}", e);
+                    _log.Operations("Catastrophic failure in voron environment flushing", e);
                 }
+
+                // wait for the message to be flushed to the logs
+                Thread.Sleep(5000);
 
                 // Note that we intentionally don't have error handling here.
                 // If this code throws an exception that bubbles up to here, we WANT the process

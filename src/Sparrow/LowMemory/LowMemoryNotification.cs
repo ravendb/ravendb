@@ -229,10 +229,8 @@ namespace Sparrow.LowMemory
             {
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"Catastrophic failure in low memory notification: {e.Message}", e);
+                    _logger.Info("Catastrophic failure in low memory notification", e);
                 }
-
-                throw;
             }
         }
 
