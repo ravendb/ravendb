@@ -2,10 +2,11 @@ using System;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Rachis
 {
-    public class TimeoutEvent : IDisposable
+    public class TimeoutEvent : IDisposable, ILowMemoryHandler
     {
         public bool Disable;
 
@@ -21,6 +22,7 @@ namespace Raven.Server.Rachis
             _lastDeferredTicks = DateTime.UtcNow.Ticks;
             _timer = new Timer(Callback, null, Timeout.Infinite, Timeout.Infinite);
             _logger = LoggingSource.Instance.GetLogger<TimeoutEvent>(name);
+            LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
         }
 
         public int TimeoutPeriod;
@@ -133,6 +135,17 @@ namespace Raven.Server.Rachis
         {
             DisableTimeout();
             _timer.Dispose();
+        }
+
+        public void LowMemory()
+        {
+            // will defer the timeout event if we detected low-memory
+            _timeoutEventSlim.Set();
+        }
+
+        public void LowMemoryOver()
+        {
+            //
         }
     }
 }
