@@ -170,6 +170,12 @@ namespace Raven.Server.Utils
             return (true, vectorBuffer.ToString());
         }
 
+        public static void ThrowConflictingEtag(string id, string changeVector, long newEtag, string dbId, string nodeTag)
+        {
+            throw new InvalidOperationException($"Tried to update the change vector '{changeVector}' but the new etag '{newEtag}' is smaller than " +
+                                                $"the etag in the change vector. DocumentId= '{id}', DatabaseId='{dbId}', NodeTag='{nodeTag}'.");
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void InitializeThreadLocalState()
         {
