@@ -16,6 +16,7 @@ namespace Sparrow.Platform.Posix
 
             var vecSize = (int)((length + Syscall.PageSize - 1) / Syscall.PageSize);
 
+            var p = stackalloc IntPtr[2];
             IntPtr vec = IntPtr.Zero;
             char* pVec;
             if (vecSize > 4)
@@ -25,7 +26,6 @@ namespace Sparrow.Platform.Posix
             }
             else
             {
-                void *p = stackalloc IntPtr[(int)length];
                 pVec = (char*)p;
             }
 

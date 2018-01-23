@@ -36,17 +36,21 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
+                if (ServerStore.IsLeader() == false)
+                {
+                    throw new NoLeaderException("Not a leader, cannot accept commands.");
+                }
 
+                HttpContext.Response.Headers["Reached-Leader"] = "true";
+
+                var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
                 var command = CommandBase.CreateFrom(commandJson);
 
                 var isClusterAdmin = IsClusterAdmin();
-
                 command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
                 var (etag, result) = await ServerStore.Engine.PutAsync(command);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                HttpContext.Response.Headers["Reached-Leader"] = "true";
                 var ms = context.CheckoutMemoryStream();
                 try
                 {

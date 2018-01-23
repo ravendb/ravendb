@@ -420,7 +420,7 @@ namespace Raven.Server.ServerWide
             // ReSharper disable once UseNullPropagation
             if (leader == null)
                 return;
-
+            
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
@@ -498,6 +498,7 @@ namespace Raven.Server.ServerWide
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
+                
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
@@ -509,8 +510,6 @@ namespace Raven.Server.ServerWide
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
                 UpdateValue(index, items, lowerKey, key, updated);
-
-                NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
             }
         }
 

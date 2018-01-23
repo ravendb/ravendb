@@ -495,14 +495,19 @@ namespace Raven.Server.Documents.Replication
             fixed (byte* pTemp = _tempBuffer)
             {
                 var requiredSize = sizeof(byte) + // type
-                              sizeof(int) + //  size of change vector
-                              cv.Size +
-                              sizeof(short) + // transaction marker
-                              sizeof(long) + // Last modified ticks
-                              sizeof(DocumentFlags) +
-                              sizeof(int) + // size of document ID
-                              item.Id.Size +
-                              sizeof(int); // size of document
+                                   sizeof(int) + //  size of change vector
+                                   cv.Size +
+                                   sizeof(short) + // transaction marker
+                                   sizeof(long) + // Last modified ticks
+                                   sizeof(DocumentFlags) +
+                                   sizeof(int) + // size of document ID
+                                   item.Id.Size +
+                                   sizeof(int); // size of document
+                
+                if (item.Collection != null)
+                {
+                    requiredSize += item.Collection.Size + sizeof(int);
+                }
 
                 if (requiredSize > _tempBuffer.Length)
                     ThrowTooManyChangeVectorEntries(item);
@@ -570,7 +575,7 @@ namespace Raven.Server.Documents.Replication
                     Memory.Copy(pTemp + tempBufferPos, item.Collection.Buffer, item.Collection.Size);
                     tempBufferPos += item.Collection.Size;
                 }
-
+                
                 _stream.Write(_tempBuffer, 0, tempBufferPos);
             }
         }
