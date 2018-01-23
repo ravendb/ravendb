@@ -23,23 +23,15 @@ function CopyStartAsServiceScript ( $spec, $targetDir ) {
 }
 
 function CopyStartCmd ( $targetDir ) {
-    $startPs1Path = [io.path]::combine("scripts", "assets", "start.ps1")
-    $startPs1TargetPath = [io.path]::combine($targetDir, "start.ps1");
+    $startPs1Path = [io.path]::combine("scripts", "assets", "run.ps1")
+    $startPs1TargetPath = [io.path]::combine($targetDir, "run.ps1");
     Copy-Item $startPs1Path $startPs1TargetPath
-    
-    $startCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\start.ps1'"" `r`n"
-    $startCmdTargetPath = [io.path]::combine($targetDir, "start.cmd");
-    Set-Content -Path $startCmdTargetPath $startCmdContent
 }
 
 function CopyStartAsServiceCmd ( $targetDir ) {
-    $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "setup-service.ps1")
-    $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "setup-service.ps1");
+    $startAsServicePs1Path = [io.path]::combine("scripts", "assets", "setup-as-service.ps1")
+    $startAsServicePs1TargetPath = [io.path]::combine($targetDir, "setup-as-service.ps1");
     Copy-Item $startAsServicePs1Path $startAsServicePs1TargetPath
-    
-    $startAsServiceCmdContent = "@ECHO OFF`r`nPowerShell.exe -NoProfile -ExecutionPolicy Bypass -Command ""& '%~dp0\setup-service.ps1'"" `r`n"
-    $startAsServiceCmdTargetPath = [io.path]::combine($targetDir, "setup-service.cmd");
-    Set-Content -Path $startAsServiceCmdTargetPath $startAsServiceCmdContent
 }
 
 function CopyStartSh ( $targetDir ) {
