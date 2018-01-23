@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                             case 2:
                             case 3:
                             case 4:
-                                Assert.IsType<AllTopologyNodesDownException>(exp);
+                                Assert.IsType<RavenException>(exp);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

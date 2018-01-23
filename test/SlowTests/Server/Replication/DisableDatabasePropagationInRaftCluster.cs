@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
@@ -84,10 +85,7 @@ namespace SlowTests.Server.Replication
                     //thus, session.Load() operation would fail now
 
                     var e = Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
-                    Assert.IsType<AggregateException>(e.InnerException);
-                    var ae = e.InnerException as AggregateException;
-                    foreach (var ie in ae.InnerExceptions)
-                        Assert.IsType<UnsuccessfulRequestException>(ie);
+                    Assert.IsType<DatabaseDisabledException>(e.InnerException);
                 }
 
                 //now we enable all databases, so it should propagate as well and make them available for requests

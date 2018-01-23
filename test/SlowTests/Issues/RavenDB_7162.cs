@@ -29,7 +29,7 @@ namespace SlowTests.Issues
                 {
                     using (var commands = store.Commands())
                     {
-                        var e = Assert.Throws<AllTopologyNodesDownException>(() => commands.Execute(new DelayCommand(TimeSpan.FromSeconds(2))));
+                        var e = Assert.Throws<RavenException>(() => commands.Execute(new DelayCommand(TimeSpan.FromSeconds(2))));
                         Assert.Contains("failed with timeout after 00:00:00.1000000", e.ToString());
                     }
                 }
