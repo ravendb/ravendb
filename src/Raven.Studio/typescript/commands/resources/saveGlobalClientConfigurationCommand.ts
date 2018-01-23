@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class saveGlobalClientConfigurationCommand extends commandBase {
     
-    constructor(private dto: Raven.Client.ServerWide.ClientConfiguration) {
+    constructor(private dto: Raven.Client.Documents.Operations.Configuration.ClientConfiguration) {
         super();
     }
     

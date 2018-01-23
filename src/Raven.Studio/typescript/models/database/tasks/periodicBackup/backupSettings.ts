@@ -16,7 +16,7 @@ abstract class backupSettings {
     
     dirtyFlag: () => DirtyFlag;
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.BackupSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
         this.enabled(!dto.Disabled);
         this.connectionType = connectionType;
         this.initObservables();
@@ -39,7 +39,7 @@ abstract class backupSettings {
         return action();
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.BackupSettings {
+    toDto(): Raven.Client.Documents.Operations.Backups.BackupSettings {
         return {
             Disabled: !this.enabled()
         }

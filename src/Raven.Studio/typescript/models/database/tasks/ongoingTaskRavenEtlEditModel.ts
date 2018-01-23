@@ -19,7 +19,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
     
     dirtyFlag: () => DirtyFlag;
     
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
         super();
 
         this.update(dto);
@@ -81,7 +81,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    protected update(dto: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) {
+    protected update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) {
         super.update(dto);
 
         if (dto.Configuration) {
@@ -92,7 +92,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
         }
     }
 
-    toDto(): Raven.Client.ServerWide.ETL.RavenEtlConfiguration { 
+    toDto(): Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration { 
         return {
             Name: this.taskName(),
             ConnectionStringName: this.connectionStringName(),
@@ -102,7 +102,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
             EtlType: "Raven",
             MentorNode: this.manualChooseMentor() ? this.preferredMentor() : undefined,
             TaskId: this.taskId,
-        } as Raven.Client.ServerWide.ETL.RavenEtlConfiguration;
+        } as Raven.Client.Documents.Operations.ETL.RavenEtlConfiguration;
     }
 
     deleteTransformationScript(transformationScript: ongoingTaskRavenEtlTransformationModel) { 
@@ -132,7 +132,7 @@ class ongoingTaskRavenEtlEditModel extends ongoingTaskEditModel {
                     ConnectionStringName: "",
                     Name: "",
                 },
-            } as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails);
     }
 }
 

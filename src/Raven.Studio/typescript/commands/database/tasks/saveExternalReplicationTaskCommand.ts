@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class saveExternalReplicationTaskCommand extends commandBase {
    
-    constructor(private db: database, private replicationSettings: Raven.Client.ServerWide.ExternalReplication) {
+    constructor(private db: database, private replicationSettings: Raven.Client.Documents.Operations.Replication.ExternalReplication) {
         super();
     }
  
-    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         return this.updateReplication()
             .fail((response: JQueryXHR) => {
                     this.reportError("Failed to save replication task", response.responseText, response.statusText);
@@ -18,18 +18,18 @@ class saveExternalReplicationTaskCommand extends commandBase {
             });
     }
 
-    private updateReplication(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
+    private updateReplication(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
 
         const url = endpoints.databases.ongoingTasks.adminTasksExternalReplication;
         
-        const addRepTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
+        const addRepTask = $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult>();
 
         const payload = {          
             Watcher: this.replicationSettings
         };
 
         this.post(url, JSON.stringify(payload), this.db)
-            .done((results: Array<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>) => {
+            .done((results: Array<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult>) => {
                 addRepTask.resolve(results[0]);
             })
             .fail(response => addRepTask.reject(response));

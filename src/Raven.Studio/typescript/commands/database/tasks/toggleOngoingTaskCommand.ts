@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class toggleOngoingTaskCommand extends commandBase {
 
-    constructor(private db: database, private taskType: Raven.Client.ServerWide.Operations.OngoingTaskType, private taskId: number, private taskName: string, private disable: boolean) {
+    constructor(private db: database, private taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType, private taskId: number, private taskName: string, private disable: boolean) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         const args = { key: this.taskId, type: this.taskType, disable: this.disable, taskName: this.taskName };
 
         // Subscription is the only task that needs only *User* authenication for toggling state

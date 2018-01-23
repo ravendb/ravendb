@@ -7,7 +7,7 @@ class azureSettings extends backupSettings {
     accountName = ko.observable<string>();
     accountKey = ko.observable<string>();
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.AzureSettings) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.AzureSettings) {
         super(dto, "Azure");
 
         this.storageContainer(dto.StorageContainer);
@@ -80,8 +80,8 @@ class azureSettings extends backupSettings {
         });
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.AzureSettings {
-        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.AzureSettings;
+    toDto(): Raven.Client.Documents.Operations.Backups.AzureSettings {
+        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.AzureSettings;
         dto.StorageContainer = this.storageContainer();
         dto.RemoteFolderName = this.remoteFolderName();
         dto.AccountName = this.accountName();

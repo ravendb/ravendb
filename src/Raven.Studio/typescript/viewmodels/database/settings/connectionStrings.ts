@@ -17,7 +17,7 @@ class connectionStrings extends viewModelBase {
     sqlEtlConnectionStringsNames = ko.observableArray<string>([]);
 
     // Mapping from { connection string } to { taskId, taskName, taskType }
-    connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: Raven.Client.ServerWide.Operations.OngoingTaskType }>> = {}; 
+    connectionStringsTasksInfo: dictionary<Array<{ TaskId: number, TaskName: string, TaskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType }>> = {}; 
     
     editedRavenEtlConnectionString = ko.observable<connectionStringRavenEtlModel>(null);
     editedSqlEtlConnectionString = ko.observable<connectionStringSqlEtlModel>(null);
@@ -94,13 +94,13 @@ class connectionStrings extends viewModelBase {
             
             switch (task.TaskType) {                
                 case 'RavenEtl':                   
-                    stringName = (task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView).ConnectionStringName;   
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView).ConnectionStringName;   
                     break;
                 case 'SqlEtl':
-                    stringName = (task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView).ConnectionStringName;
                     break;
                 case 'Replication':
-                    stringName = (task as Raven.Client.ServerWide.Operations.OngoingTaskReplication).ConnectionStringName;
+                    stringName = (task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication).ConnectionStringName;
                     break;
             }
 
@@ -120,7 +120,7 @@ class connectionStrings extends viewModelBase {
     private getAllConnectionStrings() {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.ravenEtlConnectionStringsNames(Object.keys(result.RavenConnectionStrings));
                 this.sqlEtlConnectionStringsNames(Object.keys(result.SqlConnectionStrings));
 
@@ -129,7 +129,7 @@ class connectionStrings extends viewModelBase {
             });
     }
 
-    confirmDelete(connectionStringName: string, connectionStringtype: Raven.Client.ServerWide.ConnectionStringType) {
+    confirmDelete(connectionStringName: string, connectionStringtype: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType) {
         const stringType = connectionStringtype === 'Raven' ? 'RavenDB' : 'SQL';
         this.confirmationMessage("Are you sure?", `Do you want to delete ${stringType} ETL connection string:  ${connectionStringName}`, ["Cancel", "Delete"])
             .done(result => {
@@ -139,7 +139,7 @@ class connectionStrings extends viewModelBase {
         });
     }
 
-    private deleteConnectionSring(connectionStringType: Raven.Client.ServerWide.ConnectionStringType, connectionStringName: string) {
+    private deleteConnectionSring(connectionStringType: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, connectionStringName: string) {
         new deleteConnectionStringCommand(this.activeDatabase(), connectionStringType, connectionStringName)
             .execute()
             .done(() => {
@@ -170,7 +170,7 @@ class connectionStrings extends viewModelBase {
         
         return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringName)
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result.RavenConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, 'RavenEtl')));
                 this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
                 this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
@@ -183,14 +183,14 @@ class connectionStrings extends viewModelBase {
         
         return getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), connectionStringName)
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.editedSqlEtlConnectionString(new connectionStringSqlEtlModel(result.SqlConnectionStrings[connectionStringName], false, this.getTasksThatUseThisString(connectionStringName, 'SqlEtl')));
                 this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
                 this.editedRavenEtlConnectionString(null);
             });
     }
     
-    private getTasksThatUseThisString(connectionStringName: string, taskType: Raven.Client.ServerWide.Operations.OngoingTaskType) : { taskName: string; taskId: number }[]{        
+    private getTasksThatUseThisString(connectionStringName: string, taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) : { taskName: string; taskId: number }[]{        
         const tasksData = this.connectionStringsTasksInfo[connectionStringName];               
                
         return tasksData ? _.sortBy(tasksData.map((task) => { return { taskName: task.TaskName, taskId: task.TaskId }; }), 

@@ -4,7 +4,7 @@ import jsonUtil = require("common/jsonUtil");
 class localSettings extends backupSettings {
     folderPath = ko.observable<string>();
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.LocalSettings) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.LocalSettings) {
         super(dto, "Local");
 
         this.folderPath(dto.FolderPath);
@@ -29,8 +29,8 @@ class localSettings extends backupSettings {
         });
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.LocalSettings {
-        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.LocalSettings;
+    toDto(): Raven.Client.Documents.Operations.Backups.LocalSettings {
+        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.LocalSettings;
         dto.FolderPath = this.folderPath();
         return dto;
     }

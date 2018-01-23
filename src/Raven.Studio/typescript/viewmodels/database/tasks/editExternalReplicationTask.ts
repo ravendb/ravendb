@@ -19,7 +19,7 @@ class editExternalReplicationTask extends viewModelBase {
     
     possibleMentors = ko.observableArray<string>([]);
     
-    ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.ServerWide.ETL.RavenConnectionString>([]);
+    ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.Documents.Operations.ETL.RavenConnectionString>([]);
 
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
 
@@ -52,7 +52,7 @@ class editExternalReplicationTask extends viewModelBase {
 
             ongoingTaskInfoCommand.forExternalReplication(this.activeDatabase(), this.taskId)
                 .execute()
-                .done((result: Raven.Client.ServerWide.Operations.OngoingTaskReplication) => { 
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) => { 
                     this.editedExternalReplication(new ongoingTaskReplicationEditModel(result));
                     deferred.resolve();
                 })
@@ -83,7 +83,7 @@ class editExternalReplicationTask extends viewModelBase {
     private getAllConnectionStrings() {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
                 this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));                
             });

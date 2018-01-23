@@ -12,7 +12,7 @@ abstract class connectionStringModel {
         this.tasksThatAreUsingThisConnectionString(tasks);
     }    
 
-    update(dto: Raven.Client.ServerWide.ConnectionString) {
+    update(dto: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionString) {
         this.connectionStringName(dto.Name);        
     }
 

@@ -13,7 +13,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
      
     validationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super();
 
         this.update(dto); 
@@ -31,7 +31,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
      });
     }
     
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super.update(dto);
 
         this.connectionStringName(dto.ConnectionStringName); 
@@ -44,7 +44,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
         this.delayReplicationTime(dto.DelayReplicationFor ? delayTime : null);       
     }
 
-    toDto(taskId: number): Raven.Client.ServerWide.ExternalReplication {
+    toDto(taskId: number): Raven.Client.Documents.Operations.Replication.ExternalReplication {
         return {
             Name: this.taskName(),
             Database: this.destinationDB(),
@@ -52,7 +52,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
-        } as Raven.Client.ServerWide.ExternalReplication;
+        } as Raven.Client.Documents.Operations.Replication.ExternalReplication;
     }
 
     initValidation() {
@@ -83,7 +83,7 @@ class ongoingTaskReplicationEditModel extends ongoingTaskEditModel {
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: null
-        } as Raven.Client.ServerWide.Operations.OngoingTaskReplication);
+        } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication);
     }
 }
 

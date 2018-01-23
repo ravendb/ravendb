@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class deleteConnectionStringCommand extends commandBase {
 
-    constructor(private db: database, private type: Raven.Client.ServerWide.ConnectionStringType, private connectionStringName: string) {
+    constructor(private db: database, private type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, private connectionStringName: string) {
         super();
     }
 

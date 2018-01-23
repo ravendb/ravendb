@@ -4,10 +4,10 @@ abstract class ongoingTaskModel {
 
     taskId: number;
     taskName = ko.observable<string>();
-    taskType = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskType>();
+    taskType = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>();
     responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
-    taskState = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskState>();
-    taskConnectionStatus = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskConnectionStatus>();
+    taskState = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState>();
+    taskConnectionStatus = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskConnectionStatus>();
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
@@ -71,7 +71,7 @@ abstract class ongoingTaskModel {
         });
     }
 
-    protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
+    protected update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask) {
         this.taskName(ongoingTaskModel.generateTaskNameIfNeeded(dto));
         this.taskId = dto.TaskId;
         this.taskType(dto.TaskType);
@@ -80,30 +80,30 @@ abstract class ongoingTaskModel {
         this.taskConnectionStatus(dto.TaskConnectionStatus);
     }
 
-    static generateTaskNameIfNeeded(dto: Raven.Client.ServerWide.Operations.OngoingTask): string {
+    static generateTaskNameIfNeeded(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
         dto.TaskName = dto.TaskName ? dto.TaskName.trim() : dto.TaskName;
         return dto.TaskName || ongoingTaskModel.generateTaskName(dto);
     }
 
-    static generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTask): string {
+    static generateTaskName(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask): string {
         // Note: This is static because it is also being called from other places (i.e. databaseGroupGraph.ts) which don't have the tasks models objects..
         let taskName: string = "";
 
         switch (dto.TaskType) { 
             case "Replication":
-                const dtoReplication = dto as Raven.Client.ServerWide.Operations.OngoingTaskReplication;
+                const dtoReplication = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication;
                 taskName = `External replication to ${dtoReplication.DestinationDatabase}@${dtoReplication.DestinationUrl || 'N/A'}`;
                 break;
             case "Backup":
-                const dtoBackup = dto as Raven.Client.ServerWide.Operations.OngoingTaskBackup;
+                const dtoBackup = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
                 taskName = dtoBackup.BackupDestinations.length === 0 ? "Backup w/o destinations" : `${dtoBackup.BackupType} to ${dtoBackup.BackupDestinations.join(", ")}`;
                 break;
             case "RavenEtl":
-                const dtoRavenEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView;
+                const dtoRavenEtl = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView;
                 taskName = `ETL to ${dtoRavenEtl.DestinationDatabase}@${dtoRavenEtl.DestinationUrl || 'N/A'}`;
                 break;
             case "SqlEtl":
-                const dtoSqlEtl = dto as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView;
+                const dtoSqlEtl = dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView;
                 taskName = `SQL ETL to ${dtoSqlEtl.DestinationDatabase}@${dtoSqlEtl.DestinationServer}`;
                 break;
             case "Subscription":

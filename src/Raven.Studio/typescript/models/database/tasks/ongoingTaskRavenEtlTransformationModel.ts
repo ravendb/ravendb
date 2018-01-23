@@ -20,7 +20,7 @@ class ongoingTaskEtlTransformationModel {
     
     dirtyFlag: () => DirtyFlag;
   
-    constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean, resetScript: boolean) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean) {
         this.update(dto, isNew, resetScript);
         this.initObservables();
         this.initValidation();
@@ -54,7 +54,7 @@ class ongoingTaskEtlTransformationModel {
             }, true, false);
     }
 
-    toDto(): Raven.Client.ServerWide.ETL.Transformation {
+    toDto(): Raven.Client.Documents.Operations.ETL.Transformation {
         return {
             ApplyToAllDocuments: this.applyScriptForAllCollections(),
             Collections: this.applyScriptForAllCollections() ? null : this.transformScriptCollections(),
@@ -113,7 +113,7 @@ class ongoingTaskEtlTransformationModel {
         $(".collection-list li").first().addClass("blink-style");
     }
 
-    private update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean, resetScript: boolean) {
+    private update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean, resetScript: boolean) {
         this.name(dto.Name);
         this.script(dto.Script);
         this.transformScriptCollections(dto.Collections || []);

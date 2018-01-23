@@ -7,7 +7,7 @@ class getPeriodicBackupConfigurationCommand extends commandBase {
         super();
     }
  
-    execute(): JQueryPromise<Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration> {
         const url = endpoints.global.backupDatabase.periodicBackup +
             this.urlEncodeArgs({ name: this.db.name, taskId: this.taskId });
 

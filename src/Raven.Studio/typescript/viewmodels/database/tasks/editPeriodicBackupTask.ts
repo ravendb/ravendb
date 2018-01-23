@@ -32,7 +32,7 @@ class editPeriodicBackupTask extends viewModelBase {
 
             new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((configuration: Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration) => {
+                .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
                     this.configuration(new periodicBackupConfiguration(configuration));
                     deferred.resolve();
                 })
