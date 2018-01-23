@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                     var command = new TestQueryCommand((InMemoryDocumentSessionOperations)session, store.Conventions, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
 
                     var sw = Stopwatch.StartNew();
-                    Assert.Throws<AllTopologyNodesDownException>(() => requestExecuter.Execute(command, context));
+                    Assert.Throws<RavenException>(() => requestExecuter.Execute(command, context));
                     sw.Stop();
 
                     // Assert.True(sw.Elapsed < TimeSpan.FromSeconds(1), sw.Elapsed.ToString()); this can take longer when running tests in parallel but is not needed to assert if the request was cancelled or not
