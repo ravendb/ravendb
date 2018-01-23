@@ -46,8 +46,8 @@ namespace SlowTests.Bugs
                         .Where(result => result.SkillId == 1));
 
                     index.Query += @" update { 
-for (var i = 0; i < this.Skills.$values.length; i++) {
-    this.Skills.$values[i].IsPrimary = false
+for (var i = 0; i < this.Skills.length; i++) {
+    this.Skills[i].IsPrimary = false
 }
 }";
                     var operation = store.Operations.Send(new PatchByQueryOperation(index));
