@@ -198,10 +198,8 @@ namespace Raven.Client.Util
                                 context.Visitor.Visit(methodCallExpression.Arguments[1]);
                                 return;
                             }
-
-                            writer.Write("[");
-                            context.Visitor.Visit(methodCallExpression.Arguments[0]);
-                            writer.Write(".length-1]");
+                            // arrayExpr.slice([-1])[0] will get the last value
+                            writer.Write(".slice(-1)[0]");
                             return;
 
                         }
@@ -402,7 +400,29 @@ namespace Raven.Client.Util
                 }
                 else
                 {
-                    context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    var typeInfo = methodCallExpression.Arguments[0].Type.GetTypeInfo();
+                    if (typeInfo.IsGenericType &&
+                           (
+                            typeInfo.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
+                             typeInfo.GetGenericTypeDefinition() == typeof(IDictionary<,>)
+                           )
+                        )
+                    {
+                        javascriptWriter.Write("Object.keys(");
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        javascriptWriter.Write(").reduce(function(state,index) { ");
+
+                        javascriptWriter.Write(" state.push(");
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                        javascriptWriter.Write("[index]); return state; }, [])");
+
+
+                    }
+                    else
+                    {
+                        context.Visitor.Visit(methodCallExpression.Arguments[0]);
+                    }
+
                     javascriptWriter.Write($".{newName}");
                     javascriptWriter.Write("(");
                     if (methodCallExpression.Arguments.Count > 1)
@@ -1213,6 +1233,31 @@ namespace Raven.Client.Util
                                         }
 
                                         context.Visitor.Visit(arrayExpression.Expressions[i]);
+                                    }
+                                }
+                                else if(mce.Arguments[0] is MethodCallExpression mce2)
+                                {
+                                    var value = Expression.Lambda(mce2).Compile().DynamicInvoke();
+                                    switch (value)
+                                    {
+                                        case string s:
+                                            writer.WriteLiteral(s);
+                                            break;
+                                        case Array items:
+                                            for (var i = 0; i < items.Length; i++)
+                                            {
+                                                if (i != 0)
+                                                {
+                                                    writer.Write("+\"|\"+");
+                                                }
+
+                                                var str = items.GetValue(i).ToInvariantString();
+
+                                                writer.WriteLiteral(str);
+                                            }
+                                            break;
+                                        default:
+                                            throw new InvalidOperationException("Unable to understand how to convert " + value + " to RQL (" + value?.GetType() ?? "null" +")");
                                     }
                                 }
                                 else
