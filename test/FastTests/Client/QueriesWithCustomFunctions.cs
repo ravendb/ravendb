@@ -2810,7 +2810,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                     var query = session.Query<User>()
                         .Select(u => new
                         {
-                            LasLastOrDefault = u.Roles.LastOrDefault(),
+                            LastOrDefault = u.Roles.LastOrDefault(),
                             LastOrDefaultWithPredicate = u.Roles.LastOrDefault(x => x != "4"),
                             Take = u.Roles.Take(2),
                             Skip = u.Roles.Skip(2),
@@ -2827,7 +2827,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
                         });
 
                     Assert.Equal("from Users as u select { " +
-                                 "LasLastOrDefault : u.Roles[u.Roles.length-1], " +
+                                 "LastOrDefault : u.Roles.slice(-1)[0], " +
                                  "LastOrDefaultWithPredicate : u.Roles.slice().reverse().find(function(x){return x!==\"4\";}), " +
                                  "Take : u.Roles.slice(0, 2), " +
                                  "Skip : u.Roles.slice(2, u.Roles.length), " +
@@ -2844,7 +2844,7 @@ from Orders as o load o.Employee as employee select output(o, employee)" , query
 
                     var queryResult = query.ToList();
 
-                    Assert.Equal(user.Roles.LastOrDefault(), queryResult[0].LasLastOrDefault);
+                    Assert.Equal(user.Roles.LastOrDefault(), queryResult[0].LastOrDefault);
                     Assert.Equal(user.Roles.LastOrDefault(x => x != "4"), queryResult[0].LastOrDefaultWithPredicate);
                     Assert.Equal(user.Roles.Take(2), queryResult[0].Take);
                     Assert.Equal(user.Roles.Skip(2), queryResult[0].Skip);
