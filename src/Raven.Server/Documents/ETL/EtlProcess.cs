@@ -303,9 +303,11 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (_threadAllocations.TotalAllocated > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
+            var currentlyInUse = new Size(_threadAllocations.Allocations, SizeUnit.Bytes);
+            if (currentlyInUse > _currentMaximumAllowedMemory)
             {
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
+                        currentlyInUse,
                         Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out ProcessMemoryUsage memoryUsage) == false)
                 {
                     var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {_threadAllocations.TotalAllocated}. Current memory usage: " +

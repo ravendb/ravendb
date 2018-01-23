@@ -2641,20 +2641,24 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            var currentBudget = _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes);
-            var allocated = _threadAllocations.TotalAllocated +
+            var allocated = new Size(_threadAllocations.TotalAllocated +
                 // this is the number of modified pages in the transaction, we multiple that by the page 
                 // size to get the number in bytes and then multiple it by two again to take into account
                 // additional work that will need to be done during the commit phase of the index
                 (2 * (indexingContext.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages *
-                      Voron.Global.Constants.Storage.PageSize));
+                      Voron.Global.Constants.Storage.PageSize)), SizeUnit.Bytes);
 
-            if (allocated > currentBudget)
+            if (allocated > _currentMaximumAllowedMemory)
             {
                 var canContinue = true;
 
-                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        _environment.Options.RunningOn32Bits, _logger, out ProcessMemoryUsage memoryUsage) == false)
+                if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(
+                    _threadAllocations, 
+                    ref _currentMaximumAllowedMemory,
+                    allocated,
+                    _environment.Options.RunningOn32Bits, 
+                    _logger, 
+                    out ProcessMemoryUsage memoryUsage) == false)
                 {
                     _allocationCleanupNeeded = true;
 
@@ -2666,7 +2670,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 if (memoryUsage != null)
-                    stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, currentBudget);
+                    stats.RecordMapMemoryStats(memoryUsage.WorkingSet, memoryUsage.PrivateMemory, _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes));
 
                 return canContinue;
             }
