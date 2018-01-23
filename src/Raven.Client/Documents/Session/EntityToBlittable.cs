@@ -268,6 +268,8 @@ namespace Raven.Client.Documents.Session
                 return true;
             if (typeValue.StartsWith("System.Collections.Generic.Dictionary`2[["))
                 return true;
+            if (typeValue.StartsWith("System.Collections.ObjectModel.Collection`1[["))
+                return true;
             if (ArrayEndRegex.IsMatch(typeValue)) // array
                 return true;
             return false;
