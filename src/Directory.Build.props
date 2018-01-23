@@ -1,6 +1,8 @@
 <Project>
   <PropertyGroup>
 
+    <LangVersion>latest</LangVersion>
+
     <PackageIconUrl>http://static.ravendb.net/logo-for-nuget.png</PackageIconUrl>
     <PackageProjectUrl>https://ravendb.net</PackageProjectUrl>
     <PackageLicenseUrl>http://www.ravendb.net/licensing</PackageLicenseUrl>
