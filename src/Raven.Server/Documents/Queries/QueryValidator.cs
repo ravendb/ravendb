@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.AST;
-using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries

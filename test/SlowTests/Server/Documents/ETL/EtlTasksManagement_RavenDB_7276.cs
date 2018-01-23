@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Raven.Client.ServerWide.ETL;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.ETL;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL
@@ -112,7 +112,7 @@ namespace SlowTests.Server.Documents.ETL
                 });
 
 
-                store.Maintenance.Send(new ToggleTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
+                store.Maintenance.Send(new ToggleOngoingTaskStateOperation(result.TaskId, OngoingTaskType.RavenEtl, true));
 
                 var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.RavenEtl));
 

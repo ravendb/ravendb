@@ -6,7 +6,6 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Collections;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;

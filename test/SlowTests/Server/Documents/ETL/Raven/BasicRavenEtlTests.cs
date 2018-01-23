@@ -4,7 +4,7 @@ using System.Linq;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
-using Raven.Client.ServerWide.ETL;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

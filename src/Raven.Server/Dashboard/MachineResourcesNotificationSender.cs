@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter;
-using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Collections;

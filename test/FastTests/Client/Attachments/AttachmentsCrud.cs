@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Xunit;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;

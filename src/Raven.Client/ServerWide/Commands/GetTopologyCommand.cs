@@ -8,11 +8,6 @@ namespace Raven.Client.ServerWide.Commands
 {
     public class GetTopologyCommand : RavenCommand<Topology>
     {
-
-        public GetTopologyCommand()
-        {
-        }
-
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/topology?name={node.Database}";
@@ -23,7 +18,7 @@ namespace Raven.Client.ServerWide.Commands
                 // so we are going to ask the server to respect it
                 url += "&localUrl=" + Uri.EscapeDataString(node.Url);
             }
-            
+
             return new HttpRequestMessage
             {
                 Method = HttpMethod.Get

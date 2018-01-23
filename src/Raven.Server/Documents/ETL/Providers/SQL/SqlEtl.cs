@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using Raven.Client.ServerWide.ETL;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;

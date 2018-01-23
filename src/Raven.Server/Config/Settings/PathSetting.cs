@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Text.RegularExpressions;
 using Raven.Server.ServerWide;
-using Sparrow.Platform;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config.Settings

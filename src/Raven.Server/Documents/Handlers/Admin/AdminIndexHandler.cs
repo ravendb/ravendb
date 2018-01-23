@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;

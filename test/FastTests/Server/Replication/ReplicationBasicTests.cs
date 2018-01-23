@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Replication;
 using Xunit;
 
 namespace FastTests.Server.Replication

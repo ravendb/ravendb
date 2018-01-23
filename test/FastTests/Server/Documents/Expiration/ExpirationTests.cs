@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
-using Raven.Client.ServerWide.Expiration;
+using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;

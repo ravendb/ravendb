@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Xunit;
 

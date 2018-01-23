@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Client.ServerWide.ETL;
-using Raven.Client.ServerWide.Operations.ETL;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Jint.Native;
 using Jint.Runtime.Interop;
-using Raven.Client.ServerWide.ETL;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 

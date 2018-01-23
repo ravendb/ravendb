@@ -9,7 +9,6 @@ using Raven.Server.Utils;
 using Sparrow;
 using Voron;
 using Voron.Exceptions;
-using Voron.Impl;
 using Voron.Impl.Compaction;
 
 namespace Raven.Server.Documents

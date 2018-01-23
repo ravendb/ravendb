@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Identities;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;

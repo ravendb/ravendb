@@ -4,8 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 

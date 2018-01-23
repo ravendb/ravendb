@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -10,7 +9,6 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Object;
-using Jint.Runtime;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
 using Raven.Client;

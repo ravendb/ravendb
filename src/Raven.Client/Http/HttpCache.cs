@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;

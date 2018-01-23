@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Routing;
-using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {

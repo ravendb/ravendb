@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Conventions;

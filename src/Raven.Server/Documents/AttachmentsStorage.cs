@@ -5,7 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
 using Raven.Server.ServerWide.Context;

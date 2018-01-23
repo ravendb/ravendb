@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Replication;
 using Tests.Infrastructure;
 using Xunit;
 

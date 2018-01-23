@@ -14,7 +14,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {

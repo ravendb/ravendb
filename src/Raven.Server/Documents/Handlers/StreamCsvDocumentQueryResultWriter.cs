@@ -2,15 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text;
 using CsvHelper;
-using Lucene.Net.Index;
 using Microsoft.AspNetCore.Http;
-using Org.BouncyCastle.Utilities.Collections;
 using Raven.Client;
 using Raven.Client.Json;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

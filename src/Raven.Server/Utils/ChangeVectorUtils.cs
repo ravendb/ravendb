@@ -6,7 +6,6 @@ using System.Text;
 using Lucene.Net.Support;
 using Raven.Server.Documents.Replication;
 using Sparrow;
-using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {

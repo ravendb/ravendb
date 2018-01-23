@@ -11,13 +11,11 @@ using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron;
 using Voron.Exceptions;
-using Sparrow;
 
 namespace Raven.Server.Documents.Handlers
 {

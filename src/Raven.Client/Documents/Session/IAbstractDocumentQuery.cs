@@ -2,13 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestions;
-using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Session
 {

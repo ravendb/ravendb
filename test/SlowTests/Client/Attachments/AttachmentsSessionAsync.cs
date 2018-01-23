@@ -7,6 +7,7 @@ using FastTests.Client.Attachments;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;

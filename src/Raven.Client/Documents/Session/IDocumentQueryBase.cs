@@ -4,7 +4,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Spatial;

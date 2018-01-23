@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;

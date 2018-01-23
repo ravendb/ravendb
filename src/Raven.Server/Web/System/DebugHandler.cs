@@ -1,26 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Indexes;
-using Raven.Client.Http;
-using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.Operations;
-using Raven.Client.Util;
-using Raven.Server.Config;
-using Raven.Server.Documents;
-using Raven.Server.Extensions;
 using Raven.Server.Routing;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Migration;
-using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
-using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {

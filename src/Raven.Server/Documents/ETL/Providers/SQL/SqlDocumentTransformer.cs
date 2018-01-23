@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.ServerWide.ETL;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Voron;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
