@@ -8,6 +8,18 @@ function CopyAckFile ( $targetDir ) {
     Copy-Item "$licensePath" -Destination "$targetDir"
 }
 
+function CopyReadmeFile ( $spec, $targetDir ) {
+    if ($spec.IsUnix -eq $False) {
+        $readmeFile = 'readme.windows.txt'
+    } else {
+        $readmeFile = 'readme.linux.txt'
+    }
+
+    $readmePath = Join-Path -Path "docs" -ChildPath $readmeFile
+    $targetFile = Join-Path -Path $targetDir -ChildPath 'readme.txt'
+    Copy-Item "$readmePath" -Destination "$targetFile"
+}
+
 function CopyStartScript ( $spec, $targetDir ) {
     if ($spec.IsUnix -eq $False) {
         CopyStartCmd $targetDir
