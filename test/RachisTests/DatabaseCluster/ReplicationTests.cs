@@ -8,6 +8,8 @@ using FastTests.Server.Replication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Internal;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;

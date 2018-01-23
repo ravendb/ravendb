@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
-using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {

@@ -3,12 +3,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.ConnectionStrings;
-using Raven.Client.ServerWide.Operations.ETL;
-using Raven.Client.ServerWide.PeriodicBackup;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -243,14 +245,14 @@ loadToOrders(orderData);
             }.Initialize())
             {
                 var taskId = addWatcherRes.TaskId;
-                var op = new ToggleTaskStateOperation(taskId, OngoingTaskType.Replication, true);
+                var op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Replication, true);
                 await store.Maintenance.SendAsync(op);
 
                 var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
                 Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
 
                 taskId = updateBackupResult.TaskId;
-                op = new ToggleTaskStateOperation(taskId, OngoingTaskType.Backup, false);
+                op = new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.Backup, false);
                 await store.Maintenance.SendAsync(op);
 
                 result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);

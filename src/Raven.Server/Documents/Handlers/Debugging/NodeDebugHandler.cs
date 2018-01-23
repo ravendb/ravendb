@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;

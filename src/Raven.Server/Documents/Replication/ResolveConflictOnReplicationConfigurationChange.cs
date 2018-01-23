@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

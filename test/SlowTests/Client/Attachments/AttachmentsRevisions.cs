@@ -8,6 +8,7 @@ using FastTests.Server.Documents.Revisions;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Raven.Server.Utils;

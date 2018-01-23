@@ -1,5 +1,5 @@
 ﻿using Raven.Client;
-using Raven.Client.ServerWide;
+using Raven.Client.Documents.Operations.Configuration;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands

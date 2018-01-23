@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.Utils;

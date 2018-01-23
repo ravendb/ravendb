@@ -7,7 +7,7 @@
 using System;
 using System.IO;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 

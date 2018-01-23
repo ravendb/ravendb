@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.CommandLineUtils;
 using Raven.Server.Config;
-using Sparrow.Platform;
 
 namespace Raven.Server.Utils.Cli
 {

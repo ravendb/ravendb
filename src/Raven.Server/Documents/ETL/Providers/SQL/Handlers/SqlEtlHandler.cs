@@ -6,7 +6,6 @@
 
 using System;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Json;

@@ -7,8 +7,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
-using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Conventions;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;

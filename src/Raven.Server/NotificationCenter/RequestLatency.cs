@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
-using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents.Conventions;
+﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;

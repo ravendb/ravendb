@@ -5,14 +5,10 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Org.BouncyCastle.Asn1.Nist;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
-using Org.BouncyCastle.Security;
 using Raven.Client;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -27,7 +23,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Sparrow.Json;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web.Authentication

@@ -134,14 +134,14 @@ namespace Raven.Client.ServerWide.Operations
         public List<NodeId> Members { get; set; }
         public List<NodeId> Promotables { get; set; }
         public List<NodeId> Rehabs { get; set; }
-        public Dictionary<string, DbGroupNodeStatus> Status { get; set; }
+        public Dictionary<string, DatabaseGroupNodeStatus> Status { get; set; }
 
         public NodesTopology()
         {
             Members = new List<NodeId>();
             Promotables = new List<NodeId>();
             Rehabs = new List<NodeId>();
-            Status = new Dictionary<string, DbGroupNodeStatus>();
+            Status = new Dictionary<string, DatabaseGroupNodeStatus>();
         }
 
         public DynamicJsonValue ToJson()
@@ -156,17 +156,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public enum DatabasePromotionStatus
-    {
-        WaitingForFirstPromotion,
-        NotResponding,
-        IndexNotUpToDate,
-        ChangeVectorNotMerged,
-        WaitingForResponse,
-        Ok
-    }
-
-    public class DbGroupNodeStatus : IDynamicJson
+    public class DatabaseGroupNodeStatus : IDynamicJson
     {
         public DatabasePromotionStatus LastStatus;
         public string LastError;

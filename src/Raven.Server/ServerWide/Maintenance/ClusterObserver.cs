@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
