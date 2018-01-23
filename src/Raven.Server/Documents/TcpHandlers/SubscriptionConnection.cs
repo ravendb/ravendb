@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.TcpHandlers
         public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
 
-        public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable)
+        public SubscriptionConnection(TcpConnectionOptions connectionOptions, IDisposable tcpConnectionDisposable, JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
         {
             TcpConnection = connectionOptions;
             _tcpConnectionDisposable = tcpConnectionDisposable;
@@ -77,6 +78,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
             Stats = new SubscriptionConnectionStats();
 
+            _copiedBuffer = bufferToCopy.Clone(connectionOptions.ContextPool);
         }
 
         private async Task ParseSubscriptionOptionsAsync()
@@ -86,7 +88,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 TcpConnection.Stream,
                 "subscription options",
                 BlittableJsonDocumentBuilder.UsageMode.None,
-                TcpConnection.PinnedBuffer))
+                _copiedBuffer.Buffer))
             {
                 _options = JsonDeserializationServer.SubscriptionConnectionOptions(subscriptionCommandOptions);
 
@@ -198,64 +200,86 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions)
+        public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             var remoteEndPoint = tcpConnectionOptions.TcpClient.Client.RemoteEndPoint;
 
-            Task.Run(async () =>
+
+            var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription");
+            try
             {
-                using (tcpConnectionOptions)
-                using (var tcpConnectionDisposable = tcpConnectionOptions.ConnectionProcessingInProgress("Subscription"))
-                using (var connection = new SubscriptionConnection(tcpConnectionOptions, tcpConnectionDisposable))
+                var connection = new SubscriptionConnection(tcpConnectionOptions, tcpConnectionDisposable, buffer);
+                try
                 {
-                    try
+                    Task.Run(async () =>
                     {
-                        bool gotSemaphore;
-                        if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
+                        using (tcpConnectionOptions)
+                        using (tcpConnectionDisposable)
+                        using (connection)
                         {
-                            throw new SubscriptionClosedException(
-                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections})");
-                        }
-                        try
-                        {
-                            await connection.InitAsync();
-                            await connection.ProcessSubscriptionAsync();
-                        }
-                        finally
-                        {
-                            if (gotSemaphore)
+                            try
                             {
-                                tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
+                                bool gotSemaphore;
+                                if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
+                                {
+                                    throw new SubscriptionClosedException(
+                                        $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.MaxNumberOfConcurrentConnections})");
+                                }
+
+                                try
+                                {
+                                    await connection.InitAsync();
+                                    await connection.ProcessSubscriptionAsync();
+                                }
+                                finally
+                                {
+                                    if (gotSemaphore)
+                                    {
+                                        tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
+                                    }
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                if (connection._logger.IsInfoEnabled)
+                                {
+                                    connection._logger.Info(
+                                        $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}",
+                                        e);
+                                }
+
+                                try
+                                {
+                                    await ReportExceptionToClient(connection, connection.ConnectionException ?? e);
+                                }
+                                catch (Exception)
+                                {
+                                    // ignored
+                                }
+                            }
+                            finally
+                            {
+                                if (connection._logger.IsInfoEnabled)
+                                {
+                                    connection._logger.Info(
+                                        $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
+                                }
                             }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        if (connection._logger.IsInfoEnabled)
-                        {
-                            connection._logger.Info(
-                                $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}",
-                                e);
-                        }
-                        try
-                        {
-                            await ReportExceptionToClient(connection, connection.ConnectionException ?? e);
-                        }
-                        catch (Exception)
-                        {
-                            // ignored
-                        }
-                    }
-                    finally
-                    {
-                        if (connection._logger.IsInfoEnabled)
-                        {
-                            connection._logger.Info(
-                                $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
-                        }
-                    }
+                    });
                 }
-            });
+                catch (Exception e)
+                {
+                    connection?.Dispose();
+                    throw;
+                }
+            }
+            catch (Exception e)
+            {
+                tcpConnectionDisposable?.Dispose();
+
+                throw;
+            }
         }
 
         private static async Task ReportExceptionToClient(SubscriptionConnection connection, Exception ex, int recursionDepth = 0)
@@ -403,7 +427,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     TcpConnection.Stream,
                     "Reply from subscription client",
                     BlittableJsonDocumentBuilder.UsageMode.None,
-                    TcpConnection.PinnedBuffer))
+                    _copiedBuffer.Buffer))
                 {
                     TcpConnection.RegisterBytesReceived(blittable.Size);
                     return JsonDeserializationServer.SubscriptionConnectionClientMessage(blittable);
@@ -434,6 +458,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private SubscriptionPatchDocument _filterAndProjectionScript;
         private SubscriptionDocumentsFetcher _documentsFetcher;
         private readonly IDisposable _tcpConnectionDisposable;
+        private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
 
         private async Task ProcessSubscriptionAsync()
         {
@@ -782,25 +807,28 @@ namespace Raven.Server.Documents.TcpHandlers
                 return;
             _isDisposed = true;
 
-            try
+            using (_copiedBuffer.ReleaseBuffer)
             {
-                _tcpConnectionDisposable?.Dispose();
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
+                try
+                {
+                    _tcpConnectionDisposable?.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
             
-            Stats.Dispose();
-            try
-            {
-                TcpConnection.Dispose();
+                Stats.Dispose();
+                try
+                {
+                    TcpConnection.Dispose();
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+                CancellationTokenSource.Dispose();
             }
-            catch (Exception)
-            {
-                // ignored
-            }
-            CancellationTokenSource.Dispose();
         }
 
         public static (string Collection, (string Script, string[] Functions), bool Revisions) ParseSubscriptionQuery(string query)

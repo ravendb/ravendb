@@ -110,6 +110,53 @@ namespace Sparrow.Json
             public const int Size = WholeBufferSize / 4;
 
 
+            public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
+                where T : JsonOperationContext
+            {
+                if(this.Length == WholeBufferSize)
+                    throw new InvalidOperationException("Cannot clone long lived buffers");
+                
+                var releaseCtx = pool.AllocateOperationContext(out T ctx);
+                var returnBuffer = ctx.GetManagedBuffer(out var buffer);
+                var clean = new Disposer(returnBuffer, releaseCtx);
+                try
+                {
+                    if(Length != buffer.Length)
+                        throw new InvalidOperationException("Cloned buffer must be of the same size");
+
+                    buffer.Valid = Valid - Used;
+                    buffer.Used = 0;
+                    Memory.Copy(buffer.Pointer, Pointer + Used, buffer.Valid);
+
+                    return (clean, buffer);
+                }
+                catch 
+                {
+                    clean.Dispose();
+                    throw;
+                }
+            }
+
+            private class Disposer : IDisposable
+            {
+                private readonly IDisposable[] _toDispose;
+
+                public Disposer(params IDisposable[] toDispose)
+                {
+                    this._toDispose = toDispose;
+                }
+
+
+                public void Dispose()
+                {
+                    foreach (var disposable in _toDispose)
+                    {
+                        disposable.Dispose();
+                    }
+                }
+            }
+            
+
             public readonly ArraySegment<byte> Buffer;
             public readonly int Length;
             public int Valid, Used;

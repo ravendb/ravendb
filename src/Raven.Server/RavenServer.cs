@@ -59,7 +59,6 @@ namespace Raven.Server
     {
         static RavenServer()
         {
-
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
@@ -109,7 +108,7 @@ namespace Raven.Server
         {
             var sp = Stopwatch.StartNew();
             Certificate = LoadCertificate() ?? new CertificateHolder();
-   
+
             try
             {
                 ServerStore.Initialize();
@@ -137,14 +136,16 @@ namespace Raven.Server
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
-                    options.Limits.MaxRequestBodySize = null;       // no limit!
-                    options.Limits.MinResponseDataRate = null;      // no limit!
-                    options.Limits.MinRequestBodyDataRate = null;   // no limit!
+                    options.Limits.MaxRequestBodySize = null; // no limit!
+                    options.Limits.MinResponseDataRate = null; // no limit!
+                    options.Limits.MinRequestBodyDataRate = null; // no limit!
 
                     if (Configuration.Http.MinDataRatePerSecond.HasValue && Configuration.Http.MinDataRateGracePeriod.HasValue)
                     {
-                        options.Limits.MinResponseDataRate = new MinDataRate(Configuration.Http.MinDataRatePerSecond.Value.GetValue(SizeUnit.Bytes), Configuration.Http.MinDataRateGracePeriod.Value.AsTimeSpan);
-                        options.Limits.MinRequestBodyDataRate = new MinDataRate(Configuration.Http.MinDataRatePerSecond.Value.GetValue(SizeUnit.Bytes), Configuration.Http.MinDataRateGracePeriod.Value.AsTimeSpan);
+                        options.Limits.MinResponseDataRate = new MinDataRate(Configuration.Http.MinDataRatePerSecond.Value.GetValue(SizeUnit.Bytes),
+                            Configuration.Http.MinDataRateGracePeriod.Value.AsTimeSpan);
+                        options.Limits.MinRequestBodyDataRate = new MinDataRate(Configuration.Http.MinDataRatePerSecond.Value.GetValue(SizeUnit.Bytes),
+                            Configuration.Http.MinDataRateGracePeriod.Value.AsTimeSpan);
                     }
 
                     if (Configuration.Http.MaxRequestBufferSize.HasValue)
@@ -181,25 +182,16 @@ namespace Raven.Server
                                 options.Providers.Add(typeof(DeflateCompressionProvider));
                             });
 
-                            services.Configure<GzipCompressionProviderOptions>(options =>
-                            {
-                                options.Level = Configuration.Http.GzipResponseCompressionLevel;
-                            });
+                            services.Configure<GzipCompressionProviderOptions>(options => { options.Level = Configuration.Http.GzipResponseCompressionLevel; });
 
-                            services.Configure<DeflateCompressionProviderOptions>(options =>
-                            {
-                                options.Level = Configuration.Http.DeflateResponseCompressionLevel;
-                            });
+                            services.Configure<DeflateCompressionProviderOptions>(options => { options.Level = Configuration.Http.DeflateResponseCompressionLevel; });
 
                             services.AddResponseCompression();
                         }
 
                         services.AddSingleton(Router);
                         services.AddSingleton(this);
-                        services.Configure<FormOptions>(options =>
-                        {
-                            options.MultipartBodyLengthLimit = long.MaxValue;
-                        });
+                        services.Configure<FormOptions>(options => { options.MultipartBodyLengthLimit = long.MaxValue; });
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
@@ -260,16 +252,15 @@ namespace Raven.Server
             {
                 return; // shouldn't happen, but just in case
             }
+
             var currentRefreshTask = _currentRefreshTask;
             if (currentRefreshTask.IsCompleted == false)
             {
                 _refreshClusterCertificate?.Change(TimeSpan.FromMinutes(1), TimeSpan.FromHours(1));
                 return;
             }
-            var refreshCertificate = new Task(async () =>
-            {
-                await DoActualCertificateRefresh(currentCertificate);
-            });
+
+            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate); });
             if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
                 return;
             refreshCertificate.Start();
@@ -289,6 +280,7 @@ namespace Raven.Server
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations("Tried to load certificate as part of refresh check, but got an error!", e);
                 }
+
                 if (newCertificate == null)
                 {
                     if (Logger.IsOperationsEnabled)
@@ -303,6 +295,7 @@ namespace Raven.Server
                     ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
+
                 if (Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
                     return;
 
@@ -326,15 +319,15 @@ namespace Raven.Server
                     }
                 }
 
-                    // same certificate, but now we need to see if we are need to auto update it
-                    var remainingDays = (currentCertificate.Certificate.NotAfter - DateTime.Now).TotalDays;
-                    if (remainingDays > 30)
-                        return; // nothing to do, the certs are the same and we have enough time
+                // same certificate, but now we need to see if we are need to auto update it
+                var remainingDays = (currentCertificate.Certificate.NotAfter - DateTime.Now).TotalDays;
+                if (remainingDays > 30)
+                    return; // nothing to do, the certs are the same and we have enough time
 
-                    // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
-                    // but if we have less than 20 days, we'll try anyway
-                    if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
-                        return;
+                // we want to setup all the renewals for Saturday so we'll have reduce the amount of cert renwals that are counted against our renewals
+                // but if we have less than 20 days, we'll try anyway
+                if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
+                    return;
 
                 try
                 {
@@ -346,6 +339,7 @@ namespace Raven.Server
                         Logger.Operations("Failed to update certificate from Lets Encrypt", e);
                     return;
                 }
+
                 await StartCertificateReplicationAsync(newCertificate.Certificate, "Updated Let's Encrypt Certificate", false);
             }
             catch (Exception e)
@@ -394,7 +388,6 @@ namespace Raven.Server
                 response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
 
                 response.EnsureSuccessStatusCode();
-
             }
             catch (Exception e)
             {
@@ -415,9 +408,9 @@ namespace Raven.Server
 
             if (usedRootDomain == null)
                 throw new InvalidOperationException($"Your license is associated with the following domains: {string.Join(",", userDomainsResult.RootDomains)} " +
-                                                $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl}." +
-                                                "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
-            
+                                                    $"but the PublicServerUrl configuration setting is: {Configuration.Core.PublicServerUrl}." +
+                                                    "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
+
             if (userDomainsResult.Emails.Contains(Configuration.Security.CertificateLetsEncryptEmail, StringComparer.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException($"Your license is associated with the following emails: {string.Join(",", userDomainsResult.Emails)} " +
                                                     $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}." +
@@ -430,7 +423,7 @@ namespace Raven.Server
 
             if (userDomainsResult.Domains.Any(userDomain => string.Equals(userDomain.Key, domain, StringComparison.OrdinalIgnoreCase)) == false)
                 throw new InvalidOperationException("The license provided does not have access to the domain: " + domain);
-            
+
             var setupInfo = new SetupInfo
             {
                 Domain = domain,
@@ -454,7 +447,8 @@ namespace Raven.Server
 
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
 
-            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
+            return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, Convert.FromBase64String(setupInfo.Certificate),
+                setupInfo.Password);
         }
 
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
@@ -485,6 +479,7 @@ namespace Raven.Server
                     Port = kestrelUri.Port
                 }.Uri.ToString();
             }
+
             return Configuration.Core.ServerUrls[0];
         }
 
@@ -578,7 +573,10 @@ namespace Raven.Server
 
         internal AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
         {
-            var authenticationStatus = new AuthenticateConnection { Certificate = certificate };
+            var authenticationStatus = new AuthenticateConnection
+            {
+                Certificate = certificate
+            };
             if (certificate == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
@@ -606,6 +604,7 @@ namespace Raven.Server
                         cert = ServerStore.Cluster.Read(ctx, certKey) ??
                                ServerStore.Cluster.GetLocalState(ctx, certKey);
                     }
+
                     if (cert == null)
                     {
                         authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
@@ -637,6 +636,7 @@ namespace Raven.Server
                     }
                 }
             }
+
             return authenticationStatus;
         }
 
@@ -731,6 +731,7 @@ namespace Raven.Server
                             Logger.Operations(msg, ex);
                         continue;
                     }
+
                     successfullyBoundToAtLeastOne = true;
                     var listenerLocalEndpoint = (IPEndPoint)listener.LocalEndpoint;
                     status.Port = listenerLocalEndpoint.Port;
@@ -769,7 +770,7 @@ namespace Raven.Server
         public IPAddress[] GetListenIpAddresses(string host)
         {
             if (IPAddress.TryParse(host, out IPAddress ipAddress))
-                return new[] { ipAddress };
+                return new[] {ipAddress};
 
             switch (host)
             {
@@ -795,6 +796,7 @@ namespace Raven.Server
                                 $"Failed to resolve ip address to bind to for {host}, tcp listening disabled",
                                 e);
                         }
+
                         throw;
                     }
             }
@@ -811,8 +813,8 @@ namespace Raven.Server
                 }
                 catch (ObjectDisposedException)
                 {
-                        // shutting down
-                        return;
+                    // shutting down
+                    return;
                 }
                 catch (Exception e)
                 {
@@ -820,8 +822,10 @@ namespace Raven.Server
                     {
                         _tcpLogger.Info("Failed to accept new tcp connection", e);
                     }
+
                     return;
                 }
+
                 ListenToNewTcpConnection(listener);
                 try
                 {
@@ -829,107 +833,119 @@ namespace Raven.Server
                     tcpClient.ReceiveBufferSize = 32 * 1024;
                     tcpClient.SendBufferSize = 4096;
                     tcpClient.ReceiveTimeout = tcpClient.SendTimeout = (int)Configuration.Cluster.TcpConnectionTimeout.AsTimeSpan.TotalMilliseconds;
-                    
+
                     Stream stream = tcpClient.GetStream();
                     stream = await AuthenticateAsServerIfSslNeeded(stream);
-                    var tcp = new TcpConnectionOptions
-                    {
-                        ContextPool = _tcpContextPool,
-                        Stream = stream,
-                        TcpClient = tcpClient,
-                        PinnedBuffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance()
-                    };
 
-                    try
+                    using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                    using (ctx.GetManagedBuffer(out var buffer))
                     {
-                        TcpConnectionHeaderMessage header = null;
-                        string error = null;
-                        int version = 0;
-                        bool matchingVersion = false;
-                        using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+                        var tcp = new TcpConnectionOptions
                         {
-                            int retries = TcpConnectionHeaderMessage.NumberOfRetriesForSendingTcpHeader;
-                            while (retries > 0 )
+                            ContextPool = _tcpContextPool,
+                            Stream = stream,
+                            TcpClient = tcpClient,
+                        };
+
+                        try
+                        {
+                            TcpConnectionHeaderMessage header = null;
+                            string error = null;
+                            int version = 0;
+                            bool matchingVersion = false;
+                            using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                             {
-                                using (var headerJson = await context.ParseToMemoryAsync(
-                                    stream,
-                                    "tcp-header",
-                                    BlittableJsonDocumentBuilder.UsageMode.None,
-                                    tcp.PinnedBuffer,
-                                    ServerStore.ServerShutdown,
-                                    // we don't want to allow external (and anonymous) users to send us unlimited data
-                                    // a maximum of 2 KB for the header is big enough to include any valid header that
-                                    // we can currently think of
-                                    maxSize: 1024 * 2
-                                ))
+                                int retries = TcpConnectionHeaderMessage.NumberOfRetriesForSendingTcpHeader;
+                                while (retries > 0)
                                 {
-                                    header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
-                                    if (Logger.IsInfoEnabled)
+                                    using (var headerJson = await context.ParseToMemoryAsync(
+                                        stream,
+                                        "tcp-header",
+                                        BlittableJsonDocumentBuilder.UsageMode.None,
+                                        buffer,
+                                        ServerStore.ServerShutdown,
+                                        // we don't want to allow external (and anonymous) users to send us unlimited data
+                                        // a maximum of 2 KB for the header is big enough to include any valid header that
+                                        // we can currently think of
+                                        maxSize: 1024 * 2
+                                    ))
                                     {
-                                        Logger.Info(
-                                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
-                                    }
-                                    //In the case where we have missmatched version but the other side doesn't know how to handle it.
-                                    if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
-                                    {
+                                        header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
                                         if (Logger.IsInfoEnabled)
                                         {
                                             Logger.Info(
-                                                $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason:{header.Info}");
+                                                $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                         }
-                                        return;
+
+                                        //In the case where we have missmatched version but the other side doesn't know how to handle it.
+                                        if (header.Operation == TcpConnectionHeaderMessage.OperationTypes.Drop)
+                                        {
+                                            if (Logger.IsInfoEnabled)
+                                            {
+                                                Logger.Info(
+                                                    $"Got a request to drop TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} reason:{header.Info}");
+                                            }
+
+                                            return;
+                                        }
                                     }
+
+                                    matchingVersion = MatchingOperationVersion(header, out error, out version);
+                                    if (matchingVersion == false)
+                                    {
+                                        RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
+                                        if (Logger.IsInfoEnabled)
+                                        {
+                                            Logger.Info(
+                                                $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
+                                                $" {error} retries left:{retries}");
+                                        }
+
+                                        retries--;
+                                        continue;
+                                    }
+
+                                    break;
                                 }
-                                matchingVersion = MatchingOperationVersion(header, out error, out version);
+
                                 if (matchingVersion == false)
                                 {
-                                    RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMismatch, version);
+                                    //Couldn't agree on tcp operation version, will drop the connection now.
+                                    return;
+                                }
+
+                                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+                                //At this stage the error is not relevant.
+                                RespondToTcpConnection(stream, context, null, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, version);
+
+                                if (authSuccessful == false)
+                                {
                                     if (Logger.IsInfoEnabled)
                                     {
                                         Logger.Info(
-                                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
-                                            $" {error} retries left:{retries}");
+                                            $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
+                                            $" is not authorized to access {header.DatabaseName ?? "the cluster node"} because {err}");
                                     }
-                                    retries--;
-                                    continue;
+
+                                    return; // cannot proceed
                                 }
-                                break;
                             }
-                            if (matchingVersion == false)
+
+                            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
                             {
-                                //Couldn't agree on tcp operation version, will drop the connection now.
+                                tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                                 return;
                             }
-                            bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
-                            //At this stage the error is not relevant.
-                            RespondToTcpConnection(stream, context, null, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed, version);
 
-                            if (authSuccessful == false)
-                            {
-                                if (Logger.IsInfoEnabled)
-                                {
-                                    Logger.Info(
-                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
-                                        $" is not authorized to access {header.DatabaseName ?? "the cluster node"} because {err}");
-                                }
-                                return; // cannot proceed
-                            }
+                            await DispatchDatabaseTcpConnection(tcp, header, buffer);
                         }
-
-                        if (await DispatchServerWideTcpConnection(tcp, header))
+                        catch (Exception e)
                         {
-                            tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
-                            return;
+                            if (_tcpLogger.IsInfoEnabled)
+                                _tcpLogger.Info("Failed to process TCP connection run", e);
+
+                            SendErrorIfPossible(tcp, e);
                         }
-
-                        await DispatchDatabaseTcpConnection(tcp, header);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_tcpLogger.IsInfoEnabled)
-                            _tcpLogger.Info("Failed to process TCP connection run", e);
-
-                        SendErrorIfPossible(tcp, e);
                     }
                 }
                 catch (Exception e)
@@ -942,7 +958,7 @@ namespace Raven.Server
             });
         }
 
-        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status,int version)
+        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
         {
             using (var writer = new BlittableJsonTextWriter(context, stream))
             {
@@ -958,12 +974,13 @@ namespace Raven.Server
                     writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
                     writer.WriteString(error);
                 }
+
                 writer.WriteEndObject();
                 writer.Flush();
             }
         }
 
-        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error,out int version)
+        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error, out int version)
         {
             version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
             if (version == header.OperationVersion)
@@ -971,6 +988,7 @@ namespace Raven.Server
                 error = null;
                 return true;
             }
+
             error = $"Message of type {header.Operation} version should be {version} but got a message with version {header.OperationVersion}";
             return false;
         }
@@ -1036,7 +1054,7 @@ namespace Raven.Server
             }
         }
 
-        private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
+        private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             tcp.Operation = header.Operation;
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
@@ -1049,7 +1067,7 @@ namespace Raven.Server
             {
                 return true;
             }
-            
+
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Heartbeats)
             {
                 // check for the term          
@@ -1058,10 +1076,9 @@ namespace Raven.Server
                     tcp.Stream,
                     "maintenance-heartbeat-header",
                     BlittableJsonDocumentBuilder.UsageMode.None,
-                    tcp.PinnedBuffer
+                    buffer
                 ))
                 {
-
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
 
                     if (_clusterMaintenanceWorker?.CurrentTerm > maintenanceHeader.Term)
@@ -1071,23 +1088,26 @@ namespace Raven.Server
                             _tcpLogger.Info($"Request for maintenance with term {maintenanceHeader.Term} was rejected, " +
                                             $"because we are already connected to the recent leader with the term {_clusterMaintenanceWorker.CurrentTerm}");
                         }
+
                         tcp.Dispose();
                         return true;
                     }
+
                     var old = _clusterMaintenanceWorker;
                     using (old)
                     {
                         _clusterMaintenanceWorker = new ClusterMaintenanceWorker(tcp, ServerStore.ServerShutdown, ServerStore, maintenanceHeader.Term);
                         _clusterMaintenanceWorker.Start();
                     }
+
                     return true;
                 }
-
             }
+
             return false;
         }
 
-        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
+        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
         {
             var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
             if (databaseLoadingTask == null)
@@ -1119,13 +1139,12 @@ namespace Raven.Server
             tcp.DocumentDatabase.RunningTcpConnections.Add(tcp);
             switch (header.Operation)
             {
-
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                    SubscriptionConnection.SendSubscriptionDocuments(tcp);
+                    SubscriptionConnection.SendSubscriptionDocuments(tcp, bufferToCopy);
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
-                    documentReplicationLoader.AcceptIncomingConnection(tcp);
+                    documentReplicationLoader.AcceptIncomingConnection(tcp, bufferToCopy);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
@@ -1144,13 +1163,13 @@ namespace Raven.Server
             if (Certificate.Certificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
-                        // it is fine that the client doesn't have a cert, we just care that they
-                        // are connecting to us securely. At any rate, we'll ensure that if certificate
-                        // is required, we'll validate that it is one of the expected ones on the server
-                        // and that the client is authorized to do so. 
-                        // Otherwise, we'll generate an error, but we'll do that at a higher level then
-                        // SSL, because that generate a nicer error for the user to read then just aborted
-                        // connection because SSL negotation failed.
+                    // it is fine that the client doesn't have a cert, we just care that they
+                    // are connecting to us securely. At any rate, we'll ensure that if certificate
+                    // is required, we'll validate that it is one of the expected ones on the server
+                    // and that the client is authorized to do so. 
+                    // Otherwise, we'll generate an error, but we'll do that at a higher level then
+                    // SSL, because that generate a nicer error for the user to read then just aborted
+                    // connection because SSL negotation failed.
                         true);
                 stream = sslStream;
 
@@ -1159,7 +1178,6 @@ namespace Raven.Server
 
             return stream;
         }
-
 
 
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
@@ -1288,7 +1306,6 @@ namespace Raven.Server
                         _tcpLogger.Info("Failed to properly dispose the tcp listener", e);
                 }
             }
-
         }
 
         public void OpenPipes()
