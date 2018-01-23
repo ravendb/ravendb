@@ -35,7 +35,7 @@ namespace Raven.Tests.Common.Attributes
                             camera.Megapixels
                         }",
                     Name = "CameraCost",
-                    SortOptions = { { "Cost", SortOptions.Int}, { "Megapixels", SortOptions.Double } }
+                    
                 };
             }
 
