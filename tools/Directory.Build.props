@@ -1,6 +1,8 @@
 <Project>
   <PropertyGroup>
 
+    <LangVersion>latest</LangVersion>
+
     <WarningsAsErrors>true</WarningsAsErrors>
 
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
