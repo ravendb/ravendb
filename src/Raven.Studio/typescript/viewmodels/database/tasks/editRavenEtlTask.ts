@@ -25,7 +25,7 @@ class editRavenEtlTask extends viewModelBase {
     editedRavenEtl = ko.observable<ongoingTaskRavenEtlEditModel>();
     isAddingNewRavenEtlTask = ko.observable<boolean>(true);
     
-    ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.ServerWide.ETL.RavenConnectionString>([]);
+    ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.Documents.Operations.ETL.RavenConnectionString>([]);
 
     possibleMentors = ko.observableArray<string>([]);
 
@@ -62,7 +62,7 @@ class editRavenEtlTask extends viewModelBase {
             
             getOngoingTaskInfoCommand.forRavenEtl(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((result: Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlDetails) => {
                     this.editedRavenEtl(new ongoingTaskRavenEtlEditModel(result));
                     deferred.resolve();
                 })
@@ -100,7 +100,7 @@ class editRavenEtlTask extends viewModelBase {
     private getAllConnectionStrings() {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
                 this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));
             });

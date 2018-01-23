@@ -386,7 +386,7 @@ class databaseCreationModel {
         } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
-    toRestoreDocumentDto(): Raven.Client.ServerWide.PeriodicBackup.RestoreBackupConfiguration {
+    toRestoreDocumentDto(): Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
 
         return {
@@ -395,7 +395,7 @@ class databaseCreationModel {
             LastFileNameToRestore: this.restore.lastFileNameToRestore(),
             DataDirectory: dataDirectory,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
-        } as Raven.Client.ServerWide.PeriodicBackup.RestoreBackupConfiguration;
+        } as Raven.Client.Documents.Operations.Backups.RestoreBackupConfiguration;
     }
     
     

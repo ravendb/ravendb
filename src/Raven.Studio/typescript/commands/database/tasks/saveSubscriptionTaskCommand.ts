@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number, private disabled?: Raven.Client.ServerWide.Operations.OngoingTaskState) {
+    constructor(private db: database, private payload: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions, private taskId?: number, private disabled?: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         return this.updateSubscription()
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to save subscription task", response.responseText, response.statusText); 
@@ -18,7 +18,7 @@ class saveSubscriptionTaskCommand extends commandBase {
             });
     }
 
-    private updateSubscription(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
+    private updateSubscription(): JQueryPromise<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult> {
         let args: any;
 
         if (this.taskId) { 
@@ -30,10 +30,10 @@ class saveSubscriptionTaskCommand extends commandBase {
         
         const url = endpoints.databases.subscriptions.subscriptions + this.urlEncodeArgs(args);
 
-        const saveTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
+        const saveTask = $.Deferred<Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult>();
 
         this.put(url, JSON.stringify(this.payload), this.db)
-            .done((results: Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult) => { 
+            .done((results: Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult) => { 
                 saveTask.resolve(results);
             })
             .fail(response => saveTask.reject(response));

@@ -8,12 +8,12 @@ class getExpirationConfigurationCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.ServerWide.Expiration.ExpirationConfiguration> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration> {
 
-        const deferred = $.Deferred<Raven.Client.ServerWide.Expiration.ExpirationConfiguration>();
+        const deferred = $.Deferred<Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration>();
         const url = endpoints.databases.expiration.expirationConfig;
         this.query(url, null, this.db)
-            .done((expirationConfig: Raven.Client.ServerWide.Expiration.ExpirationConfiguration) => deferred.resolve(expirationConfig))
+            .done((expirationConfig: Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration) => deferred.resolve(expirationConfig))
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
                     deferred.resolve(null);

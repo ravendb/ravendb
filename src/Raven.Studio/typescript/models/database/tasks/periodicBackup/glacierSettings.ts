@@ -4,7 +4,7 @@ import jsonUtil = require("common/jsonUtil");
 class glacierSettings extends amazonSettings {
     vaultName = ko.observable<string>();
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.GlacierSettings) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.GlacierSettings) {
         super(dto, "Glacier");
 
         this.vaultName(dto.VaultName);
@@ -48,8 +48,8 @@ class glacierSettings extends amazonSettings {
         });
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.GlacierSettings {
-        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.GlacierSettings;
+    toDto(): Raven.Client.Documents.Operations.Backups.GlacierSettings {
+        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GlacierSettings;
         dto.VaultName = this.vaultName();
         return dto;
     }

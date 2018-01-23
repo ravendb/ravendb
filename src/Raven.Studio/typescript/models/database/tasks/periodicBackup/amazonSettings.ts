@@ -29,7 +29,7 @@ abstract class amazonSettings extends backupSettings {
         { label: "US West (Oregon)", value: "us-west-2", hasS3: true, hasGlacier: true }
     ];
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.AmazonSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.AmazonSettings, connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType) {
         super(dto, connectionType);
 
         this.awsAccessKey(dto.AwsAccessKey);
@@ -135,8 +135,8 @@ abstract class amazonSettings extends backupSettings {
         return awsRegionEndpoint.label + " - " + awsRegionEndpoint.value;
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.AmazonSettings {
-        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.AmazonSettings;
+    toDto(): Raven.Client.Documents.Operations.Backups.AmazonSettings {
+        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.AmazonSettings;
         dto.AwsAccessKey = this.awsAccessKey();
         dto.AwsSecretKey = this.awsSecretKey();
         dto.AwsRegionName = this.awsRegionName();

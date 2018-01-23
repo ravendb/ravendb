@@ -12,7 +12,7 @@ class ongoingTaskSqlEtlTableModel {
     
     dirtyFlag: () => DirtyFlag;
   
-    constructor(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlTable, isNew: boolean) {
         this.update(dto, isNew);
         
         this.initValidation();
@@ -33,7 +33,7 @@ class ongoingTaskSqlEtlTableModel {
             }, true);
     }
 
-    toDto(): Raven.Client.ServerWide.ETL.SqlEtlTable {
+    toDto(): Raven.Client.Documents.Operations.ETL.SQL.SqlEtlTable {
         return {
             TableName: this.tableName(),
             DocumentIdColumn: this.documentIdColumn(),
@@ -56,7 +56,7 @@ class ongoingTaskSqlEtlTableModel {
         });
     }
 
-    private update(dto: Raven.Client.ServerWide.ETL.SqlEtlTable, isNew: boolean) {
+    private update(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlEtlTable, isNew: boolean) {
         this.tableName(dto.TableName);
         this.documentIdColumn(dto.DocumentIdColumn); 
         this.insertOnlyMode(dto.InsertOnlyMode);

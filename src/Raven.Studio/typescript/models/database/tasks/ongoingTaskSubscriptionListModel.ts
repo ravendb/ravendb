@@ -25,7 +25,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTask {
     validationGroup: KnockoutValidationGroup; 
     showSubscriptionDetails = ko.observable(false);
     
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSubscription) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
         super();
 
         this.update(dto);

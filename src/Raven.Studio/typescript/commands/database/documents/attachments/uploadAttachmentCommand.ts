@@ -8,7 +8,7 @@ class uploadAttachmentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Documents.Operations.AttachmentDetails> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.Attachments.AttachmentDetails> {
         const args = {
             id: this.documentId,
             name: this.file.name,
@@ -24,7 +24,7 @@ class uploadAttachmentCommand extends commandBase {
         }
 
         const url = endpoints.databases.attachment.attachments + this.urlEncodeArgs(args);
-        return this.put<Raven.Client.Documents.Operations.AttachmentDetails>(url, this.file, this.db, options, 0)
+        return this.put<Raven.Client.Documents.Operations.Attachments.AttachmentDetails>(url, this.file, this.db, options, 0)
             .done(() => {
                 this.reportSuccess("Successfully uploaded attachment: " + this.file.name);
             })
