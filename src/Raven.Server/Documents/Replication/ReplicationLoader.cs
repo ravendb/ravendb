@@ -5,22 +5,20 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
-using Raven.Client.ServerWide.ETL;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
@@ -162,7 +160,7 @@ namespace Raven.Server.Documents.Replication
             return null;
         }
 
-        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
+        public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -170,7 +168,7 @@ namespace Raven.Server.Documents.Replication
                 tcpConnectionOptions.Stream,
                 "IncomingReplication/get-last-etag-message read",
                 BlittableJsonDocumentBuilder.UsageMode.None,
-                tcpConnectionOptions.PinnedBuffer))
+                buffer))
             {
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
                 if (_log.IsInfoEnabled)
@@ -250,7 +248,8 @@ namespace Raven.Server.Documents.Replication
             var newIncoming = new IncomingReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
-                this);
+                this, 
+                buffer);
 
             newIncoming.Failed += OnIncomingReceiveFailed;
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
@@ -832,7 +831,16 @@ namespace Raven.Server.Documents.Replication
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
 
-            ea.Execute(_reconnectAttemptTimer.Dispose);
+            ea.Execute(() =>
+            {
+                using (var waitHandle = new ManualResetEvent(false))
+                {
+                    if (_reconnectAttemptTimer.Dispose(waitHandle))
+                    {
+                        waitHandle.WaitOne();
+                    }
+                }
+            });
 
             ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 

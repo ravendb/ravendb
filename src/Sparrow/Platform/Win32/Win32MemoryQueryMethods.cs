@@ -36,6 +36,7 @@ namespace Sparrow.Platform.Win32
 
             IntPtr wsInfo = IntPtr.Zero;
             PPSAPI_WORKING_SET_EX_INFORMATION* pWsInfo;
+            var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[2];
             if (pages > 2)
             {
                 wsInfo = Marshal.AllocHGlobal((int)(sizeof(PPSAPI_WORKING_SET_EX_INFORMATION)*pages));
@@ -43,7 +44,6 @@ namespace Sparrow.Platform.Win32
             }
             else
             {
-                var p = stackalloc PPSAPI_WORKING_SET_EX_INFORMATION[(int)pages];
                 pWsInfo = p;
             }
 

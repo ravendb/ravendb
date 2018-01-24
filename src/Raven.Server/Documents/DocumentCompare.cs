@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Sparrow;
 using Sparrow.Json;
 

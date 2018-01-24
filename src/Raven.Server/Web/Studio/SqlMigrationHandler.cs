@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Migration;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;

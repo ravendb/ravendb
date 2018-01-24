@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Session;
 using Raven.Server.Json;

@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -20,7 +20,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers
 {

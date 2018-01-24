@@ -43,9 +43,10 @@ namespace Tryouts
         {
             public string Name { get; set; }
         }
-        static unsafe void Main(string[] args)
+
+        public static async Task Main(string[] args)
         {
-            new AuthenticationBasicTests().CanUseEncryption().Wait();
+            await new AuthenticationBasicTests().CanUseEncryption();
         }
 
         private static void SerialStores()

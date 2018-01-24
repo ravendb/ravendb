@@ -11,14 +11,14 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     validationGroup: KnockoutValidationGroup;
     testConnectionValidationGroup: KnockoutValidationGroup;  
 
-    constructor(dto: Raven.Client.ServerWide.ETL.SqlConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
         
         this.update(dto);
         this.initValidation();
     }
 
-    update(dto: Raven.Client.ServerWide.ETL.SqlConnectionString) {
+    update(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString) {
         super.update(dto);
         
         this.connectionStringName(dto.Name); 
@@ -51,7 +51,7 @@ class connectionStringSqlEtlModel extends connectionStringModel {
             Type: "Sql",
             Name: "",
             ConnectionString: ""
-        } as Raven.Client.ServerWide.ETL.SqlConnectionString, true, []);
+        } as Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString, true, []);
     }
     
     toDto() {

@@ -3,11 +3,11 @@ import endpoints = require("endpoints");
 
 class getGlobalClientConfigurationCommand extends commandBase {
     
-    execute(): JQueryPromise<Raven.Client.ServerWide.ClientConfiguration> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.Configuration.ClientConfiguration> {
         const url = endpoints.global.adminConfiguration.configurationClient;
-        const loadTask = $.Deferred<Raven.Client.ServerWide.ClientConfiguration>(); 
+        const loadTask = $.Deferred<Raven.Client.Documents.Operations.Configuration.ClientConfiguration>(); 
         
-        this.query<Raven.Client.ServerWide.ClientConfiguration>(url, null)
+        this.query<Raven.Client.Documents.Operations.Configuration.ClientConfiguration>(url, null)
             .done(dto => loadTask.resolve(dto))
             .fail((response: JQueryXHR) => {
                 if (response.status !== 404) {

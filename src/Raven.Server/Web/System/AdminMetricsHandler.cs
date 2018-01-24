@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using Raven.Server.Routing;
-using Raven.Server.Utils;
-
 using Sparrow.Json;
 
 namespace Raven.Server.Web.System

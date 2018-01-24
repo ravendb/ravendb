@@ -1,6 +1,8 @@
-﻿using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.ETL;
-using Raven.Client.ServerWide.Operations;
+﻿using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 

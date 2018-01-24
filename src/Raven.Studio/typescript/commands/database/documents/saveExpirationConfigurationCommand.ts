@@ -3,7 +3,7 @@ import commandBase = require("commands/commandBase");
 import endpoint = require("endpoints");
 
 class saveExpirationConfigurationCommand extends commandBase {
-    constructor(private db: database, private expirationConfiguration: Raven.Client.ServerWide.Expiration.ExpirationConfiguration) {
+    constructor(private db: database, private expirationConfiguration: Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration) {
         super();
     }
 

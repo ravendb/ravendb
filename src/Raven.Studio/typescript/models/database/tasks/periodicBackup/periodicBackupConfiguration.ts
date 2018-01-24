@@ -13,7 +13,7 @@ class periodicBackupConfiguration {
     taskId = ko.observable<number>();
     disabled = ko.observable<boolean>();
     name = ko.observable<string>();
-    backupType = ko.observable<Raven.Client.ServerWide.PeriodicBackup.BackupType>();
+    backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
     fullBackupFrequency = ko.observable<string>();
     incrementalBackupFrequency = ko.observable<string>();
     localSettings = ko.observable<localSettings>();
@@ -55,7 +55,7 @@ class periodicBackupConfiguration {
         { label: "At 15 minutes past the hour, every 3 hours", value: "15 */3 * * *", full: false, incremental: true }
     ];
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) {
         this.taskId(dto.TaskId);
         this.disabled(dto.Disabled);
         this.name(dto.Name);
@@ -247,7 +247,7 @@ class periodicBackupConfiguration {
         return false;
     }
 
-    useBackupType(backupType: Raven.Client.ServerWide.PeriodicBackup.BackupType) {
+    useBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType) {
         this.backupType(backupType);
     }
 
@@ -316,7 +316,7 @@ class periodicBackupConfiguration {
             });
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration {
+    toDto(): Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration {
         return {
             TaskId: this.taskId(),
             Disabled: this.disabled(),

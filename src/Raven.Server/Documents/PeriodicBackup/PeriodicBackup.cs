@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {

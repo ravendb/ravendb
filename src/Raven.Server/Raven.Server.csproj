@@ -106,10 +106,8 @@
     </None>
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DebugType>portable</DebugType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
-    <DebugType>portable</DebugType>
     <Optimize>true</Optimize>
   </PropertyGroup>
   <PropertyGroup>

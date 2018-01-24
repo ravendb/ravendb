@@ -12,7 +12,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicBackup;
 using Sparrow.Binary;

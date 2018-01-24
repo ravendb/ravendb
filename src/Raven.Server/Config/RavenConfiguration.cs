@@ -9,7 +9,6 @@ using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
-using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Config.Attributes;
@@ -17,7 +16,6 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
-using Raven.Server.Utils.Cli;
 using Voron.Util.Settings;
 
 namespace Raven.Server.Config

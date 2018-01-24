@@ -15,7 +15,7 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
     
     showSqlEtlDetails = ko.observable(false);
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) {
         super();
 
         this.update(dto);
@@ -31,7 +31,7 @@ class ongoingTaskSqlEtlListModel extends ongoingTask {
         this.editUrl = urls.editSqlEtl(this.taskId);
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) {
         super.update(dto);
 
         this.destinationServer(dto.DestinationServer);

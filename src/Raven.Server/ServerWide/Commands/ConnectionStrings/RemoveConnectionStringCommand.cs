@@ -1,5 +1,7 @@
-﻿using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.ETL;
+﻿using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.ConnectionStrings

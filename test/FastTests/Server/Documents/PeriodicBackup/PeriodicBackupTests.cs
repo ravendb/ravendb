@@ -6,8 +6,8 @@
 
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.PeriodicBackup;
 using Xunit;
 
 namespace FastTests.Server.Documents.PeriodicBackup

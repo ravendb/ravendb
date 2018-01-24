@@ -4,12 +4,21 @@ using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
-using Raven.Client.ServerWide.Operations;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
+    public enum DatabasePromotionStatus
+    {
+        WaitingForFirstPromotion,
+        NotResponding,
+        IndexNotUpToDate,
+        ChangeVectorNotMerged,
+        WaitingForResponse,
+        Ok
+    }
+
     public interface IDatabaseTask
     {
         ulong GetTaskKey();

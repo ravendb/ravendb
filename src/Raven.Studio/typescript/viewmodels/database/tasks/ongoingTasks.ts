@@ -124,23 +124,23 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplicationListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication));
+                    this.replicationTasks.push(new ongoingTaskReplicationListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup));
+                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
-                    this.etlTasks.push(new ongoingTaskRavenEtlListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtlListView));
+                    this.etlTasks.push(new ongoingTaskRavenEtlListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView));
                     taskTypesSet.add("RavenDB ETL");
                     break;
                 case 'SqlEtl':
-                    this.sqlTasks.push(new ongoingTaskSqlEtlListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlListView));
+                    this.sqlTasks.push(new ongoingTaskSqlEtlListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView));
                     taskTypesSet.add("SQL ETL");
                     break;
                 case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscriptionListModel(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription)); 
+                    this.subscriptionTasks.push(new ongoingTaskSubscriptionListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription)); 
                     taskTypesSet.add("Subscription");
                     break;
             };

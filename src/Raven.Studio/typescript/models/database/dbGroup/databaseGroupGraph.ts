@@ -22,7 +22,7 @@ class databaseNode extends layoutable {
     tag: string;
     type: databaseGroupNodeType;
     responsibleNode: string;
-    status: Raven.Client.ServerWide.Operations.DatabasePromotionStatus;
+    status: Raven.Client.ServerWide.DatabasePromotionStatus;
     
     private constructor() {
         super();
@@ -61,10 +61,10 @@ class taskNode extends layoutable {
     static readonly minWidth = 130;
     static readonly textLeftPadding = 45;
     
-    type: Raven.Client.ServerWide.Operations.OngoingTaskType;
+    type: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType;
     taskId: number;
     name: string;
-    state: Raven.Client.ServerWide.Operations.OngoingTaskState;
+    state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
     responsibleNode: databaseNode;
 
@@ -72,13 +72,13 @@ class taskNode extends layoutable {
         super();
     }
 
-    static for(dto: Raven.Client.ServerWide.Operations.OngoingTask, responsibleNode: databaseNode) {
+    static for(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask, responsibleNode: databaseNode) {
         const node = new taskNode();
         node.updateWith(dto, responsibleNode);
         return node;
     }
 
-    updateWith(dto: Raven.Client.ServerWide.Operations.OngoingTask, responsibleNode: databaseNode) {
+    updateWith(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask, responsibleNode: databaseNode) {
         this.type = dto.TaskType;
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;

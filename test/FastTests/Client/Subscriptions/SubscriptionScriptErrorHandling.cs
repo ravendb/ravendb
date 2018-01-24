@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using Raven.Client.ServerWide.Revisions;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Util;
 using Xunit;
 

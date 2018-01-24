@@ -2,7 +2,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class transformationScriptSyntax extends dialogViewModelBase {
     
-    etlType = ko.observable<Raven.Client.ServerWide.ETL.EtlType>();
+    etlType = ko.observable<Raven.Client.Documents.Operations.ETL.EtlType>();
     static readonly sampleScript = `var orderData = {
     Id: id(this),
     OrderLinesCount: this.Lines.length,
@@ -27,7 +27,7 @@ loadToOrders(orderData);`;
         return Prism.highlight(transformationScriptSyntax.sampleScript, (Prism.languages as any).javascript);
     });
 
-    constructor(etlType: Raven.Client.ServerWide.ETL.EtlType) {        
+    constructor(etlType: Raven.Client.Documents.Operations.ETL.EtlType) {        
         super();
         
         this.etlType(etlType);

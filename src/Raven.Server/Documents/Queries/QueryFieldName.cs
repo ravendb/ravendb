@@ -1,5 +1,4 @@
-﻿using System;
-using Raven.Client;
+﻿using Raven.Client;
 
 namespace Raven.Server.Documents.Queries
 {

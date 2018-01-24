@@ -276,16 +276,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            try
+            if (minPageSize <= 0)
             {
-                return _searcher.Search(documentQuery, null, minPageSize, _state);
+                var result = _searcher.Search(documentQuery, null, 1, _state);
+                return new TopDocs(result.TotalHits, Array.Empty<ScoreDoc>(), result.MaxScore);
             }
-            catch (ArgumentException)
-            {
-                if (_searcher.IndexReader.NumDocs() == 0)
-                    return new TopDocs(0, Array.Empty<ScoreDoc>(), 0);
-                throw;
-            }
+            return _searcher.Search(documentQuery, null, minPageSize, _state);
         }
 
         private static bool IsBoostedQuery(Query query)
@@ -293,9 +289,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (query.Boost > 1)
                 return true;
 
-            BooleanQuery booleanQuery = query as BooleanQuery;
-
-            if (booleanQuery == null)
+            if (!(query is BooleanQuery booleanQuery))
                 return false;
 
             foreach (var clause in booleanQuery.Clauses)

@@ -16,7 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicBackup;
 

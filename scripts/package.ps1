@@ -33,6 +33,7 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec, $buil
     CopyStartScript $spec $packageDir
     CopyStartAsServiceScript $spec $packageDir
     CopyTools $outDirs
+    CopyReadmeFile $spec $packageDir
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
 }
 function CopyStudioPackage ( $outDirs, $buildOptions ) {

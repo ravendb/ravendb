@@ -13,9 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
-using System.Text;
-using Raven.Client.ServerWide.Revisions;
-using Raven.Server.Documents.Revisions;
+using Raven.Client.Documents.Operations.Revisions;
 using Sparrow;
 using static Raven.Server.Documents.DocumentsStorage;
 

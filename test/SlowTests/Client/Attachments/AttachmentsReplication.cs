@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;

@@ -86,15 +86,15 @@ class expiration extends viewModelBase {
         });
     }
 
-    private fetchConfiguration(db: database): JQueryPromise<Raven.Client.ServerWide.Expiration.ExpirationConfiguration> {
+    private fetchConfiguration(db: database): JQueryPromise<Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration> {
         return new getExpirationConfigurationCommand(db)
             .execute()
-            .done((config: Raven.Client.ServerWide.Expiration.ExpirationConfiguration) => {
+            .done((config: Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration) => {
                 this.onConfigurationLoaded(config);
             });
     }
 
-    onConfigurationLoaded(data: Raven.Client.ServerWide.Expiration.ExpirationConfiguration) {
+    onConfigurationLoaded(data: Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration) {
         if (data) {
             this.enabled(!data.Disabled);
             this.specifyDeleteFrequency(data.DeleteFrequencyInSec != null);
@@ -111,7 +111,7 @@ class expiration extends viewModelBase {
         return {
             Disabled: !this.enabled(),
             DeleteFrequencyInSec: this.specifyDeleteFrequency() ? this.deleteFrequencyInSec() : null
-        } as Raven.Client.ServerWide.Expiration.ExpirationConfiguration;
+        } as Raven.Client.Documents.Operations.Expiration.ExpirationConfiguration;
     }
 
     saveChanges() {

@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents.Indexes;
-using Raven.Client.ServerWide.ETL;
-using Raven.Client.ServerWide.Expiration;
-using Raven.Client.ServerWide.PeriodicBackup;
-using Raven.Client.ServerWide.Revisions;
 
 namespace Raven.Client.ServerWide
 {

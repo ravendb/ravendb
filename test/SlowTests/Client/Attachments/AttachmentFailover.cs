@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests.Client.Attachments;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Http;

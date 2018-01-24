@@ -209,7 +209,7 @@ class databaseInfo {
         //TODO: consider in place update? of nodes?
     }
 
-    private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DbGroupNodeStatus;}) {
+    private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DatabaseGroupNodeStatus;}) {
         nodes.forEach(node => {
             if (node.tag() in statuses) {
                 const nodeStatus = statuses[node.tag()];

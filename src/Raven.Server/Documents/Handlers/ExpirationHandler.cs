@@ -4,17 +4,11 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions.Documents.Revisions;
-using Raven.Server.Json;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Voron;
 
 namespace Raven.Server.Documents.Handlers
 {

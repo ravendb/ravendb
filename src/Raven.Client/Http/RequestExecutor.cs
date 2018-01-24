@@ -24,7 +24,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Sparrow;

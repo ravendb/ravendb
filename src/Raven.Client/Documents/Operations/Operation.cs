@@ -2,13 +2,11 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -154,19 +152,6 @@ namespace Raven.Client.Documents.Operations
             where TResult : IOperationResult
         {
             return AsyncHelpers.RunSync(() => WaitForCompletionAsync<TResult>(timeout));
-        }
-    }
-
-    public class ServerWideOperation : Operation
-    {
-        public ServerWideOperation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
-            : base(requestExecutor, changes, conventions, id)
-        {
-        }
-
-        protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id)
-        {
-            return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(conventions, id);
         }
     }
 }

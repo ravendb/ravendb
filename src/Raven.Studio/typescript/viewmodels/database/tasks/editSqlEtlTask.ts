@@ -82,7 +82,7 @@ class editSqlEtlTask extends viewModelBase {
 
             getOngoingTaskInfoCommand.forSqlEtl(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((result: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) => {
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) => {
                     this.editedSqlEtl(new ongoingTaskSqlEtlEditModel(result));
                     deferred.resolve();
                 })
@@ -127,7 +127,7 @@ class editSqlEtlTask extends viewModelBase {
     private getAllConnectionStrings() {
         return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStringsNames = Object.keys(result.SqlConnectionStrings);
                 this.sqlEtlConnectionStringsNames(_.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
@@ -222,7 +222,7 @@ class editSqlEtlTask extends viewModelBase {
             // Existing connection string
             getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
                 .execute()
-                .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {                       
+                .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {                       
                        new connectionStringSqlEtlModel(result.SqlConnectionStrings[this.editedSqlEtl().connectionStringName()], true, [])
                             .testConnection(this.activeDatabase())
                             .done((testResult) => this.testConnectionResult(testResult))

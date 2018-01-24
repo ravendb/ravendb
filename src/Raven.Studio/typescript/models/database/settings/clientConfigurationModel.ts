@@ -21,7 +21,7 @@ class clientConfigurationModel {
     isDefined = ko.observableArray<keyof this>([]);
     validationGroup: KnockoutValidationGroup;
     
-    constructor(dto: Raven.Client.ServerWide.ClientConfiguration) {
+    constructor(dto: Raven.Client.Documents.Operations.Configuration.ClientConfiguration) {
         if (dto && dto.ReadBalanceBehavior != null) {
             this.isDefined.push("readBalanceBehavior");
             this.readBalanceBehavior(dto.ReadBalanceBehavior);
@@ -49,7 +49,7 @@ class clientConfigurationModel {
     
     static empty() {
         return new clientConfigurationModel({
-        } as Raven.Client.ServerWide.ClientConfiguration);
+        } as Raven.Client.Documents.Operations.Configuration.ClientConfiguration);
     }
     
     toDto() {
@@ -57,7 +57,7 @@ class clientConfigurationModel {
             ReadBalanceBehavior: _.includes(this.isDefined(), "readBalanceBehavior") ? this.readBalanceBehavior() : null,
             MaxNumberOfRequestsPerSession: _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? this.maxNumberOfRequestsPerSession() : null,
             Disabled: this.disabled()
-        } as Raven.Client.ServerWide.ClientConfiguration;
+        } as Raven.Client.Documents.Operations.Configuration.ClientConfiguration;
     }
 }
 

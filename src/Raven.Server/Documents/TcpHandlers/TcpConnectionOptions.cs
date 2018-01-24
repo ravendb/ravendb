@@ -44,8 +44,6 @@ namespace Raven.Server.Documents.TcpHandlers
         public long Id { get; set; }
         public JsonContextPool ContextPool;
 
-        public JsonOperationContext.ManagedPinnedBuffer PinnedBuffer;
-
         private readonly SemaphoreSlim _running = new SemaphoreSlim(1);
         private string _debugTag;
 
@@ -80,8 +78,6 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 DocumentDatabase?.RunningTcpConnections.TryRemove(this);
 
-                PinnedBuffer?.Dispose();
-                PinnedBuffer = null;
                 Stream = null;
                 TcpClient = null;
             }

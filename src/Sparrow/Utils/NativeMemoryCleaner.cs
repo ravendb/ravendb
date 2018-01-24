@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 
 namespace Sparrow.Utils
@@ -12,6 +11,7 @@ namespace Sparrow.Utils
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
         private readonly TimeSpan _idleTime;
         private readonly Timer _timer;
+        private bool _disposed;
 
         public NativeMemoryCleaner(ThreadLocal<TStack> pool, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
@@ -28,6 +28,9 @@ namespace Sparrow.Utils
             {
                 Monitor.TryEnter(_lock, ref lockTaken);
                 if (lockTaken == false)
+                    return;
+
+                if (_disposed)
                     return;
 
                 var now = DateTime.UtcNow;
@@ -65,7 +68,7 @@ namespace Sparrow.Utils
                         }
                         catch (ObjectDisposedException)
                         {
-                            // it is possible that this has already been diposed
+                            // it is possible that this has already been disposed
                         }
 
                         parent.Value = null;
@@ -81,7 +84,21 @@ namespace Sparrow.Utils
 
         public void Dispose()
         {
-            _timer.Dispose();
+#if !NETSTANDARD1_3
+            using (var waitHandle = new ManualResetEvent(false))
+            {
+                if (_timer.Dispose(waitHandle))
+                {
+                    waitHandle.WaitOne();
+                }
+            }
+#else
+            lock(_lock); // prevent from running the callback _after_ dispose
+            {
+                _disposed = true;
+                _timer.Dispose();
+            }
+#endif
         }
     }
 }

@@ -14,7 +14,7 @@ class ongoingTaskSqlEtlTransformationModel {
   
     dirtyFlag: () => DirtyFlag;
     
-    constructor(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean) {
         this.update(dto, isNew);
         
         this.initObservables();
@@ -43,7 +43,7 @@ class ongoingTaskSqlEtlTransformationModel {
             }, true);
     }
 
-    toDto(): Raven.Client.ServerWide.ETL.Transformation {
+    toDto(): Raven.Client.Documents.Operations.ETL.Transformation {
         return {
             ApplyToAllDocuments: false,
             Collections: [this.collection()],
@@ -69,7 +69,7 @@ class ongoingTaskSqlEtlTransformationModel {
         });
     }
 
-    update(dto: Raven.Client.ServerWide.ETL.Transformation, isNew: boolean) {
+    update(dto: Raven.Client.Documents.Operations.ETL.Transformation, isNew: boolean) {
         this.name(dto.Name);
         this.script(dto.Script); 
         this.collection(dto.Collections[0]); // todo: check this..  

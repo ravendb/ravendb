@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using Lextm.SharpSnmpLib;
-using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 

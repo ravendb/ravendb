@@ -5,7 +5,6 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 

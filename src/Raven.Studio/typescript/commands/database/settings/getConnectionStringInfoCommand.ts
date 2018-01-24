@@ -3,18 +3,18 @@ import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getConnectionStringInfoCommand extends commandBase {
-    private constructor(private db: database, private type: Raven.Client.ServerWide.ConnectionStringType, private connectionStringName: string) {
+    private constructor(private db: database, private type: Raven.Client.Documents.Operations.ConnectionStrings.ConnectionStringType, private connectionStringName: string) {
         super();
     }
     
-    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult> {
         return this.getConnectionStringInfo()
             .fail((response: JQueryXHR) => {
                 this.reportError(`Failed to get info for connection string: ${this.connectionStringName}`, response.responseText, response.statusText);
             });
     }
 
-    private getConnectionStringInfo(): JQueryPromise<Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult> {
+    private getConnectionStringInfo(): JQueryPromise<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult> {
         const args = { connectionStringName: this.connectionStringName, type: this.type };
         const url = endpoints.databases.ongoingTasks.adminConnectionStrings + this.urlEncodeArgs(args);
 

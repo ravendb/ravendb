@@ -16,11 +16,11 @@ class ongoingTaskBackupListModel extends ongoingTask {
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
 
-    backupType = ko.observable<Raven.Client.ServerWide.PeriodicBackup.BackupType>();
-    nextBackup = ko.observable<Raven.Client.ServerWide.Operations.NextBackup>();
+    backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
+    nextBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.NextBackup>();
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
-    onGoingBackup = ko.observable<Raven.Client.ServerWide.Operations.RunningBackup>();
+    onGoingBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.RunningBackup>();
 
     showBackupDetails = ko.observable(false);
     textClass = ko.observable<string>();
@@ -37,7 +37,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
     nextBackupHumanized: KnockoutComputed<string>;
     onGoingBackupHumanized: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
         super();
 
         this.update(dto);
@@ -117,7 +117,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
         this.editUrl = urls.editPeriodicBackupTask(this.taskId); 
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
         super.update(dto);
 
         this.backupType(dto.BackupType);
@@ -130,7 +130,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
         this.onGoingBackup(dto.OnGoingBackup);
     }
 
-    private getBackupType(backupType: Raven.Client.ServerWide.PeriodicBackup.BackupType, isFull: boolean): string {
+    private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
         if (!isFull) {
             return "Incremental";
         }
@@ -157,7 +157,7 @@ class ongoingTaskBackupListModel extends ongoingTask {
     refreshBackupInfo() {
         return ongoingTaskInfoCommand.forBackup(this.activeDatabase(), this.taskId)
             .execute()
-            .done((result: Raven.Client.ServerWide.Operations.OngoingTaskBackup) => this.update(result));
+            .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => this.update(result));
     }
 
     backupNow() {

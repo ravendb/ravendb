@@ -34,14 +34,14 @@ class connectionStringRavenEtlModel extends connectionStringModel {
 
     validationGroup: KnockoutValidationGroup;
     
-    constructor(dto: Raven.Client.ServerWide.ETL.RavenConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
+    constructor(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
         
         this.update(dto);       
         this.initValidation();      
     }    
 
-    update(dto: Raven.Client.ServerWide.ETL.RavenConnectionString) {
+    update(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString) {
         super.update(dto);
         
         this.connectionStringName(dto.Name); 
@@ -83,7 +83,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             Name: "", 
             TopologyDiscoveryUrls: [],
             Database: ""
-        } as Raven.Client.ServerWide.ETL.RavenConnectionString, true, []);
+        } as Raven.Client.Documents.Operations.ETL.RavenConnectionString, true, []);
     }
     
     toDto() {

@@ -17,7 +17,7 @@ class ftpSettings extends backupSettings {
         return this.url().toLowerCase().startsWith("ftps://");
     });
 
-    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.FtpSettings) {
+    constructor(dto: Raven.Client.Documents.Operations.Backups.FtpSettings) {
         super(dto, "FTP");
 
         this.url(dto.Url);
@@ -138,8 +138,8 @@ class ftpSettings extends backupSettings {
         fileReader.onerror = () => this.isLoadingFile(false);
     }
 
-    toDto(): Raven.Client.ServerWide.PeriodicBackup.FtpSettings {
-        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.FtpSettings;
+    toDto(): Raven.Client.Documents.Operations.Backups.FtpSettings {
+        const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.FtpSettings;
         dto.Url = this.url();
         dto.Port = this.port();
         dto.UserName = this.userName();

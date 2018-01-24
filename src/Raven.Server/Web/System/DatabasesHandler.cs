@@ -385,7 +385,7 @@ namespace Raven.Server.Web.System
             NodesTopology nodesTopology, 
             Dictionary<string, NodeStatus> nodeStatuses)
         {
-            var nodeStatus = new DbGroupNodeStatus
+            var nodeStatus = new DatabaseGroupNodeStatus
             {
                 LastStatus = DatabasePromotionStatus.Ok
             };

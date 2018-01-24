@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.ServerWide.ETL;
-using Raven.Client.ServerWide.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

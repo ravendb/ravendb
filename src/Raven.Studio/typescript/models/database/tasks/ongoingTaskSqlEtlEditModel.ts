@@ -16,7 +16,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
     validationGroup: KnockoutValidationGroup;
     dirtyFlag: () => DirtyFlag;
    
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
         super();
 
         this.update(dto);
@@ -71,7 +71,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         });
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails) {
         super.update(dto);
 
         if (dto.Configuration) {
@@ -88,7 +88,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
         }        
     }
 
-    toDto(): Raven.Client.ServerWide.ETL.SqlEtlConfiguration {
+    toDto(): Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration {
         return {
             TaskId: this.taskId,
             Name: this.taskName(),
@@ -104,7 +104,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
             Transforms: this.transformationScripts().map(x => x.toDto()),
             SqlTables: this.sqlTables().map(x => x.toDto())     
         
-        } as Raven.Client.ServerWide.ETL.SqlEtlConfiguration;
+        } as Raven.Client.Documents.Operations.ETL.SQL.SqlEtlConfiguration;
     }
     
     static empty(): ongoingTaskSqlEtlEditModel {
@@ -121,7 +121,7 @@ class ongoingTaskSqlEtlEditModel extends ongoingTaskEditModel {
                      Transforms: [],
                      SqlTables: []
                 }
-            } as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtlDetails);
+            } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlDetails);
     }
 }
 

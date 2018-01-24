@@ -57,10 +57,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskEditModel {
     updateDetails(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         const dtoEditModel = dto as Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails;
 
-        const state: Raven.Client.ServerWide.Operations.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
+        const state: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
         const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
 
-        const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTask = {
+        const dtoListModel: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask = {
             ResponsibleNode: emptyNodeId,
             TaskConnectionStatus: 'Active',
             TaskId: dtoEditModel.SubscriptionId,

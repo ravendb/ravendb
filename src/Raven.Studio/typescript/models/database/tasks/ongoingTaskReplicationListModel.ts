@@ -16,7 +16,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
     
     showReplicationDetails = ko.observable(false);
   
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super();
 
         this.update(dto); 
@@ -32,7 +32,7 @@ class ongoingTaskReplicationListModel extends ongoingTaskModel {
         this.editUrl = urls.editExternalReplication(this.taskId); 
     }
 
-    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
+    update(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super.update(dto);
 
         this.destinationDB(dto.DestinationDatabase);

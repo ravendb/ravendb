@@ -12,8 +12,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -21,7 +22,6 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -40,7 +40,6 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron;
 using Voron.Data;
@@ -421,7 +420,7 @@ namespace Raven.Server.ServerWide
             // ReSharper disable once UseNullPropagation
             if (leader == null)
                 return;
-
+            
             leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
@@ -499,6 +498,7 @@ namespace Raven.Server.ServerWide
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }
+                
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
                 if (databaseRecord.DeletionInProgress.Count == 0 && databaseRecord.Topology.Count == 0)
@@ -510,8 +510,6 @@ namespace Raven.Server.ServerWide
                 var updated = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
 
                 UpdateValue(index, items, lowerKey, key, updated);
-
-                NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
             }
         }
 

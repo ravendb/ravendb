@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,10 +44,10 @@ namespace Raven.Server.Documents.Replication
 
         private IncomingReplicationStatsAggregator _lastStats;
 
-        public IncomingReplicationHandler(
-            TcpConnectionOptions options,
+        public IncomingReplicationHandler(TcpConnectionOptions options,
             ReplicationLatestEtagRequest replicatedLastEtag,
-            ReplicationLoader parent)
+            ReplicationLoader parent, 
+            JsonOperationContext.ManagedPinnedBuffer bufferToCopy)
         {
             _connectionOptions = options;
             ConnectionInfo = IncomingConnectionInfo.FromGetLatestEtag(replicatedLastEtag);
@@ -65,6 +64,8 @@ namespace Raven.Server.Documents.Replication
             _conflictManager = new ConflictManager(_database, _parent.ConflictResolver);
 
             _attachmentStreamsTempFile = _database.DocumentsStorage.AttachmentsStorage.GetTempFile("replication");
+
+            _copiedBuffer = bufferToCopy.Clone(_connectionOptions.ContextPool);
         }
 
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.Replication
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
                                 Timeout.Infinite,
-                                _connectionOptions.PinnedBuffer,
+                                _copiedBuffer.Buffer,
                                 _database.DatabaseShutdown))
                             {
                                 if (msg.Document != null)
@@ -373,24 +374,24 @@ namespace Raven.Server.Documents.Replication
         {
             while (size > 0)
             {
-                var available = _connectionOptions.PinnedBuffer.Valid - _connectionOptions.PinnedBuffer.Used;
+                var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
                 if (available == 0)
                 {
-                    var read = _connectionOptions.Stream.Read(_connectionOptions.PinnedBuffer.Buffer.Array,
-                      _connectionOptions.PinnedBuffer.Buffer.Offset,
-                      _connectionOptions.PinnedBuffer.Buffer.Count);
+                    var read = _connectionOptions.Stream.Read(_copiedBuffer.Buffer.Buffer.Array,
+                      _copiedBuffer.Buffer.Buffer.Offset,
+                      _copiedBuffer.Buffer.Buffer.Count);
                     if (read == 0)
                         throw new EndOfStreamException();
 
-                    _connectionOptions.PinnedBuffer.Valid = read;
-                    _connectionOptions.PinnedBuffer.Used = 0;
+                    _copiedBuffer.Buffer.Valid = read;
+                    _copiedBuffer.Buffer.Used = 0;
                     continue;
                 }
                 var min = (int)Math.Min(size, available);
-                file.Write(_connectionOptions.PinnedBuffer.Buffer.Array,
-                    _connectionOptions.PinnedBuffer.Buffer.Offset + _connectionOptions.PinnedBuffer.Used,
+                file.Write(_copiedBuffer.Buffer.Buffer.Array,
+                    _copiedBuffer.Buffer.Buffer.Offset + _copiedBuffer.Buffer.Used,
                     min);
-                _connectionOptions.PinnedBuffer.Used += min;
+                _copiedBuffer.Buffer.Used += min;
                 size -= min;
             }
         }
@@ -399,34 +400,34 @@ namespace Raven.Server.Documents.Replication
         {
             while (size > 0)
             {
-                var available = _connectionOptions.PinnedBuffer.Valid - _connectionOptions.PinnedBuffer.Used;
+                var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
                 if (available == 0)
                 {
-                    var read = _connectionOptions.Stream.Read(_connectionOptions.PinnedBuffer.Buffer.Array,
-                      _connectionOptions.PinnedBuffer.Buffer.Offset,
-                      _connectionOptions.PinnedBuffer.Buffer.Count);
+                    var read = _connectionOptions.Stream.Read(_copiedBuffer.Buffer.Buffer.Array,
+                      _copiedBuffer.Buffer.Buffer.Offset,
+                      _copiedBuffer.Buffer.Buffer.Count);
                     if (read == 0)
                         throw new EndOfStreamException();
 
-                    _connectionOptions.PinnedBuffer.Valid = read;
-                    _connectionOptions.PinnedBuffer.Used = 0;
+                    _copiedBuffer.Buffer.Valid = read;
+                    _copiedBuffer.Buffer.Used = 0;
                     continue;
                 }
                 var min = Math.Min(size, available);
-                var result = _connectionOptions.PinnedBuffer.Pointer + _connectionOptions.PinnedBuffer.Used;
+                var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
                 into.Write(result, min);
-                _connectionOptions.PinnedBuffer.Used += min;
+                _copiedBuffer.Buffer.Used += min;
                 size -= min;
             }
         }
 
         private unsafe byte* ReadExactly(int size)
         {
-            var diff = _connectionOptions.PinnedBuffer.Valid - _connectionOptions.PinnedBuffer.Used;
+            var diff = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
             if (diff >= size)
             {
-                var result = _connectionOptions.PinnedBuffer.Pointer + _connectionOptions.PinnedBuffer.Used;
-                _connectionOptions.PinnedBuffer.Used += size;
+                var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
+                _copiedBuffer.Buffer.Used += size;
                 return result;
             }
             return ReadExactlyUnlikely(size, diff);
@@ -435,24 +436,24 @@ namespace Raven.Server.Documents.Replication
         private unsafe byte* ReadExactlyUnlikely(int size, int diff)
         {
             UnmanagedMemory.Move(
-                _connectionOptions.PinnedBuffer.Pointer,
-                _connectionOptions.PinnedBuffer.Pointer + _connectionOptions.PinnedBuffer.Used,
+                _copiedBuffer.Buffer.Pointer,
+                _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used,
                 diff);
-            _connectionOptions.PinnedBuffer.Valid = diff;
-            _connectionOptions.PinnedBuffer.Used = 0;
+            _copiedBuffer.Buffer.Valid = diff;
+            _copiedBuffer.Buffer.Used = 0;
             while (diff < size)
             {
-                var read = _connectionOptions.Stream.Read(_connectionOptions.PinnedBuffer.Buffer.Array,
-                    _connectionOptions.PinnedBuffer.Buffer.Offset + diff,
-                    _connectionOptions.PinnedBuffer.Buffer.Count - diff);
+                var read = _connectionOptions.Stream.Read(_copiedBuffer.Buffer.Buffer.Array,
+                    _copiedBuffer.Buffer.Buffer.Offset + diff,
+                    _copiedBuffer.Buffer.Buffer.Count - diff);
                 if (read == 0)
                     throw new EndOfStreamException();
 
-                _connectionOptions.PinnedBuffer.Valid += read;
+                _copiedBuffer.Buffer.Valid += read;
                 diff += read;
             }
-            var result = _connectionOptions.PinnedBuffer.Pointer + _connectionOptions.PinnedBuffer.Used;
-            _connectionOptions.PinnedBuffer.Used += size;
+            var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
+            _copiedBuffer.Buffer.Used += size;
             return result;
         }
 
@@ -591,6 +592,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpConnectionOptions _connectionOptions;
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
+        private (IDisposable ReleaseBuffer, JsonOperationContext.ManagedPinnedBuffer Buffer) _copiedBuffer;
 
         private struct ReplicationItem : IDisposable
         {
@@ -815,58 +817,63 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
-            if (_log.IsInfoEnabled)
-                _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
-            _cts.Cancel();
-            try
+            using (_copiedBuffer.ReleaseBuffer)
             {
-                _connectionOptionsDisposable?.Dispose();
-            }
-            catch (Exception)
-            {
-            }
-            try
-            {
-                _stream.Dispose();
-            }
-            catch (Exception)
-            {
-            }
-            try
-            {
-                _tcpClient.Dispose();
-            }
-            catch (Exception)
-            {
-            }
-
-            try
-            {
-                _connectionOptions.Dispose();
-            }
-            catch
-            {
-                // do nothing
-            }
-
-            _replicationFromAnotherSource.Set();
-
-            if (_incomingThread != Thread.CurrentThread)
-            {
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
+                _cts.Cancel();
                 try
                 {
-                    _incomingThread?.Join();
+                    _connectionOptionsDisposable?.Dispose();
                 }
-                catch (ThreadStateException)
+                catch (Exception)
                 {
-                    // expected if the thread hsan't been started yet
                 }
+                try
+                {
+                    _stream.Dispose();
+                }
+                catch (Exception)
+                {
+                }
+                try
+                {
+                    _tcpClient.Dispose();
+                }
+                catch (Exception)
+                {
+                }
+
+                try
+                {
+                    _connectionOptions.Dispose();
+                }
+                catch
+                {
+                    // do nothing
+                }
+
+                _replicationFromAnotherSource.Set();
+
+                if (_incomingThread != Thread.CurrentThread)
+                {
+                    try
+                    {
+                        _incomingThread?.Join();
+                    }
+                    catch (ThreadStateException)
+                    {
+                        // expected if the thread hsan't been started yet
+                    }
+                }
+
+                _incomingThread = null;
+                _cts.Dispose();
+
+                _attachmentStreamsTempFile.Dispose();
+            
             }
-
-            _incomingThread = null;
-            _cts.Dispose();
-
-            _attachmentStreamsTempFile.Dispose();
+            
         }
 
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);

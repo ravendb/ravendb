@@ -8,10 +8,10 @@ class getConnectionStringsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult> {
         const url = endpoints.databases.ongoingTasks.adminConnectionStrings;
 
-        return this.query<Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult>(url, null, this.db)
+        return this.query<Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult>(url, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to get connection strings", response.responseText, response.statusText));
     }
 }

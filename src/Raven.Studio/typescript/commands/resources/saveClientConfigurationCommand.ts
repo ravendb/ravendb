@@ -4,7 +4,7 @@ import database = require("models/resources/database");
 
 class saveClientConfigurationCommand extends commandBase {
     
-    constructor(private dto: Raven.Client.ServerWide.ClientConfiguration, private db: database) {
+    constructor(private dto: Raven.Client.Documents.Operations.Configuration.ClientConfiguration, private db: database) {
         super();
     }
     
