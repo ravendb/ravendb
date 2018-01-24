@@ -26,10 +26,17 @@ namespace Rachis.Messages
             while (start < lengthOfData)
             {
                 var read = stream.Read(logEntry.Data, start, lengthOfData - start);
+                if(read == 0)
+                    ThrowEndOfStreamForRead(lengthOfData, start);
                 start += read;
             }
 
             return logEntry;
+        }
+
+        private static void ThrowEndOfStreamForRead(int lengthOfData, int start)
+        {
+            throw new EndOfStreamException(String.Format("Failed to read Raft log entry data from stream. Expected {0} bytes of data, but read {1} bytes", lengthOfData, start));
         }
 
         public void WriteToStream(Stream stream)
