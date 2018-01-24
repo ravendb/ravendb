@@ -442,7 +442,7 @@ namespace Sparrow.Compression
                     continue;
                 }
 
-                pIn += Bits.TrailingZeroes(diff);
+                pIn += Bits.TrailingZeroesInBytes(diff);
                 return (int)(pIn - pStart);
             }
 

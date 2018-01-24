@@ -1,4 +1,7 @@
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Sparrow.Binary;
 
 namespace Sparrow
 {
@@ -21,131 +24,147 @@ namespace Sparrow
         {
             // If we use an unmanaged bulk version with an inline compare the caller site does not get optimized properly.
             // If you know you will be comparing big memory chunks do not use the inline version. 
-            int l = size;
-            if (l > CompareInlineVsCallThreshold)
+            if (size > CompareInlineVsCallThreshold)
                 goto UnmanagedCompare;
 
-            byte* bpx = (byte*)p1, bpy = (byte*)p2;
-            int last;
-            for (int i = 0; i < l / 8; i++, bpx += 8, bpy += 8)
-            {
-                if (*((long*)bpx) != *((long*)bpy))
-                {
-                    last = 8;
-                    goto Tail;
-                }
-            }
+            byte* bpx = (byte*)p1;
+            byte* bpy = (byte*)p2;
 
-            if ((l & 4) != 0)
+            // PERF: This allows us to do pointer arithmetics and use relative addressing using the 
+            //       hardware instructions without needed an extra register.            
+            long offset = bpy - bpx;
+
+            if ((size & 7) == 0)
+                goto ProcessAligned;
+
+            // We process first the "unaligned" size.
+            ulong xor;
+            if ((size & 4) != 0)
             {
-                if (*((int*)bpx) != *((int*)bpy))
-                {
-                    last = 4;
+                xor = *((uint*)bpx) ^ *((uint*)(bpx + offset));
+                if (xor != 0)
                     goto Tail;
-                }
+
                 bpx += 4;
-                bpy += 4;
             }
 
-            if ((l & 2) != 0)
+            if ((size & 2) != 0)
             {
-                if (*((short*)bpx) != *((short*)bpy))
-                {
-                    last = 2;
+                xor = (ulong)(*((ushort*)bpx) ^ *((ushort*)(bpx + offset)));
+                if (xor != 0)
                     goto Tail;
-                }
 
                 bpx += 2;
-                bpy += 2;
             }
 
-            if ((l & 1) != 0)
+            if ((size & 1) != 0)
             {
-                return (*((byte*)bpx) - *((byte*)bpy));
+                int value = *bpx - *(bpx + offset);
+                if (value != 0)
+                    return value;
+
+                bpx += 1;
+            }
+
+            ProcessAligned:
+
+            byte* end = (byte*)p1 + size;
+            byte* loopEnd = end - 16;
+            while (bpx <= loopEnd)
+            {
+                // PERF: JIT will emit: ```{op} {reg}, qword ptr [rdx+rax]```
+                if (*((ulong*)bpx) != *(ulong*)(bpx + offset))
+                    goto XorTail;
+
+                if (*((ulong*)(bpx + 8)) != *(ulong*)(bpx + 8 + offset))
+                {
+                    bpx += 8;
+                    goto XorTail;
+                }
+                   
+
+                bpx += 16;
+            }
+
+            if (bpx < end)
+                goto XorTail;
+
+            return 0;
+
+            XorTail: xor = *((ulong*)bpx) ^ *(ulong*)(bpx + offset);
+
+            Tail:
+
+            // Fast-path for equals
+            if (xor == 0)
+                return 0;
+
+            // PERF: This is a bit twiddling hack. Given that bitwise xoring 2 values flag the bits difference, 
+            //       we can use that we know we are running on little endian hardware and the very first bit set 
+            //       will correspond to the first byte which is different. 
+
+            bpx += Bits.TrailingZeroesInBytes(xor);
+            return *bpx - *(bpx + offset);
+
+UnmanagedCompare:
+            return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int CompareInline(void* p1, void* p2, int size, out int position)
+        {
+            byte* bpx = (byte*)p1;
+            byte* bpy = (byte*)p2;
+
+            long offset = bpy - bpx;
+            if (size < 8)
+                goto ProcessSmall;
+
+            int l = size >> 3; // (Equivalent to size / 8)
+
+            ulong xor;
+            for (int i = 0; i < l; i++, bpx += 8)
+            {
+                xor = *((ulong*)bpx) ^ *(ulong*)(bpx + offset);
+                if (xor != 0)
+                    goto Tail;
+            }
+
+            ProcessSmall:
+
+            if ((size & 4) != 0)
+            {
+                xor = *((uint*)bpx) ^ *((uint*)(bpx + offset));
+                if (xor != 0)
+                    goto Tail;
+
+                bpx += 4;
+            }
+
+            if ((size & 2) != 0)
+            {
+                xor = (ulong)(*((ushort*)bpx) ^ *((ushort*)(bpx + offset)));
+                if (xor != 0)
+                    goto Tail;
+
+                bpx += 2;
+            }
+
+            position = (int)(bpx - (byte*)p1);
+
+            if ((size & 1) != 0)
+            {             
+                return *bpx - *(bpx + offset);
             }
 
             return 0;
 
             Tail:
-            while (last > 0)
-            {
-                if (*((byte*)bpx) != *((byte*)bpy))
-                    return *bpx - *bpy;
 
-                bpx++;
-                bpy++;
-                last--;
-            }
+            int p = Bits.TrailingZeroesInBytes(xor);
 
-            return 0;
-
-            UnmanagedCompare:
-            return UnmanagedMemory.Compare((byte*)p1, (byte*)p2, l);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int CompareInline(byte* p1, byte* p2, int size, out int position)
-        {
-            byte* bpx = p1, bpy = p2;
-            int l = size;
-
-            int last = 0;
-            for (int i = 0; i < l / 8; i++, bpx += 8, bpy += 8)
-            {
-                if (*((long*)bpx) != *((long*)bpy))
-                {
-                    last = 8;
-                    goto TAIL;
-                }
-            }
-
-            if ((l & 4) != 0)
-            {
-                if (*((int*)bpx) != *((int*)bpy))
-                {
-                    last = 4;
-                    goto TAIL;
-                }
-                bpx += 4;
-                bpy += 4;
-            }
-            if ((l & 2) != 0)
-            {
-                if (*((short*)bpx) != *((short*)bpy))
-                {
-                    last = 2;
-                    goto TAIL;
-                }
-
-                bpx += 2;
-                bpy += 2;
-            }
-
-            if ((l & 1) != 0)
-            {
-                position = (int)(bpx - p1);
-                return (*((byte*)bpx) - *((byte*)bpy));
-            }
-
-            position = size;
-            return 0;
-
-        TAIL:
-            while (last > 0)
-            {
-                if (*((byte*)bpx) != *((byte*)bpy))
-                {
-                    position = (int)(bpx - p1);
-                    return *bpx - *bpy;
-                }
-                
-                bpx++;
-                bpy++;
-                last--;
-            }
-
-            position = size;
-            return 0;
+            position = (int)(bpx - (byte*)p1) + p;
+            return *(bpx + p) - *(bpx + p + offset);
         }
 
         /// <summary>
