@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -344,57 +345,83 @@ namespace Sparrow.Logging
                 var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
                 while (_keepLogging)
                 {
-                    const int maxFileSize = 1024 * 1024 * 256;
-                    using (var currentFile = GetNewStream(maxFileSize))
+                    try
                     {
-                        var sizeWritten = 0;
-
-                        var foundEntry = true;
-
-                        while (sizeWritten < maxFileSize)
+                        const int maxFileSize = 1024 * 1024 * 256;
+                        using (var currentFile = GetNewStream(maxFileSize))
                         {
-                            if (foundEntry == false)
+                            var sizeWritten = 0;
+
+                            var foundEntry = true;
+
+                            while (sizeWritten < maxFileSize)
                             {
-                                if (_keepLogging == false)
-                                    return;
+                                if (foundEntry == false)
+                                {
+                                    if (_keepLogging == false)
+                                        return;
 
-                                _hasEntries.Wait();
-                                if (_keepLogging == false)
-                                    return;
+                                    _hasEntries.Wait();
+                                    if (_keepLogging == false)
+                                        return;
 
-                                _hasEntries.Reset();
+                                    _hasEntries.Reset();
+                                }
+
+                                foundEntry = false;
+                                foreach (var threadStateRef in threadStates)
+                                {
+                                    if (threadStateRef.TryGetTarget(out LocalThreadWriterState threadState) == false)
+                                    {
+                                        threadStatesToRemove.Push(threadStateRef);
+                                        continue;
+                                    }
+
+                                    for (var i = 0; i < 16; i++)
+                                    {
+                                        if (threadState.Full.Dequeue(out WebSocketMessageEntry item) == false)
+                                            break;
+
+                                        foundEntry = true;
+
+                                        sizeWritten += ActualWriteToLogTargets(item, currentFile);
+
+                                        threadState.Free.Enqueue(item);
+                                    }
+                                }
+
+                                while (threadStatesToRemove.TryPop(out var ts))
+                                    threadStates.Remove(ts);
+
+                                if (_newThreadStates.IsEmpty)
+                                    continue;
+
+                                while (_newThreadStates.TryDequeue(out WeakReference<LocalThreadWriterState> result))
+                                    threadStates.Add(result);
                             }
+                        }
+                    }
+                    catch (OutOfMemoryException)
+                    {
+                        Console.Error.WriteLine("ERROR! Out of memory exception while trying to log, will avoid logging for the next 5 seconds");
 
-                            foundEntry = false;
+                        var time = 5000;
+                        var current = Stopwatch.GetTimestamp();
+
+                        while (time > 0 && 
+                            _hasEntries.Wait(time))
+                        {
+                            _hasEntries.Reset();
+                            time = (int)(((Stopwatch.GetTimestamp() - current) * Stopwatch.Frequency) / 1000);
                             foreach (var threadStateRef in threadStates)
                             {
-                                if (threadStateRef.TryGetTarget(out LocalThreadWriterState threadState) == false)
-                                {
-                                    threadStatesToRemove.Push(threadStateRef);
-                                    continue;
-                                }
-
-                                for (var i = 0; i < 16; i++)
-                                {
-                                    if (threadState.Full.Dequeue(out WebSocketMessageEntry item) == false)
-                                        break;
-
-                                    foundEntry = true;
-
-                                    sizeWritten += ActualWriteToLogTargets(item, currentFile);
-
-                                    threadState.Free.Enqueue(item);
-                                }
+                                DiscardThreadLogState(threadStateRef);
                             }
-
-                            while (threadStatesToRemove.TryPop(out var ts))
-                                threadStates.Remove(ts);
-
-                            if (_newThreadStates.IsEmpty)
-                                continue;
-
-                            while (_newThreadStates.TryDequeue(out WeakReference<LocalThreadWriterState> result))
-                                threadStates.Add(result);
+                            foreach (var newThreadState in _newThreadStates)
+                            {
+                                DiscardThreadLogState(newThreadState);
+                            }
+                            current = Stopwatch.GetTimestamp();
                         }
                     }
                 }
@@ -402,8 +429,16 @@ namespace Sparrow.Logging
             catch (Exception e)
             {
                 var msg = $"FATAL ERROR trying to log!{Environment.NewLine}{e}";
-                Console.WriteLine(msg);
+                Console.Error.WriteLine(msg);
             }
+        }
+
+        private static void DiscardThreadLogState(WeakReference<LocalThreadWriterState> threadStateRef)
+        {
+            if (threadStateRef.TryGetTarget(out LocalThreadWriterState threadState) == false)
+                return;
+            while (threadState.Full.Dequeue(out WebSocketMessageEntry _))
+                break;
         }
 
         public void AttachPipeSink(Stream stream)
