@@ -3,7 +3,6 @@
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RuntimeFrameworkVersion>2.0.5</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DebugType>portable</DebugType>
     <AssemblyName>Voron.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Voron.Benchmark</PackageId>
