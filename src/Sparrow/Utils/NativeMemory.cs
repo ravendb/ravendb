@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Collections.LockFree;
@@ -70,7 +71,19 @@ namespace Sparrow.Utils
         {
             thread = ThreadAllocations.Value;
             thread.Allocations += size;
-            return (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
+            try
+            {
+                return (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
+            }
+            catch (OutOfMemoryException e)
+            {
+                return ThrowFailedToAllocate(size, thread, e);
+            }
+        }
+        
+        private static byte* ThrowFailedToAllocate(long size, ThreadStats thread, OutOfMemoryException e)
+        {
+            throw new OutOfMemoryException($"Failed to allocate additional {new Size(size, SizeUnit.Bytes)} to already allocated {new Size(thread.Allocations, SizeUnit.Bytes)}", e);
         }
 
         private static void FixupReleasesFromOtherThreads(ThreadStats thread)
