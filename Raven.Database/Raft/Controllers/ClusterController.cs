@@ -88,7 +88,14 @@ namespace Raven.Database.Raft.Controllers
         [RavenRoute("raft/appendEntries")]
         public async Task<HttpResponseMessage> AppendEntries()
         {
+            int version;
+            if (!TryGetParamFromUri("version", out version) || version != 2)
+            {
+                return GetMessageWithString("Received append entries from incorrect version of RavenDB instance. Are all cluster nodes updated with the same assembly version? Url received: " + Request.RequestUri, HttpStatusCode.BadRequest);
+            }
+
             var hashAsString = GetHeader("Request-Hash");
+            var bodyContentLengthAsString = GetHeader("Request-Length");
             ulong receivedHash = 0;
             if (hashAsString != null && !ulong.TryParse(hashAsString, out receivedHash))
             {
@@ -97,6 +104,16 @@ namespace Raven.Database.Raft.Controllers
                     Log.Debug("Expected for 'Request-Hash' header key to exist, and it should be a ulong. Received : " + hashAsString);
                 }
                 return GetMessageWithString("Expected for 'Request-Hash' header key to exist, and it should be a ulong. Received : " + hashAsString, HttpStatusCode.BadRequest);
+            }
+
+            int bodyContentLength = 0;
+            if (bodyContentLengthAsString != null && !int.TryParse(bodyContentLengthAsString, out bodyContentLength))
+            {
+                if (Log.IsDebugEnabled)
+                {
+                    Log.Debug("Expected for 'Request-Length' header key to exist, and it should be a int. Received : " + bodyContentLengthAsString);
+                }
+                return GetMessageWithString("Expected for 'Request-Length' header key to exist, and it should be a int. Received : " + bodyContentLengthAsString, HttpStatusCode.BadRequest);
             }
 
             AppendEntriesRequest request;
@@ -109,33 +126,18 @@ namespace Raven.Database.Raft.Controllers
             {
                 var sourceStream = await Request.Content.ReadAsStreamAsync().ConfigureAwait(false);
                 await sourceStream.CopyToAsync(contentStream).ConfigureAwait(false);
-
                 HttpResponseMessage responseMessage;
-                if (VerifyContentHash(contentStream, receivedHash, out responseMessage) == false)
+                if (VerifyContentHash(contentStream, 
+                        receivedHash, 
+                        bodyContentLength, 
+                        out responseMessage) == false)
                     return responseMessage;
 
                 contentStream.Position = 0;
-                
+
                 for (int i = 0; i < entriesCount; i++)
                 {
-                    var index = Read7BitEncodedInt(contentStream);
-                    var term = Read7BitEncodedInt(contentStream);
-                    var isTopologyChange = contentStream.ReadByte() == 1;
-                    var lengthOfData = (int) Read7BitEncodedInt(contentStream);
-                    request.Entries[i] = new LogEntry
-                    {
-                        Index = index,
-                        Term = term,
-                        IsTopologyChange = isTopologyChange,
-                        Data = new byte[lengthOfData]
-                    };
-
-                    var start = 0;
-                    while (start < lengthOfData)
-                    {
-                        var read = contentStream.Read(request.Entries[i].Data, start, lengthOfData - start);
-                        start += read;
-                    }
+                    request.Entries[i] = LogEntry.ReadFromStream(contentStream);
                 }
 
                 var taskCompletionSource = new TaskCompletionSource<HttpResponseMessage>();
@@ -144,25 +146,29 @@ namespace Raven.Database.Raft.Controllers
             }
         }
 
-        private bool VerifyContentHash(Stream stream, ulong receivedHash, out HttpResponseMessage responseMessage)
+        private bool VerifyContentHash(Stream stream, ulong receivedHash, int bodyContentLength, out HttpResponseMessage responseMessage)
         {
             stream.Position = 0;
             responseMessage = null;
-            using (var sr = new StreamReader(stream, Encoding.UTF8,true,1024,true))
+
+            //not disposing the reader because we want to keep the 'stream' open
+            var reader = new BinaryReader(stream);
+            var contentArray = reader.ReadBytes(bodyContentLength);
+            if(contentArray.Length < bodyContentLength)
+                throw new EndOfStreamException("Failed to verify content hash because we reached the end of the request body stream.");
+
+            var hash = Hashing.XXHash64.Calculate(contentArray);
+            if (hash != receivedHash)
             {
-                var contentAsString = sr.ReadToEnd();
-                var hash = Hashing.XXHash64.Calculate(contentAsString, Encoding.UTF8);
-                
-                if (hash != receivedHash)
+                if (Log.IsDebugEnabled)
                 {
-                    if (Log.IsDebugEnabled)
-                    {
-                        Log.Debug("Received content hash is not equal to received hash headers. This means something tampered with HTTP request contents... Received hash " + receivedHash + ", but expected " + hash);
-                    }
-                    responseMessage = GetMessageWithString("Received content hash is not equal to received hash headers. This means something tampered with HTTP request contents...", HttpStatusCode.BadRequest);
-                    return false;
+                    Log.Debug("Received content hash is not equal to received hash headers. This means something tampered with HTTP request contents... Received hash " + receivedHash + ", but expected " + hash);
                 }
+
+                responseMessage = GetMessageWithString("Received content hash is not equal to received hash headers. This means something tampered with HTTP request contents...", HttpStatusCode.BadRequest);
+                return false;
             }
+
             return true;
         }
 
@@ -334,25 +340,6 @@ namespace Raven.Database.Raft.Controllers
             return GetEmptyMessage();
         }
 
-        private static long Read7BitEncodedInt(Stream stream)
-        {
-            long count = 0;
-            int shift = 0;
-            byte b;
-            do
-            {
-                if (shift == 9 * 7)
-                    throw new InvalidDataException("Invalid 7bit shifted value, used more than 9 bytes");
-
-                var maybeEof = stream.ReadByte();
-                if (maybeEof == -1)
-                    throw new EndOfStreamException();
-
-                b = (byte)maybeEof;
-                count |= (uint)(b & 0x7F) << shift;
-                shift += 7;
-            } while ((b & 0x80) != 0);
-            return count;
-        }
+      
     }
 }
