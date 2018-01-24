@@ -10,6 +10,7 @@
     <PackageId>RavenDB.TestDriver</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
