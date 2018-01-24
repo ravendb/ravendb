@@ -9,6 +9,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -19,14 +20,17 @@ namespace Raven.Server.Rachis
         private Stream _stream;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private Logger _log;
+        private Action _disconnect;
+        private DisposeLock _disposerLock = new DisposeLock("RemoteConnection");
 
         public string Source => _src;
         public Stream Stream => _stream;
 
-        public RemoteConnection(string src, Stream stream, long term, [CallerMemberName] string caller = null)
+        public RemoteConnection(string src, Stream stream, long term, Action disconnect, [CallerMemberName] string caller = null)
         {
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{src} > [? discovering... ? ]");
             _stream = stream;
+            _disconnect = disconnect;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
             RegisterConnection("?", term, caller);
         }
@@ -44,10 +48,11 @@ namespace Raven.Server.Rachis
         private static int _connectionNumber = 0; 
         public static ConcurrentSet<RemoteConnectionInfo> RemoteConnectionsList = new ConcurrentSet<RemoteConnectionInfo>();
 
-        public RemoteConnection(string dest, string src, long term, Stream stream, [CallerMemberName] string caller = null)
+        public RemoteConnection(string dest, string src, long term, Stream stream, Action disconnect, [CallerMemberName] string caller = null)
         {
             _destTag = dest;
             _src = src;
+            _disconnect = disconnect;
             _log = LoggingSource.Instance.GetLogger<RemoteConnection>($"{_src} > {_destTag}");
             _stream = stream;
             _buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance();
@@ -85,6 +90,7 @@ namespace Raven.Server.Rachis
 
         private void Send(JsonOperationContext context, BlittableJsonReaderObject msg)
         {
+            using(_disposerLock.EnsureNotDisposed())
             using (var writer = new BlittableJsonTextWriter(context, _stream))
             {
        /*         var streamWriter = _writers.GetOrAdd(_dest, d => new Lazy<StreamWriter>(() => File.CreateText(d + ".log")))
@@ -260,17 +266,20 @@ namespace Raven.Server.Rachis
 
         public unsafe int Read(byte[] buffer, int offset, int count)
         {
-            if (_buffer.Used < _buffer.Valid)
+            using (_disposerLock.EnsureNotDisposed())
             {
-                var size = Math.Min(count, _buffer.Valid - _buffer.Used);
-                fixed (byte* pBuffer = buffer)
+                if (_buffer.Used < _buffer.Valid)
                 {
-                    Memory.Copy(pBuffer + offset, _buffer.Pointer + _buffer.Used, size);
-                    _buffer.Used += size;
-                    return size;
+                    var size = Math.Min(count, _buffer.Valid - _buffer.Used);
+                    fixed (byte* pBuffer = buffer)
+                    {
+                        Memory.Copy(pBuffer + offset, _buffer.Pointer + _buffer.Used, size);
+                        _buffer.Used += size;
+                        return size;
+                    }
                 }
+                return _stream.Read(buffer, offset, count);
             }
-            return _stream.Read(buffer, offset, count);
         }
 
         public Reader CreateReader()
@@ -320,6 +329,7 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                using(_disposerLock.EnsureNotDisposed())
                 using (
                     var json = context.ParseToMemory(_stream, "rachis-item",
                         BlittableJsonDocumentBuilder.UsageMode.None, _buffer))
@@ -344,11 +354,14 @@ namespace Raven.Server.Rachis
 
             try
             {
-                json = context.ParseToMemory(_stream, "rachis-snapshot",
-                    BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
-                json.BlittableValidation();
-                ValidateMessage(nameof(InstallSnapshot), json);
-                return JsonDeserializationRachis<InstallSnapshot>.Deserialize(json);
+                using (_disposerLock.EnsureNotDisposed())
+                {
+                    json = context.ParseToMemory(_stream, "rachis-snapshot",
+                        BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
+                    json.BlittableValidation();
+                    ValidateMessage(nameof(InstallSnapshot), json);
+                    return JsonDeserializationRachis<InstallSnapshot>.Deserialize(json);
+                }
             }
             catch
             {
@@ -364,11 +377,14 @@ namespace Raven.Server.Rachis
 
             try
             {
-                json = context.ParseToMemory(_stream, "rachis-entry",
+                using (_disposerLock.EnsureNotDisposed())
+                {
+                    json = context.ParseToMemory(_stream, "rachis-entry",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer);
-                json.BlittableValidation();
-                ValidateMessage(nameof(RachisEntry), json);
-                return JsonDeserializationRachis<RachisEntry>.Deserialize(json);
+                    json.BlittableValidation();
+                    ValidateMessage(nameof(RachisEntry), json);
+                    return JsonDeserializationRachis<RachisEntry>.Deserialize(json);
+                }
             }
             catch
             {
@@ -406,13 +422,25 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            RemoteConnectionsList.TryRemove(_info);
-            _stream?.Dispose();
-            _buffer?.Dispose();
+            try
+            {
+                _disconnect(); // force disconnection, to abort read/write
+            }
+            catch (Exception)
+            {
+                // even if we get an error , we must continue to the actual disposal
+            }
+            using (_disposerLock.StartDisposing())
+            {
+                RemoteConnectionsList.TryRemove(_info);
+                _stream?.Dispose();
+                _buffer?.Dispose();
+            }
         }
 
         public RachisHello InitFollower(JsonOperationContext context)
         {
+            using (_disposerLock.EnsureNotDisposed())
             using (
                 var json = context.ParseToMemory(_stream, "rachis-initial-msg",
                     BlittableJsonDocumentBuilder.UsageMode.None, _buffer))

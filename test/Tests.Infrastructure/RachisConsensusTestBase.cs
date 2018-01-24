@@ -175,7 +175,7 @@ namespace Tests.Infrastructure
                     break;
                 }
                 var stream = tcpClient.GetStream();
-                rachis.AcceptNewConnection(stream, tcpClient.Client.RemoteEndPoint, hello =>
+                rachis.AcceptNewConnection(stream, () => tcpClient.Client.Disconnect(false), tcpClient.Client.RemoteEndPoint, hello =>
                 {
                     lock (this)
                     {
@@ -316,7 +316,7 @@ namespace Tests.Infrastructure
                 return slice.ToString() == "values";
             }
 
-            public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
+            public override async Task<(Stream, Action)> ConnectToPeer(string url, X509Certificate2 certificate)
             {
                 TimeSpan time;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -325,7 +325,7 @@ namespace Tests.Infrastructure
                     time = _parent.ElectionTimeout * (_parent.GetTopology(ctx).AllNodes.Count - 2);
                 }
                 var tcpClient = await TcpUtils.ConnectAsync(url, time);
-                return tcpClient.GetStream();
+                return (tcpClient.GetStream(), () => tcpClient.Client.Disconnect(false));
             }
         }
         

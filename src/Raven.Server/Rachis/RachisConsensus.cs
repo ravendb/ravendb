@@ -89,7 +89,7 @@ namespace Raven.Server.Rachis
             StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, _serverStore);
         }
 
-        public override Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
+        public override Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
         {
             return StateMachine.ConnectToPeer(url, certificate);
         }
@@ -883,12 +883,12 @@ namespace Raven.Server.Rachis
         /// This method is expected to run for a long time (lifetime of the connection)
         /// and can never throw. We expect this to be on a separate thread
         /// </summary>
-        public void AcceptNewConnection(Stream stream, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
+        public void AcceptNewConnection(Stream stream, Action disconnect, EndPoint remoteEndpoint, Action<RachisHello> sayHello = null)
         {
             RemoteConnection remoteConnection = null;
             try
             {
-                remoteConnection = new RemoteConnection(_tag, stream, CurrentTerm);
+                remoteConnection = new RemoteConnection(_tag, stream, CurrentTerm, disconnect);
                 try
                 {
                     RachisHello initialMessage;
@@ -1557,7 +1557,7 @@ namespace Raven.Server.Rachis
             ContextPool?.Dispose();
         }
 
-        public abstract Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
+        public abstract Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
 
         public void Bootstrap(string selfUrl, bool forNewCluster = false)
         {

@@ -1634,9 +1634,9 @@ namespace Raven.Server.ServerWide
             return _engine.WaitForState(rachisState);
         }
 
-        public void ClusterAcceptNewConnection(Stream client, EndPoint remoteEndpoint)
+        public void ClusterAcceptNewConnection(Stream client, Action disconnect, EndPoint remoteEndpoint)
         {
-            _engine.AcceptNewConnection(client, remoteEndpoint);
+            _engine.AcceptNewConnection(client, disconnect, remoteEndpoint);
         }
 
         public async Task WaitForCommitIndexChange(RachisConsensus.CommitIndexModification modification, long value)

@@ -108,11 +108,12 @@ namespace Raven.Server.Rachis
                     try
                     {
                         Stream stream;
+                        Action disconnect;
                         try
                         {
                             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
-                                stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                (stream, disconnect) = _engine.ConnectToPeer(_url, _certificate, context).Result;
                             }
 
                             if (_candidate.Running == false)
@@ -134,7 +135,7 @@ namespace Raven.Server.Rachis
                         StatusMessage = $"Connected to {_tag}";
 
                         Stopwatch sp;
-                        var connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream);
+                        var connection = new RemoteConnection(_tag, _engine.Tag, _candidate.ElectionTerm, stream, disconnect);
                         Interlocked.Exchange(ref Connection, connection);//publish the new connection
                         using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {

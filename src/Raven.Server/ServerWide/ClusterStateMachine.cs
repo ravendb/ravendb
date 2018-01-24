@@ -1279,7 +1279,7 @@ namespace Raven.Server.ServerWide
             return size;
         }
 
-        public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
+        public override async Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate)
         {
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
@@ -1341,7 +1341,7 @@ namespace Raven.Server.ServerWide
                         }
                     }
                 }
-                return stream;
+                return (stream, () => tcpClient.Client.Disconnect(false));
             }
             catch (Exception)
             {

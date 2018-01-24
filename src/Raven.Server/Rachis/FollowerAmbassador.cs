@@ -146,8 +146,8 @@ namespace Raven.Server.Rachis
                                 using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     _connection?.Dispose();
-                                    var stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
-                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream);
+                                    var (stream, disconnect) = _engine.ConnectToPeer(_url, _certificate, context).Result;
+                                    var con = new RemoteConnection(_tag, _engine.Tag, _term, stream, disconnect);
                                     Interlocked.Exchange(ref _connection, con);
                                     ClusterTopology topology;
                                     using (context.OpenReadTransaction())
