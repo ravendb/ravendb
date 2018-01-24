@@ -34,8 +34,34 @@ namespace Raven.Tests.Common.Attributes
                             camera.DateOfListing,
                             camera.Megapixels
                         }",
-                    Name = "CameraCost",
-                    
+                    Name = "CameraCost"                    
+                };
+            }
+
+            public override string IndexName
+            {
+                get { return new CameraCostIndex().CreateIndexDefinition().Name; }
+            }
+        }
+
+        public class CameraCostIndexWithTyptedSorts : Raven.Client.Indexes.AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Map =
+                        @"from camera in docs 
+                        select new 
+                        { 
+                            camera.Manufacturer, 
+                            camera.Model, 
+                            camera.Cost,
+                            camera.DateOfListing,
+                            camera.Megapixels
+                        }",
+                    Name = "CameraCostIndexWithTyptedSorts",
+                    SortOptions = { { "Cost", SortOptions.Int }, { "Megapixels", SortOptions.Double } }
                 };
             }
 

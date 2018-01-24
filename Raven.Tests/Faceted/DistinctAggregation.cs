@@ -102,7 +102,7 @@ namespace Raven.Tests.Faceted
 
             using (var store = NewRemoteDocumentStore(fiddler: true))
             {
-                new CameraCostIndex().Execute(store);
+                new CameraCostIndexWithTyptedSorts().Execute(store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -124,11 +124,7 @@ namespace Raven.Tests.Faceted
                         .ToFacetsAsync("facets/CameraFacets");
 
                     var costs = facetResults.Results["Cost_Range"].Values;
-                    // "0 To 100",  "10000 To 20000"
-                    /*
-                     Ranges = new List<string>{ "[Ix0 TO Ix1000]", "[Ix10000 TO Ix20000]" }
-                    Ranges = new List<string>{ "[Dx1.0 TO Dx12.0]", "[Dx44 TO Dx55]" }
-                     */
+                    
                     Assert.True(costs.First(x => x.Range.Equals("[Ix10000 TO Ix20000]", StringComparison.InvariantCultureIgnoreCase)).Exists);
                     Assert.False(costs.First(x => x.Range.Equals("[Ix0 TO Ix1000]", StringComparison.InvariantCultureIgnoreCase)).Exists);
 
@@ -148,7 +144,7 @@ namespace Raven.Tests.Faceted
                         .ToFacetsAsync("facets/CameraFacets");
 
                     var costs = facetResults.Results["Cost_Range"].Values;
-                    // "0 To 100",  "10000 To 20000"
+                    
                     Assert.False(costs.First(x => x.Range.Equals("[Ix10000 TO Ix20000]", StringComparison.InvariantCultureIgnoreCase)).Exists);
                     Assert.True(costs.First(x => x.Range.Equals("[Ix0 TO Ix1000]", StringComparison.InvariantCultureIgnoreCase)).Exists);
 
