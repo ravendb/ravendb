@@ -3,6 +3,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Rachis
 {
@@ -38,7 +39,14 @@ namespace Raven.Server.Rachis
                     return;
                 }
                 _timeoutHappened = onTimeout;
-                _timer.Change(TimeoutPeriod, TimeoutPeriod);
+                try
+                {
+                    _timer.Change(TimeoutPeriod, TimeoutPeriod);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // done here
+                }
             }
         }
 
@@ -72,7 +80,13 @@ namespace Raven.Server.Rachis
 
         private void DisableTimeoutInternal()
         {
-            _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            try
+            {
+                _timer.Change(Timeout.Infinite, Timeout.Infinite);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
             _timeoutHappened = null;
             _currentLeader = null;
         }
@@ -134,7 +148,13 @@ namespace Raven.Server.Rachis
         public void Dispose()
         {
             DisableTimeout();
-            _timer.Dispose();
+            using (var waitHandle = new ManualResetEvent(false))
+            {
+                if (_timer.Dispose(waitHandle))
+                {
+                    waitHandle.WaitOne();
+                }
+            }
         }
 
         public void LowMemory()

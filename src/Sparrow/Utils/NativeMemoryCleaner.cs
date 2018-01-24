@@ -11,6 +11,7 @@ namespace Sparrow.Utils
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
         private readonly TimeSpan _idleTime;
         private readonly Timer _timer;
+        private bool _disposed;
 
         public NativeMemoryCleaner(ThreadLocal<TStack> pool, SharedMultipleUseFlag lowMemoryFlag, TimeSpan period, TimeSpan idleTime)
         {
@@ -27,6 +28,9 @@ namespace Sparrow.Utils
             {
                 Monitor.TryEnter(_lock, ref lockTaken);
                 if (lockTaken == false)
+                    return;
+
+                if (_disposed)
                     return;
 
                 var now = DateTime.UtcNow;
@@ -89,8 +93,11 @@ namespace Sparrow.Utils
                 }
             }
 #else
-            Monitor.Enter(_lock); // prevent from running the callback _after_ dispose
-            _timer.Dispose();      
+            lock(_lock); // prevent from running the callback _after_ dispose
+            {
+                _disposed = true;
+                _timer.Dispose();
+            }
 #endif
         }
     }
