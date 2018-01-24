@@ -51,6 +51,7 @@ namespace Raven.Server.Commercial
         private readonly SemaphoreSlim _leaseLicenseSemaphore = new SemaphoreSlim(1);
         private readonly SemaphoreSlim _licenseLimitsSemaphore = new SemaphoreSlim(1);
         private readonly bool _skipLeasingErrorsLogging;
+        private DateTime? _lastPerformanceHint;
         private bool _eulaAcceptedButHasPendingRestart;
 
         private readonly object _locker = new object();
@@ -868,14 +869,22 @@ namespace Raven.Server.Commercial
 
         private void SetAffinity(Process process, int cores, bool addPerformanceHint)
         {
+            if (cores > ProcessorInfo.ProcessorCount)
+            {
+                // the number of assigned cores is larger than we have on this machine
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Cannot set affinity to {cores} core(s), " +
+                                $"when the number of cores on this machine is: {ProcessorInfo.ProcessorCount}");
+                return;
+            }
             try
             {
                 var currentlyAssignedCores = NumberOfSetBits(process.ProcessorAffinity.ToInt64());
-                if (cores > ProcessorInfo.ProcessorCount ||
-                    currentlyAssignedCores == ProcessorInfo.ProcessorCount)
+                if (currentlyAssignedCores == cores &&
+                    _lastPerformanceHint != null && 
+                    _lastPerformanceHint.Value.AddDays(7) > DateTime.UtcNow)
                 {
-                    // the number of assigned cores is larger than we have on this machine
-                    // or we already set the assigned cores to the max number of cores on this machine
+                    // we already set the correct number of assigned cores
                     return;
                 }
 
@@ -911,9 +920,9 @@ namespace Raven.Server.Commercial
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
                 if (addPerformanceHint && 
-                    ProcessorInfo.ProcessorCount > cores && 
-                    currentlyAssignedCores != cores)
+                    ProcessorInfo.ProcessorCount > cores)
                 {
+                    _lastPerformanceHint = DateTime.UtcNow;
                     var notification = PerformanceHint.Create(
                         null,
                         "Your database can be faster - not all cores are used",
