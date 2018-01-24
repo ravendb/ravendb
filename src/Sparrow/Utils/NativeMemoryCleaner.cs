@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using Sparrow.LowMemory;
 using Sparrow.Threading;
 
 namespace Sparrow.Utils
@@ -65,7 +64,7 @@ namespace Sparrow.Utils
                         }
                         catch (ObjectDisposedException)
                         {
-                            // it is possible that this has already been diposed
+                            // it is possible that this has already been disposed
                         }
 
                         parent.Value = null;
@@ -81,7 +80,18 @@ namespace Sparrow.Utils
 
         public void Dispose()
         {
-            _timer.Dispose();
+#if !NETSTANDARD1_3
+            using (var waitHandle = new ManualResetEvent(false))
+            {
+                if (_timer.Dispose(waitHandle))
+                {
+                    waitHandle.WaitOne();
+                }
+            }
+#else
+            Monitor.Enter(_lock); // prevent from running the callback _after_ dispose
+            _timer.Dispose();      
+#endif
         }
     }
 }
