@@ -65,6 +65,9 @@ function CopyTools ( $outDirs ) {
     write-host "Copy rvn files..."
     $rvnContents = [io.path]::combine($outDirs.Rvn, "*")
     Copy-Item -Recurse "$rvnContents" -Destination "$($outDirs.Server)" -Force 
+    write-host "Copy Voron.Recovery files..."
+    $drtoolsContents = [io.path]::combine($outDirs.Drtools, "*")
+    Copy-Item -Recurse "$drtoolsContents" -Destination "$($outDirs.Server)" -Force 
 }
 
 function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {

@@ -59,6 +59,7 @@ $STUDIO_SRC_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio")
 $STUDIO_OUT_DIR = [io.path]::combine($PROJECT_DIR, "src", "Raven.Studio", "build")
 
 $RVN_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "rvn")
+$DRTOOL_SRC_DIR = [io.path]::combine($PROJECT_DIR, "tools", "Voron.Recovery")
 
 if ([string]::IsNullOrEmpty($Target) -eq $false) {
     $Target = $Target.Split(",")
@@ -97,7 +98,7 @@ if ($targets.Count -eq 0) {
 
 New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
-CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
+CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
 $versionObj = SetVersionInfo
 $version = $versionObj.Version
@@ -141,7 +142,8 @@ Foreach ($spec in $targets) {
     CleanDir $specOutDir
 
     BuildServer $SERVER_SRC_DIR $specOutDir $spec $Debug
-    BuildRvn $RVN_SRC_DIR $specOutDir $spec $Debug
+    BuildTool rvn $RVN_SRC_DIR $specOutDir $spec $Debug
+    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $spec $Debug
     
     $specOutDirs = @{
         "Main" = $specOutDir;
@@ -150,6 +152,7 @@ Foreach ($spec in $targets) {
         "Rvn" = $([io.path]::combine($specOutDir, "rvn"));
         "Studio" = $STUDIO_OUT_DIR;
         "Sparrow" = $SPARROW_OUT_DIR;
+        "Drtools" = $([io.path]::combine($specOutDir, "drtools"));
     }
 
     $buildOptions = @{
@@ -160,9 +163,11 @@ Foreach ($spec in $targets) {
         if ($spec.IsUnix -eq $False) {
             $serverPath = [io.path]::combine($specOutDirs.Server, "Raven.Server.exe");
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
+            $drtoolsPath = [io.path]::combine($specOutDirs.Server, "VoronRecovery.exe");
             
             SignFile $PROJECT_DIR $serverPath
             SignFile $PROJECT_DIR $rvnPath
+        SignFile $PROJECT_DIR $drtoolsPath
         }
     }
 
