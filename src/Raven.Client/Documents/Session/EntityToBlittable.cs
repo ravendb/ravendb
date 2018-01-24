@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -258,21 +260,17 @@ namespace Raven.Client.Documents.Session
             return simplified;
         }
 
-        private static readonly Regex ArrayEndRegex = new Regex(@"\[\], [\w\.-]+$", RegexOptions.Compiled);
-
         private static bool ShouldSimplifyJsonBasedOnType(string typeValue)
         {
-            if (typeValue == null)
-                return false;
-            if (typeValue.StartsWith("System.Collections.Generic.List`1[["))
+            var type = Type.GetType(typeValue);
+
+            if (type.IsArray)
                 return true;
-            if (typeValue.StartsWith("System.Collections.Generic.Dictionary`2[["))
-                return true;
-            if (typeValue.StartsWith("System.Collections.ObjectModel.Collection`1[["))
-                return true;
-            if (ArrayEndRegex.IsMatch(typeValue)) // array
-                return true;
-            return false;
+
+            if (type.GetGenericArguments().Length == 0)
+                return type == typeof(Enumerable);
+
+            return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
     }
 }
