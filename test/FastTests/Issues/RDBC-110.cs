@@ -11,7 +11,7 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var asdf = new Asdf { Something = new[] { "value" } };
+                var asdf = new Asdf { Something1 = new[] { "value1" }, Something2 = new[] { "value2" } };
                 using (var session = store.OpenSession())
                 {
                     session.Store(asdf);
@@ -28,7 +28,9 @@ namespace FastTests.Issues
         private class Asdf
         {
             public string Id { get; set; }
-            public IEnumerable<string> Something { get; set; } = new Collection<string>();
+            public IEnumerable<string> Something1 { get; set; } = new Collection<string>();
+            public IEnumerable<string> Something2 { get; set; } = new HashSet<string>();
+
         }
 
 
