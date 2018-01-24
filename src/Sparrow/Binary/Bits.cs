@@ -145,6 +145,22 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int LeadingZeroes(long n)
+        {
+            if (n == 0)
+                return 64;
+            return 63 - MostSignificantBit(n);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int LeadingZeroes(ulong n)
+        {
+            if (n == 0)
+                return 64;
+            return 63 - MostSignificantBit(n);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int CeilLog2(int n)
         {
             int v = n;
@@ -339,25 +355,25 @@ namespace Sparrow.Binary
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TrailingZeroes(ulong value)
+        public static int TrailingZeroesInBytes(ulong value)
         {
             return DeBruijnBytePos64[((value & (ulong)(-(long)value)) * 0x0218A392CDABBD3FUL) >> 58];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TrailingZeroes(long value)
+        public static int TrailingZeroesInBytes(long value)
         {
             return DeBruijnBytePos64[((ulong)(value & -value) * 0x0218A392CDABBD3FUL) >> 58];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TrailingZeroes(uint value)
+        public static int TrailingZeroesInBytes(uint value)
         {
             return DeBruijnBytePos32[((value & (uint)(-(int)value)) * 0x077CB531U) >> 27];
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TrailingZeroes(int value)
+        public static int TrailingZeroesInBytes(int value)
         {
             return DeBruijnBytePos32[((uint)(value & -value) * 0x077CB531U) >> 27];
         }

@@ -1,4 +1,4 @@
-using Sparrow.Binary;
+﻿using Sparrow.Binary;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -103,6 +103,41 @@ namespace FastTests.Sparrow
                 long v = 1L << i;
                 Assert.Equal(v << 1, Bits.NextPowerOf2(v + 1));
             }
+        }
+
+        [Fact]
+        public void Bits_TrailingAndLeadingZeroes()
+        {
+            long number = 210;
+
+            Assert.Equal(56 - 32, Bits.LeadingZeroes((int)number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes((int)number));
+
+            Assert.Equal(56 - 32, Bits.LeadingZeroes((uint)number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes((uint)number));
+
+            Assert.Equal(56, Bits.LeadingZeroes(number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes(number));
+
+            Assert.Equal(56, Bits.LeadingZeroes((ulong)number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes((ulong)number));
+
+            // Binary Representation: ‭0110 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000‬
+            // Hexadecimal Representation: 0x‭6000000000000000‬
+            number = 6917529027641081856;
+
+            Assert.Equal(1, Bits.LeadingZeroes(number));
+            Assert.Equal(7, Bits.TrailingZeroesInBytes(number));
+
+            Assert.Equal(1, Bits.LeadingZeroes((ulong)number));
+            Assert.Equal(7, Bits.TrailingZeroesInBytes((ulong)number));
+
+            number = 170;
+
+            Assert.Equal(0, Bits.TrailingZeroesInBytes((int)number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes((uint)number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes(number));
+            Assert.Equal(0, Bits.TrailingZeroesInBytes((ulong)number));
         }
     }
 }
