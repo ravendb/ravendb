@@ -487,6 +487,12 @@ Grow:
 
             // Back to the future!
             _head = realHead;
+            var toFree = _head.Previous;
+            while (toFree != null)
+            {
+                _context.ReturnMemory(toFree.Allocation);
+                toFree = toFree.Previous;
+            }
 
             // Ensure we are thought of as a single chunk
             _head.Previous = null;
