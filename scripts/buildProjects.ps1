@@ -83,12 +83,12 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildRvn ( $srcDir, $outDir, $spec ) {
-    write-host "Building Rvn for $($spec.Name)..."
+function BuildTool ( $toolName, $srcDir, $outDir, $spec ) {
+    write-host "Building $toolName for $($spec.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
 
-    $output = [io.path]::combine($outDir, "rvn");
+    $output = [io.path]::combine($outDir, "${toolName}");
     $quotedOutput = '"' + $output + '"'
     $commandArgs += @( "--output", $quotedOutput )
     $configuration = if ($debug) { 'Debug' } else { 'Release' }
@@ -100,7 +100,7 @@ function BuildRvn ( $srcDir, $outDir, $spec ) {
         $commandArgs += "/p:Platform=$($spec.Arch)"
     }
 
-    write-host -ForegroundColor Cyan "Publish rvn: $command $commandArgs"
+    write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
 }
