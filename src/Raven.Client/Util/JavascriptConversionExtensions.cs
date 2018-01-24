@@ -1166,6 +1166,9 @@ namespace Raven.Client.Util
                     case "IsNullOrWhiteSpace":
                         newName = "nullOrWhitespace";
                         break;
+                    case "ToCharArray":
+                        newName = "toCharArray";
+                        break;
                     default:
                         return;
                 }
@@ -1215,6 +1218,18 @@ namespace Raven.Client.Util
                             writer.Write(" || !");
                             context.Visitor.Visit(mce.Arguments[0]);
                             writer.Write(".trim())");
+                            break;
+                        case "toCharArray":
+                            context.Visitor.Visit(mce.Object);
+                            if (mce.Arguments.Count > 0)
+                            {
+                                writer.Write(".substr(");
+                                context.Visitor.Visit(mce.Arguments[0]);
+                                writer.Write(", ");
+                                context.Visitor.Visit(mce.Arguments[1]);
+                                writer.Write(")");
+                            }
+                            writer.Write(".split('')");
                             break;
                         default:
                             context.Visitor.Visit(mce.Object);

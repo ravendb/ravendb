@@ -74,6 +74,33 @@ namespace SlowTests.MailingList
             }
         }
 
+        [Fact]
+        public void CanUseToCharArrayInsideProjection()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new TestDocument { Name = "Hello world!" });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from item in session.Query<TestDocument>()
+                                select new
+                                {
+                                    Chars1 = item.Name.ToCharArray(),
+                                    Chars2 = item.Name.ToCharArray(3, 7)
+                                };
+
+                    var result = query.ToList();
+                    Assert.Equal("Hello world!".ToCharArray(), result[0].Chars1);
+                    Assert.Equal("Hello world!".ToCharArray(3, 7), result[0].Chars2);
+                }
+            }
+        }
+
 
         public class TestDocumentByName : AbstractIndexCreationTask<TestDocument>
         {
