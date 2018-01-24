@@ -1,8 +1,7 @@
 <Project>
   <PropertyGroup>
-
     <LangVersion>latest</LangVersion>
-
+    <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>
 
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>

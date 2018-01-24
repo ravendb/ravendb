@@ -12,6 +12,7 @@
     <Product>RavenDB Client</Product>
     <Title>RavenDB Client</Title>
     <Configurations>Debug;Release;Validate</Configurations>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
