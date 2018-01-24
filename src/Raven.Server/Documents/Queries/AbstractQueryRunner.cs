@@ -13,6 +13,7 @@ using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron.Global;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents.Queries
@@ -137,7 +138,9 @@ namespace Raven.Server.Documents.Queries
                             subCommand.AfterExecute = details => result.Details.Add(details);
 
                         return subCommand;
-                    }, rateGate, token, batchSize);
+                    }, rateGate, token, 
+                        maxTransactionSize: 16 * Constants.Size.Megabyte,
+                        batchSize: batchSize);
 
                     await Database.TxMerger.Enqueue(command);
 
