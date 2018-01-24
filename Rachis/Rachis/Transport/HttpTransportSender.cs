@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -213,84 +214,58 @@ namespace Rachis.Transport
 
         public void Send(NodeConnectionInfo dest, AppendEntriesRequest req)
         {
-            if (MaybeIgnoreFrequentRequestsIfServerDown(dest,"append entries"))
+            if (MaybeIgnoreFrequentRequestsIfServerDown(dest, "append entries"))
                 return;
-
             LogStatus("append entries to " + dest, async () =>
             {
-                var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}",
+                var requestUri = string.Format("raft/appendEntries?term={0}&leaderCommit={1}&prevLogTerm={2}&prevLogIndex={3}&entriesCount={4}&from={5}&clusterTopologyId={6}&version=2",
                     req.Term, req.LeaderCommit, req.PrevLogTerm, req.PrevLogIndex, req.EntriesCount, req.From, req.ClusterTopologyId);
                 using (var request = CreateRequest(dest, _shortOperationsTimeout, requestUri, HttpMethods.Post, _log))
                 {
-                    var content = new EntriesContent(req.Entries);
-                    var contentHash = Hashing.XXHash64.Calculate(await content.ReadAsStringAsync().ConfigureAwait(false), Encoding.UTF8);                    
-
-                    using (var httpResponseMessage = await request.WriteAsync(() => content, "Request-Hash", contentHash.ToString()).ConfigureAwait(false))
-                    {                                               
-                        UpdateConnectionFailureCounts(dest, httpResponseMessage);
-
-                        var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
-                        if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
+                    using (var requestContentStream = new MemoryStream())
+                    {
+                        foreach (var entry in req.Entries)
                         {
-                            _log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}\r\nreason:{3}", dest.Name, httpResponseMessage.StatusCode, reply, httpResponseMessage.ReasonPhrase);
-                            return;
+                            entry.WriteToStream(requestContentStream);
                         }
 
-                        if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
-                        {
-                            _log.Warn("Error appending entries to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
-                        }
+                        requestContentStream.Position = 0;
+                        var requestContentAsArray = requestContentStream.ToArray();
+                        var contentHash = Hashing.XXHash64.Calculate(requestContentAsArray);
+                        requestContentStream.Position = 0;
 
-                        var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
-                        SendToSelf(appendEntriesResponse);
+                        using (var content = new StreamContent(requestContentStream))
+                        using (var httpResponseMessage = await request.WriteAsync(() => content,
+                            new Dictionary<string, string>
+                            {
+                                {
+                                    "Request-Hash", contentHash.ToString()
+                                },
+                                {
+                                    "Request-Length", requestContentAsArray.Length.ToString()
+                                }
+                            }).ConfigureAwait(false))
+                        {
+                            UpdateConnectionFailureCounts(dest, httpResponseMessage);
+
+                            var reply = await httpResponseMessage.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            if (httpResponseMessage.IsSuccessStatusCode == false && httpResponseMessage.StatusCode != HttpStatusCode.NotAcceptable)
+                            {
+                                _log.Warn("Error appending entries to {0}. Status: {1}\r\n{2}\r\nreason:{3}", dest.Name, httpResponseMessage.StatusCode, reply, httpResponseMessage.ReasonPhrase);
+                                return;
+                            }
+
+                            if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
+                            {
+                                _log.Warn("Error appending entries to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
+                            }
+
+                            var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
+                            SendToSelf(appendEntriesResponse);
+                        }
                     }
                 }
             });
-        }
-
-        internal class EntriesContent : HttpContent
-        {
-            private readonly LogEntry[] _entries;
-
-            public EntriesContent(LogEntry[] entries)
-            {
-                _entries = entries;
-            }
-
-            protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
-            {
-                foreach (var logEntry in _entries)
-                {
-                    Write7BitEncodedInt64(stream, logEntry.Index);
-                    Write7BitEncodedInt64(stream, logEntry.Term);
-                    stream.WriteByte(logEntry.IsTopologyChange == true ? (byte)1 : (byte)0);
-                    Write7BitEncodedInt64(stream, logEntry.Data.Length);
-                    stream.Write(logEntry.Data, 0, logEntry.Data.Length);
-                }
-                return Task.FromResult(1);
-            }
-
-            private void Write7BitEncodedInt64(Stream stream, long value)
-            {
-                var v = (ulong)value;
-                while (v >= 128)
-                {
-                    stream.WriteByte((byte)(v | 128));
-                    v >>= 7;
-                }
-                stream.WriteByte((byte)(v));
-            }
-
-            protected override bool TryComputeLength(out long length)
-            {
-                length = -1;
-                return false;
-            }
-
-            public override string ToString()
-            {
-                return string.Join(", ", _entries.Select(x => x.ToString()));
-            }
         }
 
         public void Send(NodeConnectionInfo dest, CanInstallSnapshotRequest req)

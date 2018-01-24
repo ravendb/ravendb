@@ -80,10 +80,7 @@ namespace Rachis.Transport
         /// <param name="requestMessageContent">The content to stringify</param>
         /// <returns></returns>
         private async Task<string> GetContentAsString(HttpContent requestMessageContent)
-        {
-            var ec = requestMessageContent as HttpTransportSender.EntriesContent;
-            if (ec != null)
-                return ec.ToString();
+        {           
             var sc = requestMessageContent as HttpTransportSender.SnapshotContent;
             if (sc != null)
                 return sc.ToString();
