@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Lucene.Net.Util;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Constants = Voron.Global.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -13,16 +15,21 @@ namespace Raven.Server.Documents
         private readonly Func<T, TransactionOperationsMerger.MergedTransactionCommand> _commandToExecute;
         private readonly RateGate _rateGate;
         private readonly OperationCancelToken _token;
+        private readonly int? _maxTransactionSizeInPages;
         private readonly int? _batchSize;
         private CancellationToken _cancellationToken;
 
         internal ExecuteRateLimitedOperations(Queue<T> documentIds, Func<T, TransactionOperationsMerger.MergedTransactionCommand> commandToExecute, RateGate rateGate,
-            OperationCancelToken token, int? batchSize = null)
+            OperationCancelToken token, 
+            int? maxTransactionSize ,
+            int? batchSize)
         {
             _documentIds = documentIds;
             _commandToExecute = commandToExecute;
             _rateGate = rateGate;
             _token = token;
+            if(maxTransactionSize != null)
+                _maxTransactionSizeInPages = Math.Max(1, maxTransactionSize.Value / Constants.Storage.PageSize);
             _batchSize = batchSize;
             _cancellationToken = token.Token;
         }
@@ -60,6 +67,10 @@ namespace Raven.Server.Documents
                 }
 
                 if (_batchSize != null && Processed >= _batchSize)
+                    break;
+
+                if (_maxTransactionSizeInPages != null && 
+                    context.Transaction.InnerTransaction.LowLevelTransaction.NumberOfModifiedPages > _maxTransactionSizeInPages)
                     break;
             }
 
