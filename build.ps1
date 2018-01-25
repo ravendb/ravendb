@@ -163,11 +163,11 @@ Foreach ($spec in $targets) {
         if ($spec.IsUnix -eq $False) {
             $serverPath = [io.path]::combine($specOutDirs.Server, "Raven.Server.exe");
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
-            $drtoolsPath = [io.path]::combine($specOutDirs.Server, "VoronRecovery.exe");
+            $drtoolsPath = [io.path]::combine($specOutDirs.Drtools, "VoronRecovery.exe");
             
             SignFile $PROJECT_DIR $serverPath
             SignFile $PROJECT_DIR $rvnPath
-        SignFile $PROJECT_DIR $drtoolsPath
+            SignFile $PROJECT_DIR $drtoolsPath
         }
     }
 
