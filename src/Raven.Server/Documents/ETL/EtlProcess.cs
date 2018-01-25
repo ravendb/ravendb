@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract EtlPerformanceStats[] GetPerformanceStats();
 
-        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();
+        public abstract Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection();       
 
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.ETL
 
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _longRunningWork;
         private EtlStatsAggregator _lastStats;
         private int _statsId;
 
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.ETL
         private readonly ServerStore _serverStore;
         protected TimeSpan? FallbackTime;
 
-        public readonly TConfiguration Configuration;
+        public readonly TConfiguration Configuration;        
 
         protected EtlProcess(Transformation transformation, TConfiguration configuration, DocumentDatabase database, ServerStore serverStore, string tag)
         {
@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.ETL
             Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter, Database.Name);
 
             if (transformation.ApplyToAllDocuments == false)
-                _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);
+                _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);                        
         }
 
         protected CancellationToken CancellationToken => _cts.Token;
@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.ETL
         {
             Statistics.Reset();
 
-            if (_thread == null)
+            if (_longRunningWork == null)
                 return;
             
             _waitForChanges.Set();
@@ -349,35 +349,30 @@ namespace Raven.Server.Documents.ETL
 
         public override void Start()
         {
-            if (_thread != null)
+            if (_longRunningWork != null)
                 return;
 
             if (Transformation.Disabled)
                 return;
 
             var threadName = $"{Tag} process: {Name}";
-            _thread = new Thread(() =>
+            _longRunningWork = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x =>
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
                 Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 NativeMemory.EnsureRegistered();
                 Run();
-            })
-            {
-                Name = threadName,
-                IsBackground = true
-            };
+            }, null, threadName);            
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Starting {Tag} process: '{Name}'.");
-
-            _thread.Start();
+            
         }
 
         public override void Stop()
         {
-            if (_thread == null)
+            if (_longRunningWork == null)
                 return;
 
             if (Logger.IsInfoEnabled)
@@ -385,11 +380,11 @@ namespace Raven.Server.Documents.ETL
 
             _cts.Cancel();
 
-            var thread = _thread;
-            _thread = null;
+            var longRunningWork = _longRunningWork;
+            _longRunningWork = null;
 
-            if (Thread.CurrentThread != thread) // prevent a deadlock
-                thread.Join();
+            if (_longRunningWork != RavenThreadPool.LongRunningWork.Current) // prevent a deadlock
+                longRunningWork.Join(int.MaxValue);
         }
 
         public void Run()

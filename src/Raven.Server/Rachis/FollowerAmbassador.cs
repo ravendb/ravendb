@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
@@ -59,14 +60,24 @@ namespace Raven.Server.Rachis
         private long _lastReplyFromFollower;
         private long _lastSendToFollower;
         private string _lastSentMsg;
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _followerAmbassadorLongRunningOperation;
         private RemoteConnection _connection;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         private readonly long _term;
 
         public string Tag => _tag;
 
-        public System.Threading.ThreadState ThreadStatus => _thread.ThreadState;
+        public string ThreadStatus
+        {
+            get
+            {
+                if (_followerAmbassadorLongRunningOperation == null)
+                    return "Did not start";
+                if (_followerAmbassadorLongRunningOperation.Join(0))
+                    return "Finished";
+                return "Running";
+            }
+        }
 
         public long FollowerMatchIndex => Interlocked.Read(ref _followerMatchIndex);
 
@@ -756,12 +767,8 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             UpdateLastMatchFromFollower(0);
-            _thread = new Thread(Run)
-            {
-                Name = ToString(),
-                IsBackground = true
-            };
-            _thread.Start();
+            _followerAmbassadorLongRunningOperation =
+                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, ToString());                
         }
 
         public override string ToString()
@@ -776,15 +783,15 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"Dispose {ToString()}");
             }
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+            if (_followerAmbassadorLongRunningOperation != null && _followerAmbassadorLongRunningOperation.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
             {
                 Volatile.Read(ref _connection)?.Dispose();
 
-                while (_thread.Join(TimeSpan.FromSeconds(1)) == false)
+                while (_followerAmbassadorLongRunningOperation.Join(1000) == false)
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_thread.ManagedThreadId} ({_thread.ThreadState}) to close, disposing connection and trying");
+                        _engine.Log.Info($"{ToString()}: Waited for a full second for thread {_followerAmbassadorLongRunningOperation.ManagedThreadId} ({(_followerAmbassadorLongRunningOperation.Join(0)?"Running":"Finished")}) to close, disposing connection and trying");
                     }
                     // the thread may have create a new connection, so need
                     // to dispose that as well

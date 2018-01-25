@@ -23,5 +23,10 @@ namespace Voron.Impl.Backup
                 destination.Write(_readBuffer, 0, count);
             }
         }
+
+        public static void CleanBuffer()
+        {
+            _readBuffer = null;
+        }
     }
 }

@@ -14,6 +14,10 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
+        public static void CleanCache()
+        {
+            _jsonParserState?.Reset();
+        }
         public static ByteStringContext.ExternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice)
             where TTransaction : RavenTransaction

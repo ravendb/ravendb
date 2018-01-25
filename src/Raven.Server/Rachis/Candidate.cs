@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Sparrow.Threading;
+using static Raven.Server.Utils.RavenThreadPool;
 
 namespace Raven.Server.Rachis
 {
@@ -16,7 +17,7 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
-        private Thread _thread;
+        private LongRunningWork _longRunningWork;
         public long RunRealElectionAtTerm { get; private set; }
 
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
@@ -234,12 +235,7 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _thread = new Thread(Run)
-            {
-                Name = "Candidate for - " + _engine.Tag,
-                IsBackground = true
-            };
-            _thread.Start();
+            _longRunningWork = GlobalRavenThreadPool.Value.LongRunning(x=>Run(), null, "Candidate for - " + _engine.Tag);            
         }
 
         public void Dispose()
@@ -256,8 +252,9 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"Candidate {_engine.Tag}: Dispose");
             }
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+
+            if (_longRunningWork != null && _longRunningWork != LongRunningWork.Current)
+                _longRunningWork.Join(Int32.MaxValue);
         }
     }
 }

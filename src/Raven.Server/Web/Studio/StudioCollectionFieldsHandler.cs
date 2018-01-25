@@ -18,6 +18,11 @@ namespace Raven.Server.Web.Studio
 
         private const int MaxArrayItemsToFetch = 16;
         
+
+        public static void CleanCache()
+        {
+            _buffers = null;
+        }
         [RavenAction("/databases/*/studio/collections/fields", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCollectionFields()
         {

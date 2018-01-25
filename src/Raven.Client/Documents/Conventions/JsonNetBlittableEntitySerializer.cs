@@ -25,6 +25,11 @@ namespace Raven.Client.Documents.Conventions
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);
         }
 
+        public static void CleanThreadStatics()
+        {
+            _reader = null;
+            _serializer = null;
+        }
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
         {
             if (_reader == null)

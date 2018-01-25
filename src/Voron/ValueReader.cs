@@ -26,6 +26,11 @@ namespace Voron
             _pos = 0;
         }
 
+        public static void CleanBuffer()
+        {
+            tmpBuf = null;
+        }
+
         public int Length
         {
             get { return _len; }

@@ -21,6 +21,7 @@ using Sparrow.Binary;
 using Voron.Data.Fixed;
 using SlowTests.Authentication;
 using FastTests.Sparrow;
+using FastTests.Server.NotificationCenter;
 
 /*
     Code reference - please DO NOT REMOVE:
@@ -46,7 +47,8 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
-            await new AuthenticationBasicTests().CanUseEncryption();
+            using (var test = new NotificationCenterTests())
+                test.Can_update_alert();                
         }
 
         private static void SerialStores()

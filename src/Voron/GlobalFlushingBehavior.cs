@@ -13,7 +13,7 @@ namespace Voron
     public class GlobalFlushingBehavior
     {
         private const string FlushingThreadName = "Voron Global Flushing Thread";
-
+        
         internal static readonly Lazy<GlobalFlushingBehavior> GlobalFlusher = new Lazy<GlobalFlushingBehavior>(() =>
         {
             var flusher = new GlobalFlushingBehavior();

@@ -15,6 +15,10 @@ namespace Sparrow
         private static char[] _buffer;
 
 
+        public static void CleanBuffer()
+        {            
+            _buffer = null;
+        }
         public bool Equals(StringSegment x, StringSegment y)
         {
             if (x.Length != y.Length)

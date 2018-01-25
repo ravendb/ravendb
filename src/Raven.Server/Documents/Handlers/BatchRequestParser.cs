@@ -46,6 +46,12 @@ namespace Raven.Server.Documents.Handlers
         private static readonly CommandData[] Empty = new CommandData[0];
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
 
+
+        public static void CleanCache()
+        {
+            _cache?.Clear();
+            _cache = null;
+        }
         public static void ReturnBuffer(ArraySegment<CommandData> cmds)
         {
             Array.Clear(cmds.Array, cmds.Offset, cmds.Count);

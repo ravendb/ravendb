@@ -240,6 +240,12 @@ namespace Sparrow.Json
 
         [ThreadStatic] private static int[] _propertyArrayOffset;
 
+        public static void CleanPropertyArrayOffset()
+        {
+            _propertyArrayOffset = null;
+            _intBuffer?.Clear();
+            _intBuffer = null;
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int WritePropertyNames(int rootOffset)
         {

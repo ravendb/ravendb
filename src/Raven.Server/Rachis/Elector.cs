@@ -3,6 +3,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -10,7 +11,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _electorLongRunningWork;
         private bool _electionWon;
 
         public Elector(RachisConsensus engine, RemoteConnection connection)
@@ -21,11 +22,7 @@ namespace Raven.Server.Rachis
 
         public void Run()
         {
-            _thread = new Thread(HandleVoteRequest)
-            {
-                Name = $"Elector for candidate {_connection.Source}"
-            };
-            _thread.Start();
+            _electorLongRunningWork = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
         }
 
         public void HandleVoteRequest()

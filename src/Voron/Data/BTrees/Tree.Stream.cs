@@ -49,6 +49,11 @@ namespace Voron.Data.BTrees
         [ThreadStatic]
         private static byte[] _localBuffer;
 
+        public void CleanLocalBuffer()
+        {
+            _localBuffer = null;
+        }
+
         private struct StreamToPageWriter
         {
             private int _chunkNumber;
@@ -79,7 +84,7 @@ namespace Voron.Data.BTrees
             {
                 if (_localBuffer == null)
                     _localBuffer = new byte[4 * Constants.Storage.PageSize];
-
+                
                 AllocateNextPage();
                 var firstPage = _currentPage;
                 ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
