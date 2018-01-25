@@ -12,7 +12,7 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class RavenDB_8814:RavenTestBase
+    public class RavenDB_8814 : RavenTestBase
     {
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(10);
 
@@ -24,8 +24,9 @@ namespace FastTests.Client.Subscriptions
                 var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()
                 {
                     Filter = x => x.Age > 30,
-                    Project = x => new {
-                        
+                    Projection = x => new
+                    {
+
                         Name = x.Name,
                         Age = x.Age,
                         Foo = "Bar"
@@ -35,10 +36,10 @@ namespace FastTests.Client.Subscriptions
                 string foo = null;
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<dynamic>(subscriptionName);
-                
+
                 var mre = new AsyncManualResetEvent();
                 int resultsCount = 0;
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -63,8 +64,8 @@ namespace FastTests.Client.Subscriptions
                 });
 
                 Assert.True(await mre.WaitAsync(_reasonableWaitTime));
-                Assert.Equal("Bar",foo);
-                Assert.Equal(1,resultsCount);
+                Assert.Equal("Bar", foo);
+                Assert.Equal(1, resultsCount);
 
             }
         }
