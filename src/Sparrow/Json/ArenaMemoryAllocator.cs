@@ -161,15 +161,22 @@ namespace Sparrow.Json
 
             LowMemoryNotification.NotifyAllocationPending();
 
-            // we need the next allocation to cover at least the next expansion (also doubling)
-            // so we'll allocate 3 times as much as was requested, or as much as we already have
-            // the idea is that a single allocation can server for multiple (increasing in size) calls
-            long newSize = Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _initialSize);
+            long newSize = GetPreferredSize(requestedSize);
+
             if (newSize > MaxArenaSize)
                 newSize = MaxArenaSize;
 
+            byte* newBuffer;
             NativeMemory.ThreadStats thread;
-            var newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
+            try
+            {
+                newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
+            }
+            catch (OutOfMemoryException)
+            {
+                // we were too eager with memory allocations?
+                newBuffer = NativeMemory.AllocateMemory(requestedSize, out thread);
+            }
 
             // Save the old buffer pointer to be released when the arena is reset
             if (_olderBuffers == null)
@@ -183,6 +190,14 @@ namespace Sparrow.Json
             _ptrStart = newBuffer;
             _ptrCurrent = _ptrStart;
             _used = 0;
+        }
+
+        private int GetPreferredSize(int requestedSize)
+        {
+            // we need the next allocation to cover at least the next expansion (also doubling)
+            // so we'll allocate 3 times as much as was requested, or as much as we already have
+            // the idea is that a single allocation can server for multiple (increasing in size) calls
+            return Math.Max(Bits.NextPowerOf2(requestedSize) * 3, _initialSize);
         }
 
         public void RenewArena()
