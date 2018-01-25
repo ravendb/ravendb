@@ -37,6 +37,9 @@ namespace Raven.Client.Exceptions
 
                 return new ConcurrencyException(message);
             }
+            
+            // We throw the same error for different status codes: GatewayTimeout,RequestTimeout,BadGateway,ServiceUnavailable.
+            error += $"{Environment.NewLine}Response.StatusCode - {code}"; 
 
             var type = GetType(typeAsString);
             if (type == null)
