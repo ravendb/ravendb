@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             Metrics = new EtlMetricsCountersManager();
             _requestExecutor = RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, serverStore.Server.Certificate.Certificate, DocumentConventions.Default);
-            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);
+            _script = new RavenEtlDocumentTransformer.ScriptInput(transformation);            
         }
 
         protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)

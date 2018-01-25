@@ -1139,6 +1139,11 @@ namespace Raven.Server.Json
         [ThreadStatic]
         private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
 
+
+        public static void CleanCache()
+        {
+            _buffers = null;
+        }
         public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
             Document document)
         {

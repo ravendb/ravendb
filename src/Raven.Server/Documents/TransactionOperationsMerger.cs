@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents
         private readonly ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private ExceptionDispatchInfo _edi;
         private readonly Logger _log;
-        private Thread _txMergingThread;
+        private RavenThreadPool.LongRunningWork _txLongRunningOperation;
 
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
@@ -48,12 +49,7 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            _txMergingThread = new Thread(MergeOperationThreadProc)
-            {
-                IsBackground = true,
-                Name = TransactionMergerThreadName
-            };
-            _txMergingThread.Start();
+            _txLongRunningOperation = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
         }
 
         public abstract class MergedTransactionCommand
@@ -696,7 +692,7 @@ namespace Raven.Server.Documents
             var done = _concurrentOperations.Signal();
 
             _waitHandle.Set();
-            _txMergingThread?.Join();
+            _txLongRunningOperation?.Join(int.MaxValue);
             _waitHandle.Dispose();
 
             // make sure that the queue is empty and there are no pending 

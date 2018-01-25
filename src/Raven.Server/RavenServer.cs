@@ -61,7 +61,7 @@ namespace Raven.Server
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
-
+                
         public readonly RavenConfiguration Configuration;
 
         public Timer ServerMaintenanceTimer;

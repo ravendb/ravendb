@@ -597,7 +597,7 @@ namespace Voron.Impl.Journal
                         if (operation.TryGatherInformationToStartSync(out var syncCounter))
                         {
                             _pendingSync = operation.Task;
-                            ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(syncCounter), operation);
+                            System.Threading.ThreadPool.QueueUserWorkItem(state => ((SyncOperation)state).CompleteSync(syncCounter), operation);
                         }
                     }
 

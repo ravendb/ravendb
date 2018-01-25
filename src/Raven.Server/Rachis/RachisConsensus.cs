@@ -37,9 +37,9 @@ namespace Raven.Server.Rachis
     {
         private readonly ServerStore _serverStore;
 
-        public RachisConsensus(ServerStore serverStore, int? seed = null) : base(seed)
+        public RachisConsensus(ServerStore serverStore, int? seed = null) : base( seed)
         {
-            _serverStore = serverStore;
+            _serverStore = serverStore;            
         }
 
         public TStateMachine StateMachine;
@@ -224,7 +224,7 @@ namespace Raven.Server.Rachis
     }
     
     public abstract class RachisConsensus : IDisposable
-    {
+    {        
         internal abstract RachisStateMachine GetStateMachine();
 
         public const string InitialTag = "?";
@@ -337,7 +337,7 @@ namespace Raven.Server.Rachis
 
         protected RachisConsensus(int? seed = null)
         {
-            _rand = seed.HasValue ? new Random(seed.Value) : new Random();
+            _rand = seed.HasValue ? new Random(seed.Value) : new Random();            
         }
 
         public abstract void Notify(Notification notification);

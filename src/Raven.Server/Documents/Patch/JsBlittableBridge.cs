@@ -36,6 +36,11 @@ namespace Raven.Server.Documents.Patch
             _scriptEngine = scriptEngine;
         }
 
+        public static void CleanCache()
+        {            
+            _recursive = null;
+        }
+
         public void WriteInstance(ObjectInstance jsObject, IResultModifier modifier = null)
         {
             _writer.StartWriteObject();

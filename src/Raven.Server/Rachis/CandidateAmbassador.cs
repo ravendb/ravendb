@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
@@ -31,7 +32,7 @@ namespace Raven.Server.Rachis
             }
         }
         public AmbassadorStatus Status;
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _candidateAmbassadorLongRunningWork;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public long TrialElectionWonAtTerm { get; set; }
         public long RealElectionWonAtTerm { get; set; }
@@ -52,29 +53,25 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _thread = new Thread(Run)
-            {
-                Name = $"Candidate Ambassador for {_engine.Tag} > {_tag}",
-                IsBackground = true
-            };
-            _thread.Start();
+            _candidateAmbassadorLongRunningWork =
+                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, $"Candidate Ambassador for {_engine.Tag} > {_tag}");                
         }
 
         public void Dispose()
         {
             _running.Lower();
             DisposeConnectionIfNeeded();
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+            if (_candidateAmbassadorLongRunningWork != null && _candidateAmbassadorLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
             {
-                while (_thread.Join(TimeSpan.FromSeconds(1)) == false)
+                while (_candidateAmbassadorLongRunningWork.Join(1000) == false)
                 {
                     // the thread may have create a new connection, so need
                     // to dispose that as well
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info(
-                            $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_thread.ManagedThreadId} " +
-                            $"({_thread.ThreadState}) to finish, after the elections were {_candidate.ElectionResult}");
+                            $"CandidateAmbassador for {_tag}: Waited for a full second for thread {_candidateAmbassadorLongRunningWork.ManagedThreadId} " +
+                            $"({(_candidateAmbassadorLongRunningWork.Join(0)?"running":"finished")}) to finish, after the elections were {_candidate.ElectionResult}");
                     }
                     DisposeConnectionIfNeeded();
                 }
