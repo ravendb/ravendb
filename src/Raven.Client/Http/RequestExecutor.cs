@@ -317,7 +317,7 @@ namespace Raven.Client.Http
             RavenCommand<TResult> command,
             JsonOperationContext context,
             SessionInfo sessionInfo = null,
-            CancellationToken token = default(CancellationToken))
+            CancellationToken token = default)
         {
             var topologyUpdate = _firstTopologyUpdate;
 
@@ -567,7 +567,7 @@ namespace Raven.Client.Http
             RavenCommand<TResult> command,
             bool shouldRetry = true,
             SessionInfo sessionInfo = null,
-            CancellationToken token = default(CancellationToken))
+            CancellationToken token = default)
         {
             var request = CreateRequest(context, chosenNode, command, out string url);
 
@@ -816,7 +816,7 @@ namespace Raven.Client.Http
         private static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>().Task;
 
         private async Task ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
-            CancellationToken token = default(CancellationToken))
+            CancellationToken token = default)
         {
             int numberOfFailedTasks = 0;
 
