@@ -86,7 +86,6 @@ namespace Raven.Client.Http
                         WriteNode(writer, node, context);
                     }
                     writer.WriteEndArray();
-                    writer.WriteComma();
                     writer.WriteEndObject();
 
                     writer.WriteEndObject();
@@ -105,10 +104,15 @@ namespace Raven.Client.Http
         private static void WriteNode(BlittableJsonTextWriter writer, ServerNode node, JsonOperationContext context)
         {
             writer.WriteStartObject();
+
             writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Url)));
             writer.WriteString(context.GetLazyString(node.Url));
+
+            writer.WriteComma();
+
             writer.WritePropertyName(context.GetLazyString(nameof(ServerNode.Database)));
             writer.WriteString(context.GetLazyString(node.Database));
+
             writer.WriteEndObject();
         }
     }
