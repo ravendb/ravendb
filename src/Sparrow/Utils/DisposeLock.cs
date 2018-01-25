@@ -53,8 +53,13 @@ namespace Sparrow.Utils
         public ReadRelease EnsureNotDisposed()
         {
             _lock.EnterReadLock();
+
             if (_disposed)
+            {
+                _lock.ExitReadLock();
                 ThrowDisposed();
+            }
+
             return new ReadRelease(this);
         }
 
