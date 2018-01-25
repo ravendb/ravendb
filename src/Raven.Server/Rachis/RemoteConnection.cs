@@ -319,6 +319,8 @@ namespace Raven.Server.Rachis
                 while (remaining < size)
                 {
                     var read = _parent.Read(_buffer, remaining, size - remaining);
+                    if (read == 0)
+                        throw new EndOfStreamException();
                     remaining += read;
                 }
             }
