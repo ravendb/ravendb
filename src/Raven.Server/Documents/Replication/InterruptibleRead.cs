@@ -122,6 +122,7 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
+                _stream.Dispose();// need to dispose the current stream to abort the operation
                 using (_prevCall.Result)
                 {
 

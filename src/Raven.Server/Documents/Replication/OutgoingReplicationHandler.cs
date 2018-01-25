@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Replication
                     var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Engine.TcpConnectionTimeout);
                     wrapSsl.Wait(CancellationToken);
 
-                    using (_stream = wrapSsl.Result)
+                    using (_stream = wrapSsl.Result) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {

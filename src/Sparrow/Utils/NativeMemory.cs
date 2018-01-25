@@ -70,10 +70,11 @@ namespace Sparrow.Utils
         public static byte* AllocateMemory(long size, out ThreadStats thread)
         {
             thread = ThreadAllocations.Value;
-            thread.Allocations += size;
             try
             {
-                return (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
+                var ptr = (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
+                thread.Allocations += size;
+                return ptr;
             }
             catch (OutOfMemoryException e)
             {
