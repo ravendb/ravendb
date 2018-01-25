@@ -38,8 +38,7 @@ namespace Raven.Client.Documents.Identity
                 return NullStringCompletedTask;
             }
             var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
-            AsyncHiLoIdGenerator value;
-            if (_idGeneratorsByTag.TryGetValue(tag, out value))
+            if (_idGeneratorsByTag.TryGetValue(tag, out var value))
                 return value.GenerateDocumentIdAsync(entity);
 
             lock (_generatorLock)
