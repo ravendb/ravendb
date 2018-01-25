@@ -1378,25 +1378,30 @@ namespace Raven.Server.Commercial
                             throw new InvalidOperationException("Failed to write the certificates to a zip archive.", e);
                         }
 
-                        try
+                        if (setupMode == SetupMode.LetsEncrypt)
                         {
-                            var licenseString = JsonConvert.SerializeObject(setupInfo.License, Formatting.Indented);
+                            jsonObj[RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = setupInfo.Email;
 
-                            var entry = archive.CreateEntry("license.json");
-                            using (var entryStream = entry.Open())
-                            using (var writer = new StreamWriter(entryStream))
+                            try
                             {
-                                writer.Write(licenseString);
-                                writer.Flush();
+                                var licenseString = JsonConvert.SerializeObject(setupInfo.License, Formatting.Indented);
+
+                                var entry = archive.CreateEntry("license.json");
+                                using (var entryStream = entry.Open())
+                                using (var writer = new StreamWriter(entryStream))
+                                {
+                                    writer.Write(licenseString);
+                                    writer.Flush();
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                throw new InvalidOperationException("Failed to write license.json in zip archive.", e);
                             }
                         }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Failed to write license.json in zip archive.", e);
-                        }
-
+                        
                         jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString();
-                        jsonObj[RavenConfiguration.GetKey(x => x.Security.CertificateLetsEncryptEmail)] = setupInfo.Email;
+                        
                         var certificateFileName = $"cluster.server.certificate.{name}.pfx";
 
                         if (setupInfo.ModifyLocalServer)
