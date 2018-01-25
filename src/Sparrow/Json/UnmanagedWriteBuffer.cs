@@ -24,7 +24,6 @@ namespace Sparrow.Json
         public int Used;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
-
         public int SizeInBytes => _sizeInBytes;
 
         public UnmanagedStreamBuffer(JsonOperationContext context, Stream stream)
@@ -487,12 +486,6 @@ Grow:
 
             // Back to the future!
             _head = realHead;
-            var toFree = _head.Previous;
-            while (toFree != null)
-            {
-                _context.ReturnMemory(toFree.Allocation);
-                toFree = toFree.Previous;
-            }
 
             // Ensure we are thought of as a single chunk
             _head.Previous = null;
