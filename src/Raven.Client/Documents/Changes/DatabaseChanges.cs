@@ -153,7 +153,7 @@ namespace Raven.Client.Documents.Changes
 
             var taskedObservable = new ChangesObservable<OperationStatusChange, DatabaseConnectionState>(
                 counter,
-                notification => true);
+                notification => notification.OperationId == operationId);
 
             counter.OnOperationStatusChangeNotification += taskedObservable.Send;
             counter.OnError += taskedObservable.Error;
