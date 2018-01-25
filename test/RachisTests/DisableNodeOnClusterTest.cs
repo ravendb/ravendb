@@ -21,51 +21,52 @@ namespace RachisTests
             var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
             await CreateDatabaseInCluster("MainDB", 3, leader.WebUrl);
 
-            var leaderStore = new DocumentStore
+            using (var leaderStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = new[] {leader.WebUrl}
-            }.Initialize();
-
-            await WaitForDatabaseTopology(leaderStore, leaderStore.Database, 3);
-
-            var re = leaderStore.GetRequestExecutor();
-            using (var session = leaderStore.OpenSession())
+                Urls = new[] { leader.WebUrl }
+            }.Initialize())
             {
-                session.Store(new User
+
+                await WaitForDatabaseTopology(leaderStore, leaderStore.Database, 3);
+
+                var re = leaderStore.GetRequestExecutor();
+                using (var session = leaderStore.OpenSession())
                 {
-                    Name = "Idan"
-                });
-                session.SaveChanges();
-            }
+                    session.Store(new User
+                    {
+                        Name = "Idan"
+                    });
+                    session.SaveChanges();
+                }
 
-            var firstNodeUrl = re.Url;
-            var firstNode = Servers.Single(s => s.WebUrl == firstNodeUrl);
-            var nodePath = firstNode.Configuration.Core.DataDirectory;
+                var firstNodeUrl = re.Url;
+                var firstNode = Servers.Single(s => s.WebUrl == firstNodeUrl);
+                var nodePath = firstNode.Configuration.Core.DataDirectory;
 
-            firstNode.Dispose();
+                firstNode.Dispose();
 
-            // check that replication works.
-            using (var session = leaderStore.OpenSession())
-            {
-                session.Store(new User
+                // check that replication works.
+                using (var session = leaderStore.OpenSession())
                 {
-                    Name = "Karmel"
-                }, "users/1");
-                session.SaveChanges();
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.NotEqual(re.Url, firstNodeUrl);
+                var customSettings = new Dictionary<string, string>
+                {
+                    {RavenConfiguration.GetKey(x => x.Core.ServerUrls), firstNodeUrl},
+                    {RavenConfiguration.GetKey(x => x.Core.DataDirectory), nodePath.FullPath}
+                };
+                GetNewServer(customSettings, runInMemory: false);
+
+                Assert.True(SpinWait.SpinUntil(() => firstNodeUrl == re.Url, TimeSpan.FromSeconds(15)));
+                Assert.Equal(firstNodeUrl, re.Url);
             }
-
-            Assert.NotEqual(re.Url, firstNodeUrl);
-            var customSettings = new Dictionary<string, string>
-            {
-                { RavenConfiguration.GetKey(x => x.Core.ServerUrls), firstNodeUrl },
-                { RavenConfiguration.GetKey(x => x.Core.DataDirectory), nodePath.FullPath }
-            };
-            GetNewServer(customSettings, runInMemory: false);
-
-            Assert.True(SpinWait.SpinUntil(() => firstNodeUrl == re.Url, TimeSpan.FromSeconds(15)));
-            Assert.Equal(firstNodeUrl, re.Url);
-            leaderStore.Dispose();
         }
 
         private static async Task WaitForDatabaseTopology(IDocumentStore store, string databaseName, int replicationFactor)
@@ -77,7 +78,7 @@ namespace RachisTests
                     {
                         Url = store.Urls[0],
                         Database = databaseName,
-                    },  Timeout.Infinite);
+                    }, Timeout.Infinite);
             } while (store.GetRequestExecutor().TopologyNodes.Count != replicationFactor);
         }
     }
