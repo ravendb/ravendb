@@ -68,6 +68,11 @@ namespace Raven.Server.Documents.Indexes.Static
      
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
+            var map = definition.Maps.FirstOrDefault();
+            if (map != null && map.TrimStart().StartsWith("from") == false)
+            {
+                return GenerateJavaScriptIndex(definition);
+            }
             var cSharpSafeName = GetCSharpSafeName(definition.Name);
 
             var @class = CreateClass(cSharpSafeName, definition);
@@ -79,6 +84,11 @@ namespace Raven.Server.Documents.Indexes.Static
             index.Source = compilationResult.Code;
 
             return index;
+        }
+
+        private static StaticIndexBase GenerateJavaScriptIndex(IndexDefinition definition)
+        {
+            return new JavaScriptIndex(definition);
         }
 
         private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, Dictionary<string, string> extentions = null)
