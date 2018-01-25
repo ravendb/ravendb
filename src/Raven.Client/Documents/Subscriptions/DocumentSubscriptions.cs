@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
-    public class DocumentSubscriptions:IDisposable
+    public class DocumentSubscriptions : IDisposable
     {
         private readonly IDocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Name = options.Name,
                 ChangeVector = options.ChangeVector
-            }, options.Filter, options.Project), database);
+            }, options.Filter, options.Projection), database);
 
         }
 
@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Subscriptions
                 Name = options.Name,
                 ChangeVector = options.ChangeVector,
                 MentorNode = options.MentorNode
-            }, options.Filter, options.Project), database);
+            }, options.Filter, options.Projection), database);
         }
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         private SubscriptionCreationOptions EnsureCriteria<T>(
-            SubscriptionCreationOptions criteria, 
+            SubscriptionCreationOptions criteria,
             Expression<Func<T, bool>> predicate,
             Expression<Func<T, object>> project)
         {
@@ -99,8 +99,8 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     collectionName = _store.Conventions.GetCollectionName(tType.GenericTypeArguments[0]);
                 }
-                if(includeRevisions)
-                    criteria.Query = "from " + collectionName +" (Revisions = true)";
+                if (includeRevisions)
+                    criteria.Query = "from " + collectionName + " (Revisions = true)";
                 else
                     criteria.Query = "from " + collectionName;
                 criteria.Query += " as doc";
@@ -113,17 +113,17 @@ namespace Raven.Client.Documents.Subscriptions
                         new JavascriptConversionExtensions.MathSupport(),
                         new JavascriptConversionExtensions.LinqMethodsSupport(),
                         new JavascriptConversionExtensions.ConstSupport(),
-                        new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0],"this"),
+                        new JavascriptConversionExtensions.ReplaceParameterWithNewName(predicate.Parameters[0], "this"),
                         new JavascriptConversionExtensions.DateTimeSupport(),
                         new JavascriptConversionExtensions.InvokeSupport(),
                         new JavascriptConversionExtensions.NullCoalescingSupport(),
                         new JavascriptConversionExtensions.NestedConditionalSupport(),
                         new JavascriptConversionExtensions.StringSupport()
                     ));
-                
-                criteria.Query = "declare function predicate () {\r\n\t return " + 
-                    script + "\r\n}\r\n" + criteria.Query + "\r\n" + 
-                    "where predicate.call(doc)";
+
+                criteria.Query = $"declare function predicate() {{ return {script} }}{Environment.NewLine}" +
+                                 $"{criteria.Query}{Environment.NewLine}" +
+                                 "where predicate.call(doc)";
             }
             if (project != null)
             {
@@ -148,12 +148,12 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Create a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
         /// </summary>
-        /// <param name="creationOptions"></param>
+        /// <param name="options"></param>
         /// <param name="database"></param>
         /// <returns>Subscription object</returns>
-        public string Create(SubscriptionCreationOptions criteria, string database = null)
+        public string Create(SubscriptionCreationOptions options, string database = null)
         {
-            return AsyncHelpers.RunSync(() => CreateAsync(criteria, database));
+            return AsyncHelpers.RunSync(() => CreateAsync(options, database));
         }
 
 
@@ -163,7 +163,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <returns>Created subscription name.</returns>
         public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null)
         {
-            if (options == null )
+            if (options == null)
                 throw new InvalidOperationException("Cannot create a subscription if options is null");
 
             if (options.Query == null)
@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-            
+
             var command = new CreateSubscriptionCommand(_store.Conventions, options);
             await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
 
@@ -214,9 +214,9 @@ namespace Raven.Client.Documents.Subscriptions
         {
             if (options == null)
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
-            
+
             var subscription = new SubscriptionWorker<T>(options, _store, database);
-            subscription.OnDisposed  += sender => _subscriptions.TryRemove(sender);
+            subscription.OnDisposed += sender => _subscriptions.TryRemove(sender);
             _subscriptions.Add(subscription);
 
             return subscription;
@@ -290,7 +290,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// <param name="subscriptionName">Sbscription name as received from the server</param>
         /// <param name="database">Database where the subscription resides</param>
         /// <returns></returns>
-        public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database= null)
+        public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database = null)
         {
 
             if (string.IsNullOrEmpty(subscriptionName))
@@ -330,7 +330,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <returns>Existing subscriptions' configurations.</returns>
         public List<SubscriptionState> GetSubscriptions(int start, int take, string database = null)
-        {            
+        {
             return AsyncHelpers.RunSync(() => GetSubscriptionsAsync(start, take, database));
         }
 
