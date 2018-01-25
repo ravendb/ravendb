@@ -37,7 +37,15 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
-
+                        //We are getting a request to vote for our known leader
+                        if (_engine.LeaderTag == rv.Source)
+                        {
+                            _engine.LeaderTag = null;
+                            //If we are followers we want to drop the connection with the leader right away.
+                            //We shouldn't be in any other state since if we are candidate our leaderTag should be null but its safer to verify.
+                            if (_engine.CurrentState == RachisState.Follower)
+                                _engine.SetNewState(RachisState.Follower,null,_engine.CurrentTerm,$"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
+                        }
                         if (_engine.Log.IsInfoEnabled)
                         {
                             var election = rv.IsTrialElection ? "Trial" : "Real";
@@ -57,7 +65,7 @@ namespace Raven.Server.Rachis
                             lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
                             (whoGotMyVoteIn, lastVotedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
 
-                            clusterTopology = _engine.GetTopology(context);
+                            clusterTopology = _engine.GetTopology(context);                            
                         }
 
                         // this should be only the case when we where once in a cluster, then we were brought down and our data was wiped.
