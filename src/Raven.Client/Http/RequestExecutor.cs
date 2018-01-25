@@ -716,15 +716,8 @@ namespace Raven.Client.Http
                             }
 
                             ThrowFailedToContactAllNodes(command, request);
-                            if (command.FailedNodes.Count == 1)
-                            {
-                                var node = command.FailedNodes.First();
-                                throw node.Value;
-                            }
+                        }
 
-
-
-                                                   }
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
@@ -762,17 +755,20 @@ namespace Raven.Client.Http
         private void ThrowFailedToContactAllNodes<TResult>(RavenCommand<TResult> command, HttpRequestMessage request)
         {
             if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
-                throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
+                throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. " +
+                                                    "This is weird and should not happen.");
 
             if (command.FailedNodes.Count == 1)
-                ExceptionDispatchInfo.Capture(command.FailedNodes.First().Value).Throw();                
+                ExceptionDispatchInfo.Capture(command.FailedNodes.First().Value).Throw();
 
-            var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology, none of the attempt succeeded. ";                          
+            var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` " +
+                          $"to all configured nodes in the topology, none of the attempt succeeded. {Environment.NewLine}";                          
 
             if (_topologyTakenFromNode != null)
             {
-                message += $"{Environment.NewLine}I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}" +
-                           $"Fetched topology : {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
+                message += $"I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}" +
+                           $"Fetched topology:{Environment.NewLine}" +
+                           $"{string.Join(Environment.NewLine, _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
             }
             else
             {
@@ -782,17 +778,23 @@ namespace Raven.Client.Http
             var firstException = command.FailedNodes.Values.First();
             
             // this means that all exception has the same type
-            if (command.FailedNodes.All(x=>x.Value.GetType() == firstException.GetType() && x.Value.Message == firstException.Message))
+            if (command.FailedNodes.All(x=> ExceptionAreEqual(x.Value, firstException)))
             {
-                throw new AllTopologyNodesDownException(message,
-                    _nodeSelector?.Topology,
-                    firstException);
+                throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology, firstException);
             }
 
-            throw new AllTopologyNodesDownException(message,
-                _nodeSelector?.Topology,
-                new AggregateException(command.FailedNodes.Select(x =>
-                new UnsuccessfulRequestException(x.Key.Url, x.Value))));            
+            throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology,
+                new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));            
+        }
+
+        private bool ExceptionAreEqual(Exception first, Exception second)
+        {
+            if (first == null || second == null)
+                return first == second;
+
+            return first.GetType() == second.GetType() &&
+                   first.Message == second.Message &&
+                   ExceptionAreEqual(first.InnerException, second.InnerException);
         }
 
         private static void ThrowInvalidConcurrentSessionUsage(string command, SessionInfo sessionInfo)
@@ -979,7 +981,8 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo)
+        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, 
+            HttpRequestMessage request, HttpResponseMessage response, Exception e, SessionInfo sessionInfo)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, Exception>();
@@ -1067,7 +1070,8 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false);
         }
 
-        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e)
+        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, 
+            HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (response != null)
             {
