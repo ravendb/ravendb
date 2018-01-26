@@ -47,6 +47,6 @@ function CopyStartAsServiceCmd ( $targetDir ) {
 }
 
 function CopyStartSh ( $targetDir ) {
-    $startPs1Path = [io.path]::combine("scripts", "assets", "start.sh")
+    $startPs1Path = [io.path]::combine("scripts", "assets", "run.sh")
     Copy-Item -Path $startPs1Path -Destination "$targetDir"
 }
