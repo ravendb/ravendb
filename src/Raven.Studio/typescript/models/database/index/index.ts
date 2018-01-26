@@ -1,4 +1,6 @@
 import appUrl = require("common/appUrl");
+import indexProgress = require("models/database/index/indexProgress");
+
 
 class index {
     static readonly SideBySideIndexPrefix = "ReplacementOf/";
@@ -58,6 +60,7 @@ class index {
     canBeDisabled: KnockoutComputed<boolean>;
 
     replacement = ko.observable<index>();
+    progress = ko.observable<indexProgress>();
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexStats, globalIndexingStatus: KnockoutObservable<Raven.Client.Documents.Indexes.IndexRunningStatus>, parentIndex?: index) {
         this.parent = parentIndex;

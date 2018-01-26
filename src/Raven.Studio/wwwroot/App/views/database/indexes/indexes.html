@@ -161,11 +161,135 @@
                 </div>
             </div>
             <div class="col-xs-12 col-sm-12 col-xl-5 vertical-divider properties-container" data-bind="if: !isFaulty()">
-                <div class="properties-item state-selector" data-bind="template: { name: 'state-template' }">
+                <div class="properties-item state-selector">
+                    <span class="properties-label">State:</span>
+                    <div class="btn-group properties-value">
+                        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
+                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
+                                enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name)">
+                            <span class="text-warning" data-bind="visible: isPausedState() && !isErrorState()">
+                                <i class="icon-cancel"></i>
+                                <span>Paused until restart</span>
+                            </span>
+                            <span data-bind="visible: isNormalState()">
+                                <i class="icon-check"></i>
+                                <span>Normal</span>
+                            </span>
+                            <span data-bind="visible: isIdleState()">
+                                <i class="icon-coffee"></i>
+                                <span>Idle</span>
+                            </span>
+                            <span class="text-danger" data-bind="visible: isDisabledState()">
+                                <i class="icon-cancel"></i>
+                                <span>Indexing disabled</span>
+                            </span>
+                            <span class="text-danger" data-bind="visible: isErrorState()">
+                                <i class="icon-danger"></i>
+                                <span>Error</span>
+                            </span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li data-bind="visible: canBeEnabled()">
+                                <a href="#" data-bind="click: $root.enableIndex" title="Enable">
+                                    <i class="icon-check"></i><span>Enable</span>
+                                </a>
+                            </li>
+                            <li data-bind="visible: canBeDisabled()">
+                                <a href="#" data-bind="click: $root.disableIndex" title="Disable">
+                                    <i class="icon-cancel"></i><span>Disable indexing</span>
+                                </a>
+                            </li>
+                            <li data-bind="visible: canBePaused()">
+                                <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart" title="Pause until restart">
+                                    <i class="icon-pause"></i><span>Pause indexing until restart</span>
+                                </a>
+                            </li>
+                            <li data-bind="visible: canBeResumed()">
+                                <a href="#" class="text-success" data-bind="click: $root.resumeIndexing" title="Resume indexing">
+                                    <i class="icon-check"></i><span>Resume indexing</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="properties-item priority" data-bind="template: { name: 'priority-template' }">
+                <div class="properties-item priority">
+                    <span class="properties-label">Priority:</span>
+                    <div class="btn-group properties-value">
+                        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
+                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: $root.globalIndexingStatus() === 'Running' && !_.includes($root.spinners.localPriority(), name)">
+                            <span data-bind="visible: isNormalPriority()">
+                                <i class="icon-check"></i>
+                                <span>Normal</span>
+                            </span>
+                            <span data-bind="visible: isLowPriority()">
+                                <i class="icon-coffee"></i>
+                                <span>Low</span>
+                            </span>
+                            <span data-bind="visible: isHighPriority()">
+                                <i class="icon-force"></i>
+                                <span>High</span>
+                            </span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: $root.lowPriority" title="Low">
+                                    <i class="icon-coffee"></i><span>Low</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" data-bind="click: $root.normalPriority" title="Normal">
+                                    <i class="icon-check"></i><span>Normal</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" data-bind="click: $root.highPriority" title="High">
+                                    <i class="icon-force"></i><span>High</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                <div class="properties-item mode" data-bind="template: { name: 'lock-mode-template' }">
+                <div class="properties-item mode">
+                    <span class="properties-label">Mode:</span>
+                    <div class="btn-group properties-value">
+                        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
+                                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: $root.globalIndexingStatus() === 'Running' &&
+                                !_.includes($root.spinners.localLockChanges(), name)">
+                            <span data-bind="visible: lockMode() === 'Unlock'">
+                                <i class="icon-unlock"></i><span>Unlocked</span>
+                            </span>
+                            <span data-bind="visible: lockMode() === 'LockedIgnore'">
+                                <i class="icon-lock"></i><span>Locked</span>
+                            </span>
+                            <span data-bind="visible: lockMode() === 'LockedError'">
+                                <i class="icon-lock-error"></i><span>Locked (Error)</span>
+                            </span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a href="#" data-bind="click: $root.unlockIndex" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
+                                    <i class="icon-unlock"></i>
+                                    <span>Unlock</span>
+                                </a>
+                            </li>
+                            <li class="divider"></li>
+                            <li>
+                                <a href="#" data-bind="click: $root.lockIndex" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
+                                    <i class="icon-lock"></i>
+                                    <span>Lock</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" data-bind="click: $root.lockErrorIndex" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
+                                    <i class="icon-lock-error"></i>
+                                    <span>Lock (Error)</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="properties-item entriesCount">
                     <div class="properties-value value-only">
@@ -233,183 +357,53 @@
             </div>
         </div>
 
-        <div data-bind="visible: isStale, with: $root.indexingProgresses.watchFor(name)">
-            <div data-bind="template: { name: 'indexing-progress-template' }"></div>
-        </div>
-    </div>
-</script>
-
-
-<script type="text/html" id="indexing-progress-template">
-    <hr class="small" />
-    <div class="progress-container">
-        <div class="progress-overall">
-            <div class="flex-horizontal" data-bind="with: globalProgress">
-                <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess, attr: { title: formattedTimeLeftToProcessTitle }"></span></h3>
-                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
-            </div>
-            <div class="progress" data-bind="template: { name: 'progress-bar-template', data: globalProgress }"></div>
-        </div>
-        <div class="collections-container">
-            <!-- ko foreach: collections -->
-            <div class="panel collection-progress">
-                <div class="collection-name" data-bind="text: name"></div>
-                <div class="documents">
-                    <div class="clearfix" data-bind="with: documentsProgress">
-                        <small class="name">Documents</small>
-                        <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
+        <div data-bind="visible: isStale, with: progress">
+            <hr class="small" />
+            <div class="progress-container">
+                <div class="progress-overall">
+                    <div class="flex-horizontal" data-bind="with: globalProgress">
+                        <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess, attr: { title: formattedTimeLeftToProcessTitle }"></span></h3>
+                        <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                     </div>
-                    <div class="progress" data-bind="template: { name: 'progress-bar-template', data: documentsProgress }"></div>
-                </div>
-                <div class="tombstones">
-                    <div class="clearfix" data-bind="with: tombstonesProgress">
-                        <small class="name">Tombstones</small>
-                        <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                    <div class="progress" data-bind="with: globalProgress">
+                        <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                             class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                            <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
+                        </div>
                     </div>
-                    <div class="progress" data-bind="template: { name: 'progress-bar-template', data: tombstonesProgress }"></div>
+                </div>
+                <div class="collections-container">
+                    <!-- ko foreach: collections -->
+                    <div class="panel collection-progress">
+                        <div class="collection-name" data-bind="text: name"></div>
+                        <div class="documents">
+                            <div class="clearfix" data-bind="with: documentsProgress">
+                                <small class="name">Documents</small>
+                                <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress}"></small>
+                            </div>
+                            <div class="progress" data-bind="with: documentsProgress">
+                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                    <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tombstones">
+                            <div class="clearfix" data-bind="with: tombstonesProgress">
+                                <small class="name">Tombstones</small>
+                                <small class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress }"></small>
+                            </div>
+                            <div class="progress" data-bind="with: tombstonesProgress">
+                                <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
+                                     class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+                                    <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- /ko -->
                 </div>
             </div>
-            <!-- /ko -->
         </div>
-    </div>
-</script>
-
-<script type="text/html" id="progress-bar-template">
-    <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
-         class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-        <span class="sr-only" data-bind="text: percentageFormatted + '% Completed'"></span>
-    </div>
-</script>
-
-<script type="text/html" id="priority-template">
-    <span class="properties-label">Priority:</span>
-    <div class="btn-group properties-value">
-        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localPriority(), name) }, enable: $root.globalIndexingStatus() === 'Running' && !_.includes($root.spinners.localPriority(), name)">
-            <span data-bind="visible: isNormalPriority()">
-                <i class="icon-check"></i>
-                <span>Normal</span>
-            </span>
-            <span data-bind="visible: isLowPriority()">
-                <i class="icon-coffee"></i>
-                <span>Low</span>
-            </span>
-            <span data-bind="visible: isHighPriority()">
-                <i class="icon-force"></i>
-                <span>High</span>
-            </span>
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-            <li>
-                <a href="#" data-bind="click: $root.lowPriority" title="Low">
-                    <i class="icon-coffee"></i><span>Low</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" data-bind="click: $root.normalPriority" title="Normal">
-                    <i class="icon-check"></i><span>Normal</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" data-bind="click: $root.highPriority" title="High">
-                    <i class="icon-force"></i><span>High</span>
-                </a>
-            </li>
-        </ul>
-    </div>
-</script>
-
-<script type="text/html" id="state-template">
-    <span class="properties-label">State:</span>
-    <div class="btn-group properties-value">
-        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localState(), name) },
-                enable: $root.globalIndexingStatus() === 'Running'  && !_.includes($root.spinners.localState(), name)">
-            <span class="text-warning" data-bind="visible: isPausedState() && !isErrorState()">
-                <i class="icon-cancel"></i>
-                <span>Paused until restart</span>
-            </span>
-            <span data-bind="visible: isNormalState()">
-                <i class="icon-check"></i>
-                <span>Normal</span>
-            </span>
-            <span data-bind="visible: isIdleState()">
-                <i class="icon-coffee"></i>
-                <span>Idle</span>
-            </span>
-            <span class="text-danger" data-bind="visible: isDisabledState()">
-                <i class="icon-cancel"></i>
-                <span>Indexing disabled</span>
-            </span>
-            <span class="text-danger" data-bind="visible: isErrorState()">
-                <i class="icon-danger"></i>
-                <span>Error</span>
-            </span>
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-            <li data-bind="visible: canBeEnabled()">
-                <a href="#" data-bind="click: $root.enableIndex" title="Enable">
-                    <i class="icon-check"></i><span>Enable</span>
-                </a>
-            </li>
-            <li data-bind="visible: canBeDisabled()">
-                <a href="#" data-bind="click: $root.disableIndex" title="Disable">
-                    <i class="icon-cancel"></i><span>Disable indexing</span>
-                </a>
-            </li>
-            <li data-bind="visible: canBePaused()">
-                <a href="#" class="text-warning" data-bind="click: $root.pauseUntilRestart" title="Pause until restart">
-                    <i class="icon-pause"></i><span>Pause indexing until restart</span>
-                </a>
-            </li>
-            <li data-bind="visible: canBeResumed()">
-                <a href="#" class="text-success" data-bind="click: $root.resumeIndexing" title="Resume indexing">
-                    <i class="icon-check"></i><span>Resume indexing</span>
-                </a>
-            </li>
-        </ul>
-    </div>
-</script>
-
-<script type="text/html" id="lock-mode-template">
-    <span class="properties-label">Mode:</span>
-    <div class="btn-group properties-value">
-        <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown"
-                data-bind="css: { 'btn-spinner': _.includes($root.spinners.localLockChanges(), name) }, enable: $root.globalIndexingStatus() === 'Running' &&
-                !_.includes($root.spinners.localLockChanges(), name)">
-            <span data-bind="visible: lockMode() === 'Unlock'">
-                <i class="icon-unlock"></i><span>Unlocked</span>
-            </span>
-            <span data-bind="visible: lockMode() === 'LockedIgnore'">
-                <i class="icon-lock"></i><span>Locked</span>
-            </span>
-            <span data-bind="visible: lockMode() === 'LockedError'">
-                <i class="icon-lock-error"></i><span>Locked (Error)</span>
-            </span>
-            <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-            <li>
-                <a href="#" data-bind="click: $root.unlockIndex" title="Unlocked: The index is unlocked for changes; apps can modify it, e.g. via IndexCreation.CreateIndexes().">
-                    <i class="icon-unlock"></i>
-                    <span>Unlock</span>
-                </a>
-            </li>
-            <li class="divider"></li>
-            <li>
-                <a href="#" data-bind="click: $root.lockIndex" title="Locked: The index is locked for changes; apps cannot modify it. Programmatic attempts to modify the index will be ignored.">
-                    <i class="icon-lock"></i>
-                    <span>Lock</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" data-bind="click: $root.lockErrorIndex" title="Locked + Error: The index is locked for changes; apps cannot modify it. An error will be thrown if an app attempts to modify it.">
-                    <i class="icon-lock-error"></i>
-                    <span>Lock (Error)</span>
-                </a>
-            </li>
-        </ul>
     </div>
 </script>
