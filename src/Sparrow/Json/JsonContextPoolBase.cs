@@ -68,8 +68,8 @@ namespace Sparrow.Json
             {
                 if (_contextPool.IsValueCreated == false)
                     return;
-                current = _contextPool.Value?.Head;
-                _contextPool.Value = null;
+                current = _contextPool.Value.Head;
+                _contextPool.Value.Head = null;
                 if (current == null)
                     return;
             }
