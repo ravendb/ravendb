@@ -4,7 +4,7 @@ Startup instructions for RavenDB on Windows
 * RavenDB as a Console Application
 Open Powershell
 Type:
-    .\start.ps1
+    .\run.ps1
 
 * RavenDB as Service
 Open Powershell

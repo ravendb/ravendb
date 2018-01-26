@@ -4,8 +4,8 @@ Startup instructions for RavenDB on Linux
 * RavenDB as a Console Application
 Open bash terminal
 Type:
-    chmod +x start.sh
-    ./start.sh
+    chmod +x run.sh
+    ./run.sh
 
 
 * RavenDB as Daemon (systemd - applies to Ubuntu 16.04)
@@ -22,7 +22,7 @@ Open bash terminal, and create file /etc/systemd/system/ravendb.service, using s
     User=<desired user>
     Restart=on-failure
     Type=simple
-    ExecStart=/path/to/RavenDB/start.sh
+    ExecStart=/path/to/RavenDB/run.sh
 
     [Install]
     WantedBy=multi-user.target
