@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.ETL
             var longRunningWork = _longRunningWork;
             _longRunningWork = null;
 
-            if (_longRunningWork != RavenThreadPool.LongRunningWork.Current) // prevent a deadlock
+            if (longRunningWork != RavenThreadPool.LongRunningWork.Current) // prevent a deadlock
                 longRunningWork.Join(int.MaxValue);
         }
 
