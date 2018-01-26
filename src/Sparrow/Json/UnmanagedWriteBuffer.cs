@@ -24,7 +24,6 @@ namespace Sparrow.Json
         public int Used;
         private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
-
         public int SizeInBytes => _sizeInBytes;
 
         public UnmanagedStreamBuffer(JsonOperationContext context, Stream stream)

@@ -16,6 +16,7 @@ function CreateRavenPackage ( $projectDir, $releaseDir, $outDirs, $spec, $versio
     
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Server)"
     Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Rvn)"
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Drtools)"
 }
 
 function GetRavenArchiveFileName ( $version, $spec ) {
@@ -62,11 +63,12 @@ function CopyDaemonScripts ( $projectDir, $packageDir ) {
 }
 
 function CopyTools ( $outDirs ) {
-    write-host "Copy rvn files..."
     $rvnContents = [io.path]::combine($outDirs.Rvn, "*")
+    write-host "Copy rvn files: $rvnContents -> $($outDirs.Server)"
     Copy-Item -Recurse "$rvnContents" -Destination "$($outDirs.Server)" -Force 
-    write-host "Copy Voron.Recovery files..."
+
     $drtoolsContents = [io.path]::combine($outDirs.Drtools, "*")
+    write-host "Copy Voron.Recovery files: $drToolsContents -> $($outDirs.Server)"
     Copy-Item -Recurse "$drtoolsContents" -Destination "$($outDirs.Server)" -Force 
 }
 

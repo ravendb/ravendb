@@ -687,13 +687,11 @@ more responsive application.
 
         protected async Task<string> GetOrGenerateDocumentIdAsync(object entity)
         {
-            string id;
-            GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
+            GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out var id);
 
-            Task<string> generator =
-                id != null
-                    ? Task.FromResult(id)
-                    : GenerateIdAsync(entity);
+            Task<string> generator = id != null
+                ? Task.FromResult(id)
+                : GenerateIdAsync(entity);
 
             var result = await generator.ConfigureAwait(false);
             if (result != null && result.StartsWith("/"))

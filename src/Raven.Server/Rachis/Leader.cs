@@ -64,7 +64,7 @@ namespace Raven.Server.Rachis
         private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _leaderLongRunningWork;
 
         private int _previousPeersWereDisposed;
         
@@ -97,13 +97,8 @@ namespace Raven.Server.Rachis
 
             RefreshAmbassadors(clusterTopology, connections);
 
-            _thread = new Thread(Run)
-            {
-                Name =
-                    $"Consensus Leader - {_engine.Tag} in term {Term}",
-                IsBackground = true
-            };
-            _thread.Start();
+            _leaderLongRunningWork =
+                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");                
         }
 
         public void StepDown()
@@ -263,7 +258,7 @@ namespace Raven.Server.Rachis
                 if (old.Count > 0)
                 {
                     Interlocked.Increment(ref _previousPeersWereDisposed);
-                    ThreadPool.QueueUserWorkItem(_ =>
+                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
                     {
                         foreach (var ambasaddor in old)
                         {
@@ -727,8 +722,8 @@ namespace Raven.Server.Rachis
                     }
                 }, null);
 
-                if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                    _thread.Join();
+                if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                    _leaderLongRunningWork.Join(int.MaxValue);
 
                 var ae = new ExceptionAggregator("Could not properly dispose Leader");
                 foreach (var ambasaddor in _nonVoters)

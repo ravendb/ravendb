@@ -101,9 +101,9 @@ namespace Raven.Server.Documents.Indexes
 
         internal DocumentDatabase DocumentDatabase;
 
-        private Thread _indexingThread;
+        private RavenThreadPool.LongRunningWork _indexingThread;
 
-        private bool _initialized;
+        private bool _initialized;        
 
         protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
@@ -225,8 +225,8 @@ namespace Raven.Server.Documents.Indexes
                     var indexingThread = _indexingThread;
 
                     // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                    if (indexingThread != null && Thread.CurrentThread != indexingThread)
-                        indexingThread.Join();
+                    if (indexingThread != null && RavenThreadPool.LongRunningWork.Current != indexingThread)
+                        indexingThread.Join(int.MaxValue);
                 });
 
                 exceptionAggregator.Execute(() => { IndexPersistence?.Dispose(); });
@@ -489,7 +489,7 @@ namespace Raven.Server.Documents.Indexes
                 if (LastIndexingTime != null)
                     _didWork = true;
 
-                _initialized = true;
+                _initialized = true;                
             }
             catch (Exception)
             {
@@ -532,8 +532,8 @@ namespace Raven.Server.Documents.Indexes
         private void StartIndexingThread()
         {
             if (_indexingThread != null &&
-                _indexingThread != Thread.CurrentThread &&
-                _indexingThread.ThreadState != System.Threading.ThreadState.Stopped)
+                _indexingThread != RavenThreadPool.LongRunningWork.Current &&
+                _indexingThread.Join(0) != true)
                 throw new InvalidOperationException($"Index '{Name}' is executing.");
 
             if (Configuration.Disabled)
@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.Indexes
             _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
             _indexDisabled = false;
 
-            _indexingThread = new Thread(() =>
+            _indexingThread = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x =>
             {
                 try
                 {
@@ -561,13 +561,10 @@ namespace Raven.Server.Documents.Indexes
                         _logger.Info("Failed to execute indexing in " + IndexingThreadName, e);
                     }
                 }
-            })
-            {
-                Name = IndexingThreadName,
-                IsBackground = true
-            };
+            }, null, IndexingThreadName);
+            
 
-            _indexingThread.Start();
+            
         }
 
         public virtual void Stop(bool disableIndex = false)
@@ -604,8 +601,8 @@ namespace Raven.Server.Documents.Indexes
 
             // cancellation was requested, the thread will exit the indexing loop and terminate.
             // if we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-            if (Thread.CurrentThread != indexingThread)
-                indexingThread.Join();
+            if (RavenThreadPool.LongRunningWork.Current != indexingThread)
+                indexingThread.Join(int.MaxValue);
         }
 
         public virtual void Update(IndexDefinitionBase definition, IndexingConfiguration configuration)

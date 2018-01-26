@@ -38,8 +38,7 @@ namespace Raven.Client.Documents.Identity
                 var entity = _entitiesStoredWithoutIDs.First.Value;
                 _entitiesStoredWithoutIDs.RemoveFirst();
 
-                DocumentInfo documentInfo;
-                if (_tryGetValue(entity, out documentInfo))
+                if (_tryGetValue(entity, out var documentInfo))
                 {
                     return _session.GenerateDocumentIdForStorageAsync(entity)
                         .ContinueWith(task => documentInfo.Id = _modifyObjectId(task.Result, entity, documentInfo.Metadata))

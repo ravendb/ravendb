@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Subscriptions
     {
         public string Name { get; set; }
         public Expression<Func<T, bool>> Filter { get; set; }
-        public Expression<Func<T, object>> Project { get; set; }
+        public Expression<Func<T, object>> Projection { get; set; }
         public string ChangeVector { get; set; }
         public string MentorNode { get; set; }
     }

@@ -79,6 +79,12 @@ namespace Raven.Server.Utils
 
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
 
+
+        public static void CleanCache()
+        {
+            _changeVectorBuffer = null;
+            _mergeVectorBuffer = null;
+        }
         private static int NumberOfDigits(long etag)
         {
             int count = 0;

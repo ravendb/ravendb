@@ -39,7 +39,7 @@ namespace Voron.Util
         /// </summary>
         private readonly ThreadLocal<DynamicArray> _activeTransactions = new ThreadLocal<DynamicArray>(
             () => new DynamicArray(),
-            trackAllValues: true);
+            trackAllValues: true);      
 
         public long OldestTransaction
         {

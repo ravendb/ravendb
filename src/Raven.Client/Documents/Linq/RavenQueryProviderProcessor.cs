@@ -388,7 +388,7 @@ namespace Raven.Client.Documents.Linq
 
                 return;
             }
-           
+
             if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
             {
                 VisitEquals(Expression.Equal(expression.Right, expression.Left));
@@ -399,7 +399,7 @@ namespace Raven.Client.Documents.Linq
             _documentQuery.WhereEquals(new WhereParams
             {
                 FieldName = memberInfo.Path,
-                Value =  GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
+                Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
                 AllowWildcards = false,
                 IsNestedPath = memberInfo.IsNestedPath,
                 Exact = _insideExact
@@ -851,7 +851,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 //
                 return;
             }
-            
+
             if (declaringType == typeof(String))
             {
                 VisitStringMethodCall(expression);
@@ -1899,10 +1899,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             var js = TranslateSelectBodyToJs(expression);
             _declareBuilder.Append("\t").Append("return ").Append(js).Append(";");
-            
+
             var paramBuilder = new StringBuilder();
             paramBuilder.Append(_fromAlias);
-            
+
             if (_loadTokens != null)
             {
                 //need to add loaded documents 
@@ -1915,7 +1915,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     paramBuilder.Append(", ").Append(alias);
                 }
             }
-            
+
             if (_projectionParameters != null)
             {
                 for (var i = 0; i < _projectionParameters.Count; i++)
@@ -1923,7 +1923,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     paramBuilder.Append(", ").Append(_projectionParameters[i]);
                 }
             }
-            
+
             _declareToken = DeclareToken.Create("output", _declareBuilder.ToString(), paramBuilder.ToString());
             _jsSelectBody = $"output({_declareToken.Parameters})";
         }
@@ -1948,7 +1948,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (IsRaw(expression, name))
                 return;
-            
+
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
             var js = expression.Arguments[1].CompileToJavascript(
                 new JavascriptCompilationOptions(
@@ -1966,7 +1966,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters},
+                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
@@ -2203,7 +2203,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters},
+                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes));
 
@@ -2557,9 +2557,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     identityProperty.Type() == typeof(Guid) ||
                     identityProperty.Type() == typeof(decimal))
                 {
-                    throw new NotSupportedException("You cannot issue range queries on a identity property that is of a numeric type.\r\n" +
+                    throw new NotSupportedException("You cannot issue range queries on a identity property that is of a numeric type." + Environment.NewLine +
                                                     "RavenDB numeric ids are purely client side, on the server, they are always strings, " +
-                                                    "and aren't going to sort according to your expectations.\r\n" +
+                                                    "and aren't going to sort according to your expectations." + Environment.NewLine +
                                                     "You can create a stand-in property to hold the numeric value, and do a range query on that.");
                 }
                 return Constants.Documents.Indexing.Fields.DocumentIdFieldName;
@@ -2713,7 +2713,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case SpecialQueryType.LongCount:
                     {
                         if (finalQuery.IsDistinct)
-                            throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together.\r\n" +
+                            throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together." + Environment.NewLine +
                                                             "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
                         var qr = finalQuery.GetQueryResult();
                         if (_queryType != SpecialQueryType.Count)

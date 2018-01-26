@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpClient _tcpClient;
         private readonly Stream _stream;
         private readonly ReplicationLoader _parent;
-        private Thread _incomingThread;
+        private RavenThreadPool.LongRunningWork _incomingThread;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
         public event Action<IncomingReplicationHandler, Exception> Failed;
@@ -89,23 +89,13 @@ namespace Raven.Server.Documents.Replication
             if (_incomingThread != null)
                 return;
 
-            var result = Interlocked.CompareExchange(ref _incomingThread, new Thread(ReceiveReplicationBatches)
+            lock (this)
             {
-                IsBackground = true,
-                Name = IncomingReplicationThreadName
-            }, null);
+                if (_incomingThread != null)
+                    return; // already set by someone else, they can start it
 
-            if (result != null)
-                return; // already set by someone else, they can start it
-
-            try
-            {
-                _incomingThread.Start();
-            }
-            catch (ThreadStateException)
-            {
-                // already started, can ignore this
-            }
+                _incomingThread = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
+            }            
 
             if (_log.IsInfoEnabled)
                 _log.Info($"Incoming replication thread started ({FromToString})");
@@ -855,11 +845,11 @@ namespace Raven.Server.Documents.Replication
 
                 _replicationFromAnotherSource.Set();
 
-                if (_incomingThread != Thread.CurrentThread)
+                if (_incomingThread != RavenThreadPool.LongRunningWork.Current)
                 {
                     try
                     {
-                        _incomingThread?.Join();
+                        _incomingThread?.Join(int.MaxValue);
                     }
                     catch (ThreadStateException)
                     {

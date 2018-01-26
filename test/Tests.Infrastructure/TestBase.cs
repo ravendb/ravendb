@@ -79,7 +79,7 @@ namespace FastTests
             };
 #endif
 
-            ThreadPool.SetMinThreads(250, 250);
+            System.Threading.ThreadPool.SetMinThreads(250, 250);
 
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 

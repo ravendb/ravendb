@@ -63,7 +63,11 @@ namespace Voron.Data.BTrees
                 RootPageNumber = root
             };
         }
-
+        public Tree(bool iAmNotBoingToUseThisObjectUnlessIWantToCleanThreadStaticData)
+        {
+            if (iAmNotBoingToUseThisObjectUnlessIWantToCleanThreadStaticData == false)
+                throw new NotImplementedException("Use another ctor");            
+        }
         public Tree(LowLevelTransaction llt, Transaction tx, Slice name, TreeMutableState state)
         {
             _llt = llt;

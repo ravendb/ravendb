@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents
         private readonly ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private ExceptionDispatchInfo _edi;
         private readonly Logger _log;
-        private Thread _txMergingThread;
+        private RavenThreadPool.LongRunningWork _txLongRunningOperation;
 
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
@@ -48,12 +49,7 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            _txMergingThread = new Thread(MergeOperationThreadProc)
-            {
-                IsBackground = true,
-                Name = TransactionMergerThreadName
-            };
-            _txMergingThread.Start();
+            _txLongRunningOperation = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
         }
 
         public abstract class MergedTransactionCommand
@@ -101,57 +97,114 @@ namespace Raven.Server.Documents
 
         private void MergeOperationThreadProc()
         {
-            NativeMemory.EnsureRegistered();
-            try
-            {
-                while (_runTransactions)
-                {
-                    if (_operations.IsEmpty)
-                    {
-                        using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
-                        {
-                            generalMeter.IncrementCounter(1);
-                            _waitHandle.Wait(_shutdown);
-                        }
-                        _waitHandle.Reset();
-                    }
+            var oomTimer = new Stopwatch();// this is allocated here to avoid OOM when using it
 
-                    MergeTransactionsOnce();
+            while (true) // this is actually only executed once, except if we are trying to recover from OOM errors
+            {
+                NativeMemory.EnsureRegistered();
+                try
+                {
+                    while (_runTransactions)
+                    {
+                        if (_operations.IsEmpty)
+                        {
+                            using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
+                            {
+                                generalMeter.IncrementCounter(1);
+                                _waitHandle.Wait(_shutdown);
+                            }
+                            _waitHandle.Reset();
+                        }
+
+                        MergeTransactionsOnce();
+                    }
+                    return;
+                }
+                catch (OperationCanceledException)
+                {
+                    // clean shutdown, nothing to do
+                }
+                catch (Exception e) when (e is OutOfMemoryException)
+                {
+                    // this catch block is meant to handle potentially transient errors
+                    // in particular, an OOM error is something that we want to recover
+                    // we'll handle this by throwing out all the pending transactions,
+                    // waiting for 3 seconds and then resuming normal operations
+                    if (_log.IsOperationsEnabled)
+                    {
+                        try
+                        {
+                            _log.Operations(
+                                "OutOfMemoryException happened in the transaction merger, will abort all transactions for the next 3 seconds and then resume operations",
+                                e);
+                        }
+                        catch 
+                        {
+                            // under these conditions, this may throw, but we don't care, we wanna survive (cue music)
+                        }
+                    }
+                    ClearQueueWithException(e);
+                    oomTimer.Restart();
+                    while (_runTransactions)
+                    {
+                        try
+                        {
+                            var timeSpan = TimeSpan.FromSeconds(3) - oomTimer.Elapsed;
+                            if (timeSpan <= TimeSpan.Zero || _waitHandle.Wait(timeSpan, _shutdown) == false)
+                                break;
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            return;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return;
+                        }
+                        ClearQueueWithException(e);
+                    }
+                    oomTimer.Stop();
+                    // and now we return to the top of the loop and restart
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsOperationsEnabled)
+                    {
+                        _log.Operations(
+                            "Serious failure in transaction merging thread, the database must be restarted!",
+                            e);
+                    }
+                    Interlocked.Exchange(ref _edi, ExceptionDispatchInfo.Capture(e));
+                    // cautionary, we make sure that stuff that is waiting on the 
+                    // queue is notified about this catastrophic3 error and we wait
+                    // just a bit more to verify that nothing racy can still get 
+                    // there
+                    while (_runTransactions)
+                    {
+                        ClearQueueWithException(e);
+                        try
+                        {
+                            _waitHandle.Wait(_shutdown);
+                            _waitHandle.Reset();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            return;
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return;
+                        }
+                    }
                 }
             }
-            catch (OperationCanceledException)
+
+            void ClearQueueWithException(Exception e)
             {
-                // clean shutdown, nothing to do
-            }
-            catch (Exception e)
-            {
-                if (_log.IsOperationsEnabled)
+                while (_operations.TryDequeue(out MergedTransactionCommand result))
                 {
-                    _log.Operations(
-                        "Serious failure in transaction merging thread, the database must be restarted!",
-                        e);
-                }
-                Interlocked.Exchange(ref _edi, ExceptionDispatchInfo.Capture(e));
-                // cautionary, we make sure that stuff that is waiting on the 
-                // queue is notified about this catasropic error and we wait
-                // just a bit more to verify that nothing racy can still get 
-                // there
-                while (_runTransactions)
-                {
-                    while (_operations.TryDequeue(out MergedTransactionCommand result))
-                    {
-                        result.Exception = e;
-                        NotifyOnThreadPool(result);
-                    }
-                    try
-                    {
-                        _waitHandle.Wait(_shutdown);
-                        _waitHandle.Reset();
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
+                    result.Exception = e;
+                    NotifyOnThreadPool(result);
                 }
             }
         }
@@ -196,11 +249,11 @@ namespace Raven.Server.Documents
 
         private void MergeTransactionsOnce()
         {
-            var pendingOps = GetBufferForPendingOps();
-            using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            DocumentsTransaction tx = null;
+            try
             {
-                DocumentsTransaction tx = null;
-                try
+                var pendingOps = GetBufferForPendingOps();
+                using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     try
                     {
@@ -271,10 +324,10 @@ namespace Raven.Server.Documents
                             return;
                     }
                 }
-                finally
-                {
-                    tx?.Dispose();
-                }
+            }
+            finally
+            {
+                tx?.Dispose();
             }
         }
 
@@ -428,7 +481,7 @@ namespace Raven.Server.Documents
             ref List<MergedTransactionCommand> previousPendingOps,
             bool throwOnError)
         {
-           try
+            try
             {
                 previous.EndAsyncCommit();
                 if (_log.IsInfoEnabled)
@@ -639,7 +692,7 @@ namespace Raven.Server.Documents
             var done = _concurrentOperations.Signal();
 
             _waitHandle.Set();
-            _txMergingThread?.Join();
+            _txLongRunningOperation?.Join(int.MaxValue);
             _waitHandle.Dispose();
 
             // make sure that the queue is empty and there are no pending 

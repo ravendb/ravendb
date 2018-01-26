@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private Thread _sendingThread;
+        private RavenThreadPool.LongRunningWork _longRunningSendingWork;
         internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
 
@@ -101,12 +101,8 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            _sendingThread = new Thread(ReplicateToDestination)
-            {
-                Name = OutgoingReplicationThreadName,
-                IsBackground = true
-            };
-            _sendingThread.Start();
+            _longRunningSendingWork =
+                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);            
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
@@ -145,7 +141,7 @@ namespace Raven.Server.Documents.Replication
                     var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, _connectionInfo, _parent._server.Server.Certificate.Certificate, _parent._server.Engine.TcpConnectionTimeout);
                     wrapSsl.Wait(CancellationToken);
 
-                    using (_stream = wrapSsl.Result)
+                    using (_stream = wrapSsl.Result) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead = new InterruptibleRead(_database.DocumentsStorage.ContextPool, _stream))
                     using (_buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
@@ -843,9 +839,9 @@ namespace Raven.Server.Documents.Replication
             
             _connectionDisposed.Set();
 
-            if (_sendingThread != null && _sendingThread != Thread.CurrentThread)
+            if (_longRunningSendingWork != null && _longRunningSendingWork != RavenThreadPool.LongRunningWork.Current)
             {
-                while (_sendingThread.Join(timeout) == false)
+                while (_longRunningSendingWork.Join((int)timeout.TotalMilliseconds) == false)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");

@@ -35,7 +35,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName
             }.Initialize())
             {
@@ -82,7 +82,7 @@ namespace RachisTests.DatabaseCluster
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -151,7 +151,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -188,7 +188,7 @@ namespace RachisTests.DatabaseCluster
                     var dbName = $"Watcher{i}";
                     doc = new DatabaseRecord(dbName);
                     var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
-                    watcherUrls.Add(dbName,res.NodesAddedTo.ToArray());
+                    watcherUrls.Add(dbName, res.NodesAddedTo.ToArray());
                     var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
@@ -220,8 +220,8 @@ namespace RachisTests.DatabaseCluster
 
             Assert.Equal(5, count);
         }
-                
-        [NightlyBuildFact]        
+
+        [NightlyBuildFact]
         public async Task WaitForReplicaitonShouldWaitOnlyForInternalNodes()
         {
             var clusterSize = 5;
@@ -292,7 +292,7 @@ namespace RachisTests.DatabaseCluster
                     await Assert.ThrowsAsync<RavenException>(() => saveChangesTask);
                     Assert.IsType<TimeoutException>(saveChangesTask.Exception?.InnerException?.InnerException);
                 }
-            }            
+            }
         }
 
         private void WaitForDocumentInExternalReplication(List<ExternalReplication> watchers, Dictionary<string, string[]> watcherUrls)
@@ -391,7 +391,7 @@ namespace RachisTests.DatabaseCluster
                     var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
-                    watcherUrls.Add(dbName,res.NodesAddedTo.ToArray());
+                    watcherUrls.Add(dbName, res.NodesAddedTo.ToArray());
                     var watcher = new ExternalReplication(dbName, $"{dbName}-Connection")
                     {
                         MentorNode = "C"
@@ -430,7 +430,7 @@ namespace RachisTests.DatabaseCluster
             RavenServer watcherNode;
             using (var store = new DocumentStore()
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions =
                 {
@@ -502,7 +502,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions =
                 {
@@ -546,7 +546,7 @@ namespace RachisTests.DatabaseCluster
             //delete watcher
             using (var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions =
                 {
@@ -578,7 +578,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -648,7 +648,7 @@ namespace RachisTests.DatabaseCluster
             var doc = new DatabaseRecord(databaseName);
             using (var store = new DocumentStore()
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -684,7 +684,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = new[] {Servers[1].WebUrl},
+                Urls = new[] { Servers[1].WebUrl },
                 Database = databaseName,
                 Certificate = clientCertificate,
                 Conventions =
@@ -733,7 +733,7 @@ namespace RachisTests.DatabaseCluster
             }))
             {
                 var watcher2 = new ExternalReplication(store2.Database, "ConnectionString");
-                
+
                 await AddWatcherToReplicationTopology(store1, watcher2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -773,7 +773,7 @@ namespace RachisTests.DatabaseCluster
             }))
             {
                 var watcher2 = new ExternalReplication(store2.Database, "ConnectionString");
-                
+
                 await AddWatcherToReplicationTopology(store1, watcher2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -799,71 +799,81 @@ namespace RachisTests.DatabaseCluster
             var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
             var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
 
-            var srcStore = new DocumentStore()
+            using (var srcStore = new DocumentStore()
             {
-                Urls = new[] {srcLeader.WebUrl},
+                Urls = new[] { srcLeader.WebUrl },
                 Database = srcDB,
-            }.Initialize();
-
-            using (var session = srcStore.OpenSession())
+            }.Initialize())
             {
-                session.Store(new User { Name = "Karmel" }, "users/1");
-                session.SaveChanges();
-                Assert.True(await WaitForDocumentInClusterAsync<User>(
-                    session as DocumentSession,
-                    "users/1",
-                    u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5)));
+                using (var session = srcStore.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(
+                        session as DocumentSession,
+                        "users/1",
+                        u => u.Name.Equals("Karmel"),
+                        TimeSpan.FromSeconds(clusterSize + 5)));
+                }
+
+                // add watcher with invalid url to test the failover on database topology discovery
+                var watcher = new ExternalReplication(dstDB, "connection")
+                {
+                    MentorNode = "B"
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
+
+                using (var dstStore = new DocumentStore
+                {
+                    Urls = new[] { dstLeader.WebUrl },
+                    Database = watcher.Database,
+                }.Initialize())
+                {
+                    using (var dstSession = dstStore.OpenSession())
+                    {
+                        dstSession.Load<User>("Karmel");
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            dstSession as DocumentSession,
+                            "users/1",
+                            u => u.Name.Equals("Karmel"),
+                            TimeSpan.FromSeconds(60)));
+                    }
+
+                    var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                    var server = Servers.Single(s => s.WebUrl == responsibale);
+                    var handler = await InstantiateOutgoingTaskHandler(srcDB, server);
+                    Assert.True(WaitForValue(
+                        () => handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication).As<OngoingTaskReplication>().DestinationUrl !=
+                              null,
+                        true));
+
+                    var watcherTaskUrl = handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication).As<OngoingTaskReplication>()
+                        .DestinationUrl;
+
+                    // fail the node to to where the data is sent
+                    DisposeServerAndWaitForFinishOfDisposal(Servers.Single(s => s.WebUrl == watcherTaskUrl));
+
+                    using (var session = srcStore.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = "Karmel2"
+                        }, "users/2");
+                        session.SaveChanges();
+                        Assert.True(await WaitForDocumentInClusterAsync<User>(
+                            session as DocumentSession,
+                            "users/2",
+                            u => u.Name.Equals("Karmel2"),
+                            TimeSpan.FromSeconds(clusterSize + 5)));
+                    }
+
+                    WaitForUserToContinueTheTest(dstStore as DocumentStore);
+                    Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
+                }
             }
-
-            // add watcher with invalid url to test the failover on database topology discovery
-            var watcher = new ExternalReplication(dstDB, "connection")
-            {
-                MentorNode = "B"
-            };
-            await AddWatcherToReplicationTopology((DocumentStore)srcStore, watcher, new[] { "http://127.0.0.1:1234", dstLeader.WebUrl });
-
-            var dstStore = new DocumentStore
-            {
-                Urls = new[] { dstLeader.WebUrl},
-                Database = watcher.Database,
-            }.Initialize();
-
-            var dstSession = dstStore.OpenSession();
-            dstSession.Load<User>("Karmel");
-            Assert.True(await WaitForDocumentInClusterAsync<User>(
-                dstSession as DocumentSession,
-                "users/1",
-                u => u.Name.Equals("Karmel"),
-                TimeSpan.FromSeconds(60)));
-
-            var responsibale = srcLeader.ServerStore.GetClusterTopology().GetUrlFromTag("B");
-            var server = Servers.Single(s => s.WebUrl == responsibale);
-            var handler = await InstantiateOutgoingTaskHandler(srcDB, server);
-            Assert.True(WaitForValue(() => handler.GetOngoingTasksInternal().OngoingTasksList.
-                Single(t => t is OngoingTaskReplication).As<OngoingTaskReplication>().DestinationUrl != null, true));
-
-            var watcherTaskUrl = handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication).As<OngoingTaskReplication>().DestinationUrl;
-
-            // fail the node to to where the data is sent
-            DisposeServerAndWaitForFinishOfDisposal(Servers.Single(s=>s.WebUrl == watcherTaskUrl));
-
-            using (var session = srcStore.OpenSession())
-            {
-                session.Store(new User { Name = "Karmel2" }, "users/2");
-                session.SaveChanges();
-                Assert.True(await WaitForDocumentInClusterAsync<User>(
-                    session as DocumentSession,
-                    "users/2",
-                    u => u.Name.Equals("Karmel2"),
-                    TimeSpan.FromSeconds(clusterSize + 5)));
-            }
-            WaitForUserToContinueTheTest(dstStore as DocumentStore);
-            Assert.True(WaitForDocument(dstStore, "users/2",30_000));
-
-            srcStore.Dispose();
-            dstSession.Dispose();
-            dstStore.Dispose();
         }
     }
 }

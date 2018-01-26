@@ -18,9 +18,7 @@ namespace Sparrow.Json
         private readonly NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
-
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();     
         private class ContextStack : StackHeader<T>, IDisposable
         {
             ~ContextStack()

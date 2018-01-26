@@ -28,6 +28,11 @@ namespace Raven.Server.Web.Studio
         private const string ArrayStubsKey = "$a";
         private const string TrimmedValueKey = "$t";
 
+        public static void CleanCache()
+        {            
+            _buffers = null;
+        }
+
         [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser)]
         public Task PreviewCollection()
         {

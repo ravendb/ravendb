@@ -3,6 +3,7 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Rachis
 {
@@ -10,7 +11,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _electorLongRunningWork;
         private bool _electionWon;
 
         public Elector(RachisConsensus engine, RemoteConnection connection)
@@ -21,11 +22,7 @@ namespace Raven.Server.Rachis
 
         public void Run()
         {
-            _thread = new Thread(HandleVoteRequest)
-            {
-                Name = $"Elector for candidate {_connection.Source}"
-            };
-            _thread.Start();
+            _electorLongRunningWork = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
         }
 
         public void HandleVoteRequest()
@@ -37,7 +34,15 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
-
+                        //We are getting a request to vote for our known leader
+                        if (_engine.LeaderTag == rv.Source)
+                        {
+                            _engine.LeaderTag = null;
+                            //If we are followers we want to drop the connection with the leader right away.
+                            //We shouldn't be in any other state since if we are candidate our leaderTag should be null but its safer to verify.
+                            if (_engine.CurrentState == RachisState.Follower)
+                                _engine.SetNewState(RachisState.Follower,null,_engine.CurrentTerm,$"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
+                        }
                         if (_engine.Log.IsInfoEnabled)
                         {
                             var election = rv.IsTrialElection ? "Trial" : "Real";
@@ -57,7 +62,7 @@ namespace Raven.Server.Rachis
                             lastTerm = _engine.GetTermForKnownExisting(context, lastIndex);
                             (whoGotMyVoteIn, lastVotedTerm) = _engine.GetWhoGotMyVoteIn(context, rv.Term);
 
-                            clusterTopology = _engine.GetTopology(context);
+                            clusterTopology = _engine.GetTopology(context);                            
                         }
 
                         // this should be only the case when we where once in a cluster, then we were brought down and our data was wiped.

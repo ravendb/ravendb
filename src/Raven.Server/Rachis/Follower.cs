@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Utils;
@@ -21,7 +22,7 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly long _term;
         private readonly RemoteConnection _connection;
-        private Thread _thread;
+        private RavenThreadPool.LongRunningWork _folloowerLongRunningWork;
 
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
@@ -751,13 +752,13 @@ namespace Raven.Server.Rachis
             _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
             
             _debugRecorder.Record("Follower connection accepted");
-            
-            _thread = new Thread(Run)
-            {
-                Name = $"Follower thread from {_connection} in term {negotiation.Term}",
-                IsBackground = true
-            };
-            _thread.Start(negotiation);
+
+            _folloowerLongRunningWork = 
+                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(
+                    action: x => Run(x),
+                    state: negotiation,
+                    name: $"Follower thread from {_connection} in term {negotiation.Term}");
+                
         }
 
         private void Run(object obj)
@@ -817,8 +818,8 @@ namespace Raven.Server.Rachis
                 _engine.Log.Info($"{ToString()}: Disposing");
             }
             
-            if (_thread != null && _thread.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                _thread.Join();
+            if (_folloowerLongRunningWork != null && _folloowerLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                _folloowerLongRunningWork.Join(int.MaxValue);
             
             _engine.InMemoryDebug.RemoveRecorder(_debugName);
         }
