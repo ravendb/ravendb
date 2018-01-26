@@ -1,22 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
 using System.Threading;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.Patch;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using Voron;
-using Voron.Data.BTrees;
-using Voron.Impl.Backup;
 
 namespace Raven.Server.Utils
 {
@@ -26,6 +14,8 @@ namespace Raven.Server.Utils
         {
             return new RavenThreadPool();
         });
+
+
         private readonly ConcurrentQueue<PooledThread> _pool = new ConcurrentQueue<PooledThread>();
         private bool _disposed;
 
@@ -77,7 +67,7 @@ namespace Raven.Server.Utils
 
                 thread.Start();
             }
-            pooled.StartedAt = DateTime.Now;
+            pooled.StartedAt = DateTime.UtcNow;
             return pooled.SetWorkForThread(action, state, name);
         }
 
@@ -94,7 +84,6 @@ namespace Raven.Server.Utils
             private string _name;
             private RavenThreadPool _parent;
             private LongRunningWork _workIsDone;
-            protected Logger _logger;
 
             public DateTime StartedAt { get; internal set; }
 
@@ -112,7 +101,6 @@ namespace Raven.Server.Utils
             public PooledThread(RavenThreadPool pool)
             {                
                 _parent = pool;
-                _logger = LoggingSource.Instance.GetLogger<PooledThread>("PooledThread");
             }
 
             public LongRunningWork SetWorkForThread(Action<object> action, object state, string name)
@@ -125,48 +113,6 @@ namespace Raven.Server.Utils
                 _waitForWork.Set();
                 return _workIsDone;
             }
-
-
-            private void ReduceMemoryUsage()
-            {                              
-                // not sure about all of this "cleaning", I suspect that most of it will actually harm performance and make GC work harder...
-                ByteStringMemoryCache.CleanForCurrentThread();
-
-                using (var docsContextPool = new DocumentsContextPool(null))
-                    docsContextPool.Clean();
-
-                using (var transactionContextPool = new TransactionContextPool(null))                
-                    transactionContextPool.Clean();
-
-                using (var jsonContextPool = new JsonContextPool())
-                    jsonContextPool.Clean();
-                                
-                new Tree(true).CleanLocalBuffer();
-
-                StreamExtensions.CleanBuffer();
-
-                ValueReader.CleanBuffer();
-
-                BlittableWriter<UnmanagedWriteBuffer>.CleanPropertyArrayOffset();
-                BlittableWriter<UnmanagedStreamBuffer>.CleanPropertyArrayOffset();
-
-                LazyStringValue.CleanBuffers();
-
-                CaseInsensitiveStringSegmentEqualityComparer.CleanBuffer();
-
-                BatchRequestParser.CleanCache();
-
-                JsBlittableBridge.CleanCache();
-
-                DocumentIdWorker.CleanCache();
-                Raven.Server.Json.BlittableJsonTextWriterExtensions.CleanCache();
-
-                ChangeVectorUtils.CleanCache();
-
-
-            }
-
-
 
             public void Run()
             {
@@ -191,14 +137,14 @@ namespace Raven.Server.Utils
                     }
                     finally
                     {
-                        _workIsDone.Set();                        
+                        _workIsDone.Set();
+                        LongRunningWork.Current = null;
                     }
                     _action = null;
                     _state = null;
                     _workIsDone = null;
 
-                    ReduceMemoryUsage();
-                    //TODO: Clear _ALL_ the thread local state, such as context, json pool, etc
+                    ThreadLocalCleanup.Run();
 
                     _waitForWork.Reset();
                     lock (_parent)
