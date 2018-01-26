@@ -56,8 +56,33 @@ namespace Sparrow.Json
         protected JsonContextPoolBase()
         {
             _contextPool = new ThreadLocal<ContextStack>(() => new ContextStack(), trackAllValues: true);
+            ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
             _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(_contextPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
+        }
+
+        private void CleanThreadLocalState()
+        {
+            StackNode<T> current;
+            try
+            {
+                if (_contextPool.IsValueCreated == false)
+                    return;
+                current = _contextPool.Value?.Head;
+                _contextPool.Value = null;
+                if (current == null)
+                    return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return; // the context pool was already disposed
+            }
+
+            while(current != null)
+            {
+                current.Value.Dispose();
+                current = current.Next;
+            }
         }
 
         public IDisposable AllocateOperationContext(out JsonOperationContext context)
@@ -186,6 +211,7 @@ namespace Sparrow.Json
                     return;
                 _cts.Cancel();
                 _disposed = true;
+                ThreadLocalCleanup.ReleaseThreadLocalState -= CleanThreadLocalState;
                 _nativeMemoryCleaner.Dispose();
                 foreach (var stack in _contextPool.Values)
                 {
