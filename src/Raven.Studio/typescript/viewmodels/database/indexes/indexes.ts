@@ -15,7 +15,6 @@ import eventsCollector = require("common/eventsCollector");
 import enableIndexCommand = require("commands/database/index/enableIndexCommand");
 import disableIndexCommand = require("commands/database/index/disableIndexCommand");
 import getIndexesProgressCommand = require("commands/database/index/getIndexesProgressCommand");
-import observableMap = require("common/helpers/observableMap");
 import indexProgress = require("models/database/index/indexProgress");
 import indexStalenessReasons = require("viewmodels/database/indexes/indexStalenessReasons");
 import generalUtils = require("common/generalUtils");
@@ -35,9 +34,9 @@ class indexes extends viewModelBase {
     lockModeCommon: KnockoutComputed<string>;
     selectedIndexesName = ko.observableArray<string>();
     indexesSelectionState: KnockoutComputed<checkbox>;
-    indexingProgresses = new observableMap<string, indexProgress>();
     indexesProgressRefreshThrottle: Function;
     indexProgressInterval: number;
+    indexingProgresses = new Map<string, indexProgress>();  
 
     spinners = {
         globalStartStop: ko.observable<boolean>(false),
@@ -190,6 +189,7 @@ class indexes extends viewModelBase {
             });
 
         this.processReplacements(replacements);
+        this.syncIndexingProgress();
     }
 
     private processReplacements(replacements: Raven.Client.Documents.Indexes.IndexStats[]) {
@@ -270,9 +270,23 @@ class indexes extends viewModelBase {
             .done(indexesProgressList => {
                 for (let i = 0; i < indexesProgressList.length; i++) {
                     const dto = indexesProgressList[i];
-                    this.indexingProgresses.set(dto.Name, new indexProgress(dto));
+                    this.indexingProgresses.set(dto.Name, new indexProgress(dto));    
+                }
+                
+                this.syncIndexingProgress();
+            });
+    }
+    
+    /* passes indexing progress to index instance */
+    private syncIndexingProgress() {
+        this.indexGroups().forEach(group => {
+            group.indexes().forEach(indexDef => {
+                const progress = this.indexingProgresses.get(indexDef.name);
+                if (progress !== indexDef.progress()) {
+                    indexDef.progress(progress);    
                 }
             });
+        });
     }
 
     openFaultyIndex(i: index) {
