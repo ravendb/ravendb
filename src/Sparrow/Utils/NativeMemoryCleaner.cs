@@ -93,7 +93,7 @@ namespace Sparrow.Utils
                 }
             }
 #else
-            lock(_lock); // prevent from running the callback _after_ dispose
+            lock(_lock) // prevent from running the callback _after_ dispose
             {
                 _disposed = true;
                 _timer.Dispose();
