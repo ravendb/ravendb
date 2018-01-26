@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
+using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -106,6 +107,11 @@ namespace Sparrow.Json
             _buffer = buffer;
             _string = str;
             _length = -1;
+        }
+
+        static LazyStringValue()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += CleanBuffers;
         }
 
         public static void CleanBuffers()

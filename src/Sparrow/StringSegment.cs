@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Sparrow.Utils;
 using Bits = Sparrow.Binary.Bits;
 
 namespace Sparrow
@@ -14,11 +15,11 @@ namespace Sparrow
         [ThreadStatic]
         private static char[] _buffer;
 
-
-        public static void CleanBuffer()
-        {            
-            _buffer = null;
+        static CaseInsensitiveStringSegmentEqualityComparer()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _buffer = null;
         }
+
         public bool Equals(StringSegment x, StringSegment y)
         {
             if (x.Length != y.Length)

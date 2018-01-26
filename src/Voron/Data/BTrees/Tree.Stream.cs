@@ -49,9 +49,9 @@ namespace Voron.Data.BTrees
         [ThreadStatic]
         private static byte[] _localBuffer;
 
-        public void CleanLocalBuffer()
+        static Tree()
         {
-            _localBuffer = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _localBuffer = null;
         }
 
         private struct StreamToPageWriter

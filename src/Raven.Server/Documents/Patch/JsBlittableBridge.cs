@@ -17,6 +17,7 @@ using Jint.Runtime.Interop;
 using Raven.Client;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -29,6 +30,11 @@ namespace Raven.Server.Documents.Patch
         [ThreadStatic]
         private static HashSet<object> _recursive;
 
+        static JsBlittableBridge()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _recursive = null;
+        }
+
         public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode, Engine scriptEngine)
         {
             _writer = writer;
@@ -36,10 +42,6 @@ namespace Raven.Server.Documents.Patch
             _scriptEngine = scriptEngine;
         }
 
-        public static void CleanCache()
-        {            
-            _recursive = null;
-        }
 
         public void WriteInstance(ObjectInstance jsObject, IResultModifier modifier = null)
         {

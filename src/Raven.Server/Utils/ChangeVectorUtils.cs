@@ -6,6 +6,7 @@ using System.Text;
 using Lucene.Net.Support;
 using Raven.Server.Documents.Replication;
 using Sparrow;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
@@ -80,11 +81,15 @@ namespace Raven.Server.Utils
         [ThreadStatic] private static StringBuilder _changeVectorBuffer;
 
 
-        public static void CleanCache()
+        static ChangeVectorUtils()
         {
-            _changeVectorBuffer = null;
-            _mergeVectorBuffer = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () =>
+            {
+                _changeVectorBuffer = null;
+                _mergeVectorBuffer = null;
+            };
         }
+
         private static int NumberOfDigits(long etag)
         {
             int count = 0;

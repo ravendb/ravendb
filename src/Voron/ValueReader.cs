@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Utils;
 
 namespace Voron
 {
@@ -26,9 +27,9 @@ namespace Voron
             _pos = 0;
         }
 
-        public static void CleanBuffer()
+       static ValueReader()
         {
-            tmpBuf = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => tmpBuf = null;
         }
 
         public int Length

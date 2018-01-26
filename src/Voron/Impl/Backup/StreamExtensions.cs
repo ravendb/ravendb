@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using Sparrow.Utils;
 
 namespace Voron.Impl.Backup
 {
@@ -10,6 +11,11 @@ namespace Voron.Impl.Backup
 
         [ThreadStatic]
         private static byte[] _readBuffer;
+
+        static StreamExtensions()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _readBuffer = null;
+        }
 
         public static void CopyTo(this Stream source, Stream destination, CancellationToken cancellationToken)
         {
@@ -24,9 +30,5 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public static void CleanBuffer()
-        {
-            _readBuffer = null;
-        }
     }
 }

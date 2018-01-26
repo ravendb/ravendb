@@ -19,6 +19,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 
 namespace Raven.Server.Json
@@ -1139,11 +1140,12 @@ namespace Raven.Server.Json
         [ThreadStatic]
         private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
 
-
-        public static void CleanCache()
+        static BlittableJsonTextWriterExtensions()
         {
-            _buffers = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _buffers = null;
         }
+
+
         public static void WriteDocumentMetadata(this AbstractBlittableJsonTextWriter writer, JsonOperationContext context,
             Document document)
         {

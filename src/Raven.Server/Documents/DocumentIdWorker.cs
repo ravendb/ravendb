@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents
@@ -14,10 +15,11 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-        public static void CleanCache()
+        static DocumentIdWorker()
         {
-            _jsonParserState?.Reset();
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _jsonParserState = null;
         }
+
         public static ByteStringContext.ExternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice)
             where TTransaction : RavenTransaction

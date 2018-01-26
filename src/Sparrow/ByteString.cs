@@ -469,7 +469,9 @@ namespace Sparrow
             SegmentsPool = new ThreadLocal<SegmentStack>(() => new SegmentStack(), trackAllValues: true);
             LowMemoryFlag = new SharedMultipleUseFlag();
             Cleaner = new NativeMemoryCleaner<SegmentStack, UnmanagedGlobalSegment>(SegmentsPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
-            
+
+            ThreadLocalCleanup.ReleaseThreadLocalState += CleanForCurrentThread;
+
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(ByteStringContext.Allocator);
         }
 
@@ -542,6 +544,7 @@ namespace Sparrow
         {
             throw new InvalidOperationException("Attempt to return a memory segment that has already been disposed");
         }
+
 
         public static void CleanForCurrentThread()
         {

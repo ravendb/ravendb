@@ -6,6 +6,7 @@ using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Compression;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
@@ -22,16 +23,16 @@ namespace Sparrow.Json
         public int Position => _position;
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
-        
+
         public unsafe BlittableJsonReaderObject CreateReader()
         {
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
             var reader = new BlittableJsonReaderObject(
-                ptr, 
-                size, 
-                _context, 
+                ptr,
+                size,
+                _context,
                 (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
 
             //we don't care to lose instance of write buffer,
@@ -223,13 +224,13 @@ namespace Sparrow.Json
         {
             if (maxPropId <= byte.MaxValue)
             {
-                
+
                 objectToken |= BlittableJsonToken.PropertyIdSizeByte;
                 return sizeof(byte);
             }
 
             if (maxPropId <= ushort.MaxValue)
-            {                
+            {
                 objectToken |= BlittableJsonToken.PropertyIdSizeShort;
                 return sizeof(short);
             }
@@ -239,6 +240,11 @@ namespace Sparrow.Json
         }
 
         [ThreadStatic] private static int[] _propertyArrayOffset;
+
+        static BlittableWriter()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += CleanPropertyArrayOffset;
+        }
 
         public static void CleanPropertyArrayOffset()
         {

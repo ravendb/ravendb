@@ -13,6 +13,7 @@ using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -46,11 +47,13 @@ namespace Raven.Server.Documents.Handlers
         private static readonly CommandData[] Empty = new CommandData[0];
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
 
-
-        public static void CleanCache()
+        static BatchRequestParser()
         {
-            _cache?.Clear();
-            _cache = null;
+            ThreadLocalCleanup.ReleaseThreadLocalState += () =>
+            {
+                _cache?.Clear();
+                _cache = null;
+            };
         }
         public static void ReturnBuffer(ArraySegment<CommandData> cmds)
         {
