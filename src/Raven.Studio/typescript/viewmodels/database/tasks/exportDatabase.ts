@@ -41,7 +41,6 @@ class exportDatabase extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
 
-        this.setupDefaultExportFilename();
         this.showTransformScript.subscribe(v => {
             if (v) {
                 this.model.transformScript("function transform(doc) {\r\n  var id = doc['@metadata']['@id'];\r\n  return doc;\r\n}");
@@ -56,6 +55,8 @@ class exportDatabase extends viewModelBase {
         this.updateHelpLink("YD9M1R");
 
         this.initializeObservables();
+        
+        this.setupDefaultExportFilename();
 
         this.fetchCollections()
             .done((collections: string[]) => {
