@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -133,7 +132,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
 
-            var shouldRetry = false;
+            bool shouldRetry;
             do
             {
                 try
@@ -265,13 +264,13 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     });
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     connection?.Dispose();
                     throw;
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 tcpConnectionDisposable?.Dispose();
 
