@@ -342,8 +342,7 @@ namespace Raven.Server.Utils.Cli
 
         private static bool CommandGc(List<string> args, RavenCli cli)
         {
-            int genNum;
-            genNum = args == null || args.Count == 0 ? 2 : Convert.ToInt32(args.First());
+            var genNum = args == null || args.Count == 0 ? 2 : Convert.ToInt32(args.First());
 
             WriteText("Before collecting, managed memory used: ", TextColor, cli, newLine: false);
             WriteText(new Size(GC.GetTotalMemory(false), SizeUnit.Bytes).ToString(), ConsoleColor.Cyan, cli);
@@ -1068,8 +1067,6 @@ namespace Raven.Server.Utils.Cli
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true }, // test cli
             [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert, Experimental = true }
         };
-
-        private LogMode _previousLogMode;
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {

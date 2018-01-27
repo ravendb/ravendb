@@ -9,20 +9,14 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
-using Raven.Server.Config.Settings;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance;
-using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -65,7 +59,7 @@ namespace Tests.Infrastructure
                     continue;
                 }
                 var follower = RachisConsensuses[i + initialCount];
-                await leader.AddToClusterAsync(follower.Url); 
+                await leader.AddToClusterAsync(follower.Url);
                 var done = await follower.WaitForTopology(Leader.TopologyModification.Voter).WaitAsync(timeout);
                 Assert.True(done, "Waited for node to become a follower for too long");
             }
@@ -179,8 +173,7 @@ namespace Tests.Infrastructure
                 {
                     lock (this)
                     {
-                        ConcurrentSet<string> set;
-                        if (_rejectionList.TryGetValue(rachis.Url, out set))
+                        if (_rejectionList.TryGetValue(rachis.Url, out var set))
                         {
                             if (set.Contains(hello.DebugSourceIdentifier))
                             {
@@ -203,8 +196,7 @@ namespace Tests.Infrastructure
                 var fromTag = from.Substring(from.IndexOf('#') + 1);
                 rejections.Add(fromTag);
                 rejections.Add(from);
-                ConcurrentSet<Tuple<string, TcpClient>> set;
-                if (_connections.TryGetValue(to, out set))
+                if (_connections.TryGetValue(to, out var set))
                 {
                     foreach (var tuple in set)
                     {
@@ -222,8 +214,7 @@ namespace Tests.Infrastructure
         {
             lock (this)
             {
-                ConcurrentSet<string> rejectionList;
-                if (_rejectionList.TryGetValue(to, out rejectionList) == false)
+                if (_rejectionList.TryGetValue(to, out var rejectionList) == false)
                     return;
                 var fromTag = from.Substring(from.IndexOf('#') + 1);
                 rejectionList.TryRemove(from);
@@ -249,9 +240,8 @@ namespace Tests.Infrastructure
         protected List<Task> IssueCommandsWithoutWaitingForCommits(RachisConsensus<CountingStateMachine> leader, int numberOfCommands, string name, int value)
         {
             Assert.True(leader.CurrentState == RachisState.Leader, "Can't append commands from non leader");
-            TransactionOperationContext context;
             List<Task> waitingList = new List<Task>();
-            using (leader.ContextPool.AllocateOperationContext(out context))
+            using (leader.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 for (var i = 0; i < 3; i++)
                 {
@@ -301,22 +291,18 @@ namespace Tests.Infrastructure
 
             protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
             {
-                int val;
-                string name;
-                Assert.True(cmd.TryGet("Name", out name));
-                Assert.True(cmd.TryGet("Value", out val));
+                Assert.True(cmd.TryGet("Name", out string name));
+                Assert.True(cmd.TryGet("Value", out int val));
                 var tree = context.Transaction.InnerTransaction.CreateTree("values");
                 tree.Increment(name, val);
-
             }
-
 
             public override bool ShouldSnapshot(Slice slice, RootObjectType type)
             {
                 return slice.ToString() == "values";
             }
 
-            public override async Task<(Stream, Action)> ConnectToPeer(string url, X509Certificate2 certificate)
+            public override async Task<(Stream Stream, Action Disconnect)> ConnectToPeer(string url, X509Certificate2 certificate)
             {
                 TimeSpan time;
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -328,7 +314,7 @@ namespace Tests.Infrastructure
                 return (tcpClient.GetStream(), () => tcpClient.Client.Disconnect(false));
             }
         }
-        
+
         public class TestCommand : CommandBase
         {
             public string Name;
