@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Handlers
                 if (int.TryParse(numberOfReplicasStr, out numberOfReplicasToWaitFor) == false)
                     ThrowInvalidInteger("numberOfReplicasToWaitFor", numberOfReplicasStr);
             }
-            var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas") ?? true;
+            var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas", required: false) ?? true;
 
             var replicatedPast = await Database.ReplicationLoader.WaitForReplicationAsync(
                 numberOfReplicasToWaitFor,
