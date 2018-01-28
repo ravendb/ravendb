@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Raven.Client.Json.Converters;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 
@@ -93,6 +94,10 @@ namespace Raven.Client.Http
                     writer.WriteComma();
                     writer.WritePropertyName(context.GetLazyString(nameof(topology.Etag)));
                     writer.WriteInteger(topology.Etag);
+                    
+                    writer.WriteComma();
+                    writer.WritePropertyName(context.GetLazyString("PersistedAt"));
+                    writer.WriteString(DateTimeOffset.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
                     
                     writer.WriteEndObject();
                 }
