@@ -11,12 +11,11 @@ namespace Raven.Client.Http
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(ClusterTopologyLocalCache).FullName);
 
-        public static void ClearTopologyFromLocalCache(string serverHash)
+        public static void Clear(string serverHash)
         {
             try
             {
-                var path = GetClusterTopologyPath(serverHash);
-
+                var path = GetPath(serverHash);
                 if (File.Exists(path) == false)
                     return;
 
@@ -25,51 +24,45 @@ namespace Raven.Client.Http
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info("Could not clear the persisted cluster replication information", e);
-                }
+                    _logger.Info("Could not clear the persisted cluster topology", e);
             }
         }
 
-        private static string GetClusterTopologyPath(string serverHash)
+        private static string GetPath(string serverHash)
         {
             return Path.Combine(AppContext.BaseDirectory, serverHash + ".raven-cluster-topology");
         }
 
-        public static ClusterTopologyResponse TryLoadClusterTopologyFromLocalCache(string serverHash, JsonOperationContext context)
+        public static ClusterTopologyResponse TryLoad(string serverHash, JsonOperationContext context)
         {
             try
             {
-                var path = GetClusterTopologyPath(serverHash);
+                var path = GetPath(serverHash);
                 if (File.Exists(path) == false)
                     return null;
 
                 using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var blittableJsonReaderObject = context.Read(stream, "raven-cluster-topology"))
                 {
-                    using (var blittableJsonReaderObject = context.Read(stream, "raven-cluster-topology"))
-                    {
-                        return JsonDeserializationClient.ClusterTopology(blittableJsonReaderObject);
-                    }
+                    return JsonDeserializationClient.ClusterTopology(blittableJsonReaderObject);
                 }
             }
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info("Could not understand the persisted cluster replication information", e);
-                }
+                    _logger.Info("Could not understand the persisted cluster topology", e);
                 return null;
             }
         }
 
-        public static void TrySavingTopologyToLocalCache(string serverHash, ClusterTopologyResponse clusterTopology, JsonOperationContext context)
+        public static void TrySaving(string serverHash, ClusterTopologyResponse clusterTopology, JsonOperationContext context)
         {
             try
             {
-                var path = GetClusterTopologyPath(serverHash);
+                var path = GetPath(serverHash);
                 if (clusterTopology == null)
                 {
-                    ClearTopologyFromLocalCache(serverHash);
+                    Clear(serverHash);
                     return;
                 }
 
@@ -90,10 +83,7 @@ namespace Raven.Client.Http
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info("Could not persist the replication information", e);
-                }
-
+                    _logger.Info("Could not persist the cluster topology", e);
             }
         }
     }

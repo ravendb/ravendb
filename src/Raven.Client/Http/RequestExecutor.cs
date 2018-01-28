@@ -44,7 +44,7 @@ namespace Raven.Client.Http
         
         private static readonly GetStatisticsOperation FailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
 
-        private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
 
         private readonly ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
@@ -245,7 +245,7 @@ namespace Raven.Client.Http
 
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
-            var lockTaken = await _updateTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
+            var lockTaken = await _updateDatabaseTopologySemaphore.WaitAsync(timeout).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;
 
@@ -257,23 +257,21 @@ namespace Raven.Client.Http
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetTopologyCommand();
-
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
+                    var topology = command.Result;
 
-                    var serverHash = ServerHash.GetServerHash(node.Url, _databaseName);
-
-                    TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
+                    DatabaseTopologyLocalCache.TrySaving(_databaseName, topology, context);
 
                     if (_nodeSelector == null)
                     {
-                        _nodeSelector = new NodeSelector(command.Result);
+                        _nodeSelector = new NodeSelector(topology);
 
                         if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
                         {
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
-                    else if (_nodeSelector.OnUpdateTopology(command.Result, forceUpdate: forceUpdate))
+                    else if (_nodeSelector.OnUpdateTopology(topology, forceUpdate: forceUpdate))
                     {
                         DisposeAllFailedNodesTimers();
                         if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
@@ -283,12 +281,12 @@ namespace Raven.Client.Http
                     }
 
                     TopologyEtag = _nodeSelector.Topology.Etag;
-                    OnTopologyUpdated(command.Result);
+                    OnTopologyUpdated(topology);
                 }
             }
             finally
             {
-                _updateTopologySemaphore.Release();
+                _updateDatabaseTopologySemaphore.Release();
             }
             return true;
         }
@@ -549,8 +547,7 @@ namespace Raven.Client.Http
 
         protected virtual bool TryLoadFromCache(string url, JsonOperationContext context)
         {
-            var serverHash = ServerHash.GetServerHash(url, _databaseName);
-            var cachedTopology = TopologyLocalCache.TryLoadTopologyFromLocalCache(serverHash, context);
+            var cachedTopology = DatabaseTopologyLocalCache.TryLoad(_databaseName, context);
 
             if (cachedTopology == null)
                 return false;
@@ -1113,7 +1110,7 @@ namespace Raven.Client.Http
             if (_disposeOnceRunner.Disposed)
                 return;
 
-            _updateTopologySemaphore.Wait();
+            _updateDatabaseTopologySemaphore.Wait();
             _disposeOnceRunner.Dispose();
         }
 
