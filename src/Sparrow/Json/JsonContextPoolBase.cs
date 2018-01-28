@@ -80,7 +80,7 @@ namespace Sparrow.Json
 
             while(current != null)
             {
-                current.Value.Dispose();
+                current.Value?.Dispose();
                 current = current.Next;
             }
         }
