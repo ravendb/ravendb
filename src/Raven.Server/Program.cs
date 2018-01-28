@@ -121,6 +121,7 @@ namespace Raven.Server
                                     Logger.Info("Unable to OpenPipe. Admin Channel will not be available to the user", e);
                                 Console.WriteLine("Warning: Admin Channel is not available");
                             }
+
                             server.Initialize();
 
                             if (CommandLineSwitches.PrintServerId)
@@ -177,18 +178,9 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
-                    if (e.ToString().Contains(@"'WriteReqPool'") &&
-                        e.ToString().Contains("System.ObjectDisposedException"))
-                    {
-                        Console.WriteLine("Ignoring Kestrel's Exception : 'Cannot access a disposed object. Object name: 'WriteReqPool'");
-                        Console.Out.Flush();
-                    }
-                    else
-                    {
-                        Console.WriteLine("Error during shutdown");
-                        Console.WriteLine(e);
-                        return -2;
-                    }
+                    Console.WriteLine("Error during shutdown");
+                    Console.WriteLine(e);
+                    return -2;
                 }
             } while (rerun);
 
