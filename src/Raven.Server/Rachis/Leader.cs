@@ -676,87 +676,89 @@ namespace Raven.Server.Rachis
             ErrorsList.Enqueue((nodeTag, alert));
             ErrorsList.Reduce(25);
         }
-
+        private DisposeLock _disposerLock = new DisposeLock("Leader");
         public void Dispose()
         {
-            bool lockTaken = false;
-            Monitor.TryEnter(this, ref lockTaken);
-            try
+            using (_disposerLock.StartDisposing())
             {
-                if (lockTaken == false)
+                bool lockTaken = false;
+                Monitor.TryEnter(this, ref lockTaken);
+                try
                 {
-                    //We need to wait that refresh ambassador finish
-                    if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
+                    if (lockTaken == false)
                     {
-                        var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
-                        if (_engine.Log.IsInfoEnabled)
+                        //We need to wait that refresh ambassador finish
+                        if (Monitor.Wait(this, TimeSpan.FromSeconds(15)) == false)
                         {
-                            _engine.Log.Info(message);
-                        }
-                        throw new TimeoutException(message);
-                    }
-                }
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"Start disposing leader {_engine.Tag} of term {Term}.");
-                }
-                _running.Lower();
-                _shutdownRequested.Set();
-                TaskExecutor.Execute(_ =>
-                {
-                    _newEntriesArrived.TrySetCanceled();
-                    var lastStateChangeReason = _engine.LastStateChangeReason;
-                    TimeoutException te = null;
-                    if (string.IsNullOrEmpty(lastStateChangeReason) == false)
-                        te = new TimeoutException(lastStateChangeReason);
-                    foreach (var entry in _entries)
-                    {
-                        if (te == null)
-                        {
-                            entry.Value.TaskCompletionSource.TrySetCanceled();
-                        }
-                        else
-                        {
-                            entry.Value.TaskCompletionSource.TrySetException(te);
+                            var message = $"{ToString()}: Refresh ambassador is taking the lock for 15 sec giving up on leader dispose";
+                            if (_engine.Log.IsInfoEnabled)
+                            {
+                                _engine.Log.Info(message);
+                            }
+                            throw new TimeoutException(message);
                         }
                     }
-                }, null);
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Start disposing leader {_engine.Tag} of term {Term}.");
+                    }
+                    _running.Lower();
+                    _shutdownRequested.Set();
+                    TaskExecutor.Execute(_ =>
+                    {
+                        _newEntriesArrived.TrySetCanceled();
+                        var lastStateChangeReason = _engine.LastStateChangeReason;
+                        TimeoutException te = null;
+                        if (string.IsNullOrEmpty(lastStateChangeReason) == false)
+                            te = new TimeoutException(lastStateChangeReason);
+                        foreach (var entry in _entries)
+                        {
+                            if (te == null)
+                            {
+                                entry.Value.TaskCompletionSource.TrySetCanceled();
+                            }
+                            else
+                            {
+                                entry.Value.TaskCompletionSource.TrySetException(te);
+                            }
+                        }
+                    }, null);
 
-                if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
-                    _leaderLongRunningWork.Join(int.MaxValue);
+                    if (_leaderLongRunningWork != null && _leaderLongRunningWork.ManagedThreadId != Thread.CurrentThread.ManagedThreadId)
+                        _leaderLongRunningWork.Join(int.MaxValue);
 
-                var ae = new ExceptionAggregator("Could not properly dispose Leader");
-                foreach (var ambasaddor in _nonVoters)
-                {
-                    ae.Execute(ambasaddor.Value.Dispose);
+                    var ae = new ExceptionAggregator("Could not properly dispose Leader");
+                    foreach (var ambasaddor in _nonVoters)
+                    {
+                        ae.Execute(ambasaddor.Value.Dispose);
+                    }
+
+                    foreach (var ambasaddor in _promotables)
+                    {
+                        ae.Execute(ambasaddor.Value.Dispose);
+                    }
+                    foreach (var ambasaddor in _voters)
+                    {
+                        ae.Execute(ambasaddor.Value.Dispose);
+                    }
+
+
+                    _newEntry.Dispose();
+                    _voterResponded.Dispose();
+                    _promotableUpdated.Dispose();
+                    _shutdownRequested.Dispose();
+                    _noop.Dispose();
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"Leader {_engine.Tag} of term {Term} was disposed");
+                    }
                 }
-
-                foreach (var ambasaddor in _promotables)
+                finally
                 {
-                    ae.Execute(ambasaddor.Value.Dispose);
-                }
-                foreach (var ambasaddor in _voters)
-                {
-                    ae.Execute(ambasaddor.Value.Dispose);
-                }
-
-
-                _newEntry.Dispose();
-                _voterResponded.Dispose();
-                _promotableUpdated.Dispose();
-                _shutdownRequested.Dispose();
-                _noop.Dispose();
-                if (_engine.Log.IsInfoEnabled)
-                {
-                    _engine.Log.Info($"Leader {_engine.Tag} of term {Term} was disposed");
+                    if (lockTaken)
+                        Monitor.Exit(this);
                 }
             }
-            finally
-            {
-                if (lockTaken)
-                    Monitor.Exit(this);
-            }
-
 
         }
 
@@ -775,99 +777,102 @@ namespace Raven.Server.Rachis
 
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
-            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenWriteTransaction())
+            using (_disposerLock.EnsureNotDisposed())
             {
-                var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
-                if (existing != null)
+                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenWriteTransaction())
                 {
-                    task = existing;
-                    return false;
+                    var existing = Interlocked.CompareExchange(ref _topologyModification, null, null);
+                    if (existing != null)
+                    {
+                        task = existing;
+                        return false;
+                    }
+
+                    var clusterTopology = _engine.GetTopology(context);
+
+                    //We need to validate that the node doesn't exists before we generate the nodeTag
+                    if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
+                    {
+                        throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
+                                                            "with validation that it is not contained by the topology but current topology contains it.");
+                    }
+
+                    if (nodeTag == null)
+                    {
+                        nodeTag = GenerateNodeTag(clusterTopology);
+                    }
+
+                    var newVotes = new Dictionary<string, string>(clusterTopology.Members);
+                    newVotes.Remove(nodeTag);
+                    var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
+                    newPromotables.Remove(nodeTag);
+                    var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
+                    newNonVotes.Remove(nodeTag);
+
+                    var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] {nodeTag}).Max();
+
+                    switch (modification)
+                    {
+                        case TopologyModification.Voter:
+                            Debug.Assert(nodeUrl != null);
+                            newVotes[nodeTag] = nodeUrl;
+                            break;
+                        case TopologyModification.Promotable:
+                            Debug.Assert(nodeUrl != null);
+                            newPromotables[nodeTag] = nodeUrl;
+                            break;
+                        case TopologyModification.NonVoter:
+                            Debug.Assert(nodeUrl != null);
+                            newNonVotes[nodeTag] = nodeUrl;
+                            break;
+                        case TopologyModification.Remove:
+                            if (clusterTopology.Contains(nodeTag) == false)
+                            {
+                                throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
+                                                                    "but it is not contained by the topology.");
+                            }
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
+                    }
+
+                    clusterTopology = new ClusterTopology(
+                        clusterTopology.TopologyId,
+                        newVotes,
+                        newPromotables,
+                        newNonVotes,
+                        highestNodeId
+                    );
+
+                    var topologyJson = _engine.SetTopology(context, clusterTopology);
+                    var index = _engine.InsertToLeaderLog(context, Term, topologyJson, RachisEntryFlags.Topology);
+
+                    if (modification == TopologyModification.Remove)
+                    {
+                        _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, Term, nodeTag);
+                    }
+
+                    context.Transaction.Commit();
+
+                    var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    _entries[index] = new CommandState
+                    {
+                        TaskCompletionSource = tcs,
+                        CommandIndex = index
+                    };
+
+                    _topologyModification = task = tcs.Task.ContinueWith(_ =>
+                    {
+                        Interlocked.Exchange(ref _topologyModification, null);
+                    });
                 }
+                _hasNewTopology.Raise();
+                _voterResponded.Set();
+                _newEntry.Set();
 
-                var clusterTopology = _engine.GetTopology(context);
-
-                //We need to validate that the node doesn't exists before we generate the nodeTag
-                if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
-                {
-                    throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
-                                                        "with validation that it is not contained by the topology but current topology contains it.");
-                }
-
-                if (nodeTag == null)
-                {
-                    nodeTag = GenerateNodeTag(clusterTopology);
-                }
-
-                var newVotes = new Dictionary<string, string>(clusterTopology.Members);
-                newVotes.Remove(nodeTag);
-                var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
-                newPromotables.Remove(nodeTag);
-                var newNonVotes = new Dictionary<string, string>(clusterTopology.Watchers);
-                newNonVotes.Remove(nodeTag);
-
-                var highestNodeId = newVotes.Keys.Concat(newPromotables.Keys).Concat(newNonVotes.Keys).Concat(new[] { nodeTag }).Max();
-
-                switch (modification)
-                {
-                    case TopologyModification.Voter:
-                        Debug.Assert(nodeUrl != null);
-                        newVotes[nodeTag] = nodeUrl;
-                        break;
-                    case TopologyModification.Promotable:
-                        Debug.Assert(nodeUrl != null);
-                        newPromotables[nodeTag] = nodeUrl;
-                        break;
-                    case TopologyModification.NonVoter:
-                        Debug.Assert(nodeUrl != null);
-                        newNonVotes[nodeTag] = nodeUrl;
-                        break;
-                    case TopologyModification.Remove:
-                        if (clusterTopology.Contains(nodeTag) == false)
-                        {
-                            throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
-                                                        "but it is not contained by the topology.");
-                        }
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(nameof(modification), modification, null);
-                }
-
-                clusterTopology = new ClusterTopology(
-                    clusterTopology.TopologyId,
-                    newVotes,
-                    newPromotables,
-                    newNonVotes,
-                    highestNodeId
-                );
-
-                var topologyJson = _engine.SetTopology(context, clusterTopology);
-                var index = _engine.InsertToLeaderLog(context, Term, topologyJson, RachisEntryFlags.Topology);
- 
-                if (modification == TopologyModification.Remove)
-                {
-                    _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context, Term, nodeTag);
-                }
-
-                context.Transaction.Commit();
-
-                var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-                _entries[index] = new CommandState
-                {
-                    TaskCompletionSource = tcs,
-                    CommandIndex = index
-                };
-
-                _topologyModification = task = tcs.Task.ContinueWith(_ =>
-                {
-                    Interlocked.Exchange(ref _topologyModification, null);
-                });
+                return true;
             }
-            _hasNewTopology.Raise();
-            _voterResponded.Set();
-            _newEntry.Set();
-
-            return true;
         }
 
         public override string ToString()
