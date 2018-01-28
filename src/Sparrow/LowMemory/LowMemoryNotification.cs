@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
-using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -47,33 +43,52 @@ namespace Sparrow.LowMemory
 
         public LowMemEventDetails[] LowMemEventDetailsStack = new LowMemEventDetails[256];
         private int _lowMemEventDetailsIndex;
+        private int _clearInactiveHandlersCounter;
 
         private void RunLowMemoryHandlers(bool isLowMemory)
         {
-            var inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>();
-
-            foreach (var lowMemoryHandler in _lowMemoryHandlers)
+            try
             {
-                if (lowMemoryHandler.TryGetTarget(out var handler))
-                {                    
-                    try
+                foreach (var lowMemoryHandler in _lowMemoryHandlers)
+                {
+                    if (lowMemoryHandler.TryGetTarget(out var handler))
                     {
-                        if (isLowMemory)
-                            handler.LowMemory();
-                        else
-                            handler.LowMemoryOver();
+                        try
+                        {
+                            if (isLowMemory)
+                                handler.LowMemory();
+                            else
+                                handler.LowMemoryOver();
+                        }
+                        catch (Exception e)
+                        {
+                            try
+                            {
+                                if (_logger.IsInfoEnabled)
+                                    _logger.Info("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+                            }
+                            catch
+                            {
+                            }
+                        }
                     }
-                    catch (Exception e)
+                    else
                     {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info("Failure to process low memory notification (low memory handler - " + handler + ")", e);
+                        // make sure that we aren't allocating here, we reserve 128 items
+                        // and worst case we'll get it in the next run
+                        if (_inactiveHandlers.Count < _inactiveHandlers.Capacity)
+                            _inactiveHandlers.Add(lowMemoryHandler);
                     }
                 }
-                else
-                    inactiveHandlers.Add(lowMemoryHandler);
+                foreach (var x in _inactiveHandlers)
+                {
+                    _lowMemoryHandlers.TryRemove(x);
+                }
             }
-
-            inactiveHandlers.ForEach(x => _lowMemoryHandlers.TryRemove(x));
+            finally
+            {
+                _inactiveHandlers.Clear();
+            }
         }
 
         private void ClearInactiveHandlers()
@@ -113,6 +128,7 @@ namespace Sparrow.LowMemory
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
         private readonly ManualResetEvent _warnAllocation = new ManualResetEvent(false);
+        private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
 
         public LowMemoryNotification(Size lowMemoryThreshold, float commitChargeThreshold)
         {
@@ -149,111 +165,172 @@ namespace Sparrow.LowMemory
         private void MonitorMemoryUsage()
         {
             NativeMemory.EnsureRegistered();
-
+            var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
+            var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
+            var timeout = 5 * 1000;
             try
             {
-                int clearInactiveHandlersCounter = 0;
-                var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
-                var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
-                var timeout = 5 * 1000;
                 while (true)
                 {
-                    long totalUnmanagedAllocations = 0;
-
-                    var handles = SelectWaitMode(paranoidModeHandles, memoryAvailableHandles);
-                    switch (WaitHandle.WaitAny(handles, timeout))
+                    try
                     {
-                        case WaitHandle.WaitTimeout:
-                            if (++clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
-                            {
-                                clearInactiveHandlersCounter = 0;
-                                ClearInactiveHandlers();
-                            }
-                            foreach (var stats in NativeMemory.ThreadAllocations.Values)
-                            {
-                                if (stats.ThreadInstance.IsAlive == false)
-                                    continue;
+                        var handles = SelectWaitMode(paranoidModeHandles, memoryAvailableHandles);
+                        var result = WaitHandle.WaitAny(handles, timeout);
+                        switch (result)
+                        {
+                            case WaitHandle.WaitTimeout:
+                                timeout = CheckMemoryStatus();
+                                break;
+                            case 0:
+                                SimulateLowMemory();
+                                break;
+                            case 2: // check allocations
+                                _warnAllocation.Reset();
+                                goto case WaitHandle.WaitTimeout;
+                            case 1: // shutdown requested
+                                return;
+                            default:
+                                return;
+                        }
+                    }
+                    catch (OutOfMemoryException)
+                    {
+                        try
+                        {
+                            if(_logger.IsInfoEnabled)
+                                _logger.Info("Out of memory error in the low memory notification thread, will wait 5 seconds before trying to check memory status again. The system is likely running out of memory");
+                        }
+                        catch 
+                        {
+                        }
 
-                                totalUnmanagedAllocations += stats.TotalAllocated;
-                            }
-
-                            var memInfo = MemoryInformation.GetMemoryInfo();
-
-                            var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
-                            var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared);
-                            var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalCommittableMemory * _commitChargeThreshold);
-
-                            if (availableMem < _lowMemoryThreshold ||
-                                // at all times, we want 2% or 1 GB, the lowest of the two
-                                memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)) ||
-                                // we don't have enough room available in the commit charge, going over risking getting OOM from the OS even
-                                // if we don't use all that memory
-                                commitChargePlusMinSizeToKeepFree > memInfo.TotalCommittableMemory
-                                )
-                            {
-                                if (LowMemoryState == false)
-                                {
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info("Low memory detected, will try to reduce memory usage...");
-                                    AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk, 
-                                        availableMem.GetValue(SizeUnit.Bytes), 
-                                        totalUnmanagedAllocations,
-                                        memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
-                                        memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
-                                }
-                                LowMemoryState = true;
-                                clearInactiveHandlersCounter = 0;
-                                RunLowMemoryHandlers(true);
-                                timeout = 500;
-                            }
-                            else
-                            {
-                                if (LowMemoryState)
-                                {
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info("Back to normal memory usage detected");
-                                    AddLowMemEvent(LowMemReason.BackToNormal, 
-                                        availableMem.GetValue(SizeUnit.Bytes), 
-                                        totalUnmanagedAllocations, 
-                                        memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
-                                        memInfo.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
-                                }
-                                LowMemoryState = false;
-                                RunLowMemoryHandlers(false);
-                                timeout = availableMem < _lowMemoryThreshold * 2 ? 1000 : 5000;
-                            }
-                            break;
-                        case 0:
-                            _simulatedLowMemory.Reset();
-                            LowMemoryState = !LowMemoryState;
-                            var memInfoForLog = MemoryInformation.GetMemoryInfo();
-                            var availableMemForLog = memInfoForLog.AvailableMemory.GetValue(SizeUnit.Bytes);
-                            AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation, 
-                                availableMemForLog,
-                                totalUnmanagedAllocations, 
-                                memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
-                                memInfoForLog.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
-                            if (_logger.IsInfoEnabled)
-                                _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
-                            RunLowMemoryHandlers(LowMemoryState);
-                            break;
-                        case 2: // check allocations
-                            _warnAllocation.Reset();
-                            goto case WaitHandle.WaitTimeout;
-                        case 1: // shutdown requested
-                            return;
-                        default:
-                            return;
+                        if (_shutdownRequested.WaitOne(5000))
+                            return; // shutdown requested
                     }
                 }
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
+                if (_logger.IsOperationsEnabled)
                 {
-                    _logger.Info("Catastrophic failure in low memory notification", e);
+                    _logger.Operations("Catastrophic failure in low memory notification", e);
                 }
             }
+        }
+
+        private void SimulateLowMemory()
+        {
+            _simulatedLowMemory.Reset();
+            LowMemoryState = !LowMemoryState;
+            var memInfoForLog = MemoryInformation.GetMemoryInfo();
+            var availableMemForLog = memInfoForLog.AvailableMemory.GetValue(SizeUnit.Bytes);
+            AddLowMemEvent(LowMemoryState ? LowMemReason.LowMemStateSimulation : LowMemReason.BackToNormalSimulation,
+                availableMemForLog,
+                -2,
+                memInfoForLog.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                memInfoForLog.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
+            if (_logger.IsInfoEnabled)
+                _logger.Info("Simulating : " + (LowMemoryState ? "Low memory event" : "Back to normal memory usage"));
+            RunLowMemoryHandlers(LowMemoryState);
+        }
+
+        private int CheckMemoryStatus()
+        {
+            int timeout;
+            bool isLowMemory;
+            long totalUnmanagedAllocations;
+            (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) stats;
+            try
+            {
+                isLowMemory = GetLowMemory(out totalUnmanagedAllocations, out stats);
+            }
+            catch (OutOfMemoryException)
+            {
+                isLowMemory = true;
+                stats = (new Size(), new Size(), new Size());
+                totalUnmanagedAllocations = -1;
+            }
+            if (isLowMemory
+            )
+            {
+                if (LowMemoryState == false)
+                {
+                    try
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+
+                            _logger.Info("Low memory detected, will try to reduce memory usage...");
+
+                        }
+                        AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk,
+                            stats.AvailableMemory.GetValue(SizeUnit.Bytes),
+                            totalUnmanagedAllocations,
+                            stats.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                            stats.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
+                    }
+                    catch (OutOfMemoryException)
+                    {
+                    }
+                }
+                LowMemoryState = true;
+                _clearInactiveHandlersCounter = 0;
+                RunLowMemoryHandlers(true);
+                timeout = 500;
+            }
+            else
+            {
+                if (LowMemoryState)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info("Back to normal memory usage detected");
+                    AddLowMemEvent(LowMemReason.BackToNormal,
+                        stats.AvailableMemory.GetValue(SizeUnit.Bytes),
+                        totalUnmanagedAllocations,
+                        stats.TotalPhysicalMemory.GetValue(SizeUnit.Bytes),
+                        stats.CurrentCommitCharge.GetValue(SizeUnit.Bytes));
+                }
+                LowMemoryState = false;
+                RunLowMemoryHandlers(false);
+                timeout = stats.AvailableMemory < _lowMemoryThreshold * 2 ? 1000 : 5000;
+            }
+
+            return timeout;
+        }
+
+        private bool GetLowMemory(out long totalUnmanagedAllocations,
+            out (Size AvailableMemory, Size TotalPhysicalMemory, Size CurrentCommitCharge) memStats)
+        {
+            totalUnmanagedAllocations = 0;
+            if (++_clearInactiveHandlersCounter > 60) // 5 minutes == WaitAny 5 Secs * 60
+            {
+                _clearInactiveHandlersCounter = 0;
+                ClearInactiveHandlers();
+            }
+            foreach (var stats in NativeMemory.ThreadAllocations.Values)
+            {
+                if (stats.ThreadInstance.IsAlive == false)
+                    continue;
+
+                totalUnmanagedAllocations += stats.TotalAllocated;
+            }
+
+            var memInfo = MemoryInformation.GetMemoryInfo();
+
+            var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
+            var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared);
+            var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalCommittableMemory * _commitChargeThreshold);
+
+
+            var isLowMemory = availableMem < _lowMemoryThreshold ||
+                              // at all times, we want 2% or 1 GB, the lowest of the two
+                              memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)) ||
+                              // we don't have enough room available in the commit charge, going over risking getting OOM from the OS even
+                              // if we don't use all that memory
+                              commitChargePlusMinSizeToKeepFree > memInfo.TotalCommittableMemory;
+
+            memStats = (availableMem, memInfo.TotalPhysicalMemory, memInfo.TotalCommittableMemory);
+            return isLowMemory;
         }
 
         private WaitHandle[] SelectWaitMode(WaitHandle[] paranoidModeHandles, WaitHandle[] memoryAvailableHandles)
