@@ -775,26 +775,8 @@ namespace Raven.Client.Http
                 message += $"I've tried to access the following nodes: {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0])}.";
             }
 
-            var firstException = command.FailedNodes.Values.First();
-            
-            // this means that all exception has the same type
-            if (command.FailedNodes.All(x=> ExceptionAreEqual(x.Value, firstException)))
-            {
-                throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology, firstException);
-            }
-
             throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology,
                 new AggregateException(command.FailedNodes.Select(x => new UnsuccessfulRequestException(x.Key.Url, x.Value))));            
-        }
-
-        private bool ExceptionAreEqual(Exception first, Exception second)
-        {
-            if (first == null || second == null)
-                return first == second;
-
-            return first.GetType() == second.GetType() &&
-                   first.Message == second.Message &&
-                   ExceptionAreEqual(first.InnerException, second.InnerException);
         }
 
         private static void ThrowInvalidConcurrentSessionUsage(string command, SessionInfo sessionInfo)
