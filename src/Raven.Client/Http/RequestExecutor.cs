@@ -256,7 +256,7 @@ namespace Raven.Client.Http
 
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new GetTopologyCommand();
+                    var command = new GetDatabaseTopologyCommand();
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
                     var topology = command.Result;
 

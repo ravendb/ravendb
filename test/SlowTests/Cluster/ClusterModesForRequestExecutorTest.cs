@@ -117,13 +117,13 @@ namespace SlowTests.Cluster
                 ApplyProxiesOnRequestExecutor(serversToProxies, leaderRequestExecutor);
 
                 //wait until all nodes in database cluster are members (and not promotables)
-                //GetTopologyCommand -> does not retrieve promotables
+                //GetDatabaseTopologyCommand -> does not retrieve promotables
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var topology = new Topology();
                     while (topology.Nodes?.Count != 3)
                     {
-                        var topologyGetCommand = new GetTopologyCommand();
+                        var topologyGetCommand = new GetDatabaseTopologyCommand();
                         await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context).ConfigureAwait(false);
                         topology = topologyGetCommand.Result;
                         Thread.Sleep(50);
@@ -236,11 +236,11 @@ namespace SlowTests.Cluster
                 },  5000);
 
                 //wait until all nodes in database cluster are members (and not promotables)
-                //GetTopologyCommand -> does not retrieve promotables
+                //GetDatabaseTopologyCommand -> does not retrieve promotables
                 var topology = new Topology();
                 while (topology.Nodes?.Count != 3)
                 {
-                    var topologyGetCommand = new GetTopologyCommand();
+                    var topologyGetCommand = new GetDatabaseTopologyCommand();
                     await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context);
                     topology = topologyGetCommand.Result;
                     Thread.Sleep(50);
@@ -320,11 +320,11 @@ namespace SlowTests.Cluster
                 var leaderRequestExecutor = leaderStore.GetRequestExecutor();
 
                 //wait until all nodes in database cluster are members (and not promotables)
-                //GetTopologyCommand -> does not retrieve promotables
+                //GetDatabaseTopologyCommand -> does not retrieve promotables
                 var topology = new Topology();
                 while (topology.Nodes?.Count != 3)
                 {
-                    var topologyGetCommand = new GetTopologyCommand();
+                    var topologyGetCommand = new GetDatabaseTopologyCommand();
                     await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context);
                     topology = topologyGetCommand.Result;
                     Thread.Sleep(50);

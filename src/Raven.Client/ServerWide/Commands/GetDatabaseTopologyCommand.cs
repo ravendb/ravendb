@@ -6,7 +6,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
-    public class GetTopologyCommand : RavenCommand<Topology>
+    public class GetDatabaseTopologyCommand : RavenCommand<Topology>
     {
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
