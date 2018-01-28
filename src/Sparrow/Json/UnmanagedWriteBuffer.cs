@@ -291,7 +291,10 @@ namespace Sparrow.Json
                 var availableSpace = head.Allocation.SizeInBytes - head.Used;
                 // If the current Segment does not have any space left, allocate a new one
                 if (availableSpace == 0)
+                {
                     AllocateNextSegment(amountPending, true);
+                    head = _head;
+                }
 
                 // Write as much as we can in the current Segment
                 var amountWrittenInRound = Math.Min(amountPending, availableSpace);

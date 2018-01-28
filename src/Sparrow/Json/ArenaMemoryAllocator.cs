@@ -176,6 +176,7 @@ namespace Sparrow.Json
             {
                 // we were too eager with memory allocations?
                 newBuffer = NativeMemory.AllocateMemory(requestedSize, out thread);
+                newSize = requestedSize;
             }
 
             // Save the old buffer pointer to be released when the arena is reset

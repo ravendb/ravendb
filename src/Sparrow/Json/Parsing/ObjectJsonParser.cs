@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using Sparrow.Collections;
@@ -528,6 +529,7 @@ namespace Sparrow.Json.Parsing
                 if (_currentStateBuffer != null)
                     _ctx.ReturnMemory(_currentStateBuffer);
                 _currentStateBuffer = _ctx.GetMemory(size);
+                Debug.Assert(_currentStateBuffer != null && _currentStateBuffer.Address != null);
             }
 
             _state.StringBuffer = _currentStateBuffer.Address;
