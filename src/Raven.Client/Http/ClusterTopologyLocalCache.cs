@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Raven.Client.Json.Converters;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -73,7 +74,8 @@ namespace Raven.Client.Http
                     {
                         [nameof(clusterTopology.Topology)] = clusterTopology.Topology.ToJson(),
                         [nameof(clusterTopology.Leader)] = clusterTopology.Leader,
-                        [nameof(clusterTopology.NodeTag)] = clusterTopology.NodeTag
+                        [nameof(clusterTopology.NodeTag)] = clusterTopology.NodeTag,
+                        ["PersistedAt"] = DateTimeOffset.UtcNow.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite),
                     };
 
                     context.Write(writer, json);
