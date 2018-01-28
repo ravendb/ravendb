@@ -7,7 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Sparrow.Threading;
-using static Raven.Server.Utils.RavenThreadPool;
+using static Raven.Server.Utils.PoolOfThreads;
 
 namespace Raven.Server.Rachis
 {

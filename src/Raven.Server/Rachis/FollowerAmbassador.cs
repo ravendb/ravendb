@@ -60,7 +60,7 @@ namespace Raven.Server.Rachis
         private long _lastReplyFromFollower;
         private long _lastSendToFollower;
         private string _lastSentMsg;
-        private RavenThreadPool.LongRunningWork _followerAmbassadorLongRunningOperation;
+        private PoolOfThreads.LongRunningWork _followerAmbassadorLongRunningOperation;
         private RemoteConnection _connection;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         private readonly long _term;
@@ -768,7 +768,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, ToString());                
+                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, ToString());                
         }
 
         public override string ToString()

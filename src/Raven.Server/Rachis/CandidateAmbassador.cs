@@ -32,7 +32,7 @@ namespace Raven.Server.Rachis
             }
         }
         public AmbassadorStatus Status;
-        private RavenThreadPool.LongRunningWork _candidateAmbassadorLongRunningWork;
+        private PoolOfThreads.LongRunningWork _candidateAmbassadorLongRunningWork;
         private readonly MultipleUseFlag _running = new MultipleUseFlag(true);
         public long TrialElectionWonAtTerm { get; set; }
         public long RealElectionWonAtTerm { get; set; }
@@ -54,7 +54,7 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             _candidateAmbassadorLongRunningWork =
-                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, $"Candidate Ambassador for {_engine.Tag} > {_tag}");                
+                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, $"Candidate Ambassador for {_engine.Tag} > {_tag}");                
         }
 
         public void Dispose()

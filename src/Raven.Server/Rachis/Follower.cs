@@ -22,7 +22,7 @@ namespace Raven.Server.Rachis
         private readonly RachisConsensus _engine;
         private readonly long _term;
         private readonly RemoteConnection _connection;
-        private RavenThreadPool.LongRunningWork _folloowerLongRunningWork;
+        private PoolOfThreads.LongRunningWork _folloowerLongRunningWork;
 
         private readonly string _debugName;
         private readonly RachisLogRecorder _debugRecorder;
@@ -754,7 +754,7 @@ namespace Raven.Server.Rachis
             _debugRecorder.Record("Follower connection accepted");
 
             _folloowerLongRunningWork = 
-                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(
+                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(
                     action: x => Run(x),
                     state: negotiation,
                     name: $"Follower thread from {_connection} in term {negotiation.Term}");

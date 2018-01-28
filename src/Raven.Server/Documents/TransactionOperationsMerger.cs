@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
         private readonly ManualResetEventSlim _waitHandle = new ManualResetEventSlim(false);
         private ExceptionDispatchInfo _edi;
         private readonly Logger _log;
-        private RavenThreadPool.LongRunningWork _txLongRunningOperation;
+        private PoolOfThreads.LongRunningWork _txLongRunningOperation;
 
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            _txLongRunningOperation = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
         }
 
         public abstract class MergedTransactionCommand

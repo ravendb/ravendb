@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private RavenThreadPool.LongRunningWork _longRunningSendingWork;
+        private PoolOfThreads.LongRunningWork _longRunningSendingWork;
         internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
 
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Replication
         public void Start()
         {
             _longRunningSendingWork =
-                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);            
+                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);            
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
@@ -839,7 +839,7 @@ namespace Raven.Server.Documents.Replication
             
             _connectionDisposed.Set();
 
-            if (_longRunningSendingWork != null && _longRunningSendingWork != RavenThreadPool.LongRunningWork.Current)
+            if (_longRunningSendingWork != null && _longRunningSendingWork != PoolOfThreads.LongRunningWork.Current)
             {
                 while (_longRunningSendingWork.Join((int)timeout.TotalMilliseconds) == false)
                 {

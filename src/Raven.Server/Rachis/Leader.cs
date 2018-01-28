@@ -64,7 +64,7 @@ namespace Raven.Server.Rachis
         private readonly Dictionary<string, FollowerAmbassador> _nonVoters =
             new Dictionary<string, FollowerAmbassador>(StringComparer.OrdinalIgnoreCase);
 
-        private RavenThreadPool.LongRunningWork _leaderLongRunningWork;
+        private PoolOfThreads.LongRunningWork _leaderLongRunningWork;
 
         private int _previousPeersWereDisposed;
         
@@ -98,7 +98,7 @@ namespace Raven.Server.Rachis
             RefreshAmbassadors(clusterTopology, connections);
 
             _leaderLongRunningWork =
-                RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");                
+                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => Run(), null, $"Consensus Leader - {_engine.Tag} in term {Term}");                
         }
 
         public void StepDown()

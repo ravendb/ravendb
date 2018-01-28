@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.ETL
 
         private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
         private NativeMemory.ThreadStats _threadAllocations;
-        private RavenThreadPool.LongRunningWork _longRunningWork;
+        private PoolOfThreads.LongRunningWork _longRunningWork;
         private EtlStatsAggregator _lastStats;
         private int _statsId;
 
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.ETL
                 return;
 
             var threadName = $"{Tag} process: {Name}";
-            _longRunningWork = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x =>
+            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x =>
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.ETL
             var longRunningWork = _longRunningWork;
             _longRunningWork = null;
 
-            if (longRunningWork != RavenThreadPool.LongRunningWork.Current) // prevent a deadlock
+            if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
                 longRunningWork.Join(int.MaxValue);
         }
 

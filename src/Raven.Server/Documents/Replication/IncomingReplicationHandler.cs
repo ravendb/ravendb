@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpClient _tcpClient;
         private readonly Stream _stream;
         private readonly ReplicationLoader _parent;
-        private RavenThreadPool.LongRunningWork _incomingThread;
+        private PoolOfThreads.LongRunningWork _incomingThread;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
         public event Action<IncomingReplicationHandler, Exception> Failed;
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Replication
                 if (_incomingThread != null)
                     return; // already set by someone else, they can start it
 
-                _incomingThread = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
+                _incomingThread = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
             }            
 
             if (_log.IsInfoEnabled)
@@ -845,7 +845,7 @@ namespace Raven.Server.Documents.Replication
 
                 _replicationFromAnotherSource.Set();
 
-                if (_incomingThread != RavenThreadPool.LongRunningWork.Current)
+                if (_incomingThread != PoolOfThreads.LongRunningWork.Current)
                 {
                     try
                     {

@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal DocumentDatabase DocumentDatabase;
 
-        private RavenThreadPool.LongRunningWork _indexingThread;
+        private PoolOfThreads.LongRunningWork _indexingThread;
 
         private bool _initialized;        
 
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Indexes
                     var indexingThread = _indexingThread;
 
                     // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                    if (indexingThread != null && RavenThreadPool.LongRunningWork.Current != indexingThread)
+                    if (indexingThread != null && PoolOfThreads.LongRunningWork.Current != indexingThread)
                         indexingThread.Join(int.MaxValue);
                 });
 
@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.Indexes
         private void StartIndexingThread()
         {
             if (_indexingThread != null &&
-                _indexingThread != RavenThreadPool.LongRunningWork.Current &&
+                _indexingThread != PoolOfThreads.LongRunningWork.Current &&
                 _indexingThread.Join(0) != true)
                 throw new InvalidOperationException($"Index '{Name}' is executing.");
 
@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.Indexes
             _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
             _indexDisabled = false;
 
-            _indexingThread = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x =>
+            _indexingThread = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x =>
             {
                 try
                 {
@@ -601,7 +601,7 @@ namespace Raven.Server.Documents.Indexes
 
             // cancellation was requested, the thread will exit the indexing loop and terminate.
             // if we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-            if (RavenThreadPool.LongRunningWork.Current != indexingThread)
+            if (PoolOfThreads.LongRunningWork.Current != indexingThread)
                 indexingThread.Join(int.MaxValue);
         }
 

@@ -11,7 +11,7 @@ namespace Raven.Server.Rachis
     {
         private readonly RachisConsensus _engine;
         private readonly RemoteConnection _connection;
-        private RavenThreadPool.LongRunningWork _electorLongRunningWork;
+        private PoolOfThreads.LongRunningWork _electorLongRunningWork;
         private bool _electionWon;
 
         public Elector(RachisConsensus engine, RemoteConnection connection)
@@ -22,7 +22,7 @@ namespace Raven.Server.Rachis
 
         public void Run()
         {
-            _electorLongRunningWork = RavenThreadPool.GlobalRavenThreadPool.Value.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
         }
 
         public void HandleVoteRequest()
