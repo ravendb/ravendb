@@ -464,7 +464,7 @@ namespace Raven.Client.Util
                 return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
             
-            private static object GetDefault(Type type)
+            public static object GetDefault(Type type)
             {
                 if (type.GetTypeInfo().IsValueType)
                 {
@@ -1056,7 +1056,71 @@ namespace Raven.Client.Util
                 }
             }
         }
-               
+
+        public class NewArraySupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is MethodCallExpression mce &&
+                    mce.Method.DeclaringType == typeof(Array) &&
+                    mce.Method.Name == "Empty")
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(mce))
+                    {
+                        writer.Write("[]");
+                    }
+
+                    return;
+                }
+
+                if (context.Node.NodeType == ExpressionType.NewArrayBounds && context.Node is NewArrayExpression nae)
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(nae))
+                    {
+                        writer.Write("[");
+
+                        if (nae.Expressions.Count > 0 && 
+                            nae.Expressions[0] is ConstantExpression val && 
+                            val.Value is int asInt)
+                        {                           
+                            if (asInt != 0)
+                            {
+                                var elementsType = nae.Type.GetElementType();
+                                var defaultVal = LinqMethodsSupport.GetDefault(elementsType);
+
+                                if (defaultVal is bool)
+                                {
+                                    defaultVal = "false";
+                                }
+                                else if (defaultVal is char)
+                                {
+                                    defaultVal = '0';
+                                }
+
+                                for (var i = 0; i < asInt; i++)
+                                {
+                                    writer.Write(defaultVal ?? "null");
+                                    if (i < asInt - 1)
+                                        writer.Write(", ");
+                                }
+                            }                          
+                        }
+
+                        writer.Write("]");
+                    }
+                }
+            }
+
+        }
+
+
+
         public class NullComparisonSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)

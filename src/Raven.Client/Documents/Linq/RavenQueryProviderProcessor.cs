@@ -1966,6 +1966,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.NullableSupport(),
+                    new JavascriptConversionExtensions.NewArraySupport(),
                     new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes,
@@ -2203,6 +2204,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
                     new JavascriptConversionExtensions.NullComparisonSupport(),
                     new JavascriptConversionExtensions.NullableSupport(),
+                    new JavascriptConversionExtensions.NewArraySupport(),
                     new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
                     new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
                     MemberInitAsJson.ForAllTypes));
