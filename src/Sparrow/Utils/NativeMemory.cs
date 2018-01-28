@@ -20,19 +20,18 @@ namespace Sparrow.Utils
 
         public class ThreadStats
         {
-            public string Name;
             public int Id;
             public int UnmanagedThreadId;
             public long Allocations;
             public long ReleasesFromOtherThreads;
             public Thread ThreadInstance;
+            public string Name => ThreadInstance.Name;
 
             public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
 
             public ThreadStats()
             {
                 ThreadInstance = Thread.CurrentThread;
-                Name = ThreadInstance.Name;
                 Id = ThreadInstance.ManagedThreadId;
                 UnmanagedThreadId = PlatformDetails.RunningOnPosix ? 
                     Syscall.gettid() : 
