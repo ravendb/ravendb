@@ -534,22 +534,24 @@ namespace Raven.Server.Commercial
         private static X509Certificate2 BuildNewPfx(SetupInfo setupInfo, byte[] cert, RSA privateKey)
         {
             var certificate = new X509Certificate2(cert);
-
-            var certBytesWithKey = certificate.CopyWithPrivateKey(privateKey).Export(X509ContentType.Pfx);
+            var certWithKey = certificate.CopyWithPrivateKey(privateKey);
 
             Pkcs12Store store = new Pkcs12StoreBuilder().Build();
                         
-            store.Load(new MemoryStream(certBytesWithKey), Array.Empty<char>());
             var chain = new X509Chain();
             chain.Build(certificate);
 
             foreach (var item in chain.ChainElements)
             {
-                if (item.Certificate.Thumbprint == certificate.Thumbprint)
-                    continue;
-                
                 var x509Certificate = DotNetUtilities.FromX509Certificate(item.Certificate);
 
+                if (item.Certificate.Thumbprint == certificate.Thumbprint)
+                {
+                    var key = new AsymmetricKeyEntry(DotNetUtilities.GetKeyPair(certWithKey.PrivateKey).Private);
+                    store.SetKeyEntry(x509Certificate.SubjectDN.ToString(), key, new[] { new X509CertificateEntry(x509Certificate) });
+                    continue;
+                }
+                
                 store.SetCertificateEntry(item.Certificate.Subject, new X509CertificateEntry(x509Certificate));
             }
             
