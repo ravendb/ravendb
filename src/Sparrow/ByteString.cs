@@ -1492,20 +1492,23 @@ namespace Sparrow
 
         public void Dispose()
         {
-            if (_disposed)
-                return;
-
-            GC.SuppressFinalize(this);
-
-            _disposed = true;
-
-            foreach (var segment in _wholeSegments)
+            lock (this)
             {
-                ReleaseSegment(segment);
-            }
+                if (_disposed)
+                    return;
 
-            _wholeSegments.Clear();
-            _internalReadyToUseMemorySegments.Clear();
+                GC.SuppressFinalize(this);
+
+                _disposed = true;
+
+                foreach (var segment in _wholeSegments)
+                {
+                    ReleaseSegment(segment);
+                }
+
+                _wholeSegments.Clear();
+                _internalReadyToUseMemorySegments.Clear();
+            }
         }
 
         [ThreadStatic] private static bool _isFinalizerThread;
