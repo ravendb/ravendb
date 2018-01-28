@@ -43,7 +43,10 @@ namespace Raven.Server.Documents.Patch
                 value = new BlittableObjectProperty(this, key);
                 if (propertyIndex == -1)
                 {
-                    value.Value = new JsValue(new ObjectInstance(Engine));
+                    value.Value = new JsValue(new ObjectInstance(Engine)
+                    {
+                        Extensible = true
+                    });
                 }
                 OwnValues[key] = value;
                 Deletes?.Remove(key);

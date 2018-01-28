@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Employee = Orders.Employee;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -356,6 +357,91 @@ loadToAddresses(load(this.AddressId));
                 stats = dest.Maintenance.Send(new GetStatisticsOperation());
 
                 Assert.Equal(12, stats.CountOfDocuments);
+            }
+        }
+
+        [Fact]
+        public void Loading_to_different_collections_using_this()
+        {
+            using (var src = GetDocumentStore())
+            using (var dest = GetDocumentStore())
+            {
+                var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses != 0);
+
+                AddEtl(src, dest, "Employees", @"
+loadToPeople(this);
+loadToAddresses(this.Address);
+");
+                const int count = 5;
+
+                using (var session = src.OpenSession())
+                {
+                    for (int i = 1; i <= count; i++)
+                    {
+                        session.Store(new Employee
+                        {
+                            FirstName = "James",
+                            LastName = "Smith",
+                            Address = new Orders.Address()
+                            {
+                                Country = "USA",
+                                City = "New York"
+                            }
+                        });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    for (var i = 1; i <= count; i++)
+                    {
+                        var person = session.Advanced.LoadStartingWith<Employee>($"employees/{i}-A/people/")[0];
+                        Assert.NotNull(person);
+                        Assert.Equal("James", person.FirstName);
+
+                        var metadata = session.Advanced.GetMetadataFor(person);
+                        Assert.Equal("People", metadata[Constants.Documents.Metadata.Collection]);
+
+                        var address = session.Advanced.LoadStartingWith<Address>($"employees/{i}-A/addresses/")[0];
+                        Assert.NotNull(address);
+                        Assert.Equal("New York", address.City);
+
+                        metadata = session.Advanced.GetMetadataFor(address);
+                        Assert.Equal("Addresses", metadata[Constants.Documents.Metadata.Collection]);
+                    }
+                }
+
+                var stats = dest.Maintenance.Send(new GetStatisticsOperation());
+
+                Assert.Equal(10, stats.CountOfDocuments);
+
+                etlDone.Reset();
+
+                using (var session = src.OpenSession())
+                {
+                    session.Delete("employees/3-A");
+
+                    session.SaveChanges();
+                }
+
+                etlDone.Wait(TimeSpan.FromSeconds(30));
+
+                using (var session = dest.OpenSession())
+                {
+                    var persons = session.Advanced.LoadStartingWith<Employee>("employees/3-A/people/");
+                    Assert.Equal(0, persons.Length);
+
+                    var addresses = session.Advanced.LoadStartingWith<Address>("employees/3-A/addresses/");
+                    Assert.Equal(0, addresses.Length);
+                }
+
+                stats = dest.Maintenance.Send(new GetStatisticsOperation());
+
+                Assert.Equal(8, stats.CountOfDocuments);
             }
         }
 
