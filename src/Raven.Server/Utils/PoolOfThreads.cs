@@ -3,16 +3,24 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
-using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
-    public class RavenThreadPool : IDisposable
+    /// <summary>
+    /// This is not a thread pool, this is a pool of threads.
+    /// It is intended for checking out long running threads and will reuse them
+    /// when the running job is done. 
+    /// Threads checked out from here may be mutated by the caller and their state will
+    /// be wiped when they are (automatically) returned to the system. 
+    /// 
+    /// This is intended for _BIG_ tasks and it is not a replacement for the thread pool.
+    /// </summary>
+    public class PoolOfThreads : IDisposable
     {
-        internal static readonly Lazy<RavenThreadPool> GlobalRavenThreadPool = new Lazy<RavenThreadPool>(() =>
+        internal static readonly Lazy<PoolOfThreads> GlobalRavenThreadPool = new Lazy<PoolOfThreads>(() =>
         {
-            return new RavenThreadPool();
+            return new PoolOfThreads();
         });
 
 
@@ -82,7 +90,7 @@ namespace Raven.Server.Utils
             private Action<object> _action;
             private object _state;
             private string _name;
-            private RavenThreadPool _parent;
+            private PoolOfThreads _parent;
             private LongRunningWork _workIsDone;
 
             public DateTime StartedAt { get; internal set; }
@@ -98,7 +106,7 @@ namespace Raven.Server.Utils
                 
             }
 
-            public PooledThread(RavenThreadPool pool)
+            public PooledThread(PoolOfThreads pool)
             {                
                 _parent = pool;
             }
