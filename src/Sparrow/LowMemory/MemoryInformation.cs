@@ -27,6 +27,8 @@ namespace Sparrow.LowMemory
         {
             AvailableMemory = new Size(256, SizeUnit.Megabytes),
             TotalPhysicalMemory = new Size(256, SizeUnit.Megabytes),
+            TotalCommittableMemory = new Size(384, SizeUnit.Megabytes),// also include "page file"
+            CurrentCommitCharge = new Size(256, SizeUnit.Megabytes),
             InstalledMemory = new Size(256, SizeUnit.Megabytes),
             MemoryUsageRecords =
             new MemoryInfoResult.MemoryUsageLowHigh
@@ -181,6 +183,8 @@ namespace Sparrow.LowMemory
 
                     return new MemoryInfoResult
                     {
+                        TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
+                        CurrentCommitCharge = new Size((long)memoryStatus.ullAvailPageFile, SizeUnit.Bytes),
                         AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
                         TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                         InstalledMemory = new Size(installedMemoryInKb, SizeUnit.Kilobytes),
@@ -288,6 +292,10 @@ namespace Sparrow.LowMemory
 
                 return new MemoryInfoResult
                 {
+                    // TODO: figure out what this value should be, probably swap + ram
+                    TotalCommittableMemory = totalPhysicalMemory,
+                    CurrentCommitCharge = availableRam,
+
                     AvailableMemory = availableRam,
                     TotalPhysicalMemory = totalPhysicalMemory,
                     InstalledMemory = totalPhysicalMemory,
@@ -423,6 +431,10 @@ namespace Sparrow.LowMemory
             public MemoryUsageIntervals High;
             public MemoryUsageIntervals Low;
         }
+
+        public Size TotalCommittableMemory;
+        public Size CurrentCommitCharge;
+
         public Size TotalPhysicalMemory;
         public Size InstalledMemory;
         public Size AvailableMemory;

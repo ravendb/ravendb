@@ -52,6 +52,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var humanSizes = new DynamicJsonValue
                 {
                     ["FreeMem"] = Size.Humane(item.FreeMem),
+                    ["CurrentCommitCharge"] = Size.Humane(item.CurrentCommitCharge),
                     ["TotalUnmanaged"] = Size.Humane(item.TotalUnmanaged),
                     ["PhysicalMem"] = Size.Humane(item.PhysicalMem),
                     ["Threshold"] = Size.Humane(item.LowMemThreshold)
@@ -61,6 +62,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     ["Event"] = item.Reason,
                     ["FreeMem"] = item.FreeMem,
+                    ["CurrentCommitCharge"] = item.CurrentCommitCharge,
                     ["TotalUnmanaged"] = item.TotalUnmanaged,
                     ["PhysicalMem"] = item.PhysicalMem,
                     ["TimeOfEvent"] = item.Time,
