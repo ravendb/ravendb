@@ -762,17 +762,28 @@ namespace Raven.Client.Http
                 ExceptionDispatchInfo.Capture(command.FailedNodes.First().Value).Throw();
 
             var message = $"Tried to send '{command.GetType().Name}' request via `{request.Method} {request.RequestUri.PathAndQuery}` " +
-                          $"to all configured nodes in the topology, none of the attempt succeeded. {Environment.NewLine}";                          
+                          $"to all configured nodes in the topology, none of the attempt succeeded. {Environment.NewLine}";
 
             if (_topologyTakenFromNode != null)
+                message += $"I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}";
+
+            var nodes = _nodeSelector?.Topology.Nodes;
+            if (nodes == null)
             {
-                message += $"I was able to fetch {_topologyTakenFromNode.Database} topology from {_topologyTakenFromNode.Url}.{Environment.NewLine}" +
-                           $"Fetched topology:{Environment.NewLine}" +
-                           $"{string.Join(Environment.NewLine, _nodeSelector?.Topology.Nodes.Select(x => $"{{ Url: {x.Url}, ClusterTag: {x.ClusterTag}, ServerRole: {x.ServerRole} }}"))}";
+                message += "Topology is empty.";
             }
             else
             {
-                message += $"I've tried to access the following nodes: {string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0])}.";
+                message += "Topology:";
+                foreach (var node in nodes)
+                {
+                    command.FailedNodes.TryGetValue(node, out var exception);
+                    message += Environment.NewLine +
+                               $"[Url: {node.Url}, " +
+                               $"ClusterTag: {node.ClusterTag}, " +
+                               $"ServerRole: {node.ServerRole}, " +
+                               $"Exception: {exception.ToString() ?? "No exception"}]";
+                }
             }
 
             throw new AllTopologyNodesDownException(message, _nodeSelector?.Topology,
