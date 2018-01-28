@@ -782,7 +782,7 @@ namespace Raven.Client.Http
                                $"[Url: {node.Url}, " +
                                $"ClusterTag: {node.ClusterTag}, " +
                                $"ServerRole: {node.ServerRole}, " +
-                               $"Exception: {exception.ToString() ?? "No exception"}]";
+                               $"Exception: {exception?.Message ?? "No exception"}]";
                 }
             }
 
