@@ -8,10 +8,5 @@ namespace Raven.Client.Http
         {
             return Hashing.XXHash64.CalculateRaw(url.ToLower()).ToString("X");
         }
-
-        internal static string GetServerHash(string url, string database)
-        {
-            return Hashing.XXHash64.CalculateRaw(url.ToLower(), Hashing.XXHash64.CalculateRaw(database.ToLower())).ToString("X");
-        }
     }
 }
