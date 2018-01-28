@@ -22,7 +22,7 @@ namespace Raven.Server.Rachis
 
         public void Run()
         {
-            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
+            _electorLongRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleVoteRequest(), null, $"Elector for candidate {_connection.Source}");            
         }
 
         public void HandleVoteRequest()

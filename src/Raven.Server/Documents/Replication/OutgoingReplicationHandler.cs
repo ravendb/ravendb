@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Replication
         public void Start()
         {
             _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);            
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReplicateToDestination(), null, OutgoingReplicationThreadName);            
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";

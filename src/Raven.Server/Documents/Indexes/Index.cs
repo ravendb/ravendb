@@ -547,7 +547,7 @@ namespace Raven.Server.Documents.Indexes
             _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
             _indexDisabled = false;
 
-            _indexingThread = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x =>
+            _indexingThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 try
                 {

@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Replication
                 if (_incomingThread != null)
                     return; // already set by someone else, they can start it
 
-                _incomingThread = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
+                _incomingThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
             }            
 
             if (_log.IsInfoEnabled)

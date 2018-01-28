@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.ETL
                 return;
 
             var threadName = $"{Tag} process: {Name}";
-            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x =>
+            _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately

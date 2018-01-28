@@ -754,7 +754,7 @@ namespace Raven.Server.Rachis
             _debugRecorder.Record("Follower connection accepted");
 
             _folloowerLongRunningWork = 
-                PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(
                     action: x => Run(x),
                     state: negotiation,
                     name: $"Follower thread from {_connection} in term {negotiation.Term}");

@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
 
         public void Start()
         {
-            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.Value.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
+            _txLongRunningOperation = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => MergeOperationThreadProc(), null, TransactionMergerThreadName);            
         }
 
         public abstract class MergedTransactionCommand

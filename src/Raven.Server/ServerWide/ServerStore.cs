@@ -263,6 +263,8 @@ namespace Raven.Server.ServerWide
                 Configuration.Memory.LowMemoryLimit,
                 Configuration.Memory.MinimumFreeCommittedMemory);
 
+            PoolOfThreads.GlobalRavenThreadPool.SetMinimumFreeCommittedMemory(Configuration.Memory.MinimumFreeCommittedMemory);
+
             if (Logger.IsInfoEnabled)
                 Logger.Info("Starting to open server store for " + (Configuration.Core.RunInMemory ? "<memory>" : Configuration.Core.DataDirectory.FullPath));
 

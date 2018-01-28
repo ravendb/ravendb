@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -18,11 +19,22 @@ namespace Raven.Server.Utils
     /// </summary>
     public class PoolOfThreads : IDisposable
     {
-        internal static readonly Lazy<PoolOfThreads> GlobalRavenThreadPool = new Lazy<PoolOfThreads>(() =>
+        private static readonly Lazy<PoolOfThreads> _globalRavenThreadPool = new Lazy<PoolOfThreads>(() =>
         {
             return new PoolOfThreads();
         });
 
+        public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
+
+        private float _minimumFreeCommittedMemory = 0.05f;
+
+        public void SetMinimumFreeCommittedMemory(float min)
+        {
+            if (min <= 0)
+                throw new ArgumentException("MinimumFreeCommittedMemory must be positive, but was: " + min);
+
+            _minimumFreeCommittedMemory = min;
+        }
 
         private readonly ConcurrentQueue<PooledThread> _pool = new ConcurrentQueue<PooledThread>();
         private bool _disposed;
@@ -66,6 +78,18 @@ namespace Raven.Server.Utils
         {
             if (_pool.TryDequeue(out var pooled) == false)
             {
+                // we are about to create a new thread, might not always be a good idea:
+                // https://ayende.com/blog/181537-B/production-test-run-overburdened-and-under-provisioned
+                // https://ayende.com/blog/181569-A/threadpool-vs-pool-thread
+
+                var memInfo = MemoryInformation.GetMemoryInfo();
+                var overage = memInfo.CurrentCommitCharge * _minimumFreeCommittedMemory;
+                if (overage >= memInfo.TotalCommittableMemory)
+                {
+                    throw new InsufficientExecutionStackException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}." +
+                        $" Will not create a new thread in this situation because it may result in a stack overflow error when trying to allocate stack space but there isn't sufficient memory for that.");
+                }
+
                 pooled = new PooledThread(this);
                 var thread = new Thread(pooled.Run)
                 {
