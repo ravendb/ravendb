@@ -230,8 +230,8 @@ namespace Raven.Server.Documents.Replication
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                                 size += item.Stream.Length;
 
-                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo))
-                                numberOfItemsSent++;
+                            if (AddReplicationItemToBatch(item, _stats.Storage, skippedReplicationItemsInfo) == false)
+                                continue;
 
                             numberOfItemsSent++;
                         }
