@@ -1109,6 +1109,7 @@ namespace Raven.Server.ServerWide
                         LicenseManager,
                         DatabasesLandlord,
                         _env,
+                        _clusterRequestExecutor,
                         ContextPool,
                         ByteStringMemoryCache.Cleaner
                     };

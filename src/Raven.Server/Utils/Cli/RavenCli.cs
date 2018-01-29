@@ -30,7 +30,7 @@ using SizeClient = Raven.Client.Util.Size;
 
 namespace Raven.Server.Utils.Cli
 {
-    internal class RavenCli
+    public class RavenCli
     {
         public const string DelimiterKeyWord = "DELIMITER:";
 

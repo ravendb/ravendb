@@ -1266,6 +1266,7 @@ namespace Raven.Server
                 ea.Execute(() => LogStreamPipe?.Dispose());
                 ea.Execute(() => Metrics?.Dispose());
                 ea.Execute(() => _webHost?.Dispose());
+                ea.Execute(() => _tcpContextPool?.Dispose());
                 if (_tcpListenerStatus != null)
                 {
                     ea.Execute(() => CloseTcpListeners(_tcpListenerStatus.Listeners));
