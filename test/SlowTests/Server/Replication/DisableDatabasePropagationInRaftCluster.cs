@@ -85,7 +85,7 @@ namespace SlowTests.Server.Replication
                     //thus, session.Load() operation would fail now
 
                     var e = Assert.Throws<AllTopologyNodesDownException>(() => session.Load<User>("users/1"));
-                    Assert.IsType<DatabaseDisabledException>(e.InnerException);
+                    Assert.IsType<DatabaseDisabledException>(e.InnerException.InnerException);
                 }
 
                 //now we enable all databases, so it should propagate as well and make them available for requests
