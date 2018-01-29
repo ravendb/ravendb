@@ -238,6 +238,8 @@ namespace Raven.Database.FileSystem.Storage
 
                 backupStatus.IsRunning = false;
                 backupStatus.Completed = SystemTime.UtcNow;
+                backupStatus.Success = !state.Faulted && !state.Canceled;
+
                 SetBackupStatus(backupStatus);
             }
             catch (Exception e)
