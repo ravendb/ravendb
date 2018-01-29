@@ -172,7 +172,8 @@ namespace Sparrow.Json
             {
                 newBuffer = NativeMemory.AllocateMemory(newSize, out thread);
             }
-            catch (OutOfMemoryException)
+            catch (OutOfMemoryException oom ) 
+                when (oom.Data?.Contains("Recoverable") != true) // this can be raised if the commit charge is low
             {
                 // we were too eager with memory allocations?
                 newBuffer = NativeMemory.AllocateMemory(requestedSize, out thread);

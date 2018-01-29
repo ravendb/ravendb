@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Collections.LockFree;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Win32;
@@ -13,10 +14,17 @@ namespace Sparrow.Utils
 {
     public static unsafe class NativeMemory
     {
+        private static float _minimumFreeCommittedMemory = 0.05f;
+
         public static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues: true);
 
         public static ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>> FileMapping = new ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>>();
+
+        public static void SetMinimumFreeCommittedMemory(float min)
+        {
+            _minimumFreeCommittedMemory = min;
+        }
 
         public class ThreadStats
         {
@@ -69,6 +77,25 @@ namespace Sparrow.Utils
         public static byte* AllocateMemory(long size, out ThreadStats thread)
         {
             thread = ThreadAllocations.Value;
+
+            // Allocating when there isn't enough commit charge available is dangerous, on Linux, the OOM
+            // will try to kill us. On Windows, we might get into memory allocation failures that are not
+            // fun, so let's try to avoid it explicitly.
+            // This is not expected to be called frequently, since we are caching the memory used here
+
+            var memInfo = MemoryInformation.GetMemoryInfo();
+            var overage = memInfo.CurrentCommitCharge * _minimumFreeCommittedMemory;
+            if (overage >= memInfo.TotalCommittableMemory)
+            {
+                throw new OutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}." +
+                    $" To prevent the system running out of commit charge entirely, we'll avoid allocating any more memory, denying allocation for {new Size(size, SizeUnit.Bytes)}")
+                {
+                    Data = {
+                        ["Recoverable"] = "Nope"// not use false here to avoid boxing :-)
+                    }
+                };
+            }
+
             try
             {
                 var ptr = (byte*)Marshal.AllocHGlobal((IntPtr)size).ToPointer();
