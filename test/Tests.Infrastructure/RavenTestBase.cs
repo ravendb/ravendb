@@ -178,7 +178,7 @@ namespace FastTests
                         task.ConfigureAwait(false).GetAwaiter().GetResult();
                     }
 
-                    store.AfterDispose += (sender, args) =>
+                    store.BeforeDispose += (sender, args) =>
                     {
                         if (CreatedStores.TryRemove(store) == false)
                             return; // can happen if we are wrapping the store inside sharded one

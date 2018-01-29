@@ -68,6 +68,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public override void Dispose()
         {
+            BeforeDispose?.Invoke(this,EventArgs.Empty);
 #if DEBUG
             GC.SuppressFinalize(this);
 #endif
@@ -357,6 +358,10 @@ namespace Raven.Client.Documents
         /// Called after dispose is completed
         /// </summary>
         public override event EventHandler AfterDispose;
+        /// <summary>
+        /// Called before dispose is completed
+        /// </summary>
+        public override event EventHandler BeforeDispose;
 
         public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 

@@ -30,10 +30,8 @@ namespace Raven.Client.Documents
 
         public abstract void Dispose();
 
-        /// <summary>
-        /// 
-        /// </summary>
         public abstract event EventHandler AfterDispose;
+        public abstract event EventHandler BeforeDispose;
 
         /// <summary>
         /// Whether the instance has been disposed
