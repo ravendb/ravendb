@@ -1307,6 +1307,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
             switch (expression.Method.Name)
             {
                 case "OfType":
+                    if (expression.Arguments[0].Type.GetTypeInfo().IsGenericType)
+                    {
+                        var type = expression.Arguments[0].Type.GetGenericArguments()[0];
+                        _documentQuery.AddRootType(type);
+                    }
                     VisitExpression(expression.Arguments[0]);
                     break;
                 case "Where":
