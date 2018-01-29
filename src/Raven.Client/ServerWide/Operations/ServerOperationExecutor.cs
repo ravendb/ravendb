@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
@@ -7,7 +8,7 @@ using Raven.Client.Util;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class ServerOperationExecutor
+    public class ServerOperationExecutor : IDisposable
     {
         private readonly DocumentStoreBase _store;
         private readonly ClusterRequestExecutor _requestExecutor;
@@ -18,6 +19,13 @@ namespace Raven.Client.ServerWide.Operations
             _requestExecutor = store.Conventions.DisableTopologyUpdates
                 ? ClusterRequestExecutor.CreateForSingleNode(store.Urls[0], store.Certificate)
                 : ClusterRequestExecutor.Create(store.Urls, store.Certificate);
+
+            store.AfterDispose += (sender, args) => _requestExecutor.Dispose();
+        }
+
+        public void Dispose()
+        {
+            _requestExecutor.Dispose();
         }
 
         public void Send(IServerOperation operation)
