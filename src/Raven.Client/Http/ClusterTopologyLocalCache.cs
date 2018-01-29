@@ -12,11 +12,10 @@ namespace Raven.Client.Http
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(ClusterTopologyLocalCache).FullName);
 
-        public static void Clear(string serverHash)
+        private static void Clear(string path)
         {
             try
             {
-                var path = GetPath(serverHash);
                 if (File.Exists(path) == false)
                     return;
 
@@ -29,16 +28,16 @@ namespace Raven.Client.Http
             }
         }
 
-        private static string GetPath(string serverHash)
+        private static string GetPath(string topologyHash)
         {
-            return Path.Combine(AppContext.BaseDirectory, serverHash + ".raven-cluster-topology");
+            return Path.Combine(AppContext.BaseDirectory, topologyHash + ".raven-cluster-topology");
         }
 
-        public static ClusterTopologyResponse TryLoad(string serverHash, JsonOperationContext context)
+        public static ClusterTopologyResponse TryLoad(string topologyHash, JsonOperationContext context)
         {
             try
             {
-                var path = GetPath(serverHash);
+                var path = GetPath(topologyHash);
                 if (File.Exists(path) == false)
                     return null;
 
@@ -56,14 +55,14 @@ namespace Raven.Client.Http
             }
         }
 
-        public static void TrySaving(string serverHash, ClusterTopologyResponse clusterTopology, JsonOperationContext context)
+        public static void TrySaving(string topologyHash, ClusterTopologyResponse clusterTopology, JsonOperationContext context)
         {
             try
             {
-                var path = GetPath(serverHash);
+                var path = GetPath(topologyHash);
                 if (clusterTopology == null)
                 {
-                    Clear(serverHash);
+                    Clear(path);
                     return;
                 }
 
