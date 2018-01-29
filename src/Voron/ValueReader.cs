@@ -12,6 +12,10 @@ namespace Voron
     {
         [ThreadStatic]
         private static byte[] tmpBuf;
+        static ValueReader()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => tmpBuf = null;
+        }
 
         private int _pos;
 
@@ -27,11 +31,7 @@ namespace Voron
             _pos = 0;
         }
 
-       static ValueReader()
-        {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => tmpBuf = null;
-        }
-
+       
         public int Length
         {
             get { return _len; }

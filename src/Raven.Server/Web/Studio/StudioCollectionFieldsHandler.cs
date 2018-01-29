@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio
 {
@@ -16,13 +17,14 @@ namespace Raven.Server.Web.Studio
         [ThreadStatic]
         private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
 
+        static StudioCollectionFieldsHandler()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _buffers = null;
+        }
+
         private const int MaxArrayItemsToFetch = 16;
         
 
-        public static void CleanCache()
-        {
-            _buffers = null;
-        }
         [RavenAction("/databases/*/studio/collections/fields", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCollectionFields()
         {

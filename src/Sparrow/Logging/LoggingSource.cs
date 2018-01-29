@@ -22,6 +22,11 @@ namespace Sparrow.Logging
         private const string LoggingThreadName = "Logging Thread";
         [ThreadStatic] private static string _currentThreadId;
 
+        static LoggingSource()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _currentThreadId = null;
+        }
+
         private readonly ManualResetEventSlim _hasEntries = new ManualResetEventSlim(false);
         private readonly ThreadLocal<LocalThreadWriterState> _localState;
         private Thread _loggingThread;

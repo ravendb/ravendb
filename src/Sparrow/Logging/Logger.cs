@@ -9,7 +9,8 @@ namespace Sparrow.Logging
         private readonly string _source;
         private readonly string _logger;
         
-        [ThreadStatic] private static LogEntry _logEntry;
+        [ThreadStatic]
+        private static LogEntry _logEntry;
 
         public Logger(LoggingSource parent,string source, string logger)
         {

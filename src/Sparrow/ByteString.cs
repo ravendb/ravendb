@@ -552,7 +552,7 @@ namespace Sparrow
                 return; // nothing to do
 
             var stack = SegmentsPool.Value;
-
+            _minSize = 0;
             var current = Interlocked.Exchange(ref stack.Head, null);
             while (current != null)
             {

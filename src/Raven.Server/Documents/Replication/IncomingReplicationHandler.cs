@@ -104,6 +104,11 @@ namespace Raven.Server.Documents.Replication
         [ThreadStatic]
         public static bool IsIncomingReplication;
 
+        static IncomingReplicationHandler()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => IsIncomingReplication = false;
+        }
+
         private readonly AsyncManualResetEvent _replicationFromAnotherSource = new AsyncManualResetEvent();
 
         public void OnReplicationFromAnotherSource()

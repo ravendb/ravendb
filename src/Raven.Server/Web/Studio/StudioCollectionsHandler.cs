@@ -13,6 +13,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web.Studio
 {
@@ -20,18 +21,16 @@ namespace Raven.Server.Web.Studio
     {
         [ThreadStatic]
         private static BlittableJsonReaderObject.PropertiesInsertionBuffer _buffers;
-
+        static StudioCollectionsHandler()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _buffers = null;
+        }
         private const int ColumnsSamplingLimit = 10;
         private const int StringLengthLimit = 255;
 
         private const string ObjectStubsKey = "$o";
         private const string ArrayStubsKey = "$a";
         private const string TrimmedValueKey = "$t";
-
-        public static void CleanCache()
-        {            
-            _buffers = null;
-        }
 
         [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser)]
         public Task PreviewCollection()

@@ -196,6 +196,7 @@ namespace Raven.Server.Utils
 
         [ThreadStatic] private static List<ChangeVectorEntry> _mergeVectorBuffer;
 
+
         public static string MergeVectors(string vectorAstring, string vectorBstring)
         {
             if (string.IsNullOrEmpty(vectorAstring))

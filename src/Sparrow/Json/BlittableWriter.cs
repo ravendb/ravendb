@@ -240,7 +240,11 @@ namespace Sparrow.Json
             return sizeof(int);
         }
 
-        [ThreadStatic] private static int[] _propertyArrayOffset;
+
+        [ThreadStatic]
+        private static FastList<int> _intBuffer;
+        [ThreadStatic]
+        private static int[] _propertyArrayOffset;
 
         static BlittableWriter()
         {
@@ -428,9 +432,6 @@ namespace Sparrow.Json
 
             return count;
         }
-
-        [ThreadStatic]
-        private static FastList<int> _intBuffer;
 
         public unsafe int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {

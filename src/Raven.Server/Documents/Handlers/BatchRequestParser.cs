@@ -41,11 +41,12 @@ namespace Raven.Server.Documents.Handlers
             #endregion
         }
 
-        [ThreadStatic]
-        private static Stack<CommandData[]> _cache;
-
+    
         private static readonly CommandData[] Empty = new CommandData[0];
         private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
+
+        [ThreadStatic]
+        private static Stack<CommandData[]> _cache;
 
         static BatchRequestParser()
         {

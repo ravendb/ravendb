@@ -18,6 +18,7 @@ using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestions;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Utils;
 using BinaryExpression = Raven.Server.Documents.Queries.AST.BinaryExpression;
 
 namespace Raven.Server.Documents.Queries
@@ -575,6 +576,10 @@ namespace Raven.Server.Documents.Queries
         }
 
         [ThreadStatic] private static HashSet<string> _duplicateAliasHelper;
+        static QueryMetadata()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => _duplicateAliasHelper = null;
+        }
 
         private void FillSelectFields(BlittableJsonReaderObject parameters)
         {

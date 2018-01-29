@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -24,6 +25,11 @@ namespace Raven.Server.Documents.Indexes.Static
 
         [ThreadStatic]
         public static CurrentIndexingScope Current;
+
+        static CurrentIndexingScope()
+        {
+            ThreadLocalCleanup.ReleaseThreadLocalState += () => Current = null;
+        }
 
         public DynamicBlittableJson Source;
 
