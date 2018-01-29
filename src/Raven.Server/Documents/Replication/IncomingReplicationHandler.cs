@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpClient _tcpClient;
         private readonly Stream _stream;
         private readonly ReplicationLoader _parent;
-        private PoolOfThreads.LongRunningWork _incomingThread;
+        private PoolOfThreads.LongRunningWork _incomingWork;
         private readonly CancellationTokenSource _cts;
         private readonly Logger _log;
         public event Action<IncomingReplicationHandler, Exception> Failed;
@@ -86,15 +86,15 @@ namespace Raven.Server.Documents.Replication
 
         public void Start()
         {
-            if (_incomingThread != null)
+            if (_incomingWork != null)
                 return;
 
             lock (this)
             {
-                if (_incomingThread != null)
+                if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
             }            
 
             if (_log.IsInfoEnabled)
@@ -447,6 +447,7 @@ namespace Raven.Server.Documents.Replication
             return result;
         }
 
+        private int _initialReplicationBuffer = JsonOperationContext.InitialStreamSize;
         private unsafe void ReceiveSingleDocumentsBatch(DocumentsOperationContext documentsContext, int replicatedItemsCount, int attachmentStreamCount, long lastEtag, IncomingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
@@ -455,7 +456,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             var sw = Stopwatch.StartNew();
-            var writeBuffer = documentsContext.GetStream();
+            var writeBuffer = documentsContext.GetStream(_initialReplicationBuffer);
             Task task = null;
             try
             {
@@ -523,6 +524,14 @@ namespace Raven.Server.Documents.Replication
                     // ignore this failure, if this failed, we are already
                     // in a bad state and likely in the process of shutting 
                     // down
+                }
+                if(writeBuffer.SizeInBytes > _initialReplicationBuffer)
+                {
+                    if (_log.IsInfoEnabled)
+                    {
+                        _log.Info($"Increasing incoming replication buffer for {_incomingWork.Name} from {new Sparrow.Size(_initialReplicationBuffer, SizeUnit.Bytes)} to {new Sparrow.Size(writeBuffer.SizeInBytes, SizeUnit.Bytes)}.");
+                    }
+                    _initialReplicationBuffer = writeBuffer.SizeInBytes;
                 }
                 writeBuffer.Dispose();
             }
@@ -845,11 +854,11 @@ namespace Raven.Server.Documents.Replication
 
                 _replicationFromAnotherSource.Set();
 
-                if (_incomingThread != PoolOfThreads.LongRunningWork.Current)
+                if (_incomingWork != PoolOfThreads.LongRunningWork.Current)
                 {
                     try
                     {
-                        _incomingThread?.Join(int.MaxValue);
+                        _incomingWork?.Join(int.MaxValue);
                     }
                     catch (ThreadStateException)
                     {
@@ -857,7 +866,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
 
-                _incomingThread = null;
+                _incomingWork = null;
                 _cts.Dispose();
 
                 _attachmentStreamsTempFile.Dispose();

@@ -25,7 +25,8 @@ namespace Sparrow.Json
     public class JsonOperationContext : PooledItem
     {
         private int _generation;
-        private const int InitialStreamSize = 4096;
+        public const int InitialStreamSize = 4096;
+        private const int MaxInitialStreamSize = 16 * 1024 * 1024;
         private readonly int _initialSize;
         private readonly int _longLivedSize;
         private readonly ArenaMemoryAllocator _arenaAllocator;
@@ -369,9 +370,9 @@ namespace Sparrow.Json
         /// <summary>
         /// Generates new unmanaged stream. Should be disposed at the end of the usage.
         /// </summary>
-        public UnmanagedWriteBuffer GetStream()
+        public UnmanagedWriteBuffer GetStream(int initialSize)
         {
-            var bufferMemory = GetMemory(InitialStreamSize);
+            var bufferMemory = GetMemory(Math.Min(MaxInitialStreamSize, Math.Max(InitialStreamSize, initialSize)));
             return new UnmanagedWriteBuffer(this, bufferMemory);
         }
 

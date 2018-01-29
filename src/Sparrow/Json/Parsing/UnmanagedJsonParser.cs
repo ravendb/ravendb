@@ -91,7 +91,7 @@ namespace Sparrow.Json.Parsing
             _ctx = ctx;
             _state = state;
             _debugTag = debugTag;
-            _unmanagedWriteBuffer = ctx.GetStream();
+            _unmanagedWriteBuffer = ctx.GetStream(JsonOperationContext.InitialStreamSize);
         }
 
         public void SetBuffer(JsonOperationContext.ManagedPinnedBuffer inputBuffer)
@@ -127,8 +127,9 @@ namespace Sparrow.Json.Parsing
         public void NewDocument()
         {
             _maybeBeforePreamble = true;
+            var previous = _unmanagedWriteBuffer.SizeInBytes;
             _unmanagedWriteBuffer.Dispose();
-            _unmanagedWriteBuffer = _ctx.GetStream();
+            _unmanagedWriteBuffer = _ctx.GetStream(previous);
         }
 
         public (bool done, int bytesRead) Copy(byte* output, int count)

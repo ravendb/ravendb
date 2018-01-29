@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Queries
 
         public QueryHashCalculator(JsonOperationContext ctx)
         {
-            _buffer = ctx.GetStream();
+            _buffer = ctx.GetStream(JsonOperationContext.InitialStreamSize);
         }
 
         public ulong GetHash()

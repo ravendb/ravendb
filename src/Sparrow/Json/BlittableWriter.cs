@@ -19,7 +19,7 @@ namespace Sparrow.Json
         private AllocatedMemoryData _compressionBuffer;
         private AllocatedMemoryData _innerBuffer;
         private int _position;
-
+        private int _lastSize;
         public int Position => _position;
 
         public int SizeInBytes => _unmanagedWriteBuffer.SizeInBytes;
@@ -29,6 +29,7 @@ namespace Sparrow.Json
             byte* ptr;
             int size;
             _unmanagedWriteBuffer.EnsureSingleChunk(out ptr, out size);
+            _lastSize = size;
             var reader = new BlittableJsonReaderObject(
                 ptr,
                 size,
@@ -155,7 +156,7 @@ namespace Sparrow.Json
         public void ResetAndRenew()
         {
             _unmanagedWriteBuffer.Dispose();
-            _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream();
+            _unmanagedWriteBuffer = (TWriter)(object)_context.GetStream(_lastSize);
             _position = 0;
             _innerBuffer = _context.GetMemory(32);
         }

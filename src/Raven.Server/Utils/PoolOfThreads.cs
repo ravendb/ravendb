@@ -55,10 +55,12 @@ namespace Raven.Server.Utils
         {
             [ThreadStatic] public static LongRunningWork Current;            
             private ManualResetEvent _manualResetEvent;
+            public string Name;
 
-            public LongRunningWork(ManualResetEvent manualResetEvent)
+            public LongRunningWork(ManualResetEvent manualResetEvent, string name)
             {
-                this._manualResetEvent = manualResetEvent;
+                _manualResetEvent = manualResetEvent;
+                Name = name;
             }
 
             public int ManagedThreadId { get; internal set; }
@@ -140,7 +142,7 @@ namespace Raven.Server.Utils
                 _action = action;
                 _state = state;
                 _name = name;
-                _workIsDone = new LongRunningWork(new ManualResetEvent(false));
+                _workIsDone = new LongRunningWork(new ManualResetEvent(false), name);
 
                 _waitForWork.Set();
                 return _workIsDone;

@@ -465,12 +465,28 @@ Grow:
                 size = SizeInBytes;
                 return;
             }
-
+            
             UnlikelyEnsureSingleChunk(out ptr, out size);
         }
 
         private void UnlikelyEnsureSingleChunk(out byte* ptr, out int size)
         {
+            // we are using multiple segments, but the current one can fit all
+            // the required memory
+            if (_head.Allocation.SizeInBytes - _head.Used > SizeInBytes)
+            {
+                CopyTo(_head.Address + _head.Used);
+                // we need to fit in the beginning of the chunk, so we must move it backward.
+                UnmanagedMemory.Move(_head.Address, _head.Address + _head.Used, SizeInBytes);
+
+                ptr = _head.Address;
+                size = SizeInBytes;
+                _head.Used = SizeInBytes;
+                // Ensure we are thought of as a single chunk
+                _head.Previous = null;
+                return;
+            }
+
             var totalSize = SizeInBytes;
 
             // If we are here, then we have multiple chunks, we can't

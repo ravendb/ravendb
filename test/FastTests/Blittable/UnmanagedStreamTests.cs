@@ -16,7 +16,7 @@ namespace FastTests.Blittable
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                using (var newStream = ctx.GetStream())
+                using (var newStream = ctx.GetStream(JsonOperationContext.InitialStreamSize))
                 {
                     var buffer = new byte[1337];
                     new Random(1337).NextBytes(buffer);
@@ -50,7 +50,7 @@ namespace FastTests.Blittable
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemoryList = new List<AllocatedMemoryData>();
-                using (var newStream = ctx.GetStream())
+                using (var newStream = ctx.GetStream(JsonOperationContext.InitialStreamSize))
                 {
                     var totalSize = 0;
                     var rand = new Random();
@@ -102,7 +102,7 @@ namespace FastTests.Blittable
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemory = new List<AllocatedMemoryData>();
-                using (var newStream = ctx.GetStream())
+                using (var newStream = ctx.GetStream(JsonOperationContext.InitialStreamSize))
                 {
                     var rand = new Random();
                     for (var i = 5000; i > 1; i -= 500)
@@ -138,7 +138,7 @@ namespace FastTests.Blittable
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var allocatedMemoryList = new List<AllocatedMemoryData>();
-                using (var newStream = ctx.GetStream())
+                using (var newStream = ctx.GetStream(JsonOperationContext.InitialStreamSize))
                 {
                     var rand = new Random();
                     for (var i = 1; i < 5000; i += 500)
