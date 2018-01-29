@@ -158,10 +158,10 @@ namespace Sparrow.Json
             }
             
 
-            public readonly ArraySegment<byte> Buffer;
-            public readonly int Length;
+            public ArraySegment<byte> Buffer;
+            public int Length;
             public int Valid, Used;
-            public readonly byte* Pointer;
+            public byte* Pointer;
             private GCHandle? _handle;
 
             public ManagedPinnedBuffer(ArraySegment<byte> buffer, byte* pointer)
@@ -197,6 +197,14 @@ namespace Sparrow.Json
                     stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 0 * Size, Size), ptr));
                     stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 1 * Size, Size), ptr + 1 * Size));
                     stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 2 * Size, Size), ptr + 2 * Size));
+
+                    foreach (var item in stack)
+                    {
+                        // we don't need to actually finalize them, the instances so far are not holding any
+                        // reference to the 
+                        GC.SuppressFinalize(item);
+                    }
+
                     stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 3 * Size, Size), ptr + 3 * Size) { _handle = handle });
                 }
                 catch (Exception)
@@ -210,11 +218,16 @@ namespace Sparrow.Json
                 GC.SuppressFinalize(this);
                 _handle?.Free();
                 _handle = null;
+                // let's help the GC and avoid retaining the reference to the big byte buffer
+                Buffer = new ArraySegment<byte>();
+                Length = 0;
+                Pointer = null;
             }
 
             ~ManagedPinnedBuffer()
             {
-                Dispose();
+                _handle?.Free();
+                _handle = null;
             }
         }
 
