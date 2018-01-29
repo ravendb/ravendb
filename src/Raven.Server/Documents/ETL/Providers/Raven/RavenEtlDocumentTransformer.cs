@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 // ReSharper disable ForCanBeConvertedToForeach
 
@@ -48,10 +51,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
             
             if (loadedToDifferentCollection || metadata.HasProperty(Constants.Documents.Metadata.Collection) == false)
-                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
+                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, throwOnError: true);
 
             if (metadata.HasProperty(Constants.Documents.Metadata.Id) == false)
-                metadata.Put(Constants.Documents.Metadata.Id, id, false);
+                metadata.Put(Constants.Documents.Metadata.Id, id, throwOnError: true);
+
+            if (metadata.HasProperty(Constants.Documents.Metadata.Attachments))
+                metadata.Delete(Constants.Documents.Metadata.Attachments, throwOnError: true);
 
             var transformed = document.TranslateToObject(Context);
 
@@ -89,7 +95,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     SingleRun.Run(Context, "execute", new object[] {Current.Document}).Dispose();
                 }
                 else
+                {
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentId, null, item.Document.Data));
+
+                    if ((item.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
+                    {
+                        HandleDocumentAttachments(item);
+                    }
+                }
             }
             else
             {
@@ -97,6 +110,32 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     ApplyDeleteCommands(item, OperationType.Delete);
                 else
                     _commands.Add(new DeleteCommandData(item.DocumentId, null));
+            }
+        }
+
+        private void HandleDocumentAttachments(RavenEtlItem item)
+        {
+            if (item.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+            {
+                return;
+            }
+
+            metadata.Modifications = new DynamicJsonValue(metadata);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+
+            foreach (var attachment in attachments)
+            {
+                var attachmentInfo = (BlittableJsonReaderObject)attachment;
+
+                if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name))
+                {
+                    var attachmentData =
+                        Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, item.DocumentId, name, AttachmentType.Document, null);
+
+                    _commands.Add(new PutAttachmentCommandData(item.DocumentId, attachmentData.Name, attachmentData.Stream, attachmentData.ContentType,
+                        null));
+                }
             }
         }
 

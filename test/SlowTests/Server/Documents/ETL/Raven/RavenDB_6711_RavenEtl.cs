@@ -35,7 +35,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
 
             Assert.Equal(1, errors.Count);
 
-            Assert.Equal("Collections cannot be specified when ApplyToAllDocuments is set", errors[0]);
+            Assert.Equal("Collections cannot be specified when ApplyToAllDocuments is set. Script name: 'test'", errors[0]);
         }
 
         [Fact]
