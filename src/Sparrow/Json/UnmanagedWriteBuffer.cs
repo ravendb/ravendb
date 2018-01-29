@@ -488,11 +488,16 @@ Grow:
             }
 
             var totalSize = SizeInBytes;
-
-            // If we are here, then we have multiple chunks, we can't
-            // allow a growth of the last chunk, since we'll by copying over it
-            // so we force a whole new chunk
-            AllocateNextSegment(totalSize, false);
+            
+            // We might need to allocate, but we don't want to allocate the usual power of 2 * 3 
+            // because we know _exactly_ what we need
+            using (_context.AvoidOverAllocation())
+            {
+                // If we are here, then we have multiple chunks, we can't
+                // allow a growth of the last chunk, since we'll by copying over it
+                // so we force a whole new chunk
+                AllocateNextSegment(totalSize, false);
+            }
 
             // Go back in time to before we had the last chunk
             var realHead = _head;

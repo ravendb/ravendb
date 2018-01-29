@@ -1070,5 +1070,25 @@ namespace Sparrow.Json
 
             return handle.AddrOfPinnedObject();
         }
+
+        public AvoidOverAllocationScope AvoidOverAllocation()
+        {
+            _arenaAllocator.AvoidOverAllocation = true;
+            return new AvoidOverAllocationScope(this);
+        }
+
+        public struct AvoidOverAllocationScope : IDisposable
+        {
+            private JsonOperationContext _parent;
+            public AvoidOverAllocationScope(JsonOperationContext parent)
+            {
+                _parent = parent;
+            }
+
+            public void Dispose()
+            {
+                _parent._arenaAllocator.AvoidOverAllocation = false;
+            }
+        }
     }
 }

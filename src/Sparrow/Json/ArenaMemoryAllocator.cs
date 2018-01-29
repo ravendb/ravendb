@@ -39,6 +39,9 @@ namespace Sparrow.Json
         private readonly int _initialSize;
 
         public long TotalUsed;
+
+        public bool AvoidOverAllocation;
+
         private readonly SharedMultipleUseFlag _lowMemoryFlag;
 
         public long Allocated
@@ -196,6 +199,9 @@ namespace Sparrow.Json
 
         private int GetPreferredSize(int requestedSize)
         {
+            if (AvoidOverAllocation)
+                return Bits.NextPowerOf2(requestedSize);
+            
             // we need the next allocation to cover at least the next expansion (also doubling)
             // so we'll allocate 3 times as much as was requested, or as much as we already have
             // the idea is that a single allocation can server for multiple (increasing in size) calls
