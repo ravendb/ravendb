@@ -470,15 +470,10 @@
             Used by the Throws and DoesNotThrow methods.
             </summary>
         </member>
-        <member name="T:Xunit.Sdk.ExceptionAndOutputCaptureCommand">
+        <member name="T:Xunit.Sdk.TestResultCallbackCommand">
             <summary>
-            This command sets up the necessary trace listeners and standard
-            output/error listeners to capture Assert/Debug.Trace failures,
-            output to stdout/stderr, and Assert/Debug.Write text. It also
-            captures any exceptions that are thrown and packages them as
-            FailedResults, including the possibility that the configuration
-            file is messed up (which is exposed when we attempt to manipulate
-            the trace listener list).
+            Implementation of <see cref="T:Xunit.Sdk.ITestCommand"/> which executes the
+            <see cref="T:Xunit.Sdk.TestResultCallbackCommand"/> instances attached to a test method.
             </summary>
         </member>
         <member name="T:Xunit.Sdk.DelegatingTestCommand">
@@ -548,6 +543,43 @@
         </member>
         <member name="P:Xunit.Sdk.DelegatingTestCommand.Timeout">
             <inheritdoc/>
+        </member>
+        <member name="M:Xunit.Sdk.TestResultCallbackCommand.#ctor(Xunit.Sdk.ITestCommand,Xunit.Sdk.IMethodInfo)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Xunit.Sdk.TestResultCallbackCommand"/> class.
+            </summary>
+            <param name="innerCommand">The inner command.</param>
+            <param name="testMethod">The method.</param>
+        </member>
+        <member name="M:Xunit.Sdk.TestResultCallbackCommand.Execute(System.Object)">
+            <summary>
+            Executes the test method.
+            </summary>
+            <param name="testClass">The instance of the test class</param>
+            <returns>Returns information about the test run</returns>
+        </member>
+        <member name="T:Xunit.TestResultCallbackAttribute">
+            <summary>
+            Base attribute which indicates a test method interception (allows code to be run after the test is run).
+            </summary>
+        </member>
+        <member name="M:Xunit.TestResultCallbackAttribute.After(System.Reflection.MethodInfo,Xunit.Sdk.MethodResult)">
+            <summary>
+            This method is called after the test method is executed.
+            </summary>
+            <param name="methodUnderTest">The method under test</param>
+            <param name="result">The test result</param>
+        </member>
+        <member name="T:Xunit.Sdk.ExceptionAndOutputCaptureCommand">
+            <summary>
+            This command sets up the necessary trace listeners and standard
+            output/error listeners to capture Assert/Debug.Trace failures,
+            output to stdout/stderr, and Assert/Debug.Write text. It also
+            captures any exceptions that are thrown and packages them as
+            FailedResults, including the possibility that the configuration
+            file is messed up (which is exposed when we attempt to manipulate
+            the trace listener list).
+            </summary>
         </member>
         <member name="M:Xunit.Sdk.ExceptionAndOutputCaptureCommand.#ctor(Xunit.Sdk.ITestCommand,Xunit.Sdk.IMethodInfo)">
             <summary>
