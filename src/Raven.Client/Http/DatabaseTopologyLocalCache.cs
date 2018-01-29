@@ -11,11 +11,10 @@ namespace Raven.Client.Http
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger("Client", typeof(DatabaseTopologyLocalCache).FullName);
 
-        public static void Clear(string databaseName)
+        private static void Clear(string path)
         {
             try
             {
-                var path = GetPath(databaseName);
                 if (File.Exists(path) == false)
                     return;
 
@@ -28,16 +27,21 @@ namespace Raven.Client.Http
             }
         }
 
-        private static string GetPath(string databaseName)
+        private static string GetPath(string databaseName, string topologyHash)
         {
-            return Path.Combine(AppContext.BaseDirectory, databaseName + ".raven-database-topology");
+            return Path.Combine(AppContext.BaseDirectory, $"{databaseName}.{topologyHash}.raven-database-topology");
         }
 
-        public static Topology TryLoad(string databaseName, JsonOperationContext context)
+        public static Topology TryLoad(string databaseName, string topologyHash, JsonOperationContext context)
+        {
+            var path = GetPath(databaseName, topologyHash);
+            return TryLoad(path, context);
+        }
+
+        private static Topology TryLoad(string path, JsonOperationContext context)
         {
             try
             {
-                var path = GetPath(databaseName);
                 if (File.Exists(path) == false)
                     return null;
 
@@ -55,17 +59,18 @@ namespace Raven.Client.Http
             }
         }
 
-        public static void TrySaving(string databaseName, Topology topology, JsonOperationContext context)
+        public static void TrySaving(string databaseName, string topologyHash, Topology topology, JsonOperationContext context)
         {
             try
             {
+                var path = GetPath(databaseName, topologyHash);
                 if (topology == null)
                 {
                     Clear(databaseName);
                     return;
                 }
 
-                var exisitngTopology = TryLoad(databaseName, context);
+                var exisitngTopology = TryLoad(path, context);
                 if (exisitngTopology?.Etag >= topology.Etag)
                 {
                     if (_logger.IsInfoEnabled)
@@ -74,7 +79,6 @@ namespace Raven.Client.Http
                     return;
                 }
 
-                var path = GetPath(databaseName);
                 using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {

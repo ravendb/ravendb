@@ -14,7 +14,7 @@ namespace Raven.Client.Http
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions) : base(null, certificate, conventions)
+        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls) : base(null, certificate, conventions, initialUrls)
         {
             // Here we are explicitly ignoring trust issues in the case of ClusterRequestExecutor.
             // this is because we don't actually require trust, we just use the certificate
@@ -45,8 +45,9 @@ namespace Raven.Client.Http
 
         public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate, DocumentConventions conventions = null)
         {
-            url = ValidateUrls(new[] {url}, certificate)[0];
-            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default)
+            var initialUrls = new[] {url};
+            url = ValidateUrls(initialUrls, certificate)[0];
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -66,14 +67,14 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        public static ClusterRequestExecutor Create(string[] urls, X509Certificate2 certificate, DocumentConventions conventions = null)
+        public static ClusterRequestExecutor Create(string[] initialUrls, X509Certificate2 certificate, DocumentConventions conventions = null)
         {
-            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default)
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default, initialUrls)
             {
                 _disableClientConfigurationUpdates = true
             };
 
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
             return executor;
         }
 
@@ -99,8 +100,7 @@ namespace Raven.Client.Http
                     var command = new GetClusterTopologyCommand();
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
 
-                    var serverHash = ServerHash.GetServerHash(node.Url);
-                    ClusterTopologyLocalCache.TrySaving(serverHash, command.Result, context);
+                    ClusterTopologyLocalCache.TrySaving(TopologyHash, command.Result, context);
 
                     var results = command.Result;
                     var newTopology = new Topology
@@ -162,10 +162,9 @@ namespace Raven.Client.Http
             base.Dispose();
         }
 
-        protected override bool TryLoadFromCache(string url, JsonOperationContext context)
+        protected override bool TryLoadFromCache(JsonOperationContext context)
         {
-            var serverHash = ServerHash.GetServerHash(url);
-            var clusterTopology = ClusterTopologyLocalCache.TryLoad(serverHash, context);
+            var clusterTopology = ClusterTopologyLocalCache.TryLoad(TopologyHash, context);
             if (clusterTopology == null)
                 return false;
     

@@ -79,6 +79,8 @@ namespace Raven.Client.Http
 
         public long NumberOfServerRequests;
 
+        protected readonly string TopologyHash;
+
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url
         {
@@ -125,7 +127,7 @@ namespace Raven.Client.Http
             FailedRequest?.Invoke(url, e);
         }
 
-        protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions, string[] initialUrls)
         {
             Cache = new HttpCache(conventions.MaxHttpCacheSize.GetValue(SizeUnit.Bytes));
 
@@ -159,12 +161,14 @@ namespace Raven.Client.Http
             }
 
             HttpClient = lazyClient.Value;
+
+            TopologyHash = Http.TopologyHash.GetTopologyHash(initialUrls);
         }
 
-        public static RequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
+        public static RequestExecutor Create(string[] initialUrls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            var executor = new RequestExecutor(databaseName, certificate, conventions);
-            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(urls);
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls);
+            executor._firstTopologyUpdate = executor.FirstTopologyUpdate(initialUrls);
             return executor;
         }
 
@@ -178,8 +182,9 @@ namespace Raven.Client.Http
 
         public static RequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
-            url = ValidateUrls(new[] { url }, certificate)[0];
-            var executor = new RequestExecutor(databaseName, certificate, conventions)
+            var initialUrls = new[] { url };
+            url = ValidateUrls(initialUrls, certificate)[0];
+            var executor = new RequestExecutor(databaseName, certificate, conventions, initialUrls)
             {
                 _nodeSelector = new NodeSelector(new Topology
                 {
@@ -260,7 +265,7 @@ namespace Raven.Client.Http
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
                     var topology = command.Result;
 
-                    DatabaseTopologyLocalCache.TrySaving(_databaseName, topology, context);
+                    DatabaseTopologyLocalCache.TrySaving(_databaseName, TopologyHash, topology, context);
 
                     if (_nodeSelector == null)
                     {
@@ -478,11 +483,8 @@ namespace Raven.Client.Http
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                foreach (var url in initialUrls)
+                if (TryLoadFromCache(context))
                 {
-                    if (TryLoadFromCache(url, context) == false)
-                        continue;
-
                     InitializeUpdateTopologyTimer();
                     return;
                 }
@@ -545,10 +547,9 @@ namespace Raven.Client.Http
             }
         }
 
-        protected virtual bool TryLoadFromCache(string url, JsonOperationContext context)
+        protected virtual bool TryLoadFromCache(JsonOperationContext context)
         {
-            var cachedTopology = DatabaseTopologyLocalCache.TryLoad(_databaseName, context);
-
+            var cachedTopology = DatabaseTopologyLocalCache.TryLoad(_databaseName, TopologyHash, context);
             if (cachedTopology == null)
                 return false;
 
