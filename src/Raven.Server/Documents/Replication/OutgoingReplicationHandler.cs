@@ -152,18 +152,23 @@ namespace Raven.Server.Documents.Replication
                         try
                         {
                             var response = HandleServerResponse(getFullResponse: true);
-                            if (response.ReplyType == ReplicationMessageReply.ReplyType.Error)
+                            switch (response.ReplyType)
                             {
-                                var exception = new InvalidOperationException(response.Reply.Exception);
-                                if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)) ||
-                                    response.Reply.Exception.Contains(nameof(DatabaseNotRelevantException)))
-                                {
-                                    AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
-                                    DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
-                                }
+                                //The first time we start replication we need to register the destination current CV
+                                case ReplicationMessageReply.ReplyType.Ok:
+                                    LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
+                                    break;
+                                case ReplicationMessageReply.ReplyType.Error:
+                                    var exception = new InvalidOperationException(response.Reply.Exception);
+                                    if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)) ||
+                                        response.Reply.Exception.Contains(nameof(DatabaseNotRelevantException)))
+                                    {
+                                        AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
+                                        DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
+                                    }
 
-                                AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, $"Got error: {response.Reply.Exception}");
-                                throw exception;
+                                    AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, $"Got error: {response.Reply.Exception}");
+                                    throw exception;
                             }
                         }
                         catch (DatabaseDoesNotExistException e)
@@ -284,6 +289,10 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
                             {
+                                //If we got cancelled we need to break right away
+                                if (_cts.IsCancellationRequested)
+                                    break;
+
                                 // open tx
                                 // read current change vector compare to last sent
                                 // if okay, send cv
@@ -301,7 +310,19 @@ namespace Raven.Server.Documents.Replication
                                         SendHeartbeat(null);
                                     }
                                     else
-                                    {
+                                    {                                        
+                                        //Send a heartbeat first so we will get an updated CV of the destination
+                                        var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                                        //snapshot last CV and send heartbeat
+                                        var prevChangeVector = _lastSentChangeVectorDuringHeartbeat;
+                                        SendHeartbeat(currentChangeVector);
+                                        //If our previous CV is already merged to the destination wait a bit more 
+                                        if (prevChangeVector != null && ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, prevChangeVector) ==
+                                            ConflictStatus.AlreadyMerged)
+                                        {
+                                            continue;
+                                        }
+
                                         // we have updates that we need to send to the other side
                                         // let's do that.. 
                                         // this can happen if we got replication from another node
@@ -393,7 +414,7 @@ namespace Raven.Server.Documents.Replication
                     TaskId = taskId,
                     NodeTag = _parent._server.NodeTag,
                     LastSentEtag = _lastSentDocumentEtag,
-                    SourceChangeVector = _lastSentChangeVector,
+                    SourceChangeVector = _lastSentChangeVectorDuringHeartbeat,
                     DestinationChangeVector = LastAcceptedChangeVector
                 }
             };
@@ -656,7 +677,7 @@ namespace Raven.Server.Documents.Replication
 
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
-        private string _lastSentChangeVector;
+        private string _lastSentChangeVectorDuringHeartbeat;
         internal void SendHeartbeat(string changeVector)
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
@@ -674,7 +695,7 @@ namespace Raven.Server.Documents.Replication
                     };
                     if (changeVector != null)
                     {
-                        _lastSentChangeVector = changeVector;
+                        _lastSentChangeVectorDuringHeartbeat = changeVector;
                         heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
                     }
                     documentsContext.Write(writer, heartbeat);
