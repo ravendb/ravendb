@@ -40,12 +40,12 @@ namespace Raven.Client.Documents.Operations.ETL
             if (ApplyToAllDocuments)
             {
                 if (Collections != null && Collections.Count > 0)
-                    errors.Add($"{nameof(Collections)} cannot be specified when {nameof(ApplyToAllDocuments)} is set");
+                    errors.Add($"{nameof(Collections)} cannot be specified when {nameof(ApplyToAllDocuments)} is set. Script name: '{Name}'");
             }
             else
             {
                 if (Collections == null || Collections.Count == 0)
-                    errors.Add($"{nameof(Collections)} need be specified or {nameof(ApplyToAllDocuments)} has to be set");
+                    errors.Add($"{nameof(Collections)} need be specified or {nameof(ApplyToAllDocuments)} has to be set. Script name: '{Name}'");
             }
 
             if (string.IsNullOrEmpty(Script) == false)
@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Operations.ETL
                 var collections = GetCollectionsFromScript();
 
                 if (collections == null || collections.Length == 0)
-                    errors.Add("No `loadTo[CollectionName]` method call found in the script");
+                    errors.Add($"No `loadTo[CollectionName]` method call found in '{Name}' script");
 
                 HasLoadAttachment = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
             }
