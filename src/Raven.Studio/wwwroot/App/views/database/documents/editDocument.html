@@ -36,7 +36,7 @@
                     </p>
                     <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange()">
                         <small>
-                            <span class="icon-warning"></span> Document has been modified outside of studio - <a href="#" data-bind="click: refreshDocument">click here to refresh.</a>
+                            <span class="icon-warning"></span> This document has been modified outside of the studio. <a href="#" data-bind="click: refreshDocument">Click here to refresh.</a>
                         </small>
                     </p>
                 </div>
@@ -57,14 +57,14 @@
                     </button>
                     <a  data-bind="attr: { href: latestRevisionUrl }, visible: inReadOnlyMode()" class="btn btn-default">
                         <i class="icon-latest"></i>
-                        <span>See current document</span>
+                        <span>See the current document</span>
                     </a>
                 </div>
                 <div class="pull-right-sm" data-bind="visible: !isDeleteRevision()">
                     <div class="btn-group">
                         <button type="button" class="btn btn-default" data-bind="click: toClipboard">
                             <i class="icon-copy-to-clipboard"></i>
-                            <span>Copy to clipboard</span>
+                            <span>Copy to the clipboard</span>
                         </button>
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="caret"></span>
@@ -72,7 +72,7 @@
                         </button>
                         <ul class="dropdown-menu">
                             <li>
-                                <a href="#" data-bind="click: generateClass, enable: !isSaveEnabled()">Copy as C# class</a>
+                                <a href="#" data-bind="click: generateClass, enable: !isSaveEnabled()">Copy as a C# class</a>
                             </li>
                         </ul>
                     </div>
@@ -93,7 +93,7 @@
                 <div class="absolute-center padding bg-info text-center">
                     <i class="icon-trash icon-xl"></i>
 
-                    This document has been removed on<span data-bind="text: metadata().lastModifiedFullDate"></span>.
+                    This document was removed on <span data-bind="text: metadata().lastModifiedFullDate"></span>.
                     <br />
                     Go to <a href="#" class="text-revisions" data-bind="click: _.partial(connectedDocuments.activateRevisions, true)">REVISIONS</a> to see entire document history.
                 </div>
