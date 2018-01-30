@@ -13,7 +13,7 @@ namespace Sparrow.Threading
     {
         private readonly Action _action;
         private Tuple<MultipleUseFlag, TaskCompletionSource<object>> _state 
-            = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>());
+            = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
 
         public DisposeOnce(Action action)
         {
@@ -75,7 +75,7 @@ namespace Sparrow.Threading
                     // callers to the Dispose are either getting the error or can start
                     // calling this again
                     Interlocked.CompareExchange(ref _state,
-                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>()),
+                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously)),
                         localState
                     );
 
@@ -125,7 +125,7 @@ namespace Sparrow.Threading
     {
         private readonly Func<Task> _action;
         private Tuple<MultipleUseFlag, TaskCompletionSource<object>> _state 
-            = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>());
+            = Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
 
         public DisposeOnceAsync(Func<Task> action)
         {
@@ -163,12 +163,12 @@ namespace Sparrow.Threading
                 // attempting to dispose will stop here and wait until it
                 // is over. This call to Wait may throw with an
                 // AggregateException
-                await localState.Item2.Task;
+                await localState.Item2.Task.ConfigureAwait(false);
             }
 
             try
             {
-                await _action();
+                await _action().ConfigureAwait(false);
 
                 // Let everyone know this run worked out!
                 localState.Item2.SetResult(null);
@@ -186,7 +186,7 @@ namespace Sparrow.Threading
                     // callers to the Dispose are either getting the error or can start
                     // calling this again
                     Interlocked.CompareExchange(ref _state,
-                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>()),
+                        Tuple.Create(new MultipleUseFlag(), new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously)),
                         localState
                     );
 

@@ -8,7 +8,7 @@ namespace Sparrow.Json.Parsing
 {
     public unsafe class UnmanagedJsonParser : IJsonParser
     {
-        private static readonly byte[] NaN = {(byte)'N', (byte)'a', (byte)'N'};
+        private static readonly byte[] NaN = { (byte)'N', (byte)'a', (byte)'N' };
         private static readonly byte[] PositiveInfinity =
         {
             (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
@@ -132,7 +132,7 @@ namespace Sparrow.Json.Parsing
             _unmanagedWriteBuffer = _ctx.GetStream(previous);
         }
 
-        public (bool done, int bytesRead) Copy(byte* output, int count)
+        public (bool Done, int BytesRead) Copy(byte* output, int count)
         {
             var amountToCopy = Math.Min(count, _bufSize - _pos);
             Memory.Copy(output, _inputBuffer + _pos, amountToCopy);
@@ -147,7 +147,7 @@ namespace Sparrow.Json.Parsing
             if (state.Continuation != JsonParserTokenContinuation.None || _maybeBeforePreamble)
                 goto ReadContinuation;
 
-            MainLoop:
+MainLoop:
 
             byte b;
             byte* currentBuffer = _inputBuffer;
@@ -208,7 +208,7 @@ namespace Sparrow.Json.Parsing
                 goto ReturnFalse;
             }
 
-            ParseString:
+ParseString:
             {
                 state.EscapePositions.Clear();
                 _unmanagedWriteBuffer.Clear();
@@ -224,7 +224,7 @@ namespace Sparrow.Json.Parsing
                 goto ReturnTrue;
             }
 
-            ParseNumber:
+ParseNumber:
             {
                 _unmanagedWriteBuffer.Clear();
                 state.EscapePositions.Clear();
@@ -250,19 +250,19 @@ namespace Sparrow.Json.Parsing
                 goto ReturnTrue;
             }
 
-            Error:
+Error:
             ThrowCannotHaveCharInThisPosition(b);
 
-            ReturnTrue:
+ReturnTrue:
             _pos = pos;
             return true;
 
-            ReturnFalse:
+ReturnFalse:
             _pos = pos;
             return false;
 
 
-            ReadContinuation: // PERF: This is a "manual procedure"
+ReadContinuation: // PERF: This is a "manual procedure"
             if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
             {
                 return ContinueParsingValue();
@@ -298,24 +298,24 @@ namespace Sparrow.Json.Parsing
             switch (b)
             {
                 case (byte)'\r':
-                {
-                    if (pos >= _bufSize)
                     {
-                        return true;
+                        if (pos >= _bufSize)
+                        {
+                            return true;
+                        }
+                        if (_inputBuffer[pos] == (byte)'\n')
+                        {
+                            return false;
+                        }
+                        goto case (byte)'\n';
                     }
-                    if (_inputBuffer[pos] == (byte)'\n')
-                    {
-                        return false;
-                    }
-                    goto case (byte)'\n';
-                }
 
                 case (byte)'\n':
-                {
-                    _line++;
-                    _charPos = 1;
-                    return false;
-                }
+                    {
+                        _line++;
+                        _charPos = 1;
+                        return false;
+                    }
 
                 case (byte)' ':
                 case (byte)'\t':
@@ -325,78 +325,78 @@ namespace Sparrow.Json.Parsing
                     return false;
 
                 case (byte)'N':
-                {
-                    ReadToken(ref pos, ref couldRead, NaN, "NaN", JsonParserTokenContinuation.PartialNaN);
-                    return true;
-                }
+                    {
+                        ReadToken(ref pos, ref couldRead, NaN, "NaN", JsonParserTokenContinuation.PartialNaN);
+                        return true;
+                    }
 
                 case (byte)'I':
-                {
-                    ReadToken(ref pos, ref couldRead, PositiveInfinity, "Infinity", JsonParserTokenContinuation.PartialPositiveInfinity);
-                    return true;
-                }
+                    {
+                        ReadToken(ref pos, ref couldRead, PositiveInfinity, "Infinity", JsonParserTokenContinuation.PartialPositiveInfinity);
+                        return true;
+                    }
 
                 case (byte)'-':
-                {
-                    _zeroPrefix = false;
-                    ReadToken(ref pos, ref couldRead, NegativeInfinity, "-Infinity", JsonParserTokenContinuation.PartialNegativeInfinity);
-                    return true;
-                }
+                    {
+                        _zeroPrefix = false;
+                        ReadToken(ref pos, ref couldRead, NegativeInfinity, "-Infinity", JsonParserTokenContinuation.PartialNegativeInfinity);
+                        return true;
+                    }
 
                 case (byte)'n':
-                {
-                    _state.CurrentTokenType = JsonParserToken.Null;
-                    _expectedTokenBuffer = BlittableJsonTextWriter.NullBuffer;
-                    _expectedTokenBufferPosition = 1;
-                    _expectedTokenString = "null";
-                    if (EnsureRestOfToken(ref pos) == false)
                     {
-                        _state.Continuation = JsonParserTokenContinuation.PartialNull;
+                        _state.CurrentTokenType = JsonParserToken.Null;
+                        _expectedTokenBuffer = BlittableJsonTextWriter.NullBuffer;
+                        _expectedTokenBufferPosition = 1;
+                        _expectedTokenString = "null";
+                        if (EnsureRestOfToken(ref pos) == false)
+                        {
+                            _state.Continuation = JsonParserTokenContinuation.PartialNull;
+                            return true;
+                        }
+
+                        couldRead = true;
                         return true;
                     }
-
-                    couldRead = true;
-                    return true;
-                }
 
                 case (byte)'t':
-                {
-                    _state.CurrentTokenType = JsonParserToken.True;
-                    _expectedTokenBuffer = BlittableJsonTextWriter.TrueBuffer;
-                    _expectedTokenBufferPosition = 1;
-                    _expectedTokenString = "true";
-                    if (EnsureRestOfToken(ref pos) == false)
                     {
-                        _state.Continuation = JsonParserTokenContinuation.PartialTrue;
+                        _state.CurrentTokenType = JsonParserToken.True;
+                        _expectedTokenBuffer = BlittableJsonTextWriter.TrueBuffer;
+                        _expectedTokenBufferPosition = 1;
+                        _expectedTokenString = "true";
+                        if (EnsureRestOfToken(ref pos) == false)
+                        {
+                            _state.Continuation = JsonParserTokenContinuation.PartialTrue;
+                            return true;
+                        }
+
+                        couldRead = true;
                         return true;
                     }
-
-                    couldRead = true;
-                    return true;
-                }
 
                 case (byte)'f':
-                {
-                    _state.CurrentTokenType = JsonParserToken.False;
-                    _expectedTokenBuffer = BlittableJsonTextWriter.FalseBuffer;
-                    _expectedTokenBufferPosition = 1;
-                    _expectedTokenString = "false";
-                    if (EnsureRestOfToken(ref pos) == false)
                     {
-                        _state.Continuation = JsonParserTokenContinuation.PartialFalse;
+                        _state.CurrentTokenType = JsonParserToken.False;
+                        _expectedTokenBuffer = BlittableJsonTextWriter.FalseBuffer;
+                        _expectedTokenBufferPosition = 1;
+                        _expectedTokenString = "false";
+                        if (EnsureRestOfToken(ref pos) == false)
+                        {
+                            _state.Continuation = JsonParserTokenContinuation.PartialFalse;
+                            return true;
+                        }
+
+                        couldRead = true;
                         return true;
                     }
-
-                    couldRead = true;
-                    return true;
-                }
             }
 
             ThrowCannotHaveCharInThisPosition(b);
             return false;
         }
 
-        private void ReadToken(ref uint pos, ref bool couldRead, byte[] tokenBuffer, 
+        private void ReadToken(ref uint pos, ref bool couldRead, byte[] tokenBuffer,
             string tokenString, JsonParserTokenContinuation jsonParserTokenContinuation)
         {
             _unmanagedWriteBuffer.Clear();
@@ -471,82 +471,82 @@ namespace Sparrow.Json.Parsing
                     goto case JsonParserTokenContinuation.PartialPositiveInfinity;
                 case JsonParserTokenContinuation.PartialNaN:
                 case JsonParserTokenContinuation.PartialPositiveInfinity:
-                {
-                    if (EnsureRestOfToken(ref _pos) == false)
-                        return false;
+                    {
+                        if (EnsureRestOfToken(ref _pos) == false)
+                            return false;
 
-                    _state.Continuation = JsonParserTokenContinuation.None;
-                    _state.CurrentTokenType = JsonParserToken.Float;
-                    _unmanagedWriteBuffer.Write(_expectedTokenBuffer, 0, _expectedTokenBuffer.Length);
-                    _unmanagedWriteBuffer.EnsureSingleChunk(_state);
-
-                    return true;
-                }
-                case JsonParserTokenContinuation.PartialNumber:
-                {
-                    if (ParseNumber(ref _state.Long, ref _pos) == false)
-                        return false;
-
-                    if (_state.CurrentTokenType == JsonParserToken.Float)
+                        _state.Continuation = JsonParserTokenContinuation.None;
+                        _state.CurrentTokenType = JsonParserToken.Float;
+                        _unmanagedWriteBuffer.Write(_expectedTokenBuffer, 0, _expectedTokenBuffer.Length);
                         _unmanagedWriteBuffer.EnsureSingleChunk(_state);
 
-                    _state.Continuation = JsonParserTokenContinuation.None;
+                        return true;
+                    }
+                case JsonParserTokenContinuation.PartialNumber:
+                    {
+                        if (ParseNumber(ref _state.Long, ref _pos) == false)
+                            return false;
 
-                    return true;
+                        if (_state.CurrentTokenType == JsonParserToken.Float)
+                            _unmanagedWriteBuffer.EnsureSingleChunk(_state);
 
-                }
+                        _state.Continuation = JsonParserTokenContinuation.None;
+
+                        return true;
+
+                    }
                 case JsonParserTokenContinuation.PartialPreamble:
-                {
-                    if (EnsureRestOfToken(ref _pos) == false)
+                    {
+                        if (EnsureRestOfToken(ref _pos) == false)
+                            return false;
+
+                        _state.Continuation = JsonParserTokenContinuation.None;
+
                         return false;
-
-                    _state.Continuation = JsonParserTokenContinuation.None;
-
-                    return false;
-                }
+                    }
                 case JsonParserTokenContinuation.PartialString:
-                {
-                    if (ParseString(ref _pos) == false)
-                        return false;
+                    {
+                        if (ParseString(ref _pos) == false)
+                            return false;
 
-                    _unmanagedWriteBuffer.EnsureSingleChunk(_state);
-                    _state.CurrentTokenType = JsonParserToken.String;
-                    _state.Continuation = JsonParserTokenContinuation.None;
+                        _unmanagedWriteBuffer.EnsureSingleChunk(_state);
+                        _state.CurrentTokenType = JsonParserToken.String;
+                        _state.Continuation = JsonParserTokenContinuation.None;
 
-                    return true;
+                        return true;
 
-                }
+                    }
                 case JsonParserTokenContinuation.PartialFalse:
-                {
-                    if (EnsureRestOfToken(ref _pos) == false)
-                        return false;
+                    {
+                        if (EnsureRestOfToken(ref _pos) == false)
+                            return false;
 
-                    _state.CurrentTokenType = JsonParserToken.False;
-                    _state.Continuation = JsonParserTokenContinuation.None;
+                        _state.CurrentTokenType = JsonParserToken.False;
+                        _state.Continuation = JsonParserTokenContinuation.None;
 
-                    return true;
+                        return true;
 
-                }
+                    }
                 case JsonParserTokenContinuation.PartialTrue:
-                {
-                    if (EnsureRestOfToken(ref _pos) == false)
-                        return false;
+                    {
+                        if (EnsureRestOfToken(ref _pos) == false)
+                            return false;
 
-                    _state.CurrentTokenType = JsonParserToken.True;
-                    _state.Continuation = JsonParserTokenContinuation.None;
+                        _state.CurrentTokenType = JsonParserToken.True;
+                        _state.Continuation = JsonParserTokenContinuation.None;
 
-                    return true;
-                }
+                        return true;
+                    }
                 case JsonParserTokenContinuation.PartialNull:
-                {
-                    if (EnsureRestOfToken(ref _pos) == false)
-                        return false;
+                    {
+                        if (EnsureRestOfToken(ref _pos) == false)
+                            return false;
 
-                    _state.CurrentTokenType = JsonParserToken.Null;
-                    _state.Continuation = JsonParserTokenContinuation.None;
+                        _state.CurrentTokenType = JsonParserToken.Null;
+                        _state.Continuation = JsonParserTokenContinuation.None;
 
-                    return true;
-                }
+                        return true;
+                    }
                 default:
                     ThrowException("Somehow got continuation for single byte token " + _state.Continuation);
                     return false; // never hit
@@ -578,8 +578,8 @@ namespace Sparrow.Json.Parsing
                     if (next < value) //overflow
                         _isOverflow = true;
 
-                    value = next; 
-                    
+                    value = next;
+
 
                     _unmanagedWriteBuffer.WriteByte(b);
 
@@ -593,9 +593,10 @@ namespace Sparrow.Json.Parsing
                         if (_isNegative)
                             value *= -1;
 
-                        state.CurrentTokenType = (_isFractionedDouble || _isOverflow)? JsonParserToken.Float : JsonParserToken.Integer;
+                        state.CurrentTokenType = (_isFractionedDouble || _isOverflow) ? JsonParserToken.Float : JsonParserToken.Integer;
 
-                        pos--; _charPos--;// need to re-read this char
+                        pos--;
+                        _charPos--;// need to re-read this char
 
                         goto IsANumber;
                     }
@@ -617,10 +618,10 @@ namespace Sparrow.Json.Parsing
                 ThrowWhenMalformed("Number cannot end with char with: '" + (char)b + "' (" + b + ")");
             }
 
-            IsANumber:
+IsANumber:
             return true;
 
-            NotANumber:
+NotANumber:
             return false; // Will never execute.
         }
 
@@ -629,62 +630,62 @@ namespace Sparrow.Json.Parsing
             switch (b)
             {
                 case (byte)'.':
-                {
-                    if (!_isFractionedDouble)
                     {
-                        _zeroPrefix = false; // 0.5, frex
-                        _isFractionedDouble = true;
+                        if (!_isFractionedDouble)
+                        {
+                            _zeroPrefix = false; // 0.5, frex
+                            _isFractionedDouble = true;
+                            break;
+                        }
+
+                        ThrowWhenMalformed("Already got '.' in this number value");
                         break;
                     }
-
-                    ThrowWhenMalformed("Already got '.' in this number value");
-                    break;
-                }
                 case (byte)'+':
                     break; // just record, appears in 1.4e+3
                 case (byte)'e':
                 case (byte)'E':
-                {
-                    if (_isExponent)
-                        ThrowWhenMalformed("Already got 'e' in this number value");
-                    _isExponent = true;
-                    _isFractionedDouble = true;
-                    break;
-                }
-                case (byte)'-':
-                {
-                    if (!_isNegative || _isExponent != false)
                     {
-                        _isNegative = true;
+                        if (_isExponent)
+                            ThrowWhenMalformed("Already got 'e' in this number value");
+                        _isExponent = true;
+                        _isFractionedDouble = true;
+                        break;
+                    }
+                case (byte)'-':
+                    {
+                        if (!_isNegative || _isExponent != false)
+                        {
+                            _isNegative = true;
+                            break;
+                        }
+
+                        ThrowWhenMalformed("Already got '-' in this number value");
                         break;
                     }
 
-                    ThrowWhenMalformed("Already got '-' in this number value");
-                    break;
-                }
-
                 case (byte)'\r':
                 case (byte)'\n':
-                {
-                    _line++;
-                    _charPos = 1;
-
-                    if (!_zeroPrefix || _unmanagedWriteBuffer.SizeInBytes == 1)
                     {
-                        if (_isNegative)
-                            value *= -1;
+                        _line++;
+                        _charPos = 1;
 
-                        state.CurrentTokenType = (_isFractionedDouble || _isOverflow) ? JsonParserToken.Float : JsonParserToken.Integer;
+                        if (!_zeroPrefix || _unmanagedWriteBuffer.SizeInBytes == 1)
+                        {
+                            if (_isNegative)
+                                value *= -1;
 
-                        pos--;
-                        _charPos--; // need to re-read this char
+                            state.CurrentTokenType = (_isFractionedDouble || _isOverflow) ? JsonParserToken.Float : JsonParserToken.Integer;
 
-                        return true;
+                            pos--;
+                            _charPos--; // need to re-read this char
+
+                            return true;
+                        }
+
+                        ThrowWhenMalformed("Invalid number with zero prefix");
+                        break;
                     }
-
-                    ThrowWhenMalformed("Invalid number with zero prefix");
-                    break;
-                }
             }
 
             return false;
@@ -806,10 +807,10 @@ namespace Sparrow.Json.Parsing
             }
 
 
-            ReturnTrue:
+ReturnTrue:
             return true;
 
-            ReturnFalse:
+ReturnFalse:
             return false;
         }
 
@@ -918,7 +919,7 @@ namespace Sparrow.Json.Parsing
         {
             _unmanagedWriteBuffer.Dispose();
         }
-        
+
         public string GenerateErrorState()
         {
             var s = Encodings.Utf8.GetString(_inputBuffer, (int)_bufSize);

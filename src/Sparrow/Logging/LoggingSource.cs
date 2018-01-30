@@ -48,7 +48,7 @@ namespace Sparrow.Logging
 
         public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
-        private static byte[] _headerRow = 
+        private static byte[] _headerRow =
             Encodings.Utf8.GetBytes($"Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException{Environment.NewLine}");
 
         public class WebSocketContext
@@ -64,8 +64,7 @@ namespace Sparrow.Logging
 
         public async Task Register(WebSocket source, WebSocketContext context, CancellationToken token)
         {
-            await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true,
-                token);
+            await source.SendAsync(new ArraySegment<byte>(_headerRow), WebSocketMessageType.Text, true, token).ConfigureAwait(false);
 
             lock (this)
             {
@@ -87,7 +86,7 @@ namespace Sparrow.Logging
                 WebSocketReceiveResult result;
                 do
                 {
-                    result = await source.ReceiveAsync(arraySegment, token);
+                    result = await source.ReceiveAsync(arraySegment, token).ConfigureAwait(false);
                     if (result.CloseStatus != null)
                     {
                         return;
@@ -110,7 +109,7 @@ namespace Sparrow.Logging
 
                 await source.SendAsync(new ArraySegment<byte>(arraySegment.Array, 0, numberOfBytes),
                     WebSocketMessageType.Text, true,
-                    token);
+                    token).ConfigureAwait(false);
             }
         }
 
@@ -320,7 +319,7 @@ namespace Sparrow.Logging
             writer.Write(entry.Logger);
             writer.Write(", ");
             writer.Write(entry.Message);
-            
+
             if (entry.Exception != null)
             {
                 writer.Write(", EXCEPTION: ");
@@ -413,7 +412,7 @@ namespace Sparrow.Logging
                         var time = 5000;
                         var current = Stopwatch.GetTimestamp();
 
-                        while (time > 0 && 
+                        while (time > 0 &&
                             _hasEntries.Wait(time))
                         {
                             _hasEntries.Reset();

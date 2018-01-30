@@ -38,7 +38,7 @@ namespace Sparrow.Json
             var bytesCount = bytes.Count;
             if (bytesCount == 0)
                 return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken);
+            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken).ConfigureAwait(false);
             innerStream.SetLength(0);
             return bytesCount;
         }

@@ -22,7 +22,7 @@ namespace Sparrow.Collections
             T result;
             while (_inner.TryDequeue(out result) == false)
             {
-                await _event.WaitAsync();
+                await _event.WaitAsync().ConfigureAwait(false);
                 _event.Reset();
             }
             return result;
@@ -33,7 +33,7 @@ namespace Sparrow.Collections
             T result;
             while (_inner.TryDequeue(out result) == false)
             {
-                if (await _event.WaitAsync(timeout) == false)
+                if (await _event.WaitAsync(timeout).ConfigureAwait(false) == false)
                     return Tuple.Create(false, default(T));
                 _event.Reset();
             }
@@ -53,7 +53,7 @@ namespace Sparrow.Collections
                     if (wait < TimeSpan.Zero)
                         wait = TimeSpan.Zero;
 
-                    if (await _event.WaitAsync(wait) == false)
+                    if (await _event.WaitAsync(wait).ConfigureAwait(false) == false)
                         return Tuple.Create(false, default(TValue));
                     _event.Reset();
                 }
