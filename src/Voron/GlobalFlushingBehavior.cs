@@ -32,13 +32,14 @@ namespace Voron
             public long LastKnownSyncCounter;
         }
 
-        private readonly ConcurrentQueue<StorageEnvironment> _maybeNeedToFlush = new ConcurrentQueue<StorageEnvironment>();
         private readonly ManualResetEventSlim _flushWriterEvent = new ManualResetEventSlim();
         private readonly int _lowNumberOfFlushingResources = Math.Max(StorageEnvironment.MaxConcurrentFlushes / 10, 3);
         private readonly SemaphoreSlim _concurrentFlushes = new SemaphoreSlim(StorageEnvironment.MaxConcurrentFlushes);
-        private readonly HashSet<StorageEnvironment> _avoidDuplicates = new HashSet<StorageEnvironment>();
+
+        private readonly ConcurrentQueue<EnvSyncReq> _maybeNeedToFlush = new ConcurrentQueue<EnvSyncReq>();
         private readonly ConcurrentQueue<EnvSyncReq> _maybeNeedToSync = new ConcurrentQueue<EnvSyncReq>();
         private readonly ConcurrentQueue<EnvSyncReq> _syncIsRequired = new ConcurrentQueue<EnvSyncReq>();
+
         private readonly ConcurrentDictionary<uint, MountPointInfo> _mountPoints = new ConcurrentDictionary<uint, MountPointInfo>();
 
         private readonly Logger _log = LoggingSource.Instance.GetLogger<GlobalFlushingBehavior>("Global Flusher");
@@ -50,6 +51,33 @@ namespace Voron
 
         public bool HasLowNumberOfFlushingResources => _concurrentFlushes.CurrentCount <= _lowNumberOfFlushingResources;
 
+        public void RemoveFromFlushQueues(StorageEnvironment env)
+        {
+            foreach (var req in _maybeNeedToSync)
+            {
+                if (req.Env == env)
+                    req.Env = null;
+            }
+            foreach (var req in _maybeNeedToFlush)
+            {
+                if (req.Env == env)
+                    req.Env = null;
+            }
+            foreach (var req in _syncIsRequired)
+            {
+                if (req.Env == env)
+                    req.Env = null;
+            }
+            foreach (var mpi in _mountPoints)
+            {
+                foreach (var req in mpi.Value.StorageEnvironments)
+                {
+                    if (req.Env == env)
+                        req.Env = null;
+                }
+            }
+        }
+
         public void VoronEnvironmentFlushing()
         {
             NativeMemory.EnsureRegistered();
@@ -59,9 +87,10 @@ namespace Voron
 
             try
             {
+                var avoidDuplicates = new HashSet<StorageEnvironment>();
                 while (true)
                 {
-                    _avoidDuplicates.Clear();
+                    avoidDuplicates.Clear();
                     var maybeNeedSync = _maybeNeedToSync.Count;
                     var millisecondsTimeout = 15000 - maybeNeedSync;
                     if (millisecondsTimeout <= 0 ||
@@ -77,21 +106,21 @@ namespace Voron
 
                         // sync after 5 seconds if no flushing occurred, or if there has been a LOT of
                         // writes that we would like to run
-                        SyncDesiredEnvironments();
+                        SyncDesiredEnvironments(avoidDuplicates);
                         continue;
                     }
                     _flushWriterEvent.Reset();
 
-                    FlushEnvironments();
+                    FlushEnvironments(avoidDuplicates);
 
-                    SyncRequiredEnvironments();
+                    SyncRequiredEnvironments(avoidDuplicates);
                 }
             }
             catch (Exception e)
             {
                 if (_log.IsOperationsEnabled)
                 {
-                    _log.Operations("Catastrophic failure in voron environment flushing", e);
+                    _log.Operations("Catastrophic failure in Voron environment flushing", e);
                 }
 
                 // wait for the message to be flushed to the logs
@@ -105,9 +134,9 @@ namespace Voron
             // ReSharper disable once FunctionNeverReturns
         }
 
-        private void SyncDesiredEnvironments()
+        private void SyncDesiredEnvironments(HashSet<StorageEnvironment> avoidDuplicates)
         {
-            _avoidDuplicates.Clear();
+            avoidDuplicates.Clear();
             EnvSyncReq envToSync;
             var limit = _maybeNeedToSync.Count;
             while (
@@ -117,13 +146,17 @@ namespace Voron
                 limit-- > 0 &&
                 _maybeNeedToSync.TryDequeue(out envToSync))
             {
-                if (_avoidDuplicates.Add(envToSync.Env) == false)
-                    continue; // already seen
-
-                if (envToSync.Env.Disposed)
+                var storageEnvironment = envToSync.Env;
+                if (storageEnvironment == null)
                     continue;
 
-                var mpi = _mountPoints.GetOrAdd(envToSync.Env.Options.DataPager.UniquePhysicalDriveId,
+                if (avoidDuplicates.Add(storageEnvironment) == false)
+                    continue; // already seen
+
+                if (storageEnvironment.Disposed)
+                    continue;
+
+                var mpi = _mountPoints.GetOrAdd(storageEnvironment.Options.DataPager.UniquePhysicalDriveId,
                     _ => new MountPointInfo());
 
                 mpi.StorageEnvironments.Enqueue(envToSync);
@@ -140,9 +173,9 @@ namespace Voron
             }
         }
 
-        private void SyncRequiredEnvironments()
+        private void SyncRequiredEnvironments(HashSet<StorageEnvironment> avoidDuplicates)
         {
-            _avoidDuplicates.Clear();
+            avoidDuplicates.Clear();
 
             var limit = _syncIsRequired.Count;
             while (
@@ -152,7 +185,10 @@ namespace Voron
                 limit-- > 0 &&
                 _syncIsRequired.TryDequeue(out EnvSyncReq item))
             {
-                if (_avoidDuplicates.Add(item.Env) == false)
+                var storageEnvironment = item.Env;
+                if(storageEnvironment == null)
+                    continue;
+                if (avoidDuplicates.Add(storageEnvironment) == false)
                     continue; // avoid duplicates in batch
 
                 ThreadPool.QueueUserWorkItem(state => SyncEnvironment((EnvSyncReq)state), item);
@@ -167,23 +203,26 @@ namespace Voron
             {
                 SyncEnvironment(req);
 
-                // we have mutliple threads racing for this value, no a concern, the last one wins is probably
+                // we have multiple threads racing for this value, no a concern, the last one wins is probably
                 // going to be the latest, or close enough that we don't care
-                Interlocked.Exchange(ref req.Env.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
+                var storageEnvironment = req.Env;
+                if(storageEnvironment != null)
+                    Interlocked.Exchange(ref storageEnvironment.LastSyncTimeInTicks, DateTime.UtcNow.Ticks);
             }
         }
 
         private void SyncEnvironment(EnvSyncReq req)
         {
-            if (req.Env.Disposed)
+            var storageEnvironment = req.Env;
+            if (storageEnvironment  == null || storageEnvironment.Disposed)
                 return;
 
-            if (req.Env.LastSyncCounter > req.LastKnownSyncCounter)
+            if (storageEnvironment.LastSyncCounter > req.LastKnownSyncCounter)
                 return; // we already a sync after this was scheduled
 
             try
             {
-                using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(req.Env.Journal.Applicator))
+                using (var operation = new WriteAheadJournal.JournalApplicator.SyncOperation(storageEnvironment.Journal.Applicator))
                 {
                     operation.SyncDataFile();
                 }
@@ -191,25 +230,28 @@ namespace Voron
             catch (Exception e)
             {
                 if (_log.IsOperationsEnabled)
-                    _log.Operations($"Failed to sync data file for {req.Env.Options.BasePath}", e);
-                req.Env.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
+                    _log.Operations($"Failed to sync data file for {storageEnvironment.Options.BasePath}", e);
+                storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
             }
         }
 
 
-        private void FlushEnvironments()
+        private void FlushEnvironments(HashSet<StorageEnvironment> avoidDuplicates)
         {
-            _avoidDuplicates.Clear();
-            StorageEnvironment envToFlush;
+            avoidDuplicates.Clear();
+            EnvSyncReq req;
             var limit = _maybeNeedToFlush.Count;
             while (
                 // if there is high traffic into the queue, we want to abort after 
                 // we processed whatever was already in there, to avoid holding up
                 // the rest of the operations
                 limit-- > 0 &&
-                _maybeNeedToFlush.TryDequeue(out envToFlush))
+                _maybeNeedToFlush.TryDequeue(out req))
             {
-                if (_avoidDuplicates.Add(envToFlush) == false)
+                var envToFlush = req.Env;
+                if (envToFlush == null)
+                    continue;
+                if (avoidDuplicates.Add(envToFlush) == false)
                     continue; // avoid duplicates
                 if (envToFlush.Disposed || envToFlush.Options.ManualFlushing)
                     continue;
@@ -270,7 +312,7 @@ namespace Voron
             if (env.Options.ManualFlushing)
                 return;
 
-            _maybeNeedToFlush.Enqueue(env);
+            _maybeNeedToFlush.Enqueue(new EnvSyncReq{Env = env });
             _flushWriterEvent.Set();
         }
 
