@@ -110,14 +110,21 @@ namespace Voron.Platform.Win32
                 WriteFile(posBy4Kb, p, numberOf4Kb);
         }
 
+        private int ERROR_WORKING_SET_QUOTA = 1453;// Insufficient quota to complete the requested service.
+
+        private void SetOverlappedPosition(long locationBy4KB)
+        {
+            var offset = locationBy4KB * 4 * Constants.Size.Kilobyte;
+            _nativeOverlapped->OffsetLow = (int)(offset & 0xffffffff);
+            _nativeOverlapped->OffsetHigh = (int)(offset >> 32);
+            _nativeOverlapped->EventHandle = IntPtr.Zero;
+        }
+
         private void WriteFile(long position, byte* p, int numberOf4Kb)
         {
-            position *= 4 * Constants.Size.Kilobyte;
-            _nativeOverlapped->OffsetLow = (int)(position & 0xffffffff);
-            _nativeOverlapped->OffsetHigh = (int)(position >> 32);
-            _nativeOverlapped->EventHandle = IntPtr.Zero;
-
             Debug.Assert(_options.IoMetrics != null);
+
+            SetOverlappedPosition(position);
 
             bool writeSuccess;
             var nNumberOfBytesToWrite = numberOf4Kb * (4 * Constants.Size.Kilobyte);
@@ -128,18 +135,37 @@ namespace Voron.Platform.Win32
                     out written,
                     _nativeOverlapped);
 
+                if (writeSuccess == false)
+                {
+                    HandleWriteError(position, p, numberOf4Kb);
+                }
+
                 metrics.SetFileSize(NumberOfAllocated4Kb * (4 * Constants.Size.Kilobyte));
             }
-
-            if (writeSuccess == false)
-            {
-                ThrowOnWriteFileFailure();
-            }   
         }
 
-        private void ThrowOnWriteFileFailure()
+        private void HandleWriteError(long position, byte* p, int numberOf4Kb)
         {
-            var errorCode = Marshal.GetLastWin32Error();
+           var errorCode = Marshal.GetLastWin32Error();
+            if (errorCode != ERROR_WORKING_SET_QUOTA)
+                ThrowOnWriteFileFailure(errorCode);
+
+            // this error can happen under low memory conditions, instead of trying to write the whole thing in a single shot
+            // we'll write it in 4KB increments. This is likely to be much slower, but failing here will fail the entire DB
+            for (int i = 0; i < numberOf4Kb; i++)
+            {
+                SetOverlappedPosition(position + i);
+                var writeSuccess = Win32NativeFileMethods.WriteFile(_handle, p + (i * (4 * Constants.Size.Kilobyte)), (4 * Constants.Size.Kilobyte),
+                    out var written,
+                    _nativeOverlapped);
+
+                if (writeSuccess == false)
+                    ThrowOnWriteFileFailure(Marshal.GetLastWin32Error());
+            }
+        }
+
+        private void ThrowOnWriteFileFailure(int errorCode)
+        {
             throw new IOException($"Could not write to journal {_filename}, error code: {errorCode}",
                 new Win32Exception(errorCode));
         }
