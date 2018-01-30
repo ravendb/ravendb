@@ -74,12 +74,24 @@ namespace Raven.Server.Commercial
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
 
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
-                Environment.SpecialFolderOption.Create);
+            string localAppDataPath = null;
+            try
+            {
+                // If we use the SpecialFolderOption.Create option, GetFolderPath fails with ArgumentException if the directory does not exist.
+                // Until https://github.com/dotnet/corefx/issues/26677 is fixed, we'll ask for the path and create the directory ourselves.
+                localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
 
+                if (System.IO.Directory.Exists(localAppDataPath) == false)
+                    System.IO.Directory.CreateDirectory(localAppDataPath);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Failed to create the directory: {localAppDataPath}", e);
+            }
+            
             var hash = SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(url));
             var file = Convert.ToBase64String(hash) + ".lets-encrypt.cache.json";
-            _path = Path.Combine(home, file);
+            _path = Path.Combine(localAppDataPath, file);
         }
 
         public async Task Init(string email, CancellationToken token = default (CancellationToken))
