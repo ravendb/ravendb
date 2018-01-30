@@ -967,8 +967,8 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var sizeToRead = (int)Math.Min(_writeBuffer.Length, size);
                 var read = _parser.Copy(_writeBuffer.Pointer, sizeToRead);
-                attachment.Stream.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.bytesRead);
-                if (read.done == false)
+                attachment.Stream.Write(_writeBuffer.Buffer.Array, _writeBuffer.Buffer.Offset, read.BytesRead);
+                if (read.Done == false)
                 {
                     var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
                     if (read2 == 0)
@@ -976,7 +976,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     _parser.SetBuffer(_buffer, 0, read2);
                 }
-                size -= read.bytesRead;
+                size -= read.BytesRead;
             }
             attachment.Stream.Flush();
         }
@@ -996,7 +996,7 @@ namespace Raven.Server.Smuggler.Documents
             if (type.Equals(nameof(DatabaseItemType.DatabaseRecord), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.DatabaseRecord;
 
-            if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase) || 
+            if (type.Equals("Docs", StringComparison.OrdinalIgnoreCase) ||
                 type.Equals("Results", StringComparison.OrdinalIgnoreCase)) // reading from stream/docs endpoint
                 return DatabaseItemType.Documents;
 

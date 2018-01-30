@@ -51,17 +51,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
-                // run the completion asynchronously to ensure that continuations (await WaitAsync()) won't happen as part of a call to TrySetResult
-                // http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx
-
-                var currentTcs = _outputStreamTcs;
-
-                Task.Factory.StartNew(s => ((TaskCompletionSource<Stream>)s).TrySetResult(stream),
-                    currentTcs, CancellationToken.None,
-                    TaskCreationOptions.PreferFairness | TaskCreationOptions.RunContinuationsAsynchronously,
-                    TaskScheduler.Default);
-
-                currentTcs.Task.Wait();
+                _outputStreamTcs.TrySetResult(stream);
 
                 return _done.Task;
             }

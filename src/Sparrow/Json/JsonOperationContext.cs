@@ -563,7 +563,7 @@ namespace Sparrow.Json
                 try
                 {
                     builder.ReadObjectDocument();
-                    var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
+                    var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
 
                     EnsureNotDisposed();
 
@@ -579,7 +579,7 @@ namespace Sparrow.Json
                         bytes.Used += parser.BufferOffset;
                         if (read)
                             break;
-                        result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
+                        result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken).ConfigureAwait(false);
                         bytes.Valid = result.Count;
                         bytes.Used = 0;
                         parser.SetBuffer(bytes);
@@ -741,7 +741,7 @@ namespace Sparrow.Json
                 {
                     if (bytes.Valid == bytes.Used)
                     {
-                        var read = await webSocket.ReceiveAsync(bytes.Buffer, token);
+                        var read = await webSocket.ReceiveAsync(bytes.Buffer, token).ConfigureAwait(false);
 
                         EnsureNotDisposed();
 
@@ -809,8 +809,8 @@ namespace Sparrow.Json
                     if (bytes.Valid == bytes.Used)
                     {
                         var read = token.HasValue
-                            ? await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length, token.Value)
-                            : await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
+                            ? await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length, token.Value).ConfigureAwait(false)
+                            : await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length).ConfigureAwait(false);
 
                         EnsureNotDisposed();
 

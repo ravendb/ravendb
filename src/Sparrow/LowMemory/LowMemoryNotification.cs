@@ -110,12 +110,12 @@ namespace Sparrow.LowMemory
         }
 
         public static readonly LowMemoryNotification Instance = new LowMemoryNotification(
-            new Size(1024 * 1024 * 256, SizeUnit.Bytes), 
+            new Size(1024 * 1024 * 256, SizeUnit.Bytes),
             0.05f);
 
         public bool LowMemoryState { get; set; }
 
-        public static void Initialize(CancellationToken shutdownNotification, Size lowMemoryThreshold, float commitChargeThreshold)
+        public static void Initialize(Size lowMemoryThreshold, float commitChargeThreshold, CancellationToken shutdownNotification)
         {
             Instance._lowMemoryThreshold = lowMemoryThreshold;
             Instance._commitChargeThreshold = commitChargeThreshold;
@@ -142,7 +142,7 @@ namespace Sparrow.LowMemory
                 IsBackground = true,
                 Name = NotificationThreadName
             };
-            
+
             thread.Start();
         }
 
@@ -159,7 +159,7 @@ namespace Sparrow.LowMemory
 
             // if this is negative, we'll just ignore this
             var mappedShared = new Size(Math.Max(0, sharedMemory), SizeUnit.Bytes);
-            return mappedShared;            
+            return mappedShared;
         }
 
         private void MonitorMemoryUsage()
@@ -197,10 +197,10 @@ namespace Sparrow.LowMemory
                     {
                         try
                         {
-                            if(_logger.IsInfoEnabled)
+                            if (_logger.IsInfoEnabled)
                                 _logger.Info("Out of memory error in the low memory notification thread, will wait 5 seconds before trying to check memory status again. The system is likely running out of memory");
                         }
-                        catch 
+                        catch
                         {
                         }
 
@@ -337,7 +337,7 @@ namespace Sparrow.LowMemory
         {
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
             var memory = (memoryInfoResult.AvailableMemory + GetCurrentProcessMemoryMappedShared());
-            var handles =  memory <  _lowMemoryThreshold * 2 ? paranoidModeHandles : memoryAvailableHandles;
+            var handles = memory < _lowMemoryThreshold * 2 ? paranoidModeHandles : memoryAvailableHandles;
             return handles;
         }
 

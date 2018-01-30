@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Changes
         private int _value;
         public Exception LastException;
 
-        private readonly TaskCompletionSource<object> _firstSet = new TaskCompletionSource<object>();
+        private readonly TaskCompletionSource<object> _firstSet = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
         private Task _connected;
 
         public void Set(Task connection)

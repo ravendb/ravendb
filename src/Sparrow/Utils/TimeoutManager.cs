@@ -79,7 +79,7 @@ namespace Sparrow.Utils
             using (token.Register(value.TimerCallback, null))
             {
                 var sp = Stopwatch.StartNew();
-                await value.NextTask;
+                await value.NextTask.ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
 
                 var step = duration / 8;
@@ -92,7 +92,7 @@ namespace Sparrow.Utils
                 do
                 {
                     token.ThrowIfCancellationRequested();
-                    await value.NextTask;
+                    await value.NextTask.ConfigureAwait(false);
                 } while (sp.ElapsedMilliseconds < (duration - step));
             }
         }
@@ -130,14 +130,14 @@ namespace Sparrow.Utils
             
             if (token == CancellationToken.None || token.CanBeCanceled == false)
             {
-                await task;
+                await task.ConfigureAwait(false);
                 return;
             }
 
             var onCancel = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             using (token.Register(tcs => onCancel.TrySetCanceled(), onCancel))
             {
-                await Task.WhenAny(task, onCancel.Task);
+                await Task.WhenAny(task, onCancel.Task).ConfigureAwait(false);
             }
         }
     }

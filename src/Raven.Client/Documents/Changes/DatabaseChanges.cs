@@ -321,7 +321,7 @@ namespace Raven.Client.Documents.Changes
 
         private async Task Send(string command, string value)
         {
-            var taskCompletionSource = new TaskCompletionSource<object>();
+            var taskCompletionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             int currentCommandId;
             await _semaphore.WaitAsync(_cts.Token).ConfigureAwait(false);
             try

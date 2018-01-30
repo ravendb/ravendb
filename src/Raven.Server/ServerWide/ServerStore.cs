@@ -259,9 +259,7 @@ namespace Raven.Server.ServerWide
 
         public void Initialize()
         {
-            LowMemoryNotification.Initialize(ServerShutdown,
-                Configuration.Memory.LowMemoryLimit,
-                Configuration.Memory.MinimumFreeCommittedMemory);
+            LowMemoryNotification.Initialize(Configuration.Memory.LowMemoryLimit, Configuration.Memory.MinimumFreeCommittedMemory, ServerShutdown);
 
             PoolOfThreads.GlobalRavenThreadPool.SetMinimumFreeCommittedMemory(Configuration.Memory.MinimumFreeCommittedMemory);
 
@@ -298,7 +296,7 @@ namespace Raven.Server.ServerWide
                     try
                     {
                         options.MasterKey = Secrets.Unprotect(buffer);
-                        
+
                     }
                     catch (Exception e)
                     {
@@ -466,7 +464,7 @@ namespace Raven.Server.ServerWide
                 Engine.Log.Info(msg);
             }
             Engine.InMemoryDebug.StateChangeTracking.LimitedSizeEnqueue(msg, 10);
-            
+
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -587,7 +585,7 @@ namespace Raven.Server.ServerWide
 
                             if (Logger.IsOperationsEnabled)
                                 Logger.Operations($"Node {NodeTag}: when replacing server certificate, confirmation count: {confirmations}.");
-                            
+
                             if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
                             {
                                 if (Server.Certificate?.Certificate != null &&
@@ -621,7 +619,7 @@ namespace Raven.Server.ServerWide
                                     "Cluster.Certificate.Install.Error"));
                                 return;
                             }
-                            
+
                             var bytesToSave = Convert.FromBase64String(certBase64);
                             var newClusterCertificate = new X509Certificate2(bytesToSave, (string)null, X509KeyStorageFlags.Exportable);
 
@@ -790,7 +788,7 @@ namespace Raven.Server.ServerWide
                     Sodium.sodium_memzero(pExistingKey, (UIntPtr)key.Length);
                     if (areEqual)
                     {
-                        Sodium.sodium_memzero(pKey, (UIntPtr) key.Length);
+                        Sodium.sodium_memzero(pKey, (UIntPtr)key.Length);
                         return;
                     }
                 }
@@ -1179,7 +1177,7 @@ namespace Raven.Server.ServerWide
 
                     foreach (var db in databasesToCleanup)
                     {
-                       
+
                         if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) &&
                             resourceTask != null &&
                             resourceTask.Status == TaskStatus.RanToCompletion &&
@@ -1202,7 +1200,7 @@ namespace Raven.Server.ServerWide
                             //TODO: until RavenDB-10065 is fixed, don't unload a replicated database if it has valid a incoming connection
                             continue;
                         }
-                        
+
                         if (SystemTime.UtcNow - DatabasesLandlord.LastWork(idleDbInstance) < maxTimeDatabaseCanBeIdle)
                             continue;
 
@@ -1749,7 +1747,7 @@ namespace Raven.Server.ServerWide
             }
             catch (Exception e)
             {
-               if(Logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to registered certificates in operating system to deal with TRUSTED_ISSUERS", e);
             }
 
