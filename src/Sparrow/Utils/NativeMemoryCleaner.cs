@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using Sparrow.Threading;
 
@@ -39,7 +40,20 @@ namespace Sparrow.Utils
 #endif
 
                 var now = DateTime.UtcNow;
-                foreach (var header in _pool.Values)
+                IList<TStack> values;
+                try
+                {
+                    values = _pool.Values;
+                }
+                catch (OutOfMemoryException)
+                {
+                    return; // trying to allocate the list? 
+                }
+                catch (ObjectDisposedException)
+                {
+                    return; // already disposed
+                }
+                foreach (var header in values)
                 {
                     if (header == null)
                         continue;
