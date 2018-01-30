@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 
@@ -25,7 +26,7 @@ namespace Raven.Server.Utils
         });
 
         public static PoolOfThreads GlobalRavenThreadPool => _globalRavenThreadPool.Value;
-
+        private static Logger _log = LoggingSource.Instance.GetLogger<PoolOfThreads>("Server");
         private float _minimumFreeCommittedMemory = 0.05f;
 
         public void SetMinimumFreeCommittedMemory(float min)
@@ -153,7 +154,20 @@ namespace Raven.Server.Utils
                 while (true)
                 {
                     ResetCurrentThreadName();
-                    Thread.CurrentThread.Priority = ThreadPriority.Normal;
+                    try
+                    {
+                        if(Thread.CurrentThread.Priority != ThreadPriority.Normal)
+                            Thread.CurrentThread.Priority = ThreadPriority.Normal;
+                    }
+                    catch (Exception e)
+                    {
+                        // if we can't reset it, better just kill it
+                        if (_log.IsInfoEnabled)
+                        {
+                            _log.Info($"Unable to set this thread priority to normal, since we don't want its priority of {Thread.CurrentThread.Priority}, we'll let it exit", e);
+                        }
+                        return;
+                    }
                     Thread.CurrentThread.Name = "Available Pool Thread";
 
                     _waitForWork.WaitOne();
