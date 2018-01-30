@@ -711,12 +711,16 @@ namespace Voron
 
         private void ThrowOnTimeoutWaitingForWriteTxLock(TimeSpan wait)
         {
+            if (wait == TimeSpan.Zero)// avoid allocating any strings in common case of just trying
+                throw new TimeoutException("Tried and failed to get the tx lock with no timeout, someone else is holding the lock, will retry later...");
+
             var copy = _currentWriteTransactionHolder;
             if (copy == NativeMemory.ThreadAllocations.Value)
             {
                 throw new InvalidOperationException("A write transaction is already opened by this thread");
             }
 
+            
             var message = $"Waited for {wait} for transaction write lock, but could not get it";
             if (copy != null)
                 message += $", the tx is currently owned by thread {copy.Id} - {copy.Name}, OS thread id: {copy.UnmanagedThreadId}";
