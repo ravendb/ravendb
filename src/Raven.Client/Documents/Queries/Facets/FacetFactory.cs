@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Extensions;
 
@@ -34,6 +35,17 @@ namespace Raven.Client.Documents.Queries.Facets
     {
         private RangeFacet _range;
         private Facet _default;
+        private readonly HashSet<string> _rqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "AS",
+            "SELECT",
+            "WHERE",
+            "LOAD",
+            "GROUP",
+            "ORDER",
+            "INCLUDE",
+            "UPDATE"
+        };
 
         public IFacetOperations<T> ByRanges(Expression<Func<T, bool>> path, params Expression<Func<T, bool>>[] paths)
         {
@@ -65,6 +77,11 @@ namespace Raven.Client.Documents.Queries.Facets
         {
             if (_default == null)
                 _default = new Facet();
+
+            if (_rqlKeywords.Contains(fieldName))
+            {
+                fieldName = "'" + fieldName + "'";
+            }
 
             _default.FieldName = fieldName;
 
