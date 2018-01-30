@@ -404,7 +404,6 @@ namespace Sparrow
             Size = size;
             Segment = NativeMemory.AllocateMemory(size, out _thread);
             InUse.Raise();
-            LowMemoryNotification.NotifyAllocationPending();
         }
 
         ~UnmanagedGlobalSegment()
@@ -415,6 +414,7 @@ namespace Sparrow
             }
             catch (ObjectDisposedException)
             {
+                // nothing that can be done here
             }
         }
 

@@ -162,8 +162,6 @@ namespace Sparrow.Json
             if (requestedSize >= MaxArenaSize)
                 throw new ArgumentOutOfRangeException(nameof(requestedSize));
 
-            LowMemoryNotification.NotifyAllocationPending();
-
             long newSize = GetPreferredSize(requestedSize);
 
             if (newSize > MaxArenaSize)

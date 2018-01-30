@@ -127,7 +127,6 @@ namespace Sparrow.LowMemory
         private float _commitChargeThreshold;
         private readonly ManualResetEvent _simulatedLowMemory = new ManualResetEvent(false);
         private readonly ManualResetEvent _shutdownRequested = new ManualResetEvent(false);
-        private readonly ManualResetEvent _warnAllocation = new ManualResetEvent(false);
         private readonly List<WeakReference<ILowMemoryHandler>> _inactiveHandlers = new List<WeakReference<ILowMemoryHandler>>(128);
 
         public LowMemoryNotification(Size lowMemoryThreshold, float commitChargeThreshold)
@@ -166,7 +165,6 @@ namespace Sparrow.LowMemory
         {
             NativeMemory.EnsureRegistered();
             var memoryAvailableHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested };
-            var paranoidModeHandles = new WaitHandle[] { _simulatedLowMemory, _shutdownRequested, _warnAllocation };
             var timeout = 5 * 1000;
             try
             {
@@ -174,8 +172,7 @@ namespace Sparrow.LowMemory
                 {
                     try
                     {
-                        var handles = SelectWaitMode(paranoidModeHandles, memoryAvailableHandles);
-                        var result = WaitHandle.WaitAny(handles, timeout);
+                        var result = WaitHandle.WaitAny(memoryAvailableHandles, timeout);
                         switch (result)
                         {
                             case WaitHandle.WaitTimeout:
@@ -184,9 +181,6 @@ namespace Sparrow.LowMemory
                             case 0:
                                 SimulateLowMemory();
                                 break;
-                            case 2: // check allocations
-                                _warnAllocation.Reset();
-                                goto case WaitHandle.WaitTimeout;
                             case 1: // shutdown requested
                                 return;
                             default:
@@ -202,6 +196,7 @@ namespace Sparrow.LowMemory
                         }
                         catch
                         {
+                            // can't even log, nothing we can do here
                         }
 
                         if (_shutdownRequested.WaitOne(5000))
@@ -271,6 +266,7 @@ namespace Sparrow.LowMemory
                     }
                     catch (OutOfMemoryException)
                     {
+                        // nothing we can do, we'll wait and try again
                     }
                 }
                 LowMemoryState = true;
@@ -333,14 +329,6 @@ namespace Sparrow.LowMemory
             return isLowMemory;
         }
 
-        private WaitHandle[] SelectWaitMode(WaitHandle[] paranoidModeHandles, WaitHandle[] memoryAvailableHandles)
-        {
-            var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-            var memory = (memoryInfoResult.AvailableMemory + GetCurrentProcessMemoryMappedShared());
-            var handles = memory < _lowMemoryThreshold * 2 ? paranoidModeHandles : memoryAvailableHandles;
-            return handles;
-        }
-
         private void AddLowMemEvent(LowMemReason reason, long availableMem, long totalUnmanaged, long physicalMem, long currentcommitCharge)
         {
             var lowMemEventDetails = new LowMemEventDetails
@@ -357,11 +345,6 @@ namespace Sparrow.LowMemory
             LowMemEventDetailsStack[_lowMemEventDetailsIndex++] = lowMemEventDetails;
             if (_lowMemEventDetailsIndex == LowMemEventDetailsStack.Length)
                 _lowMemEventDetailsIndex = 0;
-        }
-
-        public static void NotifyAllocationPending()
-        {
-            Instance?._warnAllocation.Set();
         }
 
         public void SimulateLowMemoryNotification()
