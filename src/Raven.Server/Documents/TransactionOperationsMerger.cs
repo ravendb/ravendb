@@ -97,6 +97,18 @@ namespace Raven.Server.Documents
 
         private void MergeOperationThreadProc()
         {
+            try
+            {
+                Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+            }
+            catch (Exception e)
+            {
+                if (_log.IsInfoEnabled)
+                {
+                    _log.Info("Unable to elevate the transaction merger thread for " + _parent.Name, e);
+                }
+            }
+            
             var oomTimer = new Stopwatch();// this is allocated here to avoid OOM when using it
 
             while (true) // this is actually only executed once, except if we are trying to recover from OOM errors
@@ -519,6 +531,15 @@ namespace Raven.Server.Documents
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
             _alreadyListeningToPreviousOperationEnd = false;
+
+            // take the amount before we start, so we only need to cover as many items 
+            // as there were in the queue at the beginning, regardless on the ingest rate
+            var itemsBefore = _operations.Count;
+            
+            // we give it a total of 1 second to run, plus 10 ms per any item in the queue
+            // this ensure that we are still lively, but give us more time to merge the actual
+            // transaction
+            var maximumTimeForOperation = (MaxTimeToWait + (itemsBefore * 10));
             var sp = Stopwatch.StartNew();
             do
             {
@@ -534,8 +555,11 @@ namespace Raven.Server.Documents
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
                 meter.IncreamentCommands(op.Execute(context));
-
-                if (previousOperation != null && previousOperation.IsCompleted)
+                if (
+                    // even if the previous operation has already completed, we still want to clean the queue
+                    // of at least the operations that were there already
+                    pendingOps.Count >= itemsBefore  && 
+                    previousOperation != null && previousOperation.IsCompleted)
                 {
                     if (_log.IsInfoEnabled)
                     {
@@ -544,7 +568,7 @@ namespace Raven.Server.Documents
                     }
                     return GetPendingOperationsStatus(context);
                 }
-                if (sp.ElapsedMilliseconds > MaxTimeToWait)
+                if (sp.ElapsedMilliseconds > maximumTimeForOperation)
                 {
                     if (previousOperation != null)
                     {
