@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Context
         {
             if (sizeof(int) == IntPtr.Size || _database.Configuration.Storage.ForceUsing32BitsPager)
                 return new DocumentsOperationContext(_database, 32 * 1024, 4 * 1024, LowMemoryFlag);
-            return new DocumentsOperationContext(_database, 1024 * 1024, 16 * 1024, LowMemoryFlag);
+            return new DocumentsOperationContext(_database, 64 * 1024, 16 * 1024, LowMemoryFlag);
         }
     }
 }

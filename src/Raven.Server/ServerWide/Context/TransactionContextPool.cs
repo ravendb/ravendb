@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Context
             }
             else
             {
-                initialSize = 1024*1024;
+                initialSize = 32*1024;
 
                 if (_mostlyThreadDedicatedWork != null)
                 {
