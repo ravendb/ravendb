@@ -28,6 +28,15 @@ function getManageServerMenuItem() {
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
+            route: 'admin/settings/threadsInfo',
+            moduleId: "viewmodels/manage/threadsInfo",
+            title: "Threads Info",
+            nav: true,
+            css: 'icon-plus',
+            dynamicHash: appUrl.forThreadsInfo,
+            enabled: canReadOrWrite
+        }),
+        new leafMenuItem({
             route: 'admin/settings/addClusterNode',
             moduleId: "viewmodels/manage/addClusterNode",
             title: "Add Cluster Node",

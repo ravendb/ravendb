@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 return currentProcess.Threads.Cast<ProcessThread>();
         }
 
-        private class ThreadInfo
+        internal class ThreadInfo
         {
             public int Id { get; set; }
             public int ManagedThreadId { get; set; }

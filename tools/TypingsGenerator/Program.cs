@@ -35,6 +35,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
@@ -344,6 +345,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SetupMode));
             scripter.AddType(typeof(ConfigurationNodeInfo));
             scripter.AddType(typeof(SetupParameters));
+            
+            // debug
+            scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
 
             return scripter;
         }
