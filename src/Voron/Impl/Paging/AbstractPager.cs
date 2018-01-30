@@ -93,6 +93,23 @@ namespace Voron.Impl.Paging
                 {
                     nextSize = int.MaxValue;
                 }
+                
+                // Minimum working set size must be less than or equal to the maximum working set size.
+                // Let's increase the max as well.
+                if (nextSize > (long)currentProcess.MaxWorkingSet)
+                {
+                    try
+                    {
+                        currentProcess.MaxWorkingSet = new IntPtr(nextSize);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InsufficientMemoryException($"Need to increase the min working set size from {(long)currentProcess.MinWorkingSet:#,#;;0} to {nextSize:#,#;;0} but the max working set size was too small: {(long)currentProcess.MaxWorkingSet:#,#;;0}. " +
+                                                              $"Failed to increase the max working set size so we can lock {info.Size:#,#;;0} for {FileName}. With encrypted " +
+                                                              "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
+                                                              "and aborting the current operation.", e);
+                    }
+                }
 
                 try
                 {
@@ -100,7 +117,7 @@ namespace Voron.Impl.Paging
                 }
                 catch (Exception e)
                 {
-                    throw new InsufficientMemoryException($"Failed to increase the min working set size so we can lock {info.Size:#,#;;0} for {FileName}, with encrypted " +
+                    throw new InsufficientMemoryException($"Failed to increase the min working set size so we can lock {info.Size:#,#;;0} for {FileName}. With encrypted " +
                                                           "databases we lock some memory in order to avoid leaking secrets to disk. Treating this as a catastrophic error " +
                                                           "and aborting the current operation.", e);
                 }
