@@ -47,10 +47,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
+                var isFirst = true;
                 foreach (var index in indexes)
                 {
                     writer.WritePropertyName(index.Name);
                     writer.WriteStartArray();
+
+                    if (isFirst == false)
+                        writer.WriteComma();
+                    isFirst = false;
 
                     var isFirstInternal = true;
                     foreach (var query in index.CurrentlyRunningQueries)
