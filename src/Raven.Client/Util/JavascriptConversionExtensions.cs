@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Lambda2Js;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
@@ -473,7 +474,7 @@ namespace Raven.Client.Util
                 return null;
             }
             
-            private static bool IsDictionary(Type type)
+            public static bool IsDictionary(Type type)
             {
                 if (type.GetGenericArguments().Length == 0)
                     return type == typeof(Dictionary<,>) || type == typeof(IDictionary<,>);
@@ -1057,26 +1058,82 @@ namespace Raven.Client.Util
             }
         }
 
-        public class NewArraySupport : JavascriptConversionExtension
+
+        public class ListInitSupport : JavascriptConversionExtension
         {
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
-                if (context.Node is MethodCallExpression mce &&
-                    mce.Method.DeclaringType == typeof(Array) &&
-                    mce.Method.Name == "Empty")
+                if (context.Node is ListInitExpression lie && 
+                    LinqMethodsSupport.IsCollection(lie.Type) && 
+                    LinqMethodsSupport.IsDictionary(lie.Type) == false)
                 {
-                    var writer = context.GetWriter();
                     context.PreventDefault();
-
-                    using (writer.Operation(mce))
+                    var writer = context.GetWriter();
+                    using (writer.Operation(0))
                     {
-                        writer.Write("[]");
+                        writer.Write('[');
+
+                        var posStart = writer.Length;
+                        foreach (var init in lie.Initializers)
+                        {
+                            if (writer.Length > posStart)
+                                writer.Write(',');
+
+                            if (init.Arguments.Count != 1)
+                                throw new Exception(
+                                    "Arrays can only be initialized with methods that receive a single parameter for the value");
+
+                            context.Visitor.Visit(init.Arguments[0]);
+                        }
+
+                        writer.Write(']');
+                    }
+                }
+            }
+        }
+
+        public class NewSupport : JavascriptConversionExtension
+        {
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (context.Node is NewExpression newExp)
+                {
+                    if (LinqMethodsSupport.IsCollection(newExp.Type) && 
+                        LinqMethodsSupport.IsDictionary(newExp.Type) == false)
+                    {
+                        var writer = context.GetWriter();
+                        context.PreventDefault();
+
+                        if (newExp.Arguments.Count > 0 && 
+                            LinqMethodsSupport.IsCollection(newExp.Arguments[0].Type))
+                        {
+                            context.Visitor.Visit(newExp.Arguments);
+                            return;
+                        }
+
+                        using (writer.Operation(newExp))
+                        {
+                            writer.Write("[]");
+                        }
+
+                        return;
                     }
 
-                    return;
+                    if (newExp.Arguments.Count == 0)
+                    {
+                        var writer = context.GetWriter();
+                        context.PreventDefault();
+
+                        using (writer.Operation(newExp))
+                        {
+                            writer.Write("{}");
+                        }
+
+                        return;
+                    }
                 }
 
-                if (context.Node.NodeType == ExpressionType.NewArrayBounds && context.Node is NewArrayExpression nae)
+                if (context.Node is NewArrayExpression nae)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1085,10 +1142,10 @@ namespace Raven.Client.Util
                     {
                         writer.Write("[");
 
-                        if (nae.Expressions.Count > 0 && 
+                        if (nae.Expressions.Count == 1 && 
                             nae.Expressions[0] is ConstantExpression val && 
-                            val.Value is int asInt)
-                        {                           
+                            val.Value is int asInt )
+                        {
                             if (asInt != 0)
                             {
                                 var elementsType = nae.Type.GetElementType();
@@ -1107,15 +1164,42 @@ namespace Raven.Client.Util
                                 {
                                     writer.Write(defaultVal ?? "null");
                                     if (i < asInt - 1)
-                                        writer.Write(", ");
+                                        writer.Write(",");
                                 }
-                            }                          
+                            }                                               
+                        }
+
+                        else if (nae.Expressions.Count > 0)
+                        {
+                            for (var i = 0; i < nae.Expressions.Count; i++)
+                            {
+                                if (i != 0)
+                                    writer.Write(",");
+                                context.Visitor.Visit(nae.Expressions[i]);
+                            }
                         }
 
                         writer.Write("]");
                     }
+
+                    return;
+                }
+
+                if (context.Node is MethodCallExpression mce &&
+                    mce.Method.DeclaringType == typeof(Array) &&
+                    mce.Method.Name == "Empty")
+                {
+                    var writer = context.GetWriter();
+                    context.PreventDefault();
+
+                    using (writer.Operation(mce))
+                    {
+                        writer.Write("[]");
+                    }
                 }
             }
+
+
 
         }
 
