@@ -133,6 +133,10 @@ class appUrl {
     static forClusterObserverLog(): string {
         return "#admin/settings/clusterObserverLog";
     }
+    
+    static forThreadsInfo(): string {
+        return "#admin/settings/threadsInfo";
+    }
 
     static forAddClusterNode(): string {
         return "#admin/settings/addClusterNode";
