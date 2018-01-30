@@ -13,7 +13,11 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             switch (SqlProviderParser.GetSupportedProvider(factoryName))
             {
                 case SqlProvider.SqlClient:
-                    database = GetConnectionStringValue(connectionString, new[] { "Initial Catalog", "Database" });
+                    database = GetConnectionStringValue(connectionString, new[] { "Initial Catalog", "Database" }, throwIfNotFound: false);
+
+                    if (database == null)
+                        database = "master";
+
                     server = GetConnectionStringValue(connectionString, new[] { "Data Source", "Server" });
                     break;
                 case SqlProvider.Npgsql:
