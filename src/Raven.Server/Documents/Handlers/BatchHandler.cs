@@ -20,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
 using Raven.Server.Documents.Replication;
+using System.Runtime.ExceptionServices;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -50,6 +51,7 @@ namespace Raven.Server.Documents.Handlers
                 try
                 {
                     await Database.TxMerger.Enqueue(command);
+                    command?.ExceptionDispatchInfo?.Throw();
                 }
                 catch (ConcurrencyException)
                 {
@@ -265,6 +267,7 @@ namespace Raven.Server.Documents.Handlers
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             public HashSet<string> ModifiedCollections;
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
+            public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public override string ToString()
             {
@@ -284,6 +287,19 @@ namespace Raven.Server.Documents.Handlers
                 return sb.ToString();
             }
 
+            private bool CanAvoidThrowingToMerger(ConcurrencyException e, int commandOffset)
+            {
+                // if a concurrency exception has been thrown, because the user passed a change vector,
+                // we need to check if we are on the very first command and can abort immediately without
+                // having the transaction merger try to run the transactions again
+                if (commandOffset == ParsedCommands.Offset)
+                {
+                    ExceptionDispatchInfo = ExceptionDispatchInfo.Capture(e);
+                    return true;
+                }
+                return false;
+            }
+
             public override int Execute(DocumentsOperationContext context)
             {
                 _disposables.Clear();
@@ -294,8 +310,15 @@ namespace Raven.Server.Documents.Handlers
                     switch (cmd.Type)
                     {
                         case CommandType.PUT:
-                        {
-                            var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
+                            DocumentsStorage.PutOperationResults putResult;
+                            try
+                            {
+                                putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
+                            }
+                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
+                            {
+                                return 0;
+                            }
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                             LastChangeVector = putResult.ChangeVector;
                             ModifiedCollections?.Add(putResult.Collection.Name);
@@ -314,10 +337,16 @@ namespace Raven.Server.Documents.Handlers
                                 putReply[Constants.Documents.Metadata.Flags] = putResult.Flags;
 
                             Reply.Add(putReply);
-                        }
                             break;
                         case CommandType.PATCH:
-                            cmd.PatchCommand.Execute(context);
+                            try
+                            {
+                                cmd.PatchCommand.Execute(context);
+                            }
+                            catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
+                            {
+                                return 0;
+                            }
 
                             var patchResult = cmd.PatchCommand.PatchResult;
                             if (patchResult.ModifiedDocument != null)
@@ -341,8 +370,15 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
-                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
-
+                                DocumentsStorage.DeleteOperationResult? deleted;
+                                try
+                                {
+                                    deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
+                                }
+                                catch (ConcurrencyException e) when (CanAvoidThrowingToMerger(e, i))
+                                {
+                                    return 0;
+                                }
                                 if (deleted != null)
                                 {
                                     LastTombstoneEtag = deleted.Value.Etag;
@@ -442,7 +478,7 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cmd in ParsedCommands)
                 {
                     cmd.Document?.Dispose();
-                    if(cmd.PatchCommand!= null)
+                    if (cmd.PatchCommand != null)
                         cmd.PatchCommand.Dispose();
                 }
                 BatchRequestParser.ReturnBuffer(ParsedCommands);
