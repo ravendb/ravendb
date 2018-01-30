@@ -459,6 +459,8 @@ namespace Voron
             _cancellationTokenSource.Cancel();
             try
             {
+                GlobalFlushingBehavior.GlobalFlusher.Value.RemoveFromFlushQueues(this);
+
                 if (_journal != null) // error during ctor
                 {
                     // if there is a pending flush operation, we need to wait for it

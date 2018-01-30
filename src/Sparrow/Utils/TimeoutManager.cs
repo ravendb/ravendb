@@ -22,7 +22,7 @@ namespace Sparrow.Utils
             private TaskCompletionSource<object> _nextTimeout;
             private readonly Timer _timer;
 
-            private void TimerCallback(object state)
+            public void TimerCallback(object state)
             {
                 var old = Interlocked.Exchange(ref _nextTimeout, null);
                 old?.TrySetResult(null);
@@ -76,21 +76,25 @@ namespace Sparrow.Utils
 
             var value = GetHolderForDuration(duration);
 
-            var sp = Stopwatch.StartNew();
-            await value.NextTask;
-
-            var step = duration / 8;
-
-            if (sp.ElapsedMilliseconds >= (duration - step))
-                return;
-
-            value = GetHolderForDuration(step);
-
-            do
+            using (token.Register(value.TimerCallback, null))
             {
-                token.ThrowIfCancellationRequested();
+                var sp = Stopwatch.StartNew();
                 await value.NextTask;
-            } while (sp.ElapsedMilliseconds < (duration - step));
+                token.ThrowIfCancellationRequested();
+
+                var step = duration / 8;
+
+                if (sp.ElapsedMilliseconds >= (duration - step))
+                    return;
+
+                value = GetHolderForDuration(step);
+
+                do
+                {
+                    token.ThrowIfCancellationRequested();
+                    await value.NextTask;
+                } while (sp.ElapsedMilliseconds < (duration - step));
+            }
         }
 
         private static void ThrowOutOfRange()
