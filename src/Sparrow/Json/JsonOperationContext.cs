@@ -110,6 +110,12 @@ namespace Sparrow.Json
         {
             public const int WholeBufferSize = 128 * Constants.Size.Kilobyte;
             public const int Size = WholeBufferSize / 4;
+
+            public ArraySegment<byte> Buffer;
+            public int Length;
+            public int Valid, Used;
+            public byte* Pointer;
+
             private GCHandle _handle;
             private bool _disposed;
 
@@ -117,27 +123,28 @@ namespace Sparrow.Json
             {
                 if (_disposed)
                     return;
-                lock (this)
+                _disposed = true;
+                GC.SuppressFinalize(this);
+                var array = Buffer.Array;
+                Buffer = new ArraySegment<byte>();// avoid holding reference to the byte array any more
+                if (_handle.IsAllocated)
+                    _handle.Free();
+
+                Length = 0;
+                Valid = Used = 0;
+                Pointer = null;
+
+                if (array != null)// we explicitly don't want to return this in the finalizer
                 {
-                    if (_disposed)
-                        return;
-                    _disposed = true;
-                    GC.SuppressFinalize(this);
-                    if(Buffer.Array != null)// we explicitly don't want to return this in the finalizer
-                        ArrayPool<byte>.Shared.Return(Buffer.Array);
-                    Buffer = new ArraySegment<byte>();// avoid holding reference to the byte array any more
-                    if (_handle.IsAllocated)
-                        _handle.Free();
+                    ArrayPool<byte>.Shared.Return(array);
+                    _pinnedBufferPool.Free(this);
                 }
             }
 
             ~ManagedPinnedBuffer()
             {
-                lock (this)
-                {
-                    if (_handle.IsAllocated)
-                        _handle.Free();
-                }
+                if (_handle.IsAllocated)
+                    _handle.Free();
             }
 
             public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
@@ -173,7 +180,7 @@ namespace Sparrow.Json
 
                 public Disposer(params IDisposable[] toDispose)
                 {
-                    this._toDispose = toDispose;
+                    _toDispose = toDispose;
                 }
 
 
@@ -186,18 +193,21 @@ namespace Sparrow.Json
                 }
             }
 
-            public ArraySegment<byte> Buffer;
-            public int Length;
-            public int Valid, Used;
-            public byte* Pointer;
+            private ManagedPinnedBuffer()
+            {
+                GC.SuppressFinalize(this); // we only want finalization if we have values
+            }
 
-            public ManagedPinnedBuffer(ArraySegment<byte> buffer, byte* pointer, GCHandle handle)
+            private void Init(ArraySegment<byte> buffer, byte* pointer, GCHandle handle)
             {
                 Buffer = buffer;
                 Length = buffer.Count;
                 Pointer = pointer;
                 _handle = handle;
+                GC.ReRegisterForFinalize(this);
             }
+
+            private static ObjectPool<ManagedPinnedBuffer> _pinnedBufferPool = new ObjectPool<ManagedPinnedBuffer>(()=>new ManagedPinnedBuffer());
 
             public static ManagedPinnedBuffer LongLivedInstance()
             {
@@ -206,7 +216,9 @@ namespace Sparrow.Json
                 try
                 {
                     var ptr = (byte*)handle.AddrOfPinnedObject();
-                    return new ManagedPinnedBuffer(new ArraySegment<byte>(buffer), ptr, handle);
+                    var mpb = _pinnedBufferPool.Allocate();
+                    mpb.Init(new ArraySegment<byte>(buffer), ptr, handle);
+                    return mpb;
                 }
                 catch (Exception)
                 {
@@ -222,7 +234,9 @@ namespace Sparrow.Json
                 try
                 {
                     var ptr = (byte*)handle.AddrOfPinnedObject();
-                    return new ManagedPinnedBuffer(new ArraySegment<byte>(buffer), ptr, handle);
+                    var mpb = _pinnedBufferPool.Allocate();
+                    mpb.Init(new ArraySegment<byte>(buffer), ptr, handle);
+                    return mpb;
                 }
                 catch (Exception)
                 {
