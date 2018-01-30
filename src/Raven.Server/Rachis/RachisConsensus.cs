@@ -1480,11 +1480,11 @@ namespace Raven.Server.Rachis
                 *(long*)ptr = term;
             }
 
-            votedFor = votedFor ?? string.Empty;
 
             if (Log.IsInfoEnabled)
-                Log.Info($"Casting vote for {votedFor} in {term} because: {reason}");
+                Log.Info($"Casting vote for {votedFor ?? "<???>"} in {term} because: {reason}");
 
+            votedFor = votedFor ?? string.Empty;
 
             var size = Encoding.UTF8.GetByteCount(votedFor);
 

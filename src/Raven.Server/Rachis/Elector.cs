@@ -164,23 +164,30 @@ namespace Raven.Server.Rachis
 
                         if (lastTerm > rv.LastLogTerm)
                         {
+                            // we aren't going to vote for this guy, but we need to check if it is more up to date
+                            // in the state of the cluster than we are
+                            if(rv.Term > _engine.CurrentTerm + 1)
+                            {
+                                // trail election is often done on the current term + 1, but if there is any
+                                // election on a term that is greater than the current term plus one, we should
+                                // consider this an indication that the cluster was able to move past our term
+                                // and update the term accordingly
+                                using (context.OpenWriteTransaction())
+                                {
+                                    // double checking things under the transaction lock
+                                    if(rv.Term > _engine.CurrentTerm + 1)
+                                    {
+                                        _engine.CastVoteInTerm(context, rv.Term -1 , null, "Noticed that the term in the cluster grew beyond what I was familiar with, increasing it");
+                                    }
+                                    context.Transaction.Commit();
+                                }
+                            }
+
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = _engine.CurrentTerm,
                                 VoteGranted = false,
                                 Message = $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm}, so I'm more up to date"
-                            });
-                            continue;
-                        }
-
-                        if (lastIndex > rv.LastLogIndex)
-                        {
-                            _connection.Send(context, new RequestVoteResponse
-                            {
-                                Term = _engine.CurrentTerm,
-                                VoteGranted = false,
-                                Message =
-                                    $"My last log entry is of term {lastTerm} / {lastIndex} while yours is {rv.LastLogTerm} / {rv.LastLogIndex}, so I'm more up to date"
                             });
                             continue;
                         }
