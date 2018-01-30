@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -107,14 +108,42 @@ namespace Sparrow.Json
 
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
-            public const int WholeBufferSize = 256 * Constants.Size.Kilobyte;
+            public const int WholeBufferSize = 128 * Constants.Size.Kilobyte;
             public const int Size = WholeBufferSize / 4;
+            private GCHandle _handle;
+            private bool _disposed;
 
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+                lock (this)
+                {
+                    if (_disposed)
+                        return;
+                    _disposed = true;
+                    GC.SuppressFinalize(this);
+                    if(Buffer.Array != null)// we explicitly don't want to return this in the finalizer
+                        ArrayPool<byte>.Shared.Return(Buffer.Array);
+                    Buffer = new ArraySegment<byte>();// avoid holding reference to the byte array any more
+                    if (_handle.IsAllocated)
+                        _handle.Free();
+                }
+            }
+
+            ~ManagedPinnedBuffer()
+            {
+                lock (this)
+                {
+                    if (_handle.IsAllocated)
+                        _handle.Free();
+                }
+            }
 
             public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
                 where T : JsonOperationContext
             {
-                if(this.Length == WholeBufferSize)
+                if(Length == WholeBufferSize)
                     throw new InvalidOperationException("Cannot clone long lived buffers");
                 
                 var releaseCtx = pool.AllocateOperationContext(out T ctx);
@@ -156,29 +185,28 @@ namespace Sparrow.Json
                     }
                 }
             }
-            
 
             public ArraySegment<byte> Buffer;
             public int Length;
             public int Valid, Used;
             public byte* Pointer;
-            private GCHandle? _handle;
 
-            public ManagedPinnedBuffer(ArraySegment<byte> buffer, byte* pointer)
+            public ManagedPinnedBuffer(ArraySegment<byte> buffer, byte* pointer, GCHandle handle)
             {
                 Buffer = buffer;
                 Length = buffer.Count;
                 Pointer = pointer;
+                _handle = handle;
             }
 
             public static ManagedPinnedBuffer LongLivedInstance()
             {
-                var buffer = new byte[WholeBufferSize]; // making sure that this is on the LOH
+                var buffer = ArrayPool<byte>.Shared.Rent(WholeBufferSize);
                 var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
                     var ptr = (byte*)handle.AddrOfPinnedObject();
-                    return new ManagedPinnedBuffer(new ArraySegment<byte>(buffer), ptr) { _handle = handle };
+                    return new ManagedPinnedBuffer(new ArraySegment<byte>(buffer), ptr, handle);
                 }
                 catch (Exception)
                 {
@@ -187,47 +215,20 @@ namespace Sparrow.Json
                 }
             }
 
-            public static void Add(Stack<ManagedPinnedBuffer> stack)
+            public static ManagedPinnedBuffer ShortLivedInstance()
             {
-                var buffer = new byte[WholeBufferSize]; // making sure that this is on the LOH
+                var buffer = ArrayPool<byte>.Shared.Rent(WholeBufferSize / 4);
                 var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
                 try
                 {
                     var ptr = (byte*)handle.AddrOfPinnedObject();
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 0 * Size, Size), ptr));
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 1 * Size, Size), ptr + 1 * Size));
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 2 * Size, Size), ptr + 2 * Size));
-
-                    foreach (var item in stack)
-                    {
-                        // we don't need to actually finalize them, the instances so far are not holding any
-                        // reference to the 
-                        GC.SuppressFinalize(item);
-                    }
-
-                    stack.Push(new ManagedPinnedBuffer(new ArraySegment<byte>(buffer, 3 * Size, Size), ptr + 3 * Size) { _handle = handle });
+                    return new ManagedPinnedBuffer(new ArraySegment<byte>(buffer), ptr, handle);
                 }
                 catch (Exception)
                 {
                     handle.Free();
+                    throw;
                 }
-            }
-
-            public void Dispose()
-            {
-                GC.SuppressFinalize(this);
-                _handle?.Free();
-                _handle = null;
-                // let's help the GC and avoid retaining the reference to the big byte buffer
-                Buffer = new ArraySegment<byte>();
-                Length = 0;
-                Pointer = null;
-            }
-
-            ~ManagedPinnedBuffer()
-            {
-                _handle?.Free();
-                _handle = null;
             }
         }
 
@@ -270,7 +271,8 @@ namespace Sparrow.Json
                 {
                     foreach (var managedPinnedBuffer in _managedBuffers)
                     {
-                        managedPinnedBuffer.Dispose();
+                        if (managedPinnedBuffer is IDisposable s)
+                            s.Dispose();
                     }
 
                     _managedBuffers = null;
@@ -307,10 +309,12 @@ namespace Sparrow.Json
         {
             if (_managedBuffers == null)
                 _managedBuffers = new Stack<ManagedPinnedBuffer>();
-            if (_managedBuffers.Count == 0)
-                ManagedPinnedBuffer.Add(_managedBuffers);
 
-            buffer = _managedBuffers.Pop();
+            if (_managedBuffers.Count == 0)
+                buffer = ManagedPinnedBuffer.ShortLivedInstance();
+            else
+                buffer = _managedBuffers.Pop();
+
             buffer.Valid = buffer.Used = 0;
             return new ReturnBuffer(buffer, this);
         }

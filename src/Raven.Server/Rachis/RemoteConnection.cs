@@ -436,7 +436,8 @@ namespace Raven.Server.Rachis
             {
                 RemoteConnectionsList.TryRemove(_info);
                 _stream?.Dispose();
-                _buffer?.Dispose();
+                if(_buffer is IDisposable s)
+                    s.Dispose();
             }
         }
 

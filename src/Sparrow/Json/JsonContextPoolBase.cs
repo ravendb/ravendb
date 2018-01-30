@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Threading;
@@ -18,7 +19,11 @@ namespace Sparrow.Json
         private readonly NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();     
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+
+        // because this is a finalizer object, we want to pool them to avoid having too many items in the finalization queue
+        private static ObjectPool<ContextStack> _contextStackPool = new ObjectPool<ContextStack>(() => new ContextStack());
+
         private class ContextStack : StackHeader<T>, IDisposable
         {
             ~ContextStack()
@@ -28,7 +33,7 @@ namespace Sparrow.Json
 
                 try
                 {
-                    Dispose();
+                    DisposeOfContexts();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -38,7 +43,13 @@ namespace Sparrow.Json
             public void Dispose()
             {
                 GC.SuppressFinalize(this);
+                DisposeOfContexts();
+                // explicitly don't want to do this in the finalizer, if the instance leaked, so be it
+                _contextStackPool.Free(this);
+            }
 
+            private void DisposeOfContexts()
+            {
                 var current = Head;
                 while (current != null)
                 {
@@ -55,7 +66,7 @@ namespace Sparrow.Json
 
         protected JsonContextPoolBase()
         {
-            _contextPool = new ThreadLocal<ContextStack>(() => new ContextStack(), trackAllValues: true);
+            _contextPool = new ThreadLocal<ContextStack>(() => _contextStackPool.Allocate(), trackAllValues: true);
             ThreadLocalCleanup.ReleaseThreadLocalState += CleanThreadLocalState;
             _nativeMemoryCleaner = new NativeMemoryCleaner<ContextStack, T>(_contextPool, LowMemoryFlag, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
