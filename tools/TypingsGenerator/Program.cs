@@ -348,6 +348,7 @@ namespace TypingsGenerator
             
             // debug
             scripter.AddType(typeof(ThreadsHandler.ThreadInfo));
+            scripter.AddType(typeof(MemoryStatsHandler.MemoryInfo));
 
             return scripter;
         }
