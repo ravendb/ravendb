@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <Description>rvn is a CLI utility for RavenDB</Description>
-    <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.0</TargetFramework>
@@ -13,6 +12,7 @@
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <None Include="..\..\libs\libsodium\x64\libsodium.x64.dll" Link="libsodium.x64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Voron Recovery Tool</Description>
-    <Version>4.0.0-custom-40</Version>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>netcoreapp2.0</TargetFramework>
     <RuntimeFrameworkVersion>2.0.5</RuntimeFrameworkVersion>
@@ -16,6 +15,7 @@
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>

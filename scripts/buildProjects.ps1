@@ -85,7 +85,7 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildTool ( $toolName, $srcDir, $outDir, $spec ) {
+function BuildTool ( $toolName, $srcDir, $outDir, $spec, $debug ) {
     write-host "Building $toolName for $($spec.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
