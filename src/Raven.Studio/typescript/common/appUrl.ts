@@ -130,10 +130,6 @@ class appUrl {
         return "#admin/settings/cluster";
     }
     
-    static forThreadsInfo(): string {
-        return "#admin/settings/threadsInfo";
-    }
-
     static forAddClusterNode(): string {
         return "#admin/settings/addClusterNode";
     }
@@ -152,6 +148,10 @@ class appUrl {
 
     static forDebugAdvancedObserverLog(): string {
         return "#admin/settings/debug/advanced/observerLog";
+    }
+    
+    static forDebugAdvancedMemoryMappedFiles(): string {
+        return "#admin/settings/debug/advanced/memoryMappedFiles";
     }
 
     static forServerTopology(): string { 

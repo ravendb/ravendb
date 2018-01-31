@@ -19,6 +19,14 @@ class debugAdvanced extends viewModelBase {
                     hash: appUrl.forDebugAdvancedThreadsRuntime()
                 },
                 {
+                    route: 'admin/settings/debug/advanced/memoryMappedFiles',
+                    moduleId: 'viewmodels/manage/debugAdvancedMemoryMappedFiles',
+                    title: 'Memory Mapped Files',
+                    tabName: "Memory Mapped Files",
+                    nav: true,
+                    hash: appUrl.forDebugAdvancedMemoryMappedFiles()
+                },
+                {
                     route: 'admin/settings/debug/advanced/observerLog',
                     moduleId: 'viewmodels/manage/debugAdvancedObserverLog',
                     title: 'Cluster Observer Log',
