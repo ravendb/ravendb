@@ -54,6 +54,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.TimeBeforeAddingReplicaInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting AddReplicaTimeout{ get; set; }
 
+        [Description("The grace time we give to a node before it will be moved to rehab.")]
+        [DefaultValue(60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Cluster.TimeBeforeMovingToRehabInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting MoveToRehabGraceTime{ get; set; }
+        
         [Description("Tcp connection read/write timeout.")]
         [DefaultValue(15 * 1000)]
         [TimeUnit(TimeUnit.Milliseconds)]

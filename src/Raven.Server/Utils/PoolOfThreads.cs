@@ -77,7 +77,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        public LongRunningWork LongRunning(Action<object> action, object state, string name)
+        public LongRunningWork LongRunning(Action<object> action, object state, string name, ThreadPriority priority = ThreadPriority.Normal)
         {
             if (_pool.TryDequeue(out var pooled) == false)
             {
@@ -98,12 +98,13 @@ namespace Raven.Server.Utils
                 {
                     Name = name,
                     IsBackground = true,
+                    Priority = priority
                 };
 
                 thread.Start();
             }
             pooled.StartedAt = DateTime.UtcNow;
-            return pooled.SetWorkForThread(action, state, name);
+            return pooled.SetWorkForThread(action, state, name, priority);
         }
 
         private class PooledThread
@@ -119,6 +120,7 @@ namespace Raven.Server.Utils
             private string _name;
             private PoolOfThreads _parent;
             private LongRunningWork _workIsDone;
+            private ThreadPriority _priority;
 
             public DateTime StartedAt { get; internal set; }
 
@@ -138,11 +140,12 @@ namespace Raven.Server.Utils
                 _parent = pool;
             }
 
-            public LongRunningWork SetWorkForThread(Action<object> action, object state, string name)
+            public LongRunningWork SetWorkForThread(Action<object> action, object state, string name, ThreadPriority priority = ThreadPriority.Normal)
             {
                 _action = action;
                 _state = state;
                 _name = name;
+                _priority = priority;
                 _workIsDone = new LongRunningWork(new ManualResetEvent(false), name);
 
                 _waitForWork.Set();
@@ -156,8 +159,8 @@ namespace Raven.Server.Utils
                     ResetCurrentThreadName();
                     try
                     {
-                        if(Thread.CurrentThread.Priority != ThreadPriority.Normal)
-                            Thread.CurrentThread.Priority = ThreadPriority.Normal;
+                        if(Thread.CurrentThread.Priority != _priority)
+                            Thread.CurrentThread.Priority = _priority;
                     }
                     catch (Exception e)
                     {
