@@ -40,12 +40,12 @@
                 <span class="has-disable-reason" data-bind="attr: { 'data-original-title': defaultConfiguration() ? 'Default configuration was already created' : '' }">
                     <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultConfiguration()">
                         <i class="icon-settings"></i>
-                        <span>Create default configuration</span>
+                        <span>Create a default configuration</span>
                     </button>
                 </span>
                 <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration">
                     <i class="icon-plus"></i>
-                    <span>Add collection specific configuration</span>
+                    <span>Add a collection specific configuration</span>
                 </button>
             </div>
         </div>
@@ -65,7 +65,7 @@
                 <div class="row" data-bind="visible: perCollectionConfigurations().length == 0 && !defaultConfiguration()">
                     <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
                         <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h2 class="text-center">No configuration have been created</h2>    
+                        <h2 class="text-center">No configuration has been created.</h2>    
                     </div>
                 </div>
             </div>
@@ -145,8 +145,8 @@
         <div class="flex-grow">
             <ul class="properties">
                 <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge on delete</span></li>
-                <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Min revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
-                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Min retention time: <span data-bind="text: $root.formatedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
+                <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Minimum revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
+                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Minimum retention time: <span data-bind="text: $root.formatedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
             </ul>
         </div>
         <div class="actions-container">
