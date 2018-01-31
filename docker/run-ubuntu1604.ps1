@@ -148,7 +148,7 @@ if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
     $dockerArgs += "RAVEN_Logs_Mode=$LogsMode"
 }
 
-if ([string]::IsNullOrEmpty($NoSetup) -eq $False) {
+if ($NoSetup) {
     $ravenArgs += "--Setup.Mode=None"
 }
 
