@@ -35,7 +35,7 @@
                     </div>
                 </div>
                 <div class="hr-title">
-                    <h5><strong>SQL</strong> Connection strings</h5><hr>
+                    <h5><strong>SQL</strong> Connection Strings</h5><hr>
                     <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
                 </div>
                 <div data-bind="if: sqlEtlConnectionStringsNames().length === 0">
@@ -110,8 +110,8 @@
                 </form>
                 <div class="panel-addon" data-bind="with: testConnectionResult">
                     <div class="padding bg-success small" data-bind="visible: Success">
-                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to node</div>
-                        <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to SQL Sever</div>
+                        <div data-bind="visible: $root.editedRavenEtlConnectionString()">Successfully connected to the node.</div>
+                        <div data-bind="visible: $root.editedSqlEtlConnectionString()">Successfully connected to the SQL Sever.</div>
                     </div>
                     <div class="padding bg-danger small" data-bind="visible: !Success">
                         Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>

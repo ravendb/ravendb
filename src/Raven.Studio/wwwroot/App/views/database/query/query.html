@@ -89,11 +89,11 @@
                                 </a>
                             </li>
                             <li class="has-disable-reason"  data-original-title="Available only for map-reduce indexes">                                
-                                <a href="#" data-bind="visible: isMapReduceIndex, attr: { href: visualizerUrl }" title="Map-Reduce Visualizer">
-                                    <i class="icon-map-reduce-visualizer"></i> <span>Map-Reduce Visualizer</span>
+                                <a href="#" data-bind="visible: isMapReduceIndex, attr: { href: visualizerUrl }" title="MapReduce Visualizer">
+                                    <i class="icon-map-reduce-visualizer"></i> <span>MapReduce Visualizer</span>
                                 </a>
                                 <a data-bind="visible: !isMapReduceIndex()" class="disabled has-disable-reason" title="Available only for map-reduce indexes">
-                                    <i class="icon-map-reduce-visualizer"></i> <span>Map-Reduce Visualizer</span>
+                                    <i class="icon-map-reduce-visualizer"></i> <span>MapReduce Visualizer</span>
                                 </a>
                             </li>
                         </ul>
@@ -133,12 +133,12 @@
         <div class="panel flex-window-scroll">
             <div class="has-error results-error" data-bind="visible: staleResult()">
                 <div class="help-block">
-                    <i class="icon-danger"></i><span>Index is stale, possibly not all results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                    <i class="icon-danger"></i><span>Your index is stale. It's possible that not all the results are displayed. <a href="#" data-bind="click: refresh">Refresh.</a></span>
                 </div>
             </div>
             <div class="has-error results-error" data-bind="visible: dirtyResult() && !staleResult()">
                 <div class="help-block">
-                    <i class="icon-danger"></i><span>Data has changed. Your results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
+                    <i class="icon-danger"></i><span>Your data has changed. The results may contain duplicates or non-current entries. <a href="#" data-bind="click: refresh">Refresh.</a></span>
                 </div>
             </div>
             <div class="scroll-stretch">
@@ -170,7 +170,7 @@
         No results found.
     </div>
     <div data-bind="if: $root.isEmptyFieldsResult">
-        Index <strong data-bind="text: $root.queriedIndexLabel"></strong> doesn't contain any stored fields. 
+        Index <strong data-bind="text: $root.queriedIndexLabel"></strong> doesn't contain any stored fields.
     </div>
 </script>
 
