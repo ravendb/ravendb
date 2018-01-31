@@ -757,8 +757,7 @@ namespace Raven.Server.Rachis
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(
                     action: x => Run(x),
                     state: negotiation,
-                    name: $"Follower thread from {_connection} in term {negotiation.Term}",
-                    priority:ThreadPriority.AboveNormal);
+                    name: $"Follower thread from {_connection} in term {negotiation.Term}");
                 
         }
 
@@ -766,6 +765,18 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                try
+                {
+                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+                }
+                catch (Exception e)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{_debugName} was unable to set the thread priority, will continue with the same priority", e);
+                    }
+                }
+
                 using (this)
                 {
                     try

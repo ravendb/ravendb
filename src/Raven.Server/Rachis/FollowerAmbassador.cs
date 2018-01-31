@@ -139,6 +139,18 @@ namespace Raven.Server.Rachis
         {
             try
             {
+                try
+                {
+                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
+                }
+                catch (Exception e)
+                {
+                    if (_engine.Log.IsInfoEnabled)
+                    {
+                        _engine.Log.Info($"{ToString()} was unable to set the thread priority, will continue with the same priority", e);
+                    }
+                }
+
                 var needNewConnection = _connection == null;
                 while (_leader.Running && _running)
                 {
@@ -768,7 +780,7 @@ namespace Raven.Server.Rachis
         {
             UpdateLastMatchFromFollower(0);
             _followerAmbassadorLongRunningOperation =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString(), ThreadPriority.AboveNormal); 
+                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => Run(), null, ToString()); 
         }
 
         public override string ToString()
