@@ -322,6 +322,9 @@ namespace Raven.Server.Web.System
                         .Select(addr => addr.Address.ToString())
                         .ToList();
 
+                    // If there's a hostname in the server url, add it to the list
+                    if (SetupParameters.Get(ServerStore).DockerHostname != null && ips.Contains(SetupParameters.Get(ServerStore).DockerHostname) == false)
+                        ips.Add(SetupParameters.Get(ServerStore).DockerHostname);
 
                     if (first == false)
                         writer.WriteComma();

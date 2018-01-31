@@ -11,13 +11,17 @@ namespace Raven.Server.Commercial
         public int? FixedServerTcpPortNumber { get;set; }
         
         public bool IsDocker { get; set; }
+        public string DockerHostname { get; set; }
 
         public static SetupParameters Get(ServerStore serverStore)
         {
             var result = new SetupParameters();
             DetermineFixedPortNumber(serverStore, result);
             DetermineFixedTcpPortNumber(serverStore, result);
+
             result.IsDocker = Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER") == "true";
+            result.DockerHostname = result.IsDocker ? new Uri(serverStore.GetNodeHttpServerUrl()).Host : null;
+
             return result;
         }
 
