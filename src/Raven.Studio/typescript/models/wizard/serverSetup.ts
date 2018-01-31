@@ -42,7 +42,7 @@ class serverSetup {
     nodesValidationGroup: KnockoutValidationGroup;
 
     constructor() {
-        const newNode = new nodeInfo(this.hostnameIsNotRequired);
+        const newNode = new nodeInfo(this.hostnameIsNotRequired, this.mode);
         newNode.nodeTag("A");
         this.nodes.push(newNode);
 

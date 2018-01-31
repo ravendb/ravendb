@@ -10,6 +10,7 @@ class nodeInfo {
     tcpPort = ko.observable<string>();
     hostname = ko.observable<string>();
     isLocal: KnockoutComputed<boolean>;
+    mode: KnockoutObservable<Raven.Server.Commercial.SetupMode | "Continue">;
     
     externalIpAddress = ko.observable<string>();     
     effectiveIpAddresses: KnockoutComputed<string>;
@@ -21,12 +22,14 @@ class nodeInfo {
     advancedSettingsCheckBox = ko.observable<boolean>(false);    
     showAdvancedSettings: KnockoutComputed<boolean>;
 
-    validationGroup: KnockoutValidationGroup;
+    validationGroupForSecured: KnockoutValidationGroup;
+    validationGroupForLetsEncrypt: KnockoutValidationGroup;
 
     private hostnameIsOptional: KnockoutObservable<boolean>;
     
-    constructor(hostnameIsOptional: KnockoutObservable<boolean>) {
+    constructor(hostnameIsOptional: KnockoutObservable<boolean>, mode: KnockoutObservable<Raven.Server.Commercial.SetupMode | "Continue">) {
         this.hostnameIsOptional = hostnameIsOptional;
+        this.mode = mode;
         
         this.initObservables();
         this.initValidation();
@@ -52,13 +55,13 @@ class nodeInfo {
         });
 
         this.ipsContainHostName.subscribe(val => {
-            if (val) {
+            if (val && this.mode() !== 'Secured') {
                 this.advancedSettingsCheckBox(true);
             }
         });
         
         this.showAdvancedSettings = ko.pureComputed(() => {
-            if (this.ipsContainHostName()){
+            if (this.ipsContainHostName() && this.mode() !== 'Secured'){
                 return true;
             }
 
@@ -124,13 +127,23 @@ class nodeInfo {
             ]
         });
 
-        this.validationGroup = ko.validatedObservable({
+        this.validationGroupForLetsEncrypt= ko.validatedObservable({
             nodeTag: this.nodeTag,
             port: this.port, 
             tcpPort: this.tcpPort,
             ips: this.ips,
             hostname: this.hostname,
             externalIpAddress: this.externalIpAddress,
+            externalTcpPort: this.externalTcpPort,
+            externalHttpPort: this.externalHttpPort
+        });
+
+        this.validationGroupForSecured = ko.validatedObservable({
+            nodeTag: this.nodeTag,
+            port: this.port,
+            tcpPort: this.tcpPort,
+            ips: this.ips,
+            hostname: this.hostname,
             externalTcpPort: this.externalTcpPort,
             externalHttpPort: this.externalHttpPort
         });
