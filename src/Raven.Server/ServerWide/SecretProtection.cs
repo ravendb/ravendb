@@ -500,7 +500,7 @@ namespace Raven.Server.ServerWide
 
             ValidateKeyUsages(source, loadedCertificate);
             
-            AddCertificateChainToTheUserCertificateAuthority(loadedCertificate, rawBytes);
+            AddCertificateChainToTheUserCertificateAuthority(loadedCertificate, rawBytes, password);
 
 
             return new RavenServer.CertificateHolder
@@ -511,14 +511,18 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private static void AddCertificateChainToTheUserCertificateAuthority(X509Certificate2 loadedCertificate, byte[] rawBytes)
+        private static void AddCertificateChainToTheUserCertificateAuthority(X509Certificate2 loadedCertificate, byte[] rawBytes, string password)
         {
             // we have to add all the certs in the pfx file provides to the CA store for the current user 
             // to avoid a remote call on any incoming connection by the SslStream infrastructure
             // see: https://github.com/dotnet/corefx/issues/26061
             
             var collection = new X509Certificate2Collection();
-            collection.Import(rawBytes);
+
+            if (string.IsNullOrEmpty(password))
+                collection.Import(rawBytes);
+            else
+                collection.Import(rawBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
 
             using (var userIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser, 
                 System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
