@@ -14,6 +14,10 @@ namespace Sparrow.LowMemory
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<MemoryInfoResult>("Raven/Server");
 
+        private static readonly ConcurrentQueue<Tuple<long, DateTime>> MemByTime = new ConcurrentQueue<Tuple<long, DateTime>>();
+        private static DateTime _memoryRecordsSet;
+        private static readonly TimeSpan MemByTimeThrottleTime = TimeSpan.FromMilliseconds(100);
+
         public static long HighLastOneMinute;
         public static long LowLastOneMinute = long.MaxValue;
         public static long HighLastFiveMinutes;
@@ -362,8 +366,6 @@ namespace Sparrow.LowMemory
             }
         }
 
-        private static readonly ConcurrentQueue<Tuple<long, DateTime>> MemByTime = new ConcurrentQueue<Tuple<long, DateTime>>();
-
         private static void SetMemoryRecords(long availableRamInBytes)
         {
             var now = DateTime.UtcNow;
@@ -373,14 +375,19 @@ namespace Sparrow.LowMemory
             if (LowSinceStartup > availableRamInBytes)
                 LowSinceStartup = availableRamInBytes;
 
-            MemByTime.Enqueue(new Tuple<long, DateTime>(availableRamInBytes, now));
-
             while (MemByTime.TryPeek(out var existing) && 
                 (now - existing.Item2) > TimeSpan.FromMinutes(5))
             {
                 if (MemByTime.TryDequeue(out _) == false)
                     break;
             }
+
+            if (now - _memoryRecordsSet < MemByTimeThrottleTime)
+                return;
+
+            _memoryRecordsSet = now;
+
+            MemByTime.Enqueue(new Tuple<long, DateTime>(availableRamInBytes, now));
 
             long highLastOneMinute = 0;
             long lowLastOneMinute = long.MaxValue;
