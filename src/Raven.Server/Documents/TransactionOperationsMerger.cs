@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -314,7 +315,7 @@ namespace Raven.Server.Documents
                         case PendingOperations.CompletedAll:
                             try
                             {
-                                tx.Commit();
+                                CommitAndNotifyOnSlowWrite(tx);
                                 tx.Dispose();
                             }
                             catch (Exception e)
@@ -341,6 +342,32 @@ namespace Raven.Server.Documents
             finally
             {
                 tx?.Dispose();
+            }
+        }
+
+        private void CommitAndNotifyOnSlowWrite(DocumentsTransaction tx)
+        {
+            var sp = Stopwatch.StartNew();
+            tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+            tx.Commit();
+            sp.Stop();
+
+            if(stats.NumberOf4KbsWrittenToDisk == 0)
+                return;
+
+            var writtenDataInMb = stats.NumberOf4KbsWrittenToDisk / (double)256;
+            var seconds = sp.Elapsed.TotalSeconds;
+            var speed = writtenDataInMb / seconds;
+            // everything under 150ms will note raise an alert
+            if (seconds > 0.15 && (speed < 1 || seconds > 1))
+            {
+                _parent.NotificationCenter.Add(PerformanceHint.Create(_parent.Name,
+                    "An extremely slow write to disk",
+                    $"We wrote {writtenDataInMb:N} MB in {seconds:N} seconds ({speed:N} MB/s)",
+                    PerformanceHintType.SlowIO,
+                    NotificationSeverity.Info,
+                    "TxMerger"
+                ));
             }
         }
 
@@ -454,7 +481,7 @@ namespace Raven.Server.Documents
                             case PendingOperations.CompletedAll:
                                 try
                                 {
-                                    context.Transaction.Commit();
+                                    CommitAndNotifyOnSlowWrite(context.Transaction);
                                     context.Transaction.Dispose();
                                 }
                                 catch (Exception e)
@@ -689,7 +716,7 @@ namespace Raven.Server.Documents
                             using (var tx = context.OpenWriteTransaction())
                             {
                                 op.Execute(context);
-                                tx.Commit();
+                                CommitAndNotifyOnSlowWrite(tx);
                             }
                         }
                         DoCommandNotification(op);
