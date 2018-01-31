@@ -497,9 +497,25 @@ namespace Raven.Client.Http
 
         protected virtual void ThrowExceptions(List<(string, Exception)> list)
         {
-            throw new AggregateException("Failed to retrieve database topology from all known nodes" + Environment.NewLine +
-                                         string.Join(Environment.NewLine, list.Select(x => x.Item1 + " -> " + x.Item2?.Message)) + Environment.NewLine
-                , list.Select(x => x.Item2));
+            var message = "Failed to retrieve database topology from all known nodes.";
+            foreach (var tuple in list)
+            {
+                message += Environment.NewLine;
+                message += tuple.Item1;
+                message += " -> ";
+                var ex = tuple.Item2;
+                if (ex == null)
+                    message += " No exception.";
+                else
+                {
+                    if (ex is AggregateException aggregateException)
+                        ex = aggregateException.ExtractSingleInnerException();
+
+                    message += ex.AllInnerMessages();
+                }
+            }
+
+            throw new AggregateException(message, list.Select(x => x.Item2));
         }
 
         protected static string[] ValidateUrls(string[] initialUrls, X509Certificate2 certificate)
@@ -780,7 +796,7 @@ namespace Raven.Client.Http
                                $"[Url: {node.Url}, " +
                                $"ClusterTag: {node.ClusterTag}, " +
                                $"ServerRole: {node.ServerRole}, " +
-                               $"Exception: {exception?.Message ?? "No exception"}]";
+                               $"Exception: {exception?.AllInnerMessages() ?? "No exception"}]";
                 }
             }
 

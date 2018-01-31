@@ -54,5 +54,22 @@ namespace Raven.Client.Extensions
 
             return description.ToString();
         }
+
+        /// <remarks>Code from http://stackoverflow.com/questions/1886611/c-overriding-tostring-method-for-custom-exceptions </remarks>
+        public static string AllInnerMessages(this Exception ex)
+        {
+            var messages = new StringBuilder();
+            messages.Append(ex.Message);
+            
+            var inner = ex.InnerException;
+            while (inner != null)
+            {
+                messages.Append(" -> ");
+                messages.Append(inner.Message);
+                inner = inner.InnerException;
+            }
+
+            return messages.ToString();
+        }
     }
 }
