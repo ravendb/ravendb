@@ -465,6 +465,11 @@ namespace Raven.Server.Documents
                         Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
                     }
                 });
+                
+                exceptionAggregator.Execute(() =>
+                {
+                    Metrics?.Dispose();
+                });
 
                 exceptionAggregator.ThrowIfNeeded();
             }
