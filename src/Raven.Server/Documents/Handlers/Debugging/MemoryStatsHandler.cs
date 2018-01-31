@@ -164,9 +164,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     [nameof(MemoryInfoMappingDetails.Count)] = maps.Value
                                 });
                             }
+                            var fileSize = GetFileSize(file.Key);
                             details[Path.GetFileName(file.Key)] = new DynamicJsonValue
                             {
-                                [nameof(MemoryInfoMappingFileInfo.FileSize)] = GetFileSize(file.Key),
+                                [nameof(MemoryInfoMappingFileInfo.FileSize)] = fileSize,
+                                [nameof(MemoryInfoMappingFileInfo.HumaneFileSize)] = Size.Humane(fileSize),
                                 [nameof(MemoryInfoMappingFileInfo.TotalMapped)] = totalMapped,
                                 [nameof(MemoryInfoMappingFileInfo.HumaneTotalMapped)] = Size.Humane(totalMapped),
                                 [nameof(MemoryInfoMappingFileInfo.Mappings)] = dja
@@ -341,6 +343,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         internal class MemoryInfoMappingFileInfo
         {
             public long FileSize { get; set; }
+            public string HumaneFileSize { get; set; }
             public long TotalMapped { get; set; }
             public string HumaneTotalMapped { get; set; }
             public MemoryInfoMappingDetails[] Mappings { get; set; }

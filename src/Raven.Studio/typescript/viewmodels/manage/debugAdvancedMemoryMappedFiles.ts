@@ -9,8 +9,8 @@ import getDebugMemoryStatsCommand = require("commands/database/debug/getDebugMem
 type memoryMappingItem = {
     Directory: string;
     FileName: string;
-    FileSize: number;
-    TotalMapped: number;
+    HumaneFileSize: string;
+    HumaneTotalMapped: string;
     Mappings: Raven.Server.Documents.Handlers.Debugging.MemoryStatsHandler.MemoryInfoMappingDetails[];
 }
 
@@ -50,8 +50,8 @@ class memoryMappedFiles extends viewModelBase {
             [
                 new textColumn<memoryMappingItem>(grid, x => x.Directory, "Directory", "15%"),
                 new textColumn<memoryMappingItem>(grid, x => x.FileName, "File Name", "25%"),
-                new textColumn<memoryMappingItem>(grid, x => x.FileSize, "File Size", "15%"),
-                new textColumn<memoryMappingItem>(grid, x => x.TotalMapped, "Total Mapped", "30%"),
+                new textColumn<memoryMappingItem>(grid, x => x.HumaneFileSize, "File Size", "15%"),
+                new textColumn<memoryMappingItem>(grid, x => x.HumaneTotalMapped, "Total Mapped", "30%"),
             ]
         );
 
@@ -80,8 +80,8 @@ class memoryMappedFiles extends viewModelBase {
                         return {
                             Directory: m.Directory,
                             FileName: fileName,
-                            FileSize: details.FileSize,
-                            TotalMapped: details.TotalMapped,
+                            HumaneFileSize: details.HumaneFileSize,
+                            HumaneTotalMapped: details.HumaneTotalMapped,
                             Mappings: details.Mappings
                         } as memoryMappingItem;
                     })
