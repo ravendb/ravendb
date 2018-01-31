@@ -219,7 +219,7 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    await PutCertificateCollectionInCluster(certificate, certBytes, ServerStore, ctx);
+                    await PutCertificateCollectionInCluster(certificate, certBytes, certificate.Password, ServerStore, ctx);
                 }
                 catch (Exception e)
                 {
@@ -231,10 +231,14 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, ServerStore serverStore, TransactionOperationContext ctx)
+        public static async Task PutCertificateCollectionInCluster(CertificateDefinition certDef, byte[] certBytes, string password, ServerStore serverStore, TransactionOperationContext ctx)
         {
             var collection = new X509Certificate2Collection();
-            collection.Import(certBytes);
+
+            if (string.IsNullOrEmpty(password))
+                collection.Import(certBytes);
+            else
+                collection.Import(certBytes, password, X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
 
             var first = true;
             var collectionPrimaryKey = string.Empty;

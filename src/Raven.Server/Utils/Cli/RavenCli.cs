@@ -598,13 +598,14 @@ namespace Raven.Server.Utils.Cli
 
             var name = args[0];
             var path = args[1];
-            
+            var password = (args.Count == 3 ? args[2] : null);
+
             byte[] certBytes;
             X509Certificate2 cert;
             try
             {
                 certBytes = File.ReadAllBytes(path);
-                cert = args.Count == 3 ? new X509Certificate2(certBytes, args[2]) : new X509Certificate2(certBytes);
+                cert = password != null ? new X509Certificate2(certBytes, password) : new X509Certificate2(certBytes);
             }
             catch (Exception e)
             {
@@ -646,7 +647,7 @@ namespace Raven.Server.Utils.Cli
                 
                 try
                 {
-                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, cli._server.ServerStore, ctx).Wait();
+                    AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, password,  cli._server.ServerStore, ctx).Wait();
                 }
                 catch (Exception e)
                 {
