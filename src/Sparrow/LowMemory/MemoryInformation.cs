@@ -297,8 +297,8 @@ namespace Sparrow.LowMemory
                 return new MemoryInfoResult
                 {
                     // TODO: figure out what this value should be, probably swap + ram
-                    TotalCommittableMemory = totalPhysicalMemory,
-                    CurrentCommitCharge = availableRam,
+                    TotalCommittableMemory = totalPhysicalMemory,//TODO: Commit_Limit
+                    CurrentCommitCharge = availableRam, // TODO: Committed_AS
 
                     AvailableMemory = availableRam,
                     TotalPhysicalMemory = totalPhysicalMemory,
