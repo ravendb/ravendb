@@ -88,6 +88,8 @@ namespace Raven.Client.Documents.Operations
         public DateTime? LastIndexingTime { get; set; }
 
         public Size SizeOnDisk { get; set; }
+
+        public int NumberOfTransactionMergerQueueOperations { get; set; }
     }
 
     public class IndexInformation

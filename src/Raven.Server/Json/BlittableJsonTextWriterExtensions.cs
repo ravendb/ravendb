@@ -565,6 +565,10 @@ namespace Raven.Server.Json
             writer.WriteString(statistics.DatabaseId);
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(statistics.NumberOfTransactionMergerQueueOperations));
+            writer.WriteInteger(statistics.NumberOfTransactionMergerQueueOperations);
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(statistics.Is64Bit));
             writer.WriteBool(statistics.Is64Bit);
             writer.WriteComma();

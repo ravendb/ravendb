@@ -44,6 +44,7 @@ namespace Raven.Server.Documents
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
         public DatabasePerformanceMetrics TransactionPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.Transaction, 256, 8);
 
+        public int NumberOfQueuedOperations => _operations.Count;
 
         private string TransactionMergerThreadName => _parent.Name + " transaction merging thread";
 

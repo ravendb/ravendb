@@ -32,7 +32,8 @@ namespace Raven.Server.Documents.Handlers
                     CountOfDocumentsConflicts = Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
                     CountOfTombstones = Database.DocumentsStorage.GetNumberOfTombstones(context),
                     CountOfConflicts = Database.DocumentsStorage.ConflictsStorage.ConflictsCount,
-                    SizeOnDisk = new Size(sizeOnDiskInBytes)
+                    SizeOnDisk = new Size(sizeOnDiskInBytes),
+                    NumberOfTransactionMergerQueueOperations = Database.TxMerger.NumberOfQueuedOperations
                 };
 
                 var attachments = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context);
