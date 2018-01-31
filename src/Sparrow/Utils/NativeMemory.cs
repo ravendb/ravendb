@@ -41,9 +41,7 @@ namespace Sparrow.Utils
             {
                 ThreadInstance = Thread.CurrentThread;
                 Id = ThreadInstance.ManagedThreadId;
-                UnmanagedThreadId = PlatformDetails.RunningOnPosix ? 
-                    Syscall.gettid() : 
-                    (int)Win32ThreadsMethods.GetCurrentThreadId();
+                UnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
             }
         }
 

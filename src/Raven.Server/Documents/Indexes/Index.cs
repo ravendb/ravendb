@@ -551,6 +551,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 try
                 {
+                    PoolOfThreads.LongRunningWork.CurrentPooledThread.SetThreadAffinity(
+                        DocumentDatabase.Configuration.Server.NumberOfUnusedCoresByIndexes,
+                        DocumentDatabase.Configuration.Server.IndexingAffinityMask);
                     LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
                     ExecuteIndexing();
                 }
@@ -854,6 +857,7 @@ namespace Raven.Server.Documents.Indexes
                         if (_indexDisabled)
                             return;
 
+                        // this is called on every iteration because index priorities can be changed at runtime
                         ChangeIndexThreadPriorityIfNeeded();
 
                         if (_logger.IsInfoEnabled)

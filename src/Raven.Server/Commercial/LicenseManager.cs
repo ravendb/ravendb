@@ -30,6 +30,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -879,7 +880,7 @@ namespace Raven.Server.Commercial
             }
             try
             {
-                var currentlyAssignedCores = NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+                var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
                 if (currentlyAssignedCores == cores &&
                     _lastPerformanceHint != null && 
                     _lastPerformanceHint.Value.AddDays(7) > DateTime.UtcNow)
@@ -897,7 +898,7 @@ namespace Raven.Server.Commercial
                         bitMask |= 1L << i;
                     }
                 }
-                else if (NumberOfSetBits(processAffinityMask.Value) > cores)
+                else if (Bits.NumberOfSetBits(processAffinityMask.Value) > cores)
                 {
                     var affinityMask = processAffinityMask.Value;
                     var bitNumber = 0;
@@ -940,14 +941,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        //https://stackoverflow.com/questions/2709430/count-number-of-bits-in-a-64-bit-long-big-integer
-        private static long NumberOfSetBits(long i)
-        {
-            i = i - ((i >> 1) & 0x5555555555555555);
-            i = (i & 0x3333333333333333) + ((i >> 2) & 0x3333333333333333);
-            return (((i + (i >> 4)) & 0xF0F0F0F0F0F0F0F) * 0x101010101010101) >> 56;
-        }
-
+       
         private static void SetMaxWorkingSet(Process process, double ramInGb)
         {
             try

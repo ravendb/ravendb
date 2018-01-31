@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using Sparrow.Platform.Posix;
 
 namespace Sparrow.Platform
 {
@@ -14,6 +15,13 @@ namespace Sparrow.Platform
         public static readonly bool RunningOnMacOsx = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
         public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
+
+        public static int GetCurrentThreadId()
+        {
+            return RunningOnPosix ?
+                    Syscall.gettid() :
+                    (int)Win32ThreadsMethods.GetCurrentThreadId();
+        }
 
         private static bool IsWindows8OrNewer()
         {
