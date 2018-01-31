@@ -3,6 +3,7 @@ import settingsAccessAuthorizer = require("common/settingsAccessAuthorizer");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 
 export = getManageServerMenuItem;
 
@@ -16,24 +17,6 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-cluster',
             dynamicHash: appUrl.forCluster,
-            enabled: canReadOrWrite
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/clusterObserverLog',
-            moduleId: "viewmodels/manage/clusterObserverLog",
-            title: "Cluster Observer Log",
-            nav: true,
-            css: 'icon-cluster-log',
-            dynamicHash: appUrl.forClusterObserverLog,
-            enabled: canReadOrWrite
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/threadsInfo',
-            moduleId: "viewmodels/manage/threadsInfo",
-            title: "Threads Info",
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: appUrl.forThreadsInfo,
             enabled: canReadOrWrite
         }),
         new leafMenuItem({
@@ -55,15 +38,6 @@ function getManageServerMenuItem() {
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
-            route: 'admin/settings/debugInfo',
-            moduleId: 'viewmodels/manage/infoPackage',
-            title: 'Gather Debug Info',
-            nav: true,
-            css: 'icon-gather-debug-information',
-            dynamicHash: appUrl.forDebugInfo,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Admin JS Console",
@@ -79,6 +53,18 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-certificate',
             dynamicHash: appUrl.forCertificates,
+            enabled: accessHelper.isGlobalAdmin
+        }), 
+        new separatorMenuItem(),
+        new separatorMenuItem('Debug'),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced*details',
+            moduleId: 'viewmodels/manage/debugAdvancedParent',
+            title: 'Advanced',
+            nav: true,
+            css: 'icon-plus',
+            //dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
+            hash: appUrl.forDebugAdvancedThreadsRuntime(),
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
@@ -97,6 +83,15 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-traffic-watch',
             dynamicHash: appUrl.forTrafficWatch,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debugInfo',
+            moduleId: 'viewmodels/manage/infoPackage',
+            title: 'Gather Debug Info',
+            nav: true,
+            css: 'icon-gather-debug-information',
+            dynamicHash: appUrl.forDebugInfo,
             enabled: accessHelper.isGlobalAdmin
         }),
         /* TODO

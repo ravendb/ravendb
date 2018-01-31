@@ -6,30 +6,30 @@ import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import getDebugThreadsRunawayCommand = require("commands/database/debug/getDebugThreadsRunawayCommand");
 
-class threadsInfo extends viewModelBase {
+class debugAdvancedThreadsRuntime extends viewModelBase {
 
     data = ko.observable<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo[]>();
-    
+
     private gridController = ko.observable<virtualGridController<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>>();
     columnsSelector = new columnsSelector<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>();
-    
+
     spinners = {
         refresh: ko.observable<boolean>(false),
     };
-    
+
     activate(args: any) {
         super.activate(args);
-        
+
         return this.loadThreadsRunaway();
     }
 
     compositionComplete(): void {
         super.compositionComplete();
-        
+
         const fetcher = () => {
             const data = this.data() || [];
-            
+
             return $.when({
                 totalResultCount: data.length,
                 items: data
@@ -50,26 +50,26 @@ class threadsInfo extends viewModelBase {
         );
 
         this.columnPreview.install("virtual-grid", ".tooltip",
-            (entry: Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo, 
-                                    column: textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>, 
-                                    e: JQueryEventObject, onValue: (context: any) => void) => {
-            if (column.header === "Duration") {
-                const timings = {
-                    StartTime: entry.StartingTime,
-                    TotalProcessorTime: entry.TotalProcessorTime,
-                    PrivilegedProcessorTime: entry.PrivilegedProcessorTime,
-                    UserProcessorTime: entry.UserProcessorTime
-                };
-                const json = JSON.stringify(timings, null, 4);
-                const html = Prism.highlight(json, (Prism.languages as any).javascript);
-                onValue(html);
-            } else {
-                const value = column.getCellValue(entry);
-                onValue(value);
-            }
-        });
+            (entry: Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo,
+             column: textColumn<Raven.Server.Documents.Handlers.Debugging.ThreadsHandler.ThreadInfo>,
+             e: JQueryEventObject, onValue: (context: any) => void) => {
+                if (column.header === "Duration") {
+                    const timings = {
+                        StartTime: entry.StartingTime,
+                        TotalProcessorTime: entry.TotalProcessorTime,
+                        PrivilegedProcessorTime: entry.PrivilegedProcessorTime,
+                        UserProcessorTime: entry.UserProcessorTime
+                    };
+                    const json = JSON.stringify(timings, null, 4);
+                    const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                    onValue(html);
+                } else {
+                    const value = column.getCellValue(entry);
+                    onValue(value);
+                }
+            });
     }
-    
+
     private loadThreadsRunaway() {
         return new getDebugThreadsRunawayCommand()
             .execute()
@@ -77,14 +77,14 @@ class threadsInfo extends viewModelBase {
                 this.data(response);
             });
     }
-    
+
     refresh() {
         this.spinners.refresh(true);
         return this.loadThreadsRunaway()
             .done(() => this.gridController().reset(true))
             .always(() => this.spinners.refresh(false));
     }
-    
+
 }
 
-export = threadsInfo;
+export = debugAdvancedThreadsRuntime;
