@@ -22,7 +22,15 @@ function UpdateCsprojWithVersionInfo ( $projectDir, $version ) {
     UpdateVersionInFile $testDriverCsproj $version
     UpdateVersionInFile $clientCsproj $version
 
-    $buildProps = Join-Path -Path $projectDir -ChildPath "Directory.Build.props"
+    UpdateDirectoryBuildProps $projectDir "bench" $version
+    UpdateDirectoryBuildProps $projectDir "src" $version
+    UpdateDirectoryBuildProps $projectDir "test" $version
+    UpdateDirectoryBuildProps $projectDir "tools" $version
+}
+
+function UpdateDirectoryBuildProps( $projectDir, $subDir, $version ) {
+    $subDirPath = $(Join-Path $projectDir -ChildPath $subDir);
+    $buildProps = Join-Path -Path $subDirPath -ChildPath "Directory.Build.props"
     UpdateVersionInFile $buildProps $version
 }
 

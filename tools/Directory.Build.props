@@ -1,5 +1,6 @@
-<Project>
+﻿<Project>
   <PropertyGroup>
+    <Version></Version>
     <LangVersion>latest</LangVersion>
     <DebugType>embedded</DebugType>
     <WarningsAsErrors>true</WarningsAsErrors>
