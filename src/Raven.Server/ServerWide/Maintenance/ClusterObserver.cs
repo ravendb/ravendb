@@ -57,16 +57,17 @@ namespace Raven.Server.ServerWide.Maintenance
             var config = server.Configuration.Cluster;
             SupervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             _stabilizationTime = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
+            _moveToRehabTime = (long)config.MoveToRehabGraceTime.AsTimeSpan.TotalMilliseconds;
             _breakdownTimeout = config.AddReplicaTimeout.AsTimeSpan;
             _hardDeleteOnReplacement = config.HardDeleteOnReplacement;
             _observe = Run(_cts.Token);
         }
 
         public bool Suspended = false; // don't really care about concurrency here
-
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
         private long _iteration;
         private readonly long _term;
+        private readonly long _moveToRehabTime;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
@@ -147,6 +148,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                             continue;
                         }
+                      
                         var updateReason = UpdateDatabaseTopology(database, databaseRecord, clusterTopology, newStats, prevStats, ref deletions);
                         if (updateReason != null)
                         {
@@ -260,6 +262,12 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
                         continue;
                     }
+                }
+                
+                // Give one minute of grace before we move the node to a rehab
+                if (DateTime.UtcNow.AddMilliseconds(-_moveToRehabTime) < current[member]?.LastSuccessfulUpdateDateTime)
+                {
+                    continue;
                 }
                 
                 if (TryMoveToRehab(dbName, topology, current, member))
@@ -466,14 +474,16 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             return goodMembers;
         }
-
+        
         private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
         {
             DatabaseStatusReport dbStats = null;
             if (current.TryGetValue(member, out var nodeStats) &&
                 nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
                 nodeStats.Report.TryGetValue(dbName, out dbStats) && dbStats.Status != Faulted)
+            {
                 return false;
+            }
 
             string reason;
             if (nodeStats == null)
@@ -572,7 +582,10 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 return (false, null);
             }
-            if (lastSentEtag < mentorsEtag)
+
+            var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime;
+
+            if (lastSentEtag < mentorsEtag || timeDiff > 3 * SupervisorSamplePeriod)
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
