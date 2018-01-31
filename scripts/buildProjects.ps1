@@ -17,6 +17,8 @@ function BuildServer ( $srcDir, $outDir, $spec, $debug ) {
         $commandArgs += "/p:Platform=$($spec.Arch)"
     }
 
+    $commandArgs += '/p:SourceLinkCreate=true'
+
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
     CheckLastExitCode
@@ -24,14 +26,14 @@ function BuildServer ( $srcDir, $outDir, $spec, $debug ) {
 
 function BuildClient ( $srcDir ) {
     write-host "Building Client"
-    & dotnet build --no-incremental `
+    & dotnet build /p:SourceLinkCreate=true --no-incremental `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
 function BuildTestDriver ( $srcDir ) {
     write-host "Building TestDriver"
-    & dotnet build --no-incremental `
+    & dotnet build /p:SourceLinkCreate=true --no-incremental `
                 --configuration "Release" $srcDir;
     CheckLastExitCode
 }
@@ -42,7 +44,7 @@ function BuildTypingsGenerator ( $srcDir ) {
 }
 
 function BuildSparrow ( $srcDir ) {
-    & dotnet build --configuration "Release" $srcDir;
+    & dotnet build /p:SourceLinkCreate=true --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
@@ -99,6 +101,8 @@ function BuildTool ( $toolName, $srcDir, $outDir, $spec ) {
     if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
         $commandArgs += "/p:Platform=$($spec.Arch)"
     }
+
+    $commandArgs += '/p:SourceLinkCreate=true'
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
