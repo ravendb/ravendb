@@ -135,7 +135,7 @@ namespace Raven.Server.Web.System
                         HttpContext.Response.StatusCode = (int)response.StatusCode;
                         responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                        if (response.StatusCode == HttpStatusCode.InternalServerError)
+                        if (response.IsSuccessStatusCode == false)
                         {
                             error = responseString;
                         }
@@ -153,13 +153,15 @@ namespace Raven.Server.Web.System
 
                     if (error != null)
                     {
+                        JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out var errorJToken);
+
                         using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
                             new JsonSerializer().Serialize(streamWriter, new
                             {
                                 Message = GeneralDomainRegistrationServiceError,
                                 Response = result,
-                                Error = error
+                                Error = errorJToken ?? error
                             });
                             
                             streamWriter.Flush();
@@ -214,7 +216,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException(SetupHandler.GeneralDomainRegistrationServiceError, e);
+                    throw new InvalidOperationException(GeneralDomainRegistrationServiceError, e);
                 }
             }
         }
