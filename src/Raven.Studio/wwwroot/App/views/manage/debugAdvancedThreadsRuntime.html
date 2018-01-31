@@ -1,26 +1,25 @@
-<div class="content-margin">
-    <div class="flex-window stretch">
-        <div class="flex-window-head">
-            <div class="clearfix">
 
-                <div class="flex-header flex-horizontal margin-bottom">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-primary"
-                                data-bind="click: refresh, enable: !spinners.refresh(), css: { 'btn-spinner': spinners.refresh() }">
-                            <i class="icon-refresh"></i>
-                            <span>Refresh</span>
-                        </button>
-                    </div>
-                    <div class="flex-separator"></div>
+<div class="flex-window stretch">
+    <div class="flex-window-head">
+        <div class="clearfix padding padding-sm">
+
+            <div class="flex-header flex-horizontal margin-bottom">
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary"
+                            data-bind="click: refresh, enable: !spinners.refresh(), css: { 'btn-spinner': spinners.refresh() }">
+                        <i class="icon-refresh"></i>
+                        <span>Refresh</span>
+                    </button>
                 </div>
+                <div class="flex-separator"></div>
             </div>
-
         </div>
-        <div class="flex-window-scroll">
-            <div class="scroll-stretch">
-                <div class="panel-body">
-                    <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-threads-info-template'"></virtual-grid>
-                </div>
+
+    </div>
+    <div class="flex-window-scroll">
+        <div class="scroll-stretch">
+            <div class="panel-body">
+                <virtual-grid class="resizable documents-grid" params="controller: gridController, emptyTemplate: 'empty-threads-info-template'"></virtual-grid>
             </div>
         </div>
     </div>
