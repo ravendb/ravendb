@@ -19,7 +19,7 @@
 
             <div class="collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
                 <div class="field-terms panel-body">
-                    <h3 class="text-center" data-bind="visible: !terms().length"><i class="icon-empty-set"></i><span>No entries were found</span></h3>
+                    <h3 class="text-center" data-bind="visible: !terms().length"><i class="icon-empty-set"></i><span>No entries were found.</span></h3>
                     <ul class="list-unstyled row" data-bind="foreach: terms; visible: terms().length">
                         <li class="col-sm-3">
                             <a data-bind="text: $data, click: _.partial($root.navigateToQuery, $parent.name, $data)" href="#">

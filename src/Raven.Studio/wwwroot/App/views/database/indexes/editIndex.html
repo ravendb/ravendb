@@ -87,14 +87,14 @@
                 </div>
                 <div class="margin-bottom" data-bind="visible: !editedIndex().hasReduce()">
                     <button class="btn btn-info" data-bind="click: addReduce">
-                        <i class="icon-plus"></i><span>Add reduction</span>
+                        <i class="icon-plus"></i><span>Add Reduction</span>
                     </button>
                 </div>
                 <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().hasReduce">
                     <div class="checkbox checkbox-inline flex-start">
                         <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
                         <label for="outputToCollection">
-                            Output reduce to collection
+                            Output reduce to the collection
                         </label>
                     </div>
                     <div data-bind="validationElement: editedIndex().reduceToCollectionName">
@@ -166,7 +166,7 @@
 
                         <div class="form-group">
                             <div class="col-sm-offset-2 col-sm-10">
-                                <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add customized option</span></button>
+                                <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add a customized option</span></button>
                             </div>
                         </div>
                     </div>
@@ -176,11 +176,11 @@
                         <input type="file" accept=".cs" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1">
                         <div>
                             <label for="additionalSourceFilePicker" class="btn btn-primary">
-                                <i class="icon-upload"></i><span>Upload source file</span>
+                                <i class="icon-upload"></i><span>Upload the source file</span>
                             </label>
                         </div>
                         <div>
-                            Upload additional source files, which can be referenced inside index definition <small class="info"><i class="icon-info text-info"></i></small>
+                            Upload additional source files which can be referenced inside the index definition <small class="info"><i class="icon-info text-info"></i></small>
                         </div>
                     </div>
                    
