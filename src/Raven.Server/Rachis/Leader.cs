@@ -329,6 +329,7 @@ namespace Raven.Server.Rachis
                             {
                                 _engine.Log.Info($"{ToString()}: shutting down");
                             }
+                            _running.Lower();
                             return;
                     }
 

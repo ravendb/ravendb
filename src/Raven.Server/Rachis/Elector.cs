@@ -34,6 +34,14 @@ namespace Raven.Server.Rachis
                     using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
+
+                        if (_engine.Log.IsInfoEnabled)
+                        {
+                            var election = rv.IsTrialElection ? "Trial" : "Real";
+                            _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
+                                             $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
+                        }
+
                         //We are getting a request to vote for our known leader
                         if (_engine.LeaderTag == rv.Source)
                         {
@@ -42,12 +50,6 @@ namespace Raven.Server.Rachis
                             //We shouldn't be in any other state since if we are candidate our leaderTag should be null but its safer to verify.
                             if (_engine.CurrentState == RachisState.Follower)
                                 _engine.SetNewState(RachisState.Follower,null,_engine.CurrentTerm,$"We got a vote request from our leader {rv.Source} so we switch to leaderless state.");
-                        }
-                        if (_engine.Log.IsInfoEnabled)
-                        {
-                            var election = rv.IsTrialElection ? "Trial" : "Real";
-                            _engine.Log.Info($"Received ({election}) 'RequestVote' from {rv.Source}: Election is {rv.ElectionResult} in term {rv.Term} while our current term is {_engine.CurrentTerm}, " +
-                                             $"Forced election is {rv.IsForcedElection}. (Sent from:{rv.SendingThread})");
                         }
 
                         ClusterTopology clusterTopology;
@@ -194,7 +196,8 @@ namespace Raven.Server.Rachis
 
                         if (rv.IsTrialElection)
                         {
-                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out string currentLeader) == false)
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out string currentLeader) == false 
+                                && string.IsNullOrEmpty(currentLeader) == false) // if we are leaderless we can't refuse to cast our vote.
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {

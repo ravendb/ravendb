@@ -7,6 +7,7 @@
         Replication,
         Paging,
         RequestLatency,
-        UnusedCapacity
+        UnusedCapacity,
+        SlowIO
     }
 }
