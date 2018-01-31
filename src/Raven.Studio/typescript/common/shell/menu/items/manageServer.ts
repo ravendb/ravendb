@@ -58,16 +58,6 @@ function getManageServerMenuItem() {
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),
         new leafMenuItem({
-            route: 'admin/settings/debug/advanced*details',
-            moduleId: 'viewmodels/manage/debugAdvancedParent',
-            title: 'Advanced',
-            nav: true,
-            css: 'icon-plus',
-            //dynamicHash: appUrl.forDebugAdvancedThreadsRuntime,
-            hash: appUrl.forDebugAdvancedThreadsRuntime(),
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
             route: 'admin/settings/adminLogs',
             moduleId: 'viewmodels/manage/adminLogs',
             title: 'Admin Logs',
@@ -92,6 +82,15 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-gather-debug-information',
             dynamicHash: appUrl.forDebugInfo,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/debug/advanced*details',
+            moduleId: 'viewmodels/manage/debugAdvancedParent',
+            title: 'Advanced',
+            nav: true,
+            css: 'icon-plus',
+            hash: appUrl.forDebugAdvancedThreadsRuntime(),
             enabled: accessHelper.isGlobalAdmin
         }),
         /* TODO
