@@ -107,20 +107,16 @@ namespace Raven.Server.Utils
                 return EmptyCpuUsage;
 
             double machineCpuUsage = 0;
-            if (linuxInfo.TotalUserTime >= _previousLinuxInfo.TotalUserTime &&
-                linuxInfo.TotalUserLowTime >= _previousLinuxInfo.TotalUserLowTime &&
-                linuxInfo.TotalSystemTime >= _previousLinuxInfo.TotalSystemTime &&
-                linuxInfo.TotalIdleTime >= _previousLinuxInfo.TotalIdleTime)
+            if (linuxInfo.TotalIdle >= _previousLinuxInfo.TotalIdle &&
+                linuxInfo.TotalWorkTime >= _previousLinuxInfo.TotalWorkTime)
             {
-                var userTimeDiff = linuxInfo.TotalUserTime - _previousLinuxInfo.TotalUserTime;
-                var userLowTimeDiff = linuxInfo.TotalUserLowTime - _previousLinuxInfo.TotalUserLowTime;
-                var systemTimeDiff = linuxInfo.TotalSystemTime - _previousLinuxInfo.TotalSystemTime;
-                var idleTimeDiff = linuxInfo.TotalIdleTime - _previousLinuxInfo.TotalIdleTime;
+                var idleDiff = linuxInfo.TotalIdle - _previousLinuxInfo.TotalIdle;
+                var workDiff = linuxInfo.TotalWorkTime - _previousLinuxInfo.TotalWorkTime;
+                var totalSystemWork = idleDiff + workDiff;
 
-                var totalUsed = userTimeDiff + userLowTimeDiff + systemTimeDiff;
-                if (totalUsed + idleTimeDiff > 0)
+                if (totalSystemWork > 0)
                 {
-                    machineCpuUsage = (totalUsed * 100.0) / (totalUsed + idleTimeDiff);
+                    machineCpuUsage = (workDiff * 100.0) / totalSystemWork;
                 }
                 else
                 {
@@ -222,7 +218,7 @@ namespace Raven.Server.Utils
             public int dwLowDateTime;
             public int dwHighDateTime;
         }
-
+        private static char[] _separators = new[] { ' ', '\t' };
         private static LinuxInfo GetLinuxInfo()
         {
             var lines = File.ReadAllLines("/proc/stat");
@@ -231,8 +227,8 @@ namespace Raven.Server.Utils
                 if (line.StartsWith("cpu", StringComparison.OrdinalIgnoreCase) == false)
                     continue;
 
-                var items = System.Text.RegularExpressions.Regex.Split(line, @"\s+").Where(s => s != string.Empty).ToArray();
-                if (items.Length == 0)
+                var items = line.Split(_separators, StringSplitOptions.RemoveEmptyEntries);
+                if (items.Length == 0 || items.Length < 9)
                     continue;
 
                 long time = 0;
@@ -266,6 +262,11 @@ namespace Raven.Server.Utils
                     TotalUserLowTime = ulong.Parse(items[2]),
                     TotalSystemTime = ulong.Parse(items[3]),
                     TotalIdleTime = ulong.Parse(items[4]),
+                    TotalIOTime = ulong.Parse(items[5]),
+                    TotalIRQTime = ulong.Parse(items[6]),
+                    TotalSoftIRQTime = ulong.Parse(items[7]),
+                    TotalStealTime = ulong.Parse(items[8]),
+
                     Time = time,
                     LastSystemCpu = tmsStime,
                     LastUserCpu = tmsUtime,
@@ -339,6 +340,7 @@ namespace Raven.Server.Utils
             public TimeSpan ProcessProcessorTime { get; set; }
         }
 
+
         private class LinuxInfo
         {
             public ulong TotalUserTime { get; set; }
@@ -354,6 +356,24 @@ namespace Raven.Server.Utils
             public long LastSystemCpu { get; set; }
 
             public long LastUserCpu { get; set; }
+
+            public ulong TotalIOTime { get; internal set; }
+            public ulong TotalIRQTime { get; internal set; }
+            public ulong TotalSoftIRQTime { get; internal set; }
+            public ulong TotalStealTime { get; internal set; }
+
+            public ulong TotalWorkTime
+            {
+                get
+                {
+                    return TotalUserTime + TotalUserLowTime + TotalSystemTime + TotalIRQTime + TotalSoftIRQTime + TotalStealTime;
+                }
+            }
+
+            public ulong TotalIdle
+            {
+                get { return TotalIdleTime + TotalIOTime; }
+            }
         }
 
         private class MacInfo
