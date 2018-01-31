@@ -129,10 +129,6 @@ class appUrl {
     static forCluster(): string {
         return "#admin/settings/cluster";
     }
-
-    static forClusterObserverLog(): string {
-        return "#admin/settings/clusterObserverLog";
-    }
     
     static forThreadsInfo(): string {
         return "#admin/settings/threadsInfo";
@@ -148,6 +144,14 @@ class appUrl {
 
     static forAdminLogs(): string {
         return "#admin/settings/adminLogs";
+    }
+
+    static forDebugAdvancedThreadsRuntime(): string {
+        return "#admin/settings/debug/advanced/threadsRuntime";
+    }
+
+    static forDebugAdvancedObserverLog(): string {
+        return "#admin/settings/debug/advanced/observerLog";
     }
 
     static forServerTopology(): string { 

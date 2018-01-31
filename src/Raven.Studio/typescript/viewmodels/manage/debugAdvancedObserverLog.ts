@@ -9,45 +9,44 @@ import getClusterObserverDecisionsCommand = require("commands/database/cluster/g
 import toggleClusterObserverCommand = require("commands/database/cluster/toggleClusterObserverCommand");
 
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
-import ThrottleSettings = _.ThrottleSettings;
 
 class clusterObserverLog extends viewModelBase {
 
     decisions = ko.observable<Raven.Server.ServerWide.Maintenance.ClusterObserverDecisions>();
     topology = clusterTopologyManager.default.topology;
     observerSuspended = ko.observable<boolean>();
-    
+
     private gridController = ko.observable<virtualGridController<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>>();
     columnsSelector = new columnsSelector<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
     private columnPreview = new columnPreviewPlugin<Raven.Server.ServerWide.Maintenance.ClusterObserverLogEntry>();
-    
+
     termChanged: KnockoutComputed<boolean>;
-    
+
     spinners = {
         refresh: ko.observable<boolean>(false),
         toggleObserver: ko.observable<boolean>(false)
     };
-    
+
     constructor() {
         super();
-        
+
         this.termChanged = ko.pureComputed(() => {
             const topologyTerm = this.topology().currentTerm();
             const dataTerm = this.decisions().Term;
-            
+
             return topologyTerm !== dataTerm;
         })
     }
-    
+
     activate(args: any) {
         super.activate(args);
-        
+
         return this.loadDecisions();
     }
 
     compositionComplete(): void {
         super.compositionComplete();
-        
+
         const fetcher = () => {
             const log = this.decisions();
             if (!log) {
@@ -82,7 +81,7 @@ class clusterObserverLog extends viewModelBase {
             }
         });
     }
-    
+
     private loadDecisions() {
         return new getClusterObserverDecisionsCommand()
             .execute()
@@ -92,14 +91,14 @@ class clusterObserverLog extends viewModelBase {
                 this.observerSuspended(response.Suspended);
             });
     }
-    
+
     refresh() {
         this.spinners.refresh(true);
         return this.loadDecisions()
             .done(() => this.gridController().reset(true))
             .always(() => this.spinners.refresh(false));
     }
-    
+
     private static formatTimestampAsAgo(time: string): string {
         const dateMoment = moment.utc(time).local();
         const ago = dateMoment.diff(moment());
@@ -133,10 +132,8 @@ class clusterObserverLog extends viewModelBase {
                             this.refresh();
                         });
                 }
-            }); 
+            });
     }
-    
-
 }
 
 export = clusterObserverLog;
