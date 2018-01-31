@@ -188,7 +188,7 @@ namespace Sparrow.LowMemory
                     return new MemoryInfoResult
                     {
                         TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
-                        CurrentCommitCharge = new Size((long)memoryStatus.ullAvailPageFile, SizeUnit.Bytes),
+                        CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
                         AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
                         TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                         InstalledMemory = new Size(installedMemoryInKb, SizeUnit.Kilobytes),

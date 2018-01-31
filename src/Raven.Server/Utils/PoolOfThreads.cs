@@ -89,7 +89,7 @@ namespace Raven.Server.Utils
                 // https://ayende.com/blog/181569-A/threadpool-vs-pool-thread
 
                 var memInfo = MemoryInformation.GetMemoryInfo();
-                var overage = memInfo.CurrentCommitCharge * _minimumFreeCommittedMemory;
+                var overage = (memInfo.TotalCommittableMemory * _minimumFreeCommittedMemory) + memInfo.CurrentCommitCharge;
                 if (overage >= memInfo.TotalCommittableMemory)
                 {
                     throw new InsufficientExecutionStackException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}." +
