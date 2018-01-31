@@ -80,7 +80,7 @@
                         <div class="form-group" data-bind="validationElement: ip">
                             <label class="control-label" data-bind="attr: { for: 'ipInput_' + $index() }">
                                 <span data-bind="visible: $index() === 0">
-                                    <i data-bind="attr: { 'id': $root.defineServerUrl() ? 'ip-address-info' : 'ip-address-info-with-warning' }" class="icon-info text-info"></i>
+                                    <i data-bind="attr: { 'id': $parent.mode() === 'Secured' ? 'ip-address-info' : 'ip-address-info-with-warning' }" class="icon-info text-info"></i>
                                     &nbsp;IP Address / Hostname
                                     <i class="required"></i>
                                 </span>

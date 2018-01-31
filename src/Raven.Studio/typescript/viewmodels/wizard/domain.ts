@@ -86,7 +86,7 @@ class domain extends setupStep {
             const existingDomainInfo = domains.Domains[chosenDomain];
             if (existingDomainInfo) {
                 const nodes = existingDomainInfo.map(info => {
-                    const entry = new nodeInfo(this.model.hostnameIsNotRequired);
+                    const entry = new nodeInfo(this.model.hostnameIsNotRequired, this.model.mode);
                     entry.nodeTag(info.SubDomain);
                     entry.ips(info.Ips.map(x => ipEntry.forIp(x)));
                     return entry;

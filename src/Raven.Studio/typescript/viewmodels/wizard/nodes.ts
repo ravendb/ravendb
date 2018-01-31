@@ -18,7 +18,6 @@ class nodes extends setupStep {
         
     defineServerUrl: KnockoutComputed<boolean>;
     showDnsInfo: KnockoutComputed<boolean>;
-    provideCertificates: KnockoutComputed<boolean>;
     showAgreement: KnockoutComputed<boolean>;
     showFullDomain: KnockoutComputed<boolean>;
     canCustomizeExternalIpsAndPorts: KnockoutComputed<boolean>;
@@ -43,11 +42,6 @@ class nodes extends setupStep {
         
         this.defineServerUrl = ko.pureComputed(() => {
             return this.model.mode() === "Secured" && !this.model.certificate().wildcardCertificate();
-        });
-        
-        this.provideCertificates = ko.pureComputed(() => {
-            const mode = this.model.mode();
-            return mode && mode === "Secured";
         });
 
         this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
@@ -133,8 +127,16 @@ class nodes extends setupStep {
         nodes.forEach(node => {
             let validNodeConfig = true;
             
-            if (!this.isValid(node.validationGroup)) {
-                validNodeConfig = false;
+            if (this.model.mode() === 'Secured') {
+                if (!this.isValid(node.validationGroupForSecured)) {
+                    validNodeConfig = false;
+                }
+            }
+            
+            if (this.model.mode() === 'LetsEncrypt') {
+                if (!this.isValid(node.validationGroupForLetsEncrypt)) {
+                    validNodeConfig = false;
+                }
             }
             
             node.ips().forEach(entry => {
@@ -175,7 +177,7 @@ class nodes extends setupStep {
     }
   
     addNode() {
-        const node = new nodeInfo(this.model.hostnameIsNotRequired);
+        const node = new nodeInfo(this.model.hostnameIsNotRequired, this.model.mode);
         this.model.nodes.push(node);
         this.editedNode(node);
         this.updateNodeTags();
@@ -224,7 +226,8 @@ class nodes extends setupStep {
                 placement: "top"
             });
 
-        const ipText = ownCerts ? "IP Address or Hostname that should already be associated with DNS name in certificate. " : "IP Address or Hostname that will be associated with the DNS Name.";
+        const ipText = ownCerts ? "IP Address or Hostname that should already be associated with DNS name in certificate." : 
+                                  "IP Address or Hostname that will be associated with the DNS Name.";
         
         const ipAddressInfo =  ipText + "<br/>" +
             "For example:<br/>" +
@@ -243,7 +246,7 @@ class nodes extends setupStep {
 
         popoverUtils.longWithHover($("#ip-address-info-with-warning"),
             {
-                //TODO: check if we should display this in own cert flow 
+                // This will be displayed only in 'Lets Encrypt' flow 
                 content: ipAddressInfo + "<strong>Note:</strong> If Hostname is used then an external ip must also be provided.",
                 placement: "top"
             });
