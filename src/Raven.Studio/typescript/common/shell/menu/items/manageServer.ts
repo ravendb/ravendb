@@ -89,7 +89,7 @@ function getManageServerMenuItem() {
             moduleId: 'viewmodels/manage/debugAdvancedParent',
             title: 'Advanced',
             nav: true,
-            css: 'icon-plus',
+            css: 'icon-debug-advanced',
             hash: appUrl.forDebugAdvancedThreadsRuntime(),
             enabled: accessHelper.isGlobalAdmin
         }),
