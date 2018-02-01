@@ -228,7 +228,9 @@ namespace Sparrow.Json
                 {
                     // we used less than half the memory we have, so let us reduce it
 
-                    NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+                    if (_ptrStart != null)
+                        NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+
                     _allocated = Math.Max(_allocated / 2, _initialSize);
                     _ptrCurrent = _ptrStart = null;
                 }

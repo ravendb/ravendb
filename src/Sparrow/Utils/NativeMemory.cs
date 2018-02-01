@@ -52,6 +52,8 @@ namespace Sparrow.Utils
 
         public static void Free(byte* ptr, long size, ThreadStats stats)
         {            
+            Debug.Assert(ptr != null);
+
             var currentThreadValue = ThreadAllocations.Value;            
 
             if (currentThreadValue == stats)
@@ -192,6 +194,8 @@ namespace Sparrow.Utils
 
         public static void Free4KbAlignedMemory(byte* ptr, int size, ThreadStats stats)
         {
+            Debug.Assert(ptr != null);
+
             var currentThreadValue = ThreadAllocations.Value;
             if (currentThreadValue == stats)
             {
