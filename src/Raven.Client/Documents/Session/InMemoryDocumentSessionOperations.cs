@@ -1036,14 +1036,14 @@ more responsive application.
             {
                 GC.SuppressFinalize(this);
 
-                _releaseOperationContext.Dispose();
+                _releaseOperationContext?.Dispose();
             }
             else
             {
                 // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
                 // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
 
-                Context.Dispose();
+                Context?.Dispose();
             }
         }
 
