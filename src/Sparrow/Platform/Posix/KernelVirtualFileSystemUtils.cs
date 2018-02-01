@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Sparrow.Platform.Posix
@@ -229,5 +232,115 @@ namespace Sparrow.Platform.Posix
                 return null;
             }
         }
+
+
+        public class BufferedPosixKeyValueOutputValueReader : IDisposable
+        {
+            private readonly string _path;
+            private byte[] _buffer;
+            private int _bytesRead;
+
+            public BufferedPosixKeyValueOutputValueReader(string path)
+            {
+                _path = path;
+                _buffer = ArrayPool<byte>.Shared.Rent(8 * 1024);
+            }
+            
+            public void ReadFileIntoBuffer()
+            {
+
+                using (var fileStream = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    if (fileStream.Length > _buffer.Length)
+                        ThrowStreamBiggerThenBufferException();
+
+                    _bytesRead = 0;
+                    
+
+                    while (true)
+                    {
+                        var read = fileStream.Read(_buffer, _bytesRead, _buffer.Length - _bytesRead);
+                        if (read == 0)
+                            break;
+                        _bytesRead += read;
+                    }    
+                }
+            }
+
+            private (int Start, int End) SearchInBuffer(byte[] filter)
+            {
+                var maxValidSize = _bytesRead - filter.Length;
+                for (int j = 0; j < maxValidSize; j++)
+                {
+                    if (filter[0] == _buffer[j])
+                    {
+                        bool success = true;
+                        for (int k = 1; k < filter.Length; k++)
+                        {
+                            if (filter[k] != _buffer[j + k])
+                            {
+                                success = false;
+                                break;
+                            }
+                        }
+
+                        if (success == false)
+                        {
+                            while (++j < _bytesRead)
+                            {
+                                if (_buffer[j] == '\n')
+                                    break;
+                            }
+                            continue;
+                        }
+
+                        var start = j + filter.Length;
+                        while (
+                            start < _bytesRead && 
+                            (_buffer[start] == ' ' || _buffer[start] == '\t'))
+                        {
+                            start++;
+                        }
+
+                        var end = start;
+                        while (end < _bytesRead && _buffer[end] != '\n')
+                        {
+                            end++;
+                        }
+
+                        return (start, end);
+                    }
+                }
+
+                return (0, 0);
+            }
+            
+            public long ExtractNumericValueFromKeyValuePairsFormattedFile(byte[] filter)
+            {
+                var (start, end) = SearchInBuffer(filter);
+                long value = 0;
+                for (int i = start; i < end; i++)
+                {
+                    if (_buffer[i] < (byte)'0' || _buffer[i] > (byte)'9')
+                        return value;
+                    
+                    value *= 10;
+                    value += _buffer[i] - (byte)'0';
+                }
+                return value;
+            }
+
+            private void ThrowStreamBiggerThenBufferException()
+            {
+                throw new InvalidOperationException($"The stream for {_path} is bigger then the buffer");
+            }
+
+            public void Dispose()
+            {
+                ArrayPool<byte>.Shared.Return(_buffer);
+                _buffer = null;
+            }
+        }
+        
     }
 }

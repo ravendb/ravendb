@@ -34,6 +34,27 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 return Task.CompletedTask;
             }
         }
+        
+        [RavenAction("/admin/debug/proc/status", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task PosixMemStatus()
+        {
+            await WriteFile("/proc/self/status");
+        }
+        
+        [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public async Task PosixMemInfo()
+        {
+            await WriteFile("/proc/meminfo");
+        }
+
+        private async Task WriteFile(string file)
+        {
+            HttpContext.Response.ContentType = "text/plain";
+            using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                await fileStream.CopyToAsync(ResponseBodyStream());
+            }
+        }
 
         public static DynamicJsonValue LowMemLogInternal()
         {
