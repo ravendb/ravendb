@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Debugging;
 using Voron.Global;
 using static Sparrow.DatabasePerformanceMetrics;
 
@@ -315,7 +316,9 @@ namespace Raven.Server.Documents
                         case PendingOperations.CompletedAll:
                             try
                             {
-                                CommitAndNotifyOnSlowWrite(tx);
+                                tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+                                tx.Commit();
+                                CheckOnSlowWrite(stats);
                                 tx.Dispose();
                             }
                             catch (Exception e)
@@ -345,25 +348,31 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void CommitAndNotifyOnSlowWrite(DocumentsTransaction tx)
+        private bool _lastWriteWasAlsoSlow;
+        private void CheckOnSlowWrite(CommitStats stats)
         {
-            var sp = Stopwatch.StartNew();
-            tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
-            tx.Commit();
-            sp.Stop();
-
-            if(stats.NumberOf4KbsWrittenToDisk == 0)
+            if (stats.NumberOf4KbsWrittenToDisk == 0 ||
+                // we don't want to raise the error too often
+                stats.WriteToJournalDuration.TotalMilliseconds < 500)
+            {
+                _lastWriteWasAlsoSlow = false;
                 return;
+            }
+
+            var lastWasSlowToo = _lastWriteWasAlsoSlow;
+            _lastWriteWasAlsoSlow = true;
+            if (lastWasSlowToo == false)
+                return; // we want to raise it on two consecutive slow writes 
 
             var writtenDataInMb = stats.NumberOf4KbsWrittenToDisk / (double)256;
-            var seconds = sp.Elapsed.TotalSeconds;
-            var speed = writtenDataInMb / seconds;
-            // everything under 150ms will note raise an alert
-            if (seconds > 0.15 && (speed < 1 || seconds > 1))
+            var seconds = stats.WriteToJournalDuration.TotalSeconds;
+            var rateOfWritesInMbPerSec = writtenDataInMb / seconds;
+            
+            if (rateOfWritesInMbPerSec < 1)
             {
                 _parent.NotificationCenter.Add(PerformanceHint.Create(_parent.Name,
                     "An extremely slow write to disk",
-                    $"We wrote {writtenDataInMb:N} MB in {seconds:N} seconds ({speed:N} MB/s)",
+                    $"We wrote {writtenDataInMb:N} MB in {seconds:N} seconds ({rateOfWritesInMbPerSec:N} MB/s)",
                     PerformanceHintType.SlowIO,
                     NotificationSeverity.Info,
                     "TxMerger"
@@ -407,6 +416,7 @@ namespace Raven.Server.Documents
             List<MergedTransactionCommand> previousPendingOps)
         {
             var previous = context.Transaction;
+            CommitStats commitStats;
             try
             {
                 while (true)
@@ -415,6 +425,7 @@ namespace Raven.Server.Documents
                         _log.Info($"BeginAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
                     try
                     {
+                        previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
                         context.Transaction = previous.BeginAsyncCommitAndStartNewTransaction();
                     }
                     catch (Exception e)
@@ -447,7 +458,7 @@ namespace Raven.Server.Documents
                                 transactionMeter.Dispose();
                             }
                             calledCompletePreviousTx = true;
-                            CompletePreviousTransaction(previous, ref previousPendingOps, throwOnError: true);
+                            CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
                         {
@@ -462,7 +473,7 @@ namespace Raven.Server.Documents
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
-                                    CompletePreviousTransaction(previous, ref previousPendingOps,
+                                    CompletePreviousTransaction(previous, commitStats, ref previousPendingOps,
                                         // if this previous threw, it won't throw again
                                         throwOnError: false);
                                 }
@@ -481,7 +492,9 @@ namespace Raven.Server.Documents
                             case PendingOperations.CompletedAll:
                                 try
                                 {
-                                    CommitAndNotifyOnSlowWrite(context.Transaction);
+                                    context.Transaction.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+                                    context.Transaction.Commit();
+                                    CheckOnSlowWrite(stats);
                                     context.Transaction.Dispose();
                                 }
                                 catch (Exception e)
@@ -518,12 +531,14 @@ namespace Raven.Server.Documents
 
         private void CompletePreviousTransaction(
             RavenTransaction previous,
+            CommitStats commitStats,
             ref List<MergedTransactionCommand> previousPendingOps,
             bool throwOnError)
         {
             try
             {
                 previous.EndAsyncCommit();
+
                 if (_log.IsInfoEnabled)
                     _log.Info($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
 
@@ -716,7 +731,9 @@ namespace Raven.Server.Documents
                             using (var tx = context.OpenWriteTransaction())
                             {
                                 op.Execute(context);
-                                CommitAndNotifyOnSlowWrite(tx);
+                                tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out var stats);
+                                tx.Commit();
+                                CheckOnSlowWrite(stats);
                             }
                         }
                         DoCommandNotification(op);

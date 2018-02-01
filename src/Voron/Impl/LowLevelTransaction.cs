@@ -922,11 +922,17 @@ namespace Voron.Impl
         {
             // In the case of non-lazy transactions, we must flush the data from older lazy transactions
             // to ensure the sequentiality of the data.
+            Stopwatch sp = null;
+            if(_requestedCommitStats != null)
+            {
+                sp = Stopwatch.StartNew();
+            }
             var numberOfWrittenPages = _journal.WriteToJournal(this);
             FlushedToJournal = true;
 
             if (_requestedCommitStats != null)
             {
+                _requestedCommitStats.WriteToJournalDuration = sp.Elapsed;
                 _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
                 _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
             }
