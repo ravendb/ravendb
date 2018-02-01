@@ -109,7 +109,7 @@ namespace Voron.Platform.Win32
             var streamAccessType = _access == Win32NativeFileAccess.GenericRead
                 ? FileAccess.Read
                 : FileAccess.ReadWrite;
-            _fileStream = new FileStream(_handle, streamAccessType);
+            _fileStream = SafeFileStream.Create(_handle, streamAccessType);
 
             _totalAllocationSize = _fileInfo.Length;
 

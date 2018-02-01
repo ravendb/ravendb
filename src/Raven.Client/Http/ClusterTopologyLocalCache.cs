@@ -5,6 +5,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Utils;
 
 namespace Raven.Client.Http
 {
@@ -41,7 +42,7 @@ namespace Raven.Client.Http
                 if (File.Exists(path) == false)
                     return null;
 
-                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var stream = SafeFileStream.Create(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 using (var blittableJsonReaderObject = context.Read(stream, "raven-cluster-topology"))
                 {
                     return JsonDeserializationClient.ClusterTopology(blittableJsonReaderObject);
@@ -66,7 +67,7 @@ namespace Raven.Client.Http
                     return;
                 }
 
-                using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
+                using (var stream = SafeFileStream.Create(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     var json = new DynamicJsonValue

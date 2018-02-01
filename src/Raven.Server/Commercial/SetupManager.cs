@@ -40,6 +40,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Utils;
 
 namespace Raven.Server.Commercial
 {
@@ -1039,7 +1040,7 @@ namespace Raven.Server.Commercial
         public static void WriteSettingsJsonLocally(string settingsPath, string json)
         {
             var tmpPath = settingsPath + ".tmp";
-            using (var file = new FileStream(tmpPath, FileMode.Create))
+            using (var file = SafeFileStream.Create(tmpPath, FileMode.Create))
             using (var writer = new StreamWriter(file))
             {
                 writer.Write(json);
@@ -1230,7 +1231,7 @@ namespace Raven.Server.Commercial
                 progress.AddInfo($"Saving server certificate at {certPath}.");
                 onProgress(progress);
 
-                using (var certfile = new FileStream(certPath, FileMode.Create))
+                using (var certfile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
                     var certBytes = serverCert.Export(X509ContentType.Pfx);
                     certfile.Write(certBytes, 0, certBytes.Length);
@@ -1409,7 +1410,7 @@ namespace Raven.Server.Commercial
                         if (setupInfo.ModifyLocalServer)
                         {
                             var certPath = Path.Combine(AppContext.BaseDirectory, certificateFileName);
-                            using (var certfile = new FileStream(certPath, FileMode.Create))
+                            using (var certfile = SafeFileStream.Create(certPath, FileMode.Create))
                             {
                                 certfile.Write(serverCertBytes, 0, serverCertBytes.Length);
                                 certfile.Flush(true);

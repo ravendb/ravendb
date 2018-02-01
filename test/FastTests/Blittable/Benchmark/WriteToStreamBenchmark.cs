@@ -130,7 +130,7 @@ namespace FastTests.Blittable.Benchmark
 
         public static void PerformanceAnalysis(string directory, string outputFile, int size)
         {
-            using (var fileStream = new FileStream(outputFile, FileMode.Create))
+            using (var fileStream = SafeFileStream.Create(outputFile, FileMode.Create))
             using (var streamWriter = new StreamWriter(fileStream))
             {
                 var files = Directory.GetFiles(directory, "*.json").OrderBy(f => new FileInfo(f).Length).Take(size);
@@ -146,7 +146,7 @@ namespace FastTests.Blittable.Benchmark
                         var jsonOjbect = JObject.Load(new JsonTextReader(File.OpenText(jsonFile)));
                         streamWriter.Write(sp.ElapsedMilliseconds + ",");
 
-                        using (var stream = new FileStream("output.junk", FileMode.Create))
+                        using (var stream = SafeFileStream.Create("output.junk", FileMode.Create))
                         using (var textWriter = new StreamWriter(stream))
                         {
                             sp.Restart();
@@ -163,7 +163,7 @@ namespace FastTests.Blittable.Benchmark
                         using (var employee = blittableContext.Read(File.OpenRead(jsonFile), "doc1"))
                         {
                             streamWriter.Write(sp.ElapsedMilliseconds + ",");
-                            using (var stream = new FileStream("output2.junk", FileMode.Create))
+                            using (var stream = SafeFileStream.Create("output2.junk", FileMode.Create))
                             {
                                 sp.Restart();
                                 blittableContext.Write(stream, employee);

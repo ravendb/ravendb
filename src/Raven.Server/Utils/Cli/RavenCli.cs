@@ -699,7 +699,7 @@ namespace Raven.Server.Utils.Cli
                 var certificateFileName = $"admin.client.certificate.{name}.zip";
                 certPath = Path.Combine(path, certificateFileName);
 
-                using (var certfile = new FileStream(certPath, FileMode.Create))
+                using (var certfile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
                     certfile.Write(outputBytes, 0, outputBytes.Length);
                     certfile.Flush(true);

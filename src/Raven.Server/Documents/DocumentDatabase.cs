@@ -592,7 +592,7 @@ namespace Raven.Server.Documents
 
         public void FullBackupTo(string backupPath)
         {
-            using (var file = new FileStream(backupPath, FileMode.Create))
+            using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

@@ -34,7 +34,6 @@
       <LastGenOutput>Sodium.cs</LastGenOutput>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
     <PackageReference Include="System.Buffers" Version="4.4.0" />

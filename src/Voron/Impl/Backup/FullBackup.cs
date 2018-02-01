@@ -12,6 +12,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using Sparrow.Utils;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
@@ -38,7 +39,7 @@ namespace Voron.Impl.Backup
 
             infoNotify("Voron backup db started");
 
-            using (var file = new FileStream(backupPath, FileMode.Create))
+            using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             {
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
@@ -270,7 +271,7 @@ namespace Voron.Impl.Backup
                     }
 
                     using (var input = entry.Open())
-                    using (var output = new FileStream(Path.Combine(folder, entry.Name), FileMode.CreateNew))
+                    using (var output = SafeFileStream.Create(Path.Combine(folder, entry.Name), FileMode.CreateNew))
                     {
                         input.CopyTo(output, cancellationToken.Value);
                     }

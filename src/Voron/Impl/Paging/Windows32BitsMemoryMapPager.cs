@@ -107,7 +107,7 @@ namespace Voron.Impl.Paging
                  ? FileAccess.Read
                  : FileAccess.ReadWrite;
 
-            _fileStream = new FileStream(_handle, streamAccessType);
+            _fileStream = SafeFileStream.Create(_handle, streamAccessType);
 
             _totalAllocationSize = _fileInfo.Length;
 

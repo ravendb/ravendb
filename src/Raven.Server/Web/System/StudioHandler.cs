@@ -23,6 +23,7 @@ using Raven.Client;
 using Raven.Server.Commercial;
 using Sparrow.Collections;
 using Sparrow.Threading;
+using Sparrow.Utils;
 using StringSegment = Sparrow.StringSegment;
 
 namespace Raven.Server.Web.System
@@ -600,7 +601,7 @@ namespace Raven.Server.Web.System
             }
 
             // We have the file in the zip, so fetch it
-            using (var fileStream = new FileStream(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var fileStream = SafeFileStream.Create(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false))
             {
                 var zipEntry = zipArchive.Entries.FirstOrDefault(a => a.FullName.Equals(serverRelativeFileName, StringComparison.OrdinalIgnoreCase));
@@ -664,7 +665,7 @@ namespace Raven.Server.Web.System
 
             try
             {
-                using (var fileStream = new FileStream(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var fileStream = SafeFileStream.Create(_zipFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 using (var zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Read, false))
                 {
                     foreach (var entry in zipArchive.Entries)

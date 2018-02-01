@@ -3,6 +3,7 @@ using System.IO;
 using Lucene.Net.Store;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Utils;
 using Voron.Impl;
 using Voron;
 
@@ -28,7 +29,7 @@ namespace Raven.Server.Indexing
             if (options.EncryptionEnabled)
                 _file = new TempCryptoStream(_fileTempPath);
             else
-                _file = new FileStream(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
+                _file = SafeFileStream.Create(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);
 
             _tx.ReadTree(_tree).AddStream(name, Stream.Null); // ensure it's visible by LuceneVoronDirectory.FileExists, the actual write is inside Dispose
         }
