@@ -149,6 +149,13 @@ namespace Raven.Server.Web.System
                 "text/plain; charset=utf-8";
         }
 
+        [RavenAction("/favicon.ico", "GET", AuthorizationStatus.UnauthenticatedClients)]
+        public Task FavIcon()
+        {
+            HttpContext.Response.StatusCode = 404;
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task StudioAuthError()
         {
