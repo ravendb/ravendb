@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Sparrow;
+using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
 using Voron.Global;
@@ -312,7 +313,7 @@ namespace SlowTests.Voron
             Options.Dispose();
             Options = StorageEnvironmentOptions.ForPath(DataDir);
             Configure(Options);
-            using (var fileStream = new FileStream(
+            using (var fileStream = SafeFileStream.Create(
                 Path.Combine(DataDir, StorageEnvironmentOptions.JournalName(journal)),
                 FileMode.Open,
                 FileAccess.ReadWrite,

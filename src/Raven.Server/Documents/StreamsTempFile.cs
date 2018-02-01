@@ -2,6 +2,7 @@
 using System.IO;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents
 {
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents
             _tempFile = tempFile;
             _database = database;
 
-            _file = new FileStream(_tempFile, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
+            _file = SafeFileStream.Create(_tempFile, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose | FileOptions.SequentialScan);
         }
 
         public Stream StartNewStream()

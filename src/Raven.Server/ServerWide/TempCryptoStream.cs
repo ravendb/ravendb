@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide
 {
@@ -40,7 +41,7 @@ namespace Raven.Server.ServerWide
         private long _blockNumber;
         private long _maxLength;
 
-        public TempCryptoStream(string file) : this(new FileStream(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
+        public TempCryptoStream(string file) : this(SafeFileStream.Create(file, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None, 4096, FileOptions.DeleteOnClose))
         {
             _file = file;
         }

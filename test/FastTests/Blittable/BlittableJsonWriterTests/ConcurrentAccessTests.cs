@@ -20,7 +20,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
             using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-                /* FileStream file = new FileStream(@"c:\Temp\example.txt",FileMode.Create);
+                /* FileStream file = SafeFileStream.Create(@"c:\Temp\example.txt",FileMode.Create);
                  employee.WriteTo(file);
                  file.Flush();
                  file.Dispose();*/

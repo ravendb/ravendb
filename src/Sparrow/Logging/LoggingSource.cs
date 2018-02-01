@@ -206,8 +206,7 @@ namespace Sparrow.Logging
                                nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
                 if (File.Exists(fileName) && new FileInfo(fileName).Length >= maxFileSize)
                     continue;
-                var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024,
-                    false);
+                var fileStream = SafeFileStream.Create(fileName, FileMode.Create, FileAccess.Write, FileShare.Read, 32 * 1024, false);
                 fileStream.Write(_headerRow, 0, _headerRow.Length);
                 return fileStream;
             }

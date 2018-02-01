@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using Sparrow.Utils;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Voron.Global;
@@ -43,7 +44,7 @@ namespace Voron.Impl.Backup
 
             var copier = new DataCopier(Constants.Storage.PageSize * 16);
 
-            using (var file = new FileStream(backupPath, FileMode.Create))
+            using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             {
                 long numberOfBackedUpPages;
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
@@ -66,7 +67,7 @@ namespace Voron.Impl.Backup
             infoNotify = infoNotify ?? (s => { });
 
             long totalNumberOfBackedUpPages = 0;
-            using (var file = new FileStream(backupPath, FileMode.Create))
+            using (var file = SafeFileStream.Create(backupPath, FileMode.Create))
             {
                 using (var package = new ZipArchive(file, ZipArchiveMode.Create, leaveOpen: true))
                 {
@@ -357,7 +358,7 @@ namespace Voron.Impl.Backup
                         case ".journal":
 
                             var jounalFileName = tempDir.Combine(entry.Name);
-                            using (var output = new FileStream(jounalFileName.FullPath, FileMode.Create))
+                            using (var output = SafeFileStream.Create(jounalFileName.FullPath, FileMode.Create))
                             using (var input = entry.Open())
                             {
                                 output.Position = output.Length;
