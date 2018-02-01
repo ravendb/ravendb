@@ -30,7 +30,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.1.0" />
+    <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.4.1" />
   </ItemGroup>
   <ItemGroup>
