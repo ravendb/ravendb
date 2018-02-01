@@ -66,7 +66,7 @@ namespace Raven.Server.Dashboard
                     PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
                         ? currentProcess.WorkingSet64
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
-                var memoryInfoResult = MemoryInformation.GetMemoryInfo(useFreeInsteadOfAvailable: true); // useFreeInsteadOfAvailable for presentation only (for low mem we still use "available mem")
+                var memoryInfoResult = MemoryInformation.GetMemoryInfo();
                 var committedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes);
                 var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
                 var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);

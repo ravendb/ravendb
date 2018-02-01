@@ -21,11 +21,11 @@ namespace Sparrow.LowMemory
         private static DateTime _memoryRecordsSet;
         private static readonly TimeSpan MemByTimeThrottleTime = TimeSpan.FromMilliseconds(100);
 
-        public static Lazy<byte[]> VmRss = new Lazy<byte[]>(()=>UTF8Encoding.UTF8.GetBytes("VmRSS:"));
-        public static Lazy<byte[]> MemAvailable = new Lazy<byte[]>(()=>UTF8Encoding.UTF8.GetBytes("MemAvailable:"));
-        public static Lazy<byte[]> MemFree = new Lazy<byte[]>(()=>UTF8Encoding.UTF8.GetBytes("MemFree:"));
-        public static Lazy<byte[]> Committed_AS = new Lazy<byte[]>(()=>UTF8Encoding.UTF8.GetBytes("Committed_AS:"));
-        public static Lazy<byte[]> CommitLimit = new Lazy<byte[]>(()=>UTF8Encoding.UTF8.GetBytes("CommitLimit:"));
+        public static byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
+        public static byte[] MemAvailable = Encoding.UTF8.GetBytes("MemAvailable:");
+        public static byte[] MemFree = Encoding.UTF8.GetBytes("MemFree:");
+        public static byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
+        public static byte[] CommitLimit = Encoding.UTF8.GetBytes("CommitLimit:");
 
         public static long HighLastOneMinute;
         public static long LowLastOneMinute = long.MaxValue;
@@ -92,7 +92,7 @@ namespace Sparrow.LowMemory
                 using (var bufferedReader =new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
-                    var vmrss = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmRss.Value);
+                    var vmrss = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmRss);
                     return vmrss * 1024;// value is in KB, we need to return bytes
                 }
             }
@@ -114,8 +114,8 @@ namespace Sparrow.LowMemory
                 using (var bufferedReader =new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
-                    var memAvailable = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemAvailable.Value);
-                    var memFree = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree.Value);
+                    var memAvailable = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemAvailable);
+                    var memFree = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree);
                     return (MemAvailable:memAvailable, MemFree: memFree);
                 }
             }
@@ -138,8 +138,8 @@ namespace Sparrow.LowMemory
                 using (var bufferedReader =new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
-                    var committedAs = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS.Value);
-                    var commitLimit = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(CommitLimit.Value);
+                    var committedAs = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
+                    var commitLimit = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(CommitLimit);
                     return (Committed_AS:committedAs, CommitLimit: commitLimit);
                 }
             }
@@ -159,7 +159,7 @@ namespace Sparrow.LowMemory
             return (installedMemoryInGb, usableMemoryInGb);
         }
 
-        public static unsafe MemoryInfoResult GetMemoryInfo(bool useFreeInsteadOfAvailable = false)
+        public static unsafe MemoryInfoResult GetMemoryInfo()
         {
             if (_failedToGetAvailablePhysicalMemory)
             {
@@ -248,10 +248,7 @@ namespace Sparrow.LowMemory
 
                     var availableAndFree = GetAvailableAndFreeMemoryFromProcMemInfo();
                     
-                    if (useFreeInsteadOfAvailable)
-                        availableRamInBytes = (ulong)availableAndFree.MemFree;
-                    else
-                        availableRamInBytes = (ulong)availableAndFree.MemAvailable;
+                    availableRamInBytes = (ulong)availableAndFree.MemAvailable;
                     totalPhysicalMemoryInBytes = totalram;
                 }
                 else
