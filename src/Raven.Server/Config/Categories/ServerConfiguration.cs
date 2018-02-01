@@ -30,6 +30,5 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1)]
         [ConfigurationEntry("Server.NumberOfUnusedCoresByIndexes", ConfigurationEntryScope.ServerWideOnly)]
         public int NumberOfUnusedCoresByIndexes { get; set; }
-
     }
 }
