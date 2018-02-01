@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Sparrow.Logging;
 
 namespace Raven.Server.Utils
@@ -10,18 +11,32 @@ namespace Raven.Server.Utils
 
         public static void Track(Logger logger)
         {
-            AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             {
-                var exceptionString = $"UnhandledException: { eventArgs.ExceptionObject.ToString() }.";
-                if (logger.IsOperationsEnabled)
-                    logger.Operations(exceptionString, withWait: true).Wait(TimeToWaitForLog);
+                if (logger.IsOperationsEnabled == false)
+                    return;
+
+                if (args.ExceptionObject is Exception ex)
+                {
+                    logger.OperationsAsync("UnhandledException occurred.", ex).Wait(TimeToWaitForLog);
+                }
+                else
+                {
+                    var exceptionString = $"UnhandledException: { args.ExceptionObject.ToString() }.";
+                    logger.OperationsAsync(exceptionString).Wait(TimeToWaitForLog);
+                }
             };
 
-            TaskScheduler.UnobservedTaskException += (sender, eventArgs) =>
+            TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
-                var exception = eventArgs.Exception.ToString();
-                if (logger.IsInfoEnabled)
-                    logger.Info($"UnobservedTaskException: {exception}.", withWait: true).Wait(TimeToWaitForLog);
+                if (logger.IsInfoEnabled == false)
+                    return;
+
+                if (args.Observed)
+                    return;
+
+                var exception = args.Exception.ExtractSingleInnerException();
+                logger.InfoAsync("UnobservedTaskException occurred.", exception).Wait(TimeToWaitForLog);
             };
         }
     }

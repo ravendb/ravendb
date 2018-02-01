@@ -20,7 +20,18 @@ namespace Sparrow.Logging
             _logger = logger;
         }
 
-        public Task Info(string msg, Exception ex = null, bool withWait = false)
+        public void Info(string msg, Exception ex = null)
+        {
+            _logEntry.At = DateTime.UtcNow;
+            _logEntry.Exception = ex;
+            _logEntry.Logger = _logger;
+            _logEntry.Message = msg;
+            _logEntry.Source = _source;
+            _logEntry.Type = LogMode.Information;
+            _parent.Log(ref _logEntry);
+        }
+
+        public Task InfoAsync(string msg, Exception ex = null)
         {
             _logEntry.At = DateTime.UtcNow;
             _logEntry.Exception = ex;
@@ -29,26 +40,14 @@ namespace Sparrow.Logging
             _logEntry.Source = _source;
             _logEntry.Type = LogMode.Information;
 
-            Task waitTask;
-            TaskCompletionSource<object> tcs;
-
-            if (withWait)
-            {
-                tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                waitTask = tcs.Task;
-            }
-            else
-            {
-                tcs = null;
-                waitTask = Task.CompletedTask;
-            }
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             _parent.Log(ref _logEntry, tcs);
 
-            return waitTask;
+            return tcs.Task;
         }
 
-        public Task Operations(string msg, Exception ex = null, bool withWait = false)
+        public void Operations(string msg, Exception ex = null)
         {
             _logEntry.At = DateTime.Now;
             _logEntry.Exception = ex;
@@ -57,24 +56,22 @@ namespace Sparrow.Logging
             _logEntry.Source = _source;
             _logEntry.Type = LogMode.Operations;
             _parent.Log(ref _logEntry);
+        }
 
-            Task waitTask;
-            TaskCompletionSource<object> tcs;
+        public Task OperationsAsync(string msg, Exception ex = null)
+        {
+            _logEntry.At = DateTime.Now;
+            _logEntry.Exception = ex;
+            _logEntry.Logger = _logger;
+            _logEntry.Message = msg;
+            _logEntry.Source = _source;
+            _logEntry.Type = LogMode.Operations;
 
-            if (withWait)
-            {
-                tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                waitTask = tcs.Task;
-            }
-            else
-            {
-                tcs = null;
-                waitTask = Task.CompletedTask;
-            }
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             _parent.Log(ref _logEntry, tcs);
 
-            return waitTask;
+            return tcs.Task;
         }
 
         public bool IsInfoEnabled
