@@ -429,7 +429,7 @@ namespace Raven.Server.Documents
             List<MergedTransactionCommand> previousPendingOps)
         {
             var previous = context.Transaction;
-            CommitStats commitStats;
+            CommitStats commitStats = null;
             try
             {
                 while (true)
@@ -454,7 +454,7 @@ namespace Raven.Server.Documents
                             try
                             {
                                 //already throwing, attempt to complete previous tx
-                                CompletePreviousTransaction(previous, ref previousPendingOps, throwOnError: false);
+                                CompletePreviousTransaction(previous, commitStats, ref previousPendingOps, throwOnError: false);
                             }
                             finally
                             {
@@ -500,7 +500,9 @@ namespace Raven.Server.Documents
                             {
                                 if (calledCompletePreviousTx == false)
                                 {
-                                    CompletePreviousTransaction(previous, commitStats, ref previousPendingOps,
+                                    CompletePreviousTransaction(previous,
+                                        commitStats,
+                                        ref previousPendingOps,
                                         // if this previous threw, it won't throw again
                                         throwOnError: false);
                                 }
@@ -565,7 +567,12 @@ namespace Raven.Server.Documents
             try
             {
                 previous.EndAsyncCommit();
-                CheckOnSlowWrite(commitStats);
+
+                //not sure about this 'if'
+                if (commitStats != null) 
+                {
+                    CheckOnSlowWrite(commitStats);
+                }
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
