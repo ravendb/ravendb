@@ -281,9 +281,9 @@ namespace Raven.Server.Documents.Indexes
 
                 if (_index.Type.IsMapReduce())
                 {
-                    stats.ReduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice).Reader.ReadLittleEndianInt32();
-                    stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice).Reader.ReadLittleEndianInt32();
-                    stats.ReduceSuccesses = statsTree.Read(IndexSchema.ReduceSuccessesSlice).Reader.ReadLittleEndianInt32();
+                    stats.ReduceAttempts = statsTree.Read(IndexSchema.ReduceAttemptsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.ReduceErrors = statsTree.Read(IndexSchema.ReduceErrorsSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
+                    stats.ReduceSuccesses = statsTree.Read(IndexSchema.ReduceSuccessesSlice)?.Reader.ReadLittleEndianInt32() ?? 0;
                 }
             }
 
