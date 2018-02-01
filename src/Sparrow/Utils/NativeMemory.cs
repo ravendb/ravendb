@@ -19,6 +19,11 @@ namespace Sparrow.Utils
         public static readonly ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
             () => new ThreadStats(), trackAllValues: true);
 
+        public static void NotifyCurrentThreadAboutToClose()
+        {
+            ThreadAllocations.Value = null;
+        }
+
         public static ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>> FileMapping = new ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>>();
 
         public static void SetMinimumFreeCommittedMemory(float min)

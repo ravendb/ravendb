@@ -154,52 +154,59 @@ namespace Raven.Server.Utils
 
             public void Run()
             {
-                InitializeProcessThreads();
-                LongRunningWork.CurrentPooledThread = this;
-
-                while (true)
+                try
                 {
-                    _waitForWork.WaitOne();
-                    _workIsDone.ManagedThreadId = Thread.CurrentThread.ManagedThreadId;
-                    if (_action == null)
-                        return; // should only happen when we shutdown
+                    InitializeProcessThreads();
+                    LongRunningWork.CurrentPooledThread = this;
 
-                    ResetCurrentThreadName();
-                    Thread.CurrentThread.Name = _name;
-
-                    try
+                    while (true)
                     {
-                        LongRunningWork.Current = _workIsDone;
-                        _action(_state);
-                    }
-                    finally
-                    {
-                        _workIsDone.Set();
-                        LongRunningWork.Current = null;
-                    }
-                    _action = null;
-                    _state = null;
-                    _workIsDone = null;
+                        _waitForWork.WaitOne();
+                        _workIsDone.ManagedThreadId = Thread.CurrentThread.ManagedThreadId;
+                        if (_action == null)
+                            return; // should only happen when we shutdown
 
-                    ThreadLocalCleanup.Run();
+                        ResetCurrentThreadName();
+                        Thread.CurrentThread.Name = _name;
 
-                    ResetCurrentThreadName();
-                    Thread.CurrentThread.Name = "Available Pool Thread";
+                        try
+                        {
+                            LongRunningWork.Current = _workIsDone;
+                            _action(_state);
+                        }
+                        finally
+                        {
+                            _workIsDone.Set();
+                            LongRunningWork.Current = null;
+                        }
+                        _action = null;
+                        _state = null;
+                        _workIsDone = null;
 
-                    if (ResetThreadPriority() == false)
-                        return;
+                        ThreadLocalCleanup.Run();
 
-                    if (ResetThreadAffinity() == false)
-                        return;
+                        ResetCurrentThreadName();
+                        Thread.CurrentThread.Name = "Available Pool Thread";
 
-                    _waitForWork.Reset();
-                    lock (_parent)
-                    {
-                        if (_parent._disposed)
+                        if (ResetThreadPriority() == false)
                             return;
 
-                        _parent._pool.Enqueue(this);
+                        if (ResetThreadAffinity() == false)
+                            return;
+
+                        _waitForWork.Reset();
+                        lock (_parent)
+                        {
+                            if (_parent._disposed)
+                                return;
+
+                            _parent._pool.Enqueue(this);
+                        }
                     }
+                }
+                finally
+                {
+                    NativeMemory.NotifyCurrentThreadAboutToClose();
                 }
             }
 
