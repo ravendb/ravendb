@@ -414,7 +414,6 @@ WriteLargeCompressedString:
             {
                 numberOfEscapeSequences--;
                 var bytesToSkip = BlittableJsonReaderBase.ReadVariableSizeInt(strSrcBuffer, ref escapeSequencePos);
-                EnsureBuffer(bytesToSkip);
                 WriteRawString(strBuffer, bytesToSkip);
                 strBuffer += bytesToSkip;
                 size -= bytesToSkip + 1 /*for the escaped char we skip*/;
@@ -444,7 +443,6 @@ WriteLargeCompressedString:
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void WriteRawString(byte* buffer, int size)
         {
-            // PERF: We are no longer ensuring the buffer has enough size anymore. Caller must ensure it is so.
             if (size < JsonOperationContext.ManagedPinnedBuffer.Size)
             {
                 EnsureBuffer(size);
