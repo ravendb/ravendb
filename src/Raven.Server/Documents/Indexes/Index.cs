@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Indexes
         {
             StorageEnvironment environment = null;
 
-            var name = Path.GetDirectoryName(path);
+            var name = new DirectoryInfo(path).Name;
             var indexPath = path;
 
             var indexTempPath =
