@@ -538,6 +538,7 @@ namespace Raven.Server.Documents
             try
             {
                 previous.EndAsyncCommit();
+                CheckOnSlowWrite(commitStats);
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"EndAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id}");
