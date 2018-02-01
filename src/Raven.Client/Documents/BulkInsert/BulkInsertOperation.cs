@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -101,7 +102,11 @@ namespace Raven.Client.Documents.BulkInsert
                 var message = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = _stream
+                    Content = _stream,
+                    Headers =
+                    {
+                        TransferEncoding = { new TransferCodingHeaderValue("chunked") }
+                    }
                 };
 
                 return message;
