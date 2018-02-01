@@ -182,6 +182,11 @@ namespace Raven.Server
                     Console.WriteLine(e);
                     return -2;
                 }
+                finally
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.OperationsAsync("Server has shut down").Wait(TimeSpan.FromSeconds(15));
+                }
             } while (rerun);
 
             return 0;
