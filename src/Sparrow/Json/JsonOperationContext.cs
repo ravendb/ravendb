@@ -108,9 +108,10 @@ namespace Sparrow.Json
 
         public unsafe class ManagedPinnedBuffer : IDisposable
         {
-            public const int WholeBufferSize = 128 * Constants.Size.Kilobyte;
-            public const int Size = WholeBufferSize / 4;
+            public const int LargeBufferSize = 128 * Constants.Size.Kilobyte;
+            public const int Size =  32 * Constants.Size.Kilobyte;
 
+            internal BufferSegment BufferInstance;
             public ArraySegment<byte> Buffer;
             public int Length;
             public int Valid, Used;
@@ -125,8 +126,9 @@ namespace Sparrow.Json
                     return;
                 _disposed = true;
                 GC.SuppressFinalize(this);
-                var array = Buffer.Array;
-                Buffer = new ArraySegment<byte>();// avoid holding reference to the byte array any more
+                var bufferBefore = BufferInstance;
+                BufferInstance = null;
+                Buffer = new ArraySegment<byte>();
                 if (_handle.IsAllocated)
                     _handle.Free();
 
@@ -134,11 +136,16 @@ namespace Sparrow.Json
                 Valid = Used = 0;
                 Pointer = null;
 
-                if (array != null)// we explicitly don't want to return this in the finalizer
+                if (bufferBefore != null)
                 {
-                    ArrayPool<byte>.Shared.Return(array);
-                    _pinnedBufferPool.Free(this);
+                    if (bufferBefore.Count == LargeBufferSize)
+                        _largeBufferSegments.Free(bufferBefore);
+                    else
+                        _smallBufferSegments.Free(bufferBefore);
                 }
+
+                _pinnedBufferPool.Free(this);
+                
             }
 
             ~ManagedPinnedBuffer()
@@ -150,17 +157,15 @@ namespace Sparrow.Json
             public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
                 where T : JsonOperationContext
             {
-                if(Length == WholeBufferSize)
-                    throw new InvalidOperationException("Cannot clone long lived buffers");
-                
+                if(Length != Size)
+                    throw new InvalidOperationException("Cloned buffer must be of the same size");
+
+
                 var releaseCtx = pool.AllocateOperationContext(out T ctx);
                 var returnBuffer = ctx.GetManagedBuffer(out var buffer);
                 var clean = new Disposer(returnBuffer, releaseCtx);
                 try
                 {
-                    if(Length != buffer.Length)
-                        throw new InvalidOperationException("Cloned buffer must be of the same size");
-
                     buffer.Valid = Valid - Used;
                     buffer.Used = 0;
                     Memory.Copy(buffer.Pointer, Pointer + Used, buffer.Valid);
@@ -198,9 +203,10 @@ namespace Sparrow.Json
                 GC.SuppressFinalize(this); // we only want finalization if we have values
             }
 
-            private void Init(ArraySegment<byte> buffer, byte* pointer, GCHandle handle)
+            private void Init(BufferSegment buffer, byte* pointer, GCHandle handle)
             {
-                Buffer = buffer;
+                BufferInstance = buffer;
+                Buffer = new ArraySegment<byte>(buffer.Array, buffer.Offset, buffer.Count);
                 Length = buffer.Count;
                 Pointer = pointer;
                 _handle = handle;
@@ -208,41 +214,70 @@ namespace Sparrow.Json
             }
 
             private static ObjectPool<ManagedPinnedBuffer> _pinnedBufferPool = new ObjectPool<ManagedPinnedBuffer>(()=>new ManagedPinnedBuffer());
+            private static ObjectPool<BufferSegment> _smallBufferSegments = new ObjectPool<BufferSegment>(CreateSmallBuffers);
+            private static ObjectPool<BufferSegment> _largeBufferSegments = new ObjectPool<BufferSegment>(() => new BufferSegment
+            {
+                Array = new byte[LargeBufferSize],
+                Count = LargeBufferSize,
+                Offset = 0
+            });
+
+            private static BufferSegment CreateSmallBuffers()
+            {
+                Debug.Assert(Size * 8 > 80 * 1024);// expected to reside on LOH
+                var buffer = new byte[Size * 8]; 
+                for (int i = 1; i < 8; i++)
+                {
+                    // we put the remaining values in the buffer pool
+                    _smallBufferSegments.Free(new BufferSegment
+                    {
+                        Array = buffer,
+                        Count = Size,
+                        Offset = i * Size
+                    });
+                }
+                return new BufferSegment
+                {
+                    Array = buffer,
+                    Count = Size,
+                    Offset = 0
+                };
+            }
+
+            internal class BufferSegment
+            {
+                public byte[] Array;
+                public int Offset;
+                public int Count;
+            }
 
             public static ManagedPinnedBuffer LongLivedInstance()
             {
-                var buffer = ArrayPool<byte>.Shared.Rent(WholeBufferSize);
-                var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                return AllocateInstance(_largeBufferSegments);
+            }
+
+            private static ManagedPinnedBuffer AllocateInstance(ObjectPool<BufferSegment> pool)
+            {
+                var buffer = pool.Allocate();
+                var handle = GCHandle.Alloc(buffer.Array, GCHandleType.Pinned);
                 try
                 {
                     var ptr = (byte*)handle.AddrOfPinnedObject();
                     var mpb = _pinnedBufferPool.Allocate();
-                    mpb.Init(new ArraySegment<byte>(buffer), ptr, handle);
+                    mpb.Init(buffer, ptr + buffer.Offset, handle);
                     return mpb;
                 }
                 catch (Exception)
                 {
                     handle.Free();
+                    pool.Free(buffer);
                     throw;
                 }
             }
 
             public static ManagedPinnedBuffer ShortLivedInstance()
             {
-                var buffer = ArrayPool<byte>.Shared.Rent(WholeBufferSize / 4);
-                var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-                try
-                {
-                    var ptr = (byte*)handle.AddrOfPinnedObject();
-                    var mpb = _pinnedBufferPool.Allocate();
-                    mpb.Init(new ArraySegment<byte>(buffer), ptr, handle);
-                    return mpb;
-                }
-                catch (Exception)
-                {
-                    handle.Free();
-                    throw;
-                }
+                return AllocateInstance(_smallBufferSegments);
             }
         }
 
