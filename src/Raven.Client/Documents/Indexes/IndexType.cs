@@ -6,7 +6,9 @@
         AutoMap,
         AutoMapReduce,
         Map,
+        JavaScriptMap,
         MapReduce,
+        JavaScriptMapReduce,
         Faulty
     }
 
@@ -14,7 +16,7 @@
     {
         public static bool IsMap(this IndexType self)
         {
-            return self == IndexType.Map || self == IndexType.AutoMap;
+            return self == IndexType.Map || self == IndexType.AutoMap || self == IndexType.JavaScriptMap;
         }
 
         public static bool IsMapReduce(this IndexType self)
