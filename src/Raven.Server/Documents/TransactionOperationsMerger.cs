@@ -276,13 +276,19 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_operations.TryDequeue(out MergedTransactionCommand command))
+                        try
                         {
-                            command.Exception = e;
-                            DoCommandNotification(command);
+                            if (_operations.TryDequeue(out MergedTransactionCommand command))
+                            {
+                                command.Exception = e;
+                                DoCommandNotification(command);
+                            }
+                            return;
                         }
-
-                        return;
+                        finally
+                        {
+                            tx?.Dispose();
+                        }
                     }
                     PendingOperations result;
                     try
@@ -300,15 +306,22 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        if (_log.IsInfoEnabled)
+                        try
                         {
-                            _log.Info(
-                                $"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently",
-                                e);
+                            if (_log.IsInfoEnabled)
+                            {
+                                _log.Info(
+                                    $"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently",
+                                    e);
+                            }
+
+                            NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
+                            return;
                         }
-                        tx.Dispose();
-                        NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
-                        return;
+                        finally
+                        {
+                            tx?.Dispose();
+                        }
                     }
 
                     switch (result)
@@ -435,6 +448,20 @@ namespace Raven.Server.Documents
                             op.Exception = e;
                         }
                         NotifyOnThreadPool(previousPendingOps);
+
+                        if (e is OutOfMemoryException)
+                        {
+                            try
+                            {
+                                //already throwing, attempt to complete previous tx
+                                CompletePreviousTransaction(previous, ref previousPendingOps, throwOnError: false);
+                            }
+                            finally
+                            {
+                                context.Transaction?.Dispose();
+                            }
+                        }
+
                         return;
                     }
                     try
@@ -709,7 +736,6 @@ namespace Raven.Server.Documents
         {
             TaskExecutor.Execute(DoCommandNotification, cmd);
         }
-
 
         private void NotifyOnThreadPool(List<MergedTransactionCommand> cmds)
         {
