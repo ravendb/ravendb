@@ -253,7 +253,8 @@ namespace Sparrow.Json
             }
             // we'll likely need more memory in the next round, let us increase the size we hold on to
 
-            NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
+            if (_ptrStart != null)
+                NativeMemory.Free(_ptrStart, _allocated, _allocatingThread);
 
             // we'll allocate some multiple of the currently allocated amount, that will prevent big spikes in memory 
             // consumption and has the worst case usage of doubling memory utilization
