@@ -206,22 +206,30 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-        public static string ReadLineFromFile(string path, string filter)
+        public static string[] ReadLineFromFile(string path, string[] filters)
         {
             try
             {
-                string result = null;
+                string[] result = new string[filters.Length];
                 var txt = File.ReadAllLines(path);
                 var cnt = 0;
                 foreach (var line in txt)
                 {
-                    if (line.Contains(filter))
+                    foreach (var filter in filters)
                     {
-                        result = line;
-                        if (++cnt > 1)
-                            return null;
+                        if (line.Contains(filter))
+                        {
+                            if (cnt > filters.Length - 1)
+                                return null; // TODO: this is an error
+                            result[cnt++] = line;
+                            break;
+                        }
                     }
                 }
+
+                if (cnt < filters.Length)
+                    return null; // TODO: this is an error
+                
                 return result;
             }
             catch (Exception)

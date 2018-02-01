@@ -26,6 +26,7 @@ namespace Raven.Server.Utils.Cli
             const string lineBorder = "+---------------------------------------------------------------+";
 
             var meminfo = MemoryInformation.GetMemoryInfo();
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 ConsoleWriteLineWithColor(ConsoleColor.Yellow,

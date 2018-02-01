@@ -51,7 +51,7 @@ namespace Raven.Server
                 configuration.AddCommandLine(configurationArgs);
 
             configuration.Initialize();
-
+            
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, configuration.Logs.Path.FullPath);
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");

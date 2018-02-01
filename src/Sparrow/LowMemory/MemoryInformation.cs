@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -77,73 +78,98 @@ namespace Sparrow.LowMemory
         public static long GetRssMemoryUsage(int processId)
         {
             var path = $"/proc/{processId}/status";
-            return GetMemoryUsageByFilter(path, "VmRSS");
+            var rc =  GetMemoryUsageByFilter(path, new [] { "VmRSS" });
+            return rc[0];
         }
 
-        public static long GetAvailableMemoryFromProcMemInfo()
+        public static long[] GetAvailableAndFreeMemoryFromProcMemInfo()
         {
             var path = "/proc/meminfo";
-            return GetMemoryUsageByFilter(path, "MemAvailable"); // this is different then sysinfo freeram+buffered (and the closest to the real free memory)
+            var rc = GetMemoryUsageByFilter(path, new [] { "MemAvailable", "MemFree" } ); // this is different then sysinfo freeram+buffered (and the closest to the real free memory)
+            return rc;
+        }
+            
+        public static long[] GetCommitAsAndCommitLimitFromProcMemInfo()
+        {
+            var path = "/proc/meminfo";
+            var rc = GetMemoryUsageByFilter(path, new [] { "Committed_AS", "CommitLimit" } ); // this is different then sysinfo freeram+buffered (and the closest to the real free memory)
+            return rc;
         }
         
-        public static long GetFreeMemoryFromProcMemInfo()
-        {
-            // MemFree is really different then MemAvailable (while free is usually lower then the real free,
-            // and available is only estimated free which sometimes higher then the real free memory)
-            var path = "/proc/meminfo";
-            return GetMemoryUsageByFilter(path, "MemFree");
-        }
-
-        public static long GetMemoryUsageByFilter(string path, string filter)
+        public static long[] GetMemoryUsageByFilter(string path, string[] filters)
         {
             // currently Process.GetCurrentProcess().WorkingSet64 doesn't give the real RSS number
             // getting it from /proc/self/stat or statm can be also problematic because in some distros the number is in page size, in other pages, and position is not always guarenteed
             // however /proc/self/status gives the real number in humenly format. We extract this here:
-            var filterString = KernelVirtualFileSystemUtils.ReadLineFromFile(path, filter);
-            if (filterString == null)
+
+            var rcValues = new long[filters.Length];
+            
+            var filtersString = KernelVirtualFileSystemUtils.ReadLineFromFile(path, filters);
+            if (filtersString == null)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read {filter} from {path}");
-                return 0;
+                    Logger.Info($"Failed to read " + string.Join(",", filters) + " from {path}");
+                return null;
             }
 
-            var parsedLine = filterString.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-            if (parsedLine.Length != 3) // format should be: {filter}: <num> kb
+            var cnt = 0;
+            foreach (var filterString in filtersString)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read {filter} from {path}. Line was {parsedLine}");
-                return 0;
+                var parsedLine = filterString.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+
+                if (parsedLine.Length != 3) // format should be: {filter}: <num> kb
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to read {filters[cnt]} from {path}. Line was {parsedLine}");
+                    rcValues[cnt++] = 0;
+                    continue;
+                }
+
+                var found = false;
+                foreach (var filter in filters)
+                {
+                    if (parsedLine[0].Contains($"{filter}:") == true)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found == false)
+                    continue;
+
+                if (long.TryParse(parsedLine[1], out var result) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to parse {filters[cnt]} from {path}. Line was {parsedLine}");
+                    rcValues[cnt++] = 0;
+                    continue;
+                }
+
+                switch (parsedLine[2].ToLowerInvariant())
+                {
+                    case "kb":
+                        result *= 1024L;
+                        break;
+                    case "mb":
+                        result *= 1024L * 1024;
+                        break;
+                    case "gb":
+                        result *= 1024L * 1024 * 1024;
+                        break;
+                }
+
+                rcValues[cnt++] = result;
+
+                if (cnt > rcValues.Length)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to read from {path}. Too many values then expected");
+                    return null;
+                }
             }
 
-            if (parsedLine[0].Contains($"{filter}:") == false)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to find {filter} from {path}. Line was {parsedLine}");
-                return 0;
-            }
-
-            if (long.TryParse(parsedLine[1], out var result) == false)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to parse {filter} from {path}. Line was {parsedLine}");
-                return 0;
-            }
-
-            switch (parsedLine[2].ToLowerInvariant())
-            {
-                case "kb":
-                    result *= 1024L;
-                    break;
-                case "mb":
-                    result *= 1024L * 1024;
-                    break;
-                case "gb":
-                    result *= 1024L * 1024 * 1024;
-                    break;
-            }
-
-            return result;
+            return rcValues;
         }
 
         public static (double InstalledMemory, double UsableMemory) GetMemoryInfoInGb()
@@ -241,10 +267,12 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
+                    var availableAndFree = GetAvailableAndFreeMemoryFromProcMemInfo();
+
                     if (useFreeInsteadOfAvailable)
-                        availableRamInBytes = (ulong)GetFreeMemoryFromProcMemInfo();
+                        availableRamInBytes = (ulong)availableAndFree[1];
                     else
-                        availableRamInBytes = (ulong)GetAvailableMemoryFromProcMemInfo();
+                        availableRamInBytes = (ulong)availableAndFree[0];
                     totalPhysicalMemoryInBytes = totalram;
                 }
                 else
@@ -294,11 +322,13 @@ namespace Sparrow.LowMemory
 
                 SetMemoryRecords((long)availableRamInBytes);
 
+                var commitAsAndCommitLimit = GetCommitAsAndCommitLimitFromProcMemInfo();
+
                 return new MemoryInfoResult
                 {
                     // TODO: figure out what this value should be, probably swap + ram
-                    TotalCommittableMemory = totalPhysicalMemory,
-                    CurrentCommitCharge = availableRam,
+                    TotalCommittableMemory = new Size(commitAsAndCommitLimit[1], SizeUnit.Bytes),
+                    CurrentCommitCharge = new Size(commitAsAndCommitLimit[0],SizeUnit.Bytes),
 
                     AvailableMemory = availableRam,
                     TotalPhysicalMemory = totalPhysicalMemory,
