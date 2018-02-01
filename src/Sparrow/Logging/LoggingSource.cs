@@ -256,24 +256,25 @@ namespace Sparrow.Logging
             return state;
         }
 
-        public void Log(ref LogEntry entry)
+        public void Log(ref LogEntry entry, TaskCompletionSource<object> tcs = null)
         {
-            WebSocketMessageEntry item;
             var state = _localState.Value;
             if (state.Generation != _generation)
             {
                 _localState.Value = GenerateThreadWriterState();
             }
 
-            if (state.Free.Dequeue(out item))
+            if (state.Free.Dequeue(out var item))
             {
                 item.Data.SetLength(0);
                 item.WebSocketsList.Clear();
+                item.Task = tcs;
                 state.ForwardingStream.Destination = item.Data;
             }
             else
             {
                 item = new WebSocketMessageEntry();
+                item.Task = tcs;
                 state.ForwardingStream.Destination = new MemoryStream();
             }
 
@@ -284,6 +285,7 @@ namespace Sparrow.Logging
                     item.WebSocketsList.Add(kvp.Key);
                 }
             }
+
             WriteEntryToWriter(state.Writer, ref entry);
             item.Data = state.ForwardingStream.Destination;
 
@@ -402,6 +404,8 @@ namespace Sparrow.Logging
 
                                 while (_newThreadStates.TryDequeue(out WeakReference<LocalThreadWriterState> result))
                                     threadStates.Add(result);
+
+                                _hasEntries.Set(); // we need to start writing logs again from new thread states
                             }
                         }
                     }
@@ -457,10 +461,22 @@ namespace Sparrow.Logging
 
         private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
         {
-            ArraySegment<byte> bytes;
-            item.Data.TryGetBuffer(out bytes);
+            item.Data.TryGetBuffer(out var bytes);
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
+
+            if (item.Task != null)
+            {
+                try
+                {
+                    file.Flush();
+                    _additionalOutput?.Flush();
+                }
+                finally
+                {
+                    item.Task.TrySetResult(null);
+                }
+            }
 
             try
             {
