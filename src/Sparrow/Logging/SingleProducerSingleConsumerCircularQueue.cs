@@ -2,12 +2,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sparrow.Logging
 {
     public class WebSocketMessageEntry
     {
-        public MemoryStream Data { get; set; }
+        public MemoryStream Data;
+        public TaskCompletionSource<object> Task;
+
         public readonly List<WebSocket> WebSocketsList = new List<WebSocket>();
 
         public override string ToString()
@@ -19,13 +22,13 @@ namespace Sparrow.Logging
     public class SingleProducerSingleConsumerCircularQueue<T>
     {
         private readonly T[] _data;
-       // private readonly MemoryStream[] _data;
-       // private readonly List<WebSocket>[]  _webSocketsList;
+        // private readonly MemoryStream[] _data;
+        // private readonly List<WebSocket>[]  _webSocketsList;
         private readonly int _queueSize;
         private volatile uint _readPos;
 #pragma warning disable 169 // unused field
         // cache line padding
-        private long _p1, _p2, _p3, _p4, _p5, _p6, _p7; 
+        private long _p1, _p2, _p3, _p4, _p5, _p6, _p7;
 #pragma warning restore 169
         private volatile uint _writePos;
 
@@ -57,7 +60,7 @@ namespace Sparrow.Logging
 
         private int _numberOfTimeWaitedForEnqueue;
 
-        public bool Enqueue(T entry,int timeout)
+        public bool Enqueue(T entry, int timeout)
         {
             if (Enqueue(entry))
             {
@@ -67,7 +70,7 @@ namespace Sparrow.Logging
             while (timeout > 0)
             {
                 _numberOfTimeWaitedForEnqueue++;
-                var timeToWait = _numberOfTimeWaitedForEnqueue/2;
+                var timeToWait = _numberOfTimeWaitedForEnqueue / 2;
                 if (timeToWait < 2)
                     timeToWait = 2;
                 else if (timeToWait > timeout)
