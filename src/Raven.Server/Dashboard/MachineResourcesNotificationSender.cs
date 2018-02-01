@@ -78,8 +78,10 @@ namespace Raven.Server.Dashboard
                 var machineResources = new MachineResources
                 {
                     TotalMemory = installedMemory,
-                    MachineMemoryUsage = installedMemory - availableMemory,
-                    ProcessMemoryUsage = committedMemory < installedMemory - availableMemory ? committedMemory : workingSet,
+                    // we report the committed memory, because that is what we care about, but if we have more committed memory than physical
+                    // then we want to report actual memory usage, to avoid confusing users
+                    MachineMemoryUsage =  committedMemory > installedMemory ? installedMemory - availableMemory : committedMemory,
+                    ProcessMemoryUsage = workingSet,
                     ProcessMemoryExcludingSharedUsage = Math.Max(workingSet - shared, 0),
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
                     ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
