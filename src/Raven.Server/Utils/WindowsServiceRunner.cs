@@ -102,8 +102,8 @@ namespace Raven.Server.Utils
 
         public void Stop()
         {
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Stopping RavenDB Windows Service: {ServiceName}.");
+            if (Logger.IsOperationsEnabled)
+                Logger.OperationsAsync($"Stopping RavenDB Windows Service: {ServiceName}.").Wait(TimeSpan.FromSeconds(15));
 
             _ravenServer.Dispose();
             _serviceStoppedCallback();
