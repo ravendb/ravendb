@@ -315,7 +315,7 @@ namespace Sparrow.LowMemory
 
             var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
             var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared);
-            var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalCommittableMemory * _commitChargeThreshold);
+            var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalPhysicalMemory * _commitChargeThreshold);
 
             // We consider low memory only if we don't have enough free pyhsical memory *AND* the commited memory size if larger than our pyhsical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
