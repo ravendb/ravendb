@@ -58,6 +58,7 @@ namespace Raven.Server
     {
         static RavenServer()
         {
+            UnhandledExceptions.Track(Logger);
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
