@@ -75,14 +75,15 @@ namespace Raven.Server.Documents.Indexes.Auto
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var tx = environment.ReadTransaction())
             {
-                var tree = tx.CreateTree("Definition");
-                var result = tree.Read(DefinitionSlice);
-                if (result == null)
-                    return null;
-
-                using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
+                using (var stream = GetIndexDefinitionStream(environment, tx))
                 {
-                    return LoadFromJson(reader);
+                    if (stream == null)
+                        return null;
+
+                    using (var reader = context.ReadForDisk(stream, string.Empty))
+                    {
+                        return LoadFromJson(reader);
+                    }
                 }
             }
         }

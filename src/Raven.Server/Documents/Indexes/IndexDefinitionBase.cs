@@ -12,6 +12,7 @@ using Sparrow.Json;
 
 using Voron;
 using Sparrow;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -223,6 +224,28 @@ namespace Raven.Server.Documents.Indexes
             stream.Write(encryptedData, 0, encryptedData.Length);
             stream.Write(nonce, 0, nonce.Length);
             stream.Position = 0;
+        }
+
+        protected static Stream GetIndexDefinitionStream(StorageEnvironment environment, Transaction tx)
+        {
+            var tree = tx.CreateTree("Definition");
+            var result = tree.Read(DefinitionSlice);
+            if (result == null)
+                return null;
+
+            var stream = result.Reader.AsStream();
+            if (environment.Options.EncryptionEnabled)
+            {
+                using (stream)
+                {
+                    var ms = new MemoryStream();
+                    result.Reader.AsStream().CopyTo(ms);
+                    ms.Position = 0;
+                    DecryptStream(environment.Options, ms);
+                    return ms;
+                }
+            }
+            return stream;
         }
 
         private static unsafe void DecryptStream(StorageEnvironmentOptions options, MemoryStream stream)

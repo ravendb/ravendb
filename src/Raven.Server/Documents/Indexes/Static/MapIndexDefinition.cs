@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -8,6 +9,7 @@ using Raven.Server.Json;
 
 using Sparrow.Json;
 using Voron;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -110,12 +112,8 @@ namespace Raven.Server.Documents.Indexes.Static
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var tx = environment.ReadTransaction())
             {
-                var tree = tx.CreateTree("Definition");
-                var result = tree.Read(DefinitionSlice);
-                if (result == null)
-                    return null;
-
-                using (var reader = context.ReadForDisk(result.Reader.AsStream(), string.Empty))
+                using (var stream = GetIndexDefinitionStream(environment, tx))
+                using (var reader = context.ReadForDisk(stream, "index/def"))
                 {
                     var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);
