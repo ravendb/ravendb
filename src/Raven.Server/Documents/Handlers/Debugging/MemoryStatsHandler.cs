@@ -139,14 +139,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value))
                     {
+                        var details = new DynamicJsonValue();
+                        
                         var dir = new DynamicJsonValue
                         {
-                            ["Directory"] = sizes.Key.Substring(prefixLength),
-                            ["TotalDirectorySize"] = new DynamicJsonValue
-                            {
-                                ["Mapped"] = sizes.Value,
-                                ["HumaneMapped"] = Size.Humane(sizes.Value)
-                            }
+                            [nameof(MemoryInfoMappingItem.Directory)] = sizes.Key.Substring(prefixLength),
+                            [nameof(MemoryInfoMappingItem.TotalDirectorySize)] = sizes.Value,
+                            [nameof(MemoryInfoMappingItem.HumaneTotalDirectorySize)] = Size.Humane(sizes.Value),
+                            [nameof(MemoryInfoMappingItem.Details)] = details
                         };
                         foreach (var file in value.OrderBy(x => x.Key))
                         {
@@ -164,20 +164,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             {
                                 dja.Add(new DynamicJsonValue
                                 {
-                                    ["Size"] = maps.Key,
-                                    ["Count"] = maps.Value
+                                    [nameof(MemoryInfoMappingDetails.Size)] = maps.Key,
+                                    [nameof(MemoryInfoMappingDetails.Count)] = maps.Value
                                 });
                             }
-
-                            dir[Path.GetFileName(file.Key)] = new DynamicJsonValue
+                            
+                            var fileSize = GetFileSize(file.Key);
+                            details[Path.GetFileName(file.Key)] = new DynamicJsonValue
                             {
-                                ["FileSize"] = GetFileSize(file.Key),
-                                ["TotalMapped"] = totalMapped,
-                                ["HumaneTotalMapped"] = Size.Humane(totalMapped),
-                                ["Mappings"] = dja
+                                [nameof(MemoryInfoMappingFileInfo.FileSize)] = fileSize,
+                                [nameof(MemoryInfoMappingFileInfo.HumaneFileSize)] = Size.Humane(fileSize),
+                                [nameof(MemoryInfoMappingFileInfo.TotalMapped)] = totalMapped,
+                                [nameof(MemoryInfoMappingFileInfo.HumaneTotalMapped)] = Size.Humane(totalMapped),
+                                [nameof(MemoryInfoMappingFileInfo.Mappings)] = dja
                             };
                         }
-
                         fileMappings.Add(dir);
                     }
                 }
@@ -221,30 +222,30 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var managedMemory = GC.GetTotalMemory(false);
                 var djv = new DynamicJsonValue
                 {
-                    ["WorkingSet"] = workingSet,
-                    ["TotalUnmanagedAllocations"] = totalUnmanagedAllocations,
-                    ["ManagedAllocations"] = managedMemory,
-                    ["TotalMemoryMapped"] = totalMapping,
-                    ["PhysicalMem"] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
-                    ["FreeMem"] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
-                    ["HighMemLastOneMinute"] = Size.Humane(memInfo.MemoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                    ["LowMemLastOneMinute"] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                    ["HighMemLastFiveMinute"] = Size.Humane(memInfo.MemoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                    ["LowMemLastFiveMinute"] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                    ["HighMemSinceStartup"] = Size.Humane(memInfo.MemoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
-                    ["LowMemSinceStartup"] = Size.Humane(memInfo.MemoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
-
-                    ["Humane"] = new DynamicJsonValue
+                    [nameof(MemoryInfo.WorkingSet)] = workingSet,
+                    [nameof(MemoryInfo.TotalUnmanagedAllocations)] = totalUnmanagedAllocations,
+                    [nameof(MemoryInfo.ManagedAllocations)] = managedMemory,
+                    [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
+                    [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.FreeMem)] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memInfo.MemoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memInfo.MemoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memInfo.MemoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
+                    [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memInfo.MemoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
+                    
+                    [nameof(MemoryInfo.Humane)] = new DynamicJsonValue
                     {
-                        ["WorkingSet"] = Size.Humane(workingSet),
-                        ["TotalUnmanagedAllocations"] = Size.Humane(totalUnmanagedAllocations),
-                        ["ManagedAllocations"] = Size.Humane(managedMemory),
-                        ["TotalMemoryMapped"] = Size.Humane(totalMapping)
+                        [nameof(MemoryInfoHumane.WorkingSet)] = Size.Humane(workingSet),
+                        [nameof(MemoryInfoHumane.TotalUnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
+                        [nameof(MemoryInfoHumane.ManagedAllocations)] = Size.Humane(managedMemory),
+                        [nameof(MemoryInfoHumane.TotalMemoryMapped)] = Size.Humane(totalMapping)
                     },
-
+                    
                     ["Threads"] = threads,
 
-                    ["Mappings"] = fileMappings
+                    [nameof(MemoryInfo.Mappings)] = fileMappings
                 };
                 return djv;
             }
@@ -309,9 +310,76 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return prefixLength;
         }
 
+        internal class MemoryInfo
+        {
+            public long WorkingSet { get; set; }
+            public long TotalUnmanagedAllocations { get; set; }
+            public long ManagedAllocations { get; set; }
+            public long TotalMemoryMapped { get; set; }
+            public string PhysicalMem { get; set; }
+            public string FreeMem { get; set; }
+            public string HighMemLastOneMinute { get; set; }
+            public string LowMemLastOneMinute { get; set; }
+            public string HighMemLastFiveMinute { get; set; }
+            public string LowMemLastFiveMinute { get; set; }
+            public string HighMemSinceStartup { get; set; }
+            public string LowMemSinceStartup { get; set; }
+            public MemoryInfoHumane Humane { get; set; }
+
+            public MemoryInfoMappingItem[] Mappings { get; set; }
+            //TODO: threads
+
+        }
+
+        internal class MemoryInfoHumane
+        {
+            public string WorkingSet { get; set; }
+            public string TotalUnmanagedAllocations { get; set; }
+            public string ManagedAllocations { get; set; }
+            public string TotalMemoryMapped { get; set; }
+        }
+
+        internal class MemoryInfoMappingItem
+        {
+            public string Directory { get; set; }
+            public long TotalDirectorySize { get; set; }
+            public string HumaneTotalDirectorySize { get; set; }
+            public Dictionary<string, MemoryInfoMappingFileInfo> Details { get; set; }
+        }
+
+        internal class MemoryInfoMappingFileInfo
+        {
+            public long FileSize { get; set; }
+            public string HumaneFileSize { get; set; }
+            public long TotalMapped { get; set; }
+            public string HumaneTotalMapped { get; set; }
+            public MemoryInfoMappingDetails[] Mappings { get; set; }
+        }
+
+        internal class MemoryInfoMappingDetails
+        {
+            public long Size { get; set; }
+            public long Count { get; set; }
+        }
+        
         [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public Task ProcMemInfo()
         {
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, new DynamicJsonValue()
+                        {
+                            ["ERROR"] = "End point doesn't support non linux OS",
+                        });
+                    }
+                }
+                return Task.CompletedTask;
+            }
+            
             var txt = File.ReadAllLines("/proc/meminfo");
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -366,6 +434,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/proc/self/status", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public Task ProcSelfStatus()
         {
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, new DynamicJsonValue()
+                        {
+                            ["ERROR"] = "End point doesn't support non linux OS",
+                        });
+                    }
+                }
+                return Task.CompletedTask;
+            }
+            
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 var path = $"/proc/{currentProcess.Id}/status";
