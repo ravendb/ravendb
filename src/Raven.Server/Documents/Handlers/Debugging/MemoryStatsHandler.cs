@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
-using Org.BouncyCastle.Asn1;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow;
@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     context.Write(write, djv);
                 }
+
                 return Task.CompletedTask;
             }
         }
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             foreach (var item in lowMemLog.OrderByDescending(x =>
             {
-                if (x!=null)
+                if (x != null)
                     return x.Time;
                 return DateTime.MinValue;
             }))
@@ -94,6 +95,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     context.Write(write, djv);
                 }
+
                 return Task.CompletedTask;
             }
         }
@@ -120,6 +122,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         value = new Dictionary<string, ConcurrentDictionary<IntPtr, long>>();
                         fileMappingByDir[dir] = value;
                     }
+
                     value[mapping.Key] = mapping.Value;
                     foreach (var singleMapping in mapping.Value)
                     {
@@ -156,6 +159,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 dic.TryGetValue(mapping.Value, out long prev);
                                 dic[mapping.Value] = prev + 1;
                             }
+
                             foreach (var maps in dic)
                             {
                                 dja.Add(new DynamicJsonValue
@@ -164,6 +168,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     [nameof(MemoryInfoMappingDetails.Count)] = maps.Value
                                 });
                             }
+                            
                             var fileSize = GetFileSize(file.Key);
                             details[Path.GetFileName(file.Key)] = new DynamicJsonValue
                             {
@@ -210,8 +215,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     {
                         groupStats["Ids"] = ids;
                     }
+
                     threads.Add(groupStats);
                 }
+
                 var managedMemory = GC.GetTotalMemory(false);
                 var djv = new DynamicJsonValue
                 {
@@ -227,7 +234,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memInfo.MemoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
                     [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memInfo.MemoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
                     [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memInfo.MemoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
-
+                    
                     [nameof(MemoryInfo.Humane)] = new DynamicJsonValue
                     {
                         [nameof(MemoryInfoHumane.WorkingSet)] = Size.Humane(workingSet),
@@ -235,7 +242,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         [nameof(MemoryInfoHumane.ManagedAllocations)] = Size.Humane(managedMemory),
                         [nameof(MemoryInfoHumane.TotalMemoryMapped)] = Size.Humane(totalMapping)
                     },
-
+                    
                     ["Threads"] = threads,
 
                     [nameof(MemoryInfo.Mappings)] = fileMappings
@@ -302,28 +309,28 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             return prefixLength;
         }
-        
-            
+
         internal class MemoryInfo
         {
             public long WorkingSet { get; set; }
             public long TotalUnmanagedAllocations { get; set; }
-            public long ManagedAllocations { get; set;}
+            public long ManagedAllocations { get; set; }
             public long TotalMemoryMapped { get; set; }
             public string PhysicalMem { get; set; }
             public string FreeMem { get; set; }
             public string HighMemLastOneMinute { get; set; }
             public string LowMemLastOneMinute { get; set; }
-            public string HighMemLastFiveMinute { get; set; }        
+            public string HighMemLastFiveMinute { get; set; }
             public string LowMemLastFiveMinute { get; set; }
             public string HighMemSinceStartup { get; set; }
             public string LowMemSinceStartup { get; set; }
             public MemoryInfoHumane Humane { get; set; }
+
             public MemoryInfoMappingItem[] Mappings { get; set; }
             //TODO: threads
-            
+
         }
-        
+
         internal class MemoryInfoHumane
         {
             public string WorkingSet { get; set; }
@@ -331,7 +338,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string ManagedAllocations { get; set; }
             public string TotalMemoryMapped { get; set; }
         }
-        
+
         internal class MemoryInfoMappingItem
         {
             public string Directory { get; set; }
@@ -339,7 +346,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string HumaneTotalDirectorySize { get; set; }
             public Dictionary<string, MemoryInfoMappingFileInfo> Details { get; set; }
         }
-        
+
         internal class MemoryInfoMappingFileInfo
         {
             public long FileSize { get; set; }
@@ -348,12 +355,168 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string HumaneTotalMapped { get; set; }
             public MemoryInfoMappingDetails[] Mappings { get; set; }
         }
-        
+
         internal class MemoryInfoMappingDetails
         {
             public long Size { get; set; }
             public long Count { get; set; }
         }
+        
+        [RavenAction("/admin/debug/proc/meminfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
+        public Task ProcMemInfo()
+        {
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, new DynamicJsonValue()
+                        {
+                            ["ERROR"] = "End point doesn't support non linux OS",
+                        });
+                    }
+                }
+                return Task.CompletedTask;
+            }
+            
+            var txt = File.ReadAllLines("/proc/meminfo");
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var djv = new DynamicJsonValue();
+                var djvHumanly = new DynamicJsonValue();
+                foreach (var line in txt)
+                {
+                    var parsedLine = line.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (parsedLine.Length != 3) // format should be: {filter}: <num> kb
+                        continue; // an error but we ignore and do not put in the results
+
+                    var key = parsedLine[0].Split(":")[0];
+
+                    if (long.TryParse(parsedLine[1], out var result) == false)
+                    {
+                        djv[key] = "Failed To Parse Value : " + parsedLine[1];
+                        continue;
+                    }
+
+                    switch (parsedLine[2].ToLowerInvariant())
+                    {
+                        case "kb":
+                            result *= 1024L;
+                            break;
+                        case "mb":
+                            result *= 1024L * 1024;
+                            break;
+                        case "gb":
+                            result *= 1024L * 1024 * 1024;
+                            break;
+                    }
+
+                    djv[key] = result;
+                    djvHumanly[key] = Size.Humane(result);
+                }
+
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, new DynamicJsonValue()
+                    {
+                        ["Humanly"] = djvHumanly,
+                        ["Values"] = djv
+                    });
+                }
+
+                return Task.CompletedTask;
+            }
+        }
+
+
+        [RavenAction("/admin/debug/proc/self/status", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
+        public Task ProcSelfStatus()
+        {
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, new DynamicJsonValue()
+                        {
+                            ["ERROR"] = "End point doesn't support non linux OS",
+                        });
+                    }
+                }
+                return Task.CompletedTask;
+            }
+            
+            using (var currentProcess = Process.GetCurrentProcess())
+            {
+                var path = $"/proc/{currentProcess.Id}/status";
+                var txt = File.ReadAllLines(path);
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    var djv = new DynamicJsonValue();
+                    var djvHumanly = new DynamicJsonValue();
+                    foreach (var line in txt)
+                    {
+                        var parsedLine = line.Split(new[] {' ', '\t'}, StringSplitOptions.RemoveEmptyEntries);
+
+                        if (parsedLine.Length < 2) // format may vary
+                            continue; // an error but we ignore and do not put in the results
+
+                        var key = parsedLine[0].Split(":")[0];
+
+                        if (parsedLine.Length == 3 && 
+                            ( parsedLine[2].Equals("kB", StringComparison.InvariantCultureIgnoreCase) ||
+                              parsedLine[2].Equals("mB", StringComparison.InvariantCultureIgnoreCase) ||
+                              parsedLine[2].Equals("gB", StringComparison.InvariantCultureIgnoreCase)))
+                        {
+                            if (long.TryParse(parsedLine[1], out var result) == false)
+                            {
+                                djv[key] = "Failed To Parse Value : " + parsedLine[1];
+                                continue;
+                            }
+
+
+                            switch (parsedLine[2].ToLowerInvariant())
+                            {
+                                case "kb":
+                                    result *= 1024L;
+                                    break;
+                                case "mb":
+                                    result *= 1024L * 1024;
+                                    break;
+                                case "gb":
+                                    result *= 1024L * 1024 * 1024;
+                                    break;
+                            }
+                            djv[key] = result;
+                            djvHumanly[key] = Size.Humane(result);
+                        }
+                        else
+                        {
+                            var restOfTheLine = new StringBuilder(parsedLine[1]);
+                            for (int i = 2; i < parsedLine.Length; i++)
+                            {
+                                restOfTheLine.Append(" ");
+                                restOfTheLine.Append(parsedLine[i]);
+                            }
+                            djv[key] = restOfTheLine.ToString();
+                        }
+                    }
+
+                    using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(write, new DynamicJsonValue()
+                        {
+                            ["Humanly"] = djvHumanly,
+                            ["Values"] = djv
+                        });
+                    }
+
+                    return Task.CompletedTask;
+                }
+            }
+        }
     }
-    
 }
