@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
             {
-                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag}) and map duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
+                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag:#,#;;0}) and map duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
                 return false;
             }
 

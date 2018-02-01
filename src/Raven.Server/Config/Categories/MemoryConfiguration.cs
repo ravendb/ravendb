@@ -22,7 +22,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Memory.LowMemoryLimitInMb", ConfigurationEntryScope.ServerWideOnly)]
         public Size LowMemoryLimit { get; set; }
 
-        [Description("EXPERT. The minimum amount of committed memory that RavenDB will attempt to ensure remains available. Reducing this value too much may cause RavenDB to fail if there is not enough memory available for the operation system to handle operations.")]
+        [Description("EXPERT: The minimum amount of committed memory that RavenDB will attempt to ensure remains available. Reducing this value too much may cause RavenDB to fail if there is not enough memory available for the operation system to handle operations.")]
         [DefaultValue(0.05f)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("Memory.MinimumFreeCommittedMemoryPercentage", ConfigurationEntryScope.ServerWideOnly)]

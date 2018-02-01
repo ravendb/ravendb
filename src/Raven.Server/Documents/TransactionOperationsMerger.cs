@@ -14,6 +14,7 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Debugging;
 using Voron.Global;
+using Voron.Impl;
 using static Sparrow.DatabasePerformanceMetrics;
 
 namespace Raven.Server.Documents
@@ -36,11 +37,19 @@ namespace Raven.Server.Documents
         private readonly Logger _log;
         private PoolOfThreads.LongRunningWork _txLongRunningOperation;
 
+        private readonly double _maxTimeToWaitForPreviousTxInMs;
+        private readonly long _maxTxSizeInBytes;
+        private readonly double _maxTimeToWaitForPreviousTxBeforeRejectingInMs;
+
         public TransactionOperationsMerger(DocumentDatabase parent, CancellationToken shutdown)
         {
             _parent = parent;
             _log = LoggingSource.Instance.GetLogger<TransactionOperationsMerger>(_parent.Name);
             _shutdown = shutdown;
+
+            _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxInMs.AsTimeSpan.TotalMilliseconds;
+            _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSizeInMb.GetValue(SizeUnit.Bytes);
+            _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejectingInMs.AsTimeSpan.TotalMilliseconds;
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
@@ -429,13 +438,14 @@ namespace Raven.Server.Documents
             List<MergedTransactionCommand> previousPendingOps)
         {
             var previous = context.Transaction;
-            CommitStats commitStats = null;
             try
             {
                 while (true)
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info($"BeginAsyncCommit on {previous.InnerTransaction.LowLevelTransaction.Id} with {_operations.Count} additional operations pending");
+
+                    CommitStats commitStats = null;
                     try
                     {
                         previous.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
@@ -598,10 +608,7 @@ namespace Raven.Server.Documents
             HasMore
         }
 
-        const int MaxTimeToWait = 1000;
-
         private bool _alreadyListeningToPreviousOperationEnd;
-
 
         private PendingOperations ExecutePendingOperationsInTransaction(
             List<MergedTransactionCommand> pendingOps,
@@ -610,14 +617,6 @@ namespace Raven.Server.Documents
         {
             _alreadyListeningToPreviousOperationEnd = false;
 
-            // take the amount before we start, so we only need to cover as many items 
-            // as there were in the queue at the beginning, regardless on the ingest rate
-            var itemsBefore = _operations.Count;
-            
-            // we give it a total of 1 second to run, plus 10 ms per any item in the queue
-            // this ensure that we are still lively, but give us more time to merge the actual
-            // transaction
-            var maximumTimeForOperation = (MaxTimeToWait + (itemsBefore * 10));
             var sp = Stopwatch.StartNew();
             do
             {
@@ -632,51 +631,100 @@ namespace Raven.Server.Documents
 
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
-                meter.IncreamentCommands(op.Execute(context));
-                if (
-                    // even if the previous operation has already completed, we still want to clean the queue
-                    // of at least the operations that were there already
-                    pendingOps.Count >= itemsBefore  && 
-                    previousOperation != null && previousOperation.IsCompleted)
+                meter.IncrementCommands(op.Execute(context));
+
+                var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
+                var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
+
+                var canCloseCurrentTx = previousOperation == null || previousOperation.IsCompleted;
+                if (canCloseCurrentTx)
                 {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info(
-                            $"Stopping merged operations because previous transaction async commit completed. Took {sp.Elapsed} with {pendingOps.Count} operations and {_operations.Count} remaining operations");
-                    }
-                    return GetPendingOperationsStatus(context);
-                }
-                if (sp.ElapsedMilliseconds > maximumTimeForOperation)
-                {
-                    if (previousOperation != null)
-                    {
-                        continue;
-                    }
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Stopping merged operations because {sp.Elapsed} passed {pendingOps.Count} operations and {_operations.Count} remaining operations");
-                    }
-                    return GetPendingOperationsStatus(context);
+                    if (_operations.IsEmpty)
+                        break; // nothing remaining to do, let's us close this work
+
+                    if (sp.ElapsedMilliseconds > _maxTimeToWaitForPreviousTxInMs)
+                        break; // too much time 
+
+                    if (modifiedSize > _maxTxSizeInBytes)
+                        break; // transaction is too big, let's clean it
+
+                    // even though we can close the tx, we choose to keep it a bit longer
+                    // we want to keep processing operations until we clear the queue, time / size
+                    // limits are reached
+                    continue;
                 }
 
-                if (IntPtr.Size == sizeof(int) || _parent.Configuration.Storage.ForceUsing32BitsPager)
-                {
-                    // we need to be sure that we don't use up too much virtual space
-                    var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
-                    var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
-                    if (modifiedSize > 4 * Constants.Size.Megabyte)
-                    {
-                        return GetPendingOperationsStatus(context);
-                    }
-                }
+                // if I can't close the tx, this means that the previous async operation is stil in progress
+                // and there are incoming requests coming in. We'll accept them, to a certain limit
+                if (modifiedSize < _maxTxSizeInBytes)
+                    continue; // we can still process requests at this time, so let's do that...
+
+                UnlikelyRejectOperations(previousOperation, sp, llt, modifiedSize);
+
+                break;
 
             } while (true);
+
+            var status = GetPendingOperationsStatus(context, pendingOps.Count == 0);
             if (_log.IsInfoEnabled)
             {
-                _log.Info($"Merged {pendingOps.Count} operations in {sp.Elapsed} and there is no more work");
+                var opType = previousOperation == null ? string.Empty : "(async)";
+                _log.Info($"Merged {pendingOps.Count:#,#;;0} operations in {sp.Elapsed} {opType} with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
             }
+            return status;
+        }
 
-            return GetPendingOperationsStatus(context, pendingOps.Count == 0);
+        private void UnlikelyRejectOperations(IAsyncResult previousOperation, Stopwatch sp, LowLevelTransaction llt, long modifiedSize)
+        {
+            Debug.Assert(previousOperation != null);
+
+            // we have now reached the point were we are consuming too much memory, and we cannot
+            // proceed with accepting a new request, it is time to start rejecting requests
+            WaitHandle[] waitHandles = 
+            {
+                _waitHandle.WaitHandle,
+                previousOperation.AsyncWaitHandle
+            };
+
+            while (previousOperation.IsCompleted == false)
+            {
+                _waitHandle.Reset();
+
+                var timeToWait = (int)_maxTimeToWaitForPreviousTxBeforeRejectingInMs - (int)sp.ElapsedMilliseconds;
+                // we still give the queued operation in the queue time to respond, but if the total
+                // time we are waiting exceed the configured limit, we need to wait until either there
+                // is a new operation to reject or the previous tx has completed
+                if (timeToWait < 0)
+                    timeToWait = Timeout.Infinite;
+
+                var waitAny = WaitHandle.WaitAny(waitHandles, timeToWait);
+                if (waitAny == 1) // previous operation completed, can carry on, yeah!
+                    break;
+
+                if (sp.ElapsedMilliseconds < _maxTimeToWaitForPreviousTxBeforeRejectingInMs)
+                    continue;
+
+                if (_operations.IsEmpty)
+                    continue;
+
+                var timeout = new TimeoutException(
+                    $"Operation was cancelled by the transaction merger because a transaction #{llt.Id} has been waiting for the previous " +
+                    $"transaction to complete for {sp.Elapsed} and has reached size of {new Size(modifiedSize, SizeUnit.Bytes)}, which is over the limit." +
+                    Environment.NewLine +
+                    "In order to protect the database from out of memory errors, transactions are now rejected until the current work is completed");
+
+                var rejectedBuffer = GetBufferForPendingOps();
+                while (_operations.TryDequeue(out var operationToReject))
+                {
+                    operationToReject.Exception = timeout;
+                    rejectedBuffer.Add(operationToReject);
+                }
+
+                if (_log.IsInfoEnabled)
+                    _log.Info($"Rejecting {rejectedBuffer.Count} to avoid OOM error", timeout);
+
+                NotifyOnThreadPool(rejectedBuffer);
+            }
         }
 
         private bool TryGetNextOperation(Task previousOperation, out MergedTransactionCommand op, ref PerformanceMetrics.DurationMeasurement meter)

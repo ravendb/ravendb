@@ -68,6 +68,8 @@ namespace Raven.Server.Config
 
         public SubscriptionConfiguration Subscriptions { get; }
 
+        public TransactionMergerConfiguration TransactionMergerConfiguration { get; }
+
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         protected IConfigurationRoot Settings { get; set; }
@@ -112,6 +114,7 @@ namespace Raven.Server.Config
             Licensing = new LicenseConfiguration();
             Tombstones = new TombstoneConfiguration();
             Subscriptions = new SubscriptionConfiguration();
+            TransactionMergerConfiguration = new TransactionMergerConfiguration(Storage.ForceUsing32BitsPager);
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -163,6 +166,7 @@ namespace Raven.Server.Config
             Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Subscriptions.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            TransactionMergerConfiguration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 

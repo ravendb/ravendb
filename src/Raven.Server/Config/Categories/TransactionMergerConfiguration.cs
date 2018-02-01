@@ -1,0 +1,45 @@
+using System;
+using System.ComponentModel;
+using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Settings;
+using Sparrow;
+using Sparrow.LowMemory;
+
+namespace Raven.Server.Config.Categories
+{
+    public class TransactionMergerConfiguration : ConfigurationCategory
+    {
+        public TransactionMergerConfiguration(bool forceUsing32BitsPager)
+        {
+            if (IntPtr.Size == sizeof(int) || forceUsing32BitsPager)
+            {
+                MaxTxSizeInMb = new Size(4, SizeUnit.Megabytes);
+                return;
+            }
+
+            var memoryInfo = MemoryInformation.GetMemoryInfo();
+
+            MaxTxSizeInMb = Size.Min(
+                new Size(512, SizeUnit.Megabytes),
+                memoryInfo.TotalPhysicalMemory / 10);
+        }
+
+        [Description("EXPERT: Time to wait for the previous async commit before checking for the tx size")]
+        [DefaultValue(1000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("TransactionMerger.MaxTimeToWaitForPreviousTxInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting MaxTimeToWaitForPreviousTxInMs { get; set; }
+
+        [Description("EXPERT: Time to wait for the previous async commit transaction before rejecting the request due to long duration IO")]
+        [DefaultValue(5000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("TransactionMerger.MaxTimeToWaitForPreviousTxBeforeRejectingInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting MaxTimeToWaitForPreviousTxBeforeRejectingInMs { get; set; }
+
+        [Description("EXPERT: Maximum size for the merged transaction")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("TransactionMerger.MaxTxSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size MaxTxSizeInMb { get; set; }
+    }
+}

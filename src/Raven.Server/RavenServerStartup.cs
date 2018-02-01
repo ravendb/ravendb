@@ -260,7 +260,7 @@ namespace Raven.Server
                 response.StatusCode = (int) HttpStatusCode.BadRequest;
                 return;
             }
-            
+
             if (exception is LowMemoryException || 
                 exception is OutOfMemoryException ||
                 exception is VoronUnrecoverableErrorException)
@@ -296,6 +296,12 @@ namespace Raven.Server
             if (exception is UnauthorizedAccessException)
             {
                 response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return;
+            }
+
+            if (exception is TimeoutException)
+            {
+                response.StatusCode = (int)HttpStatusCode.RequestTimeout;
                 return;
             }
 
