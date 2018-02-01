@@ -67,6 +67,7 @@ namespace Raven.Server.Dashboard
                         ? currentProcess.WorkingSet64
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
                 var memoryInfoResult = MemoryInformation.GetMemoryInfo(useFreeInsteadOfAvailable: true); // useFreeInsteadOfAvailable for presentation only (for low mem we still use "available mem")
+                var committedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes);
                 var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
                 var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);
                 var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
@@ -78,7 +79,7 @@ namespace Raven.Server.Dashboard
                 {
                     TotalMemory = installedMemory,
                     MachineMemoryUsage = installedMemory - availableMemory,
-                    ProcessMemoryUsage = workingSet,
+                    ProcessMemoryUsage = committedMemory < installedMemory - availableMemory ? committedMemory : workingSet,
                     ProcessMemoryExcludingSharedUsage = Math.Max(workingSet - shared, 0),
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
                     ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling

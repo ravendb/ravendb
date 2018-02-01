@@ -317,15 +317,13 @@ namespace Sparrow.LowMemory
             var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared);
             var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalCommittableMemory * _commitChargeThreshold);
 
+            // We consider low memory only if we don't have enough free pyhsical memory *AND* the commited memory size if larger than our pyhsical memory.
+            // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
+            // we don't want to stay in low memory due to retained memory.
+            var isLowMemory = availableMem < _lowMemoryThreshold && 
+                              memInfo.TotalPhysicalMemory < commitChargePlusMinSizeToKeepFree;
 
-            var isLowMemory = availableMem < _lowMemoryThreshold ||
-                              // at all times, we want 2% or 1 GB, the lowest of the two
-                              memInfo.AvailableMemory < Size.Min((memInfo.TotalPhysicalMemory / 50), new Size(1, SizeUnit.Gigabytes)) ||
-                              // we don't have enough room available in the commit charge, going over risking getting OOM from the OS even
-                              // if we don't use all that memory
-                              commitChargePlusMinSizeToKeepFree > memInfo.TotalCommittableMemory;
-
-            memStats = (availableMem, memInfo.TotalPhysicalMemory, memInfo.TotalCommittableMemory);
+            memStats = (availableMem, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;
         }
 
