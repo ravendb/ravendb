@@ -250,7 +250,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     nodeStats.Report.TryGetValue(dbName, out var dbStats))
                 {
                     status = dbStats.Status;
-                    if (status == Loaded || status == Unloaded)
+                    if (status == Loaded || 
+                        status == Loading || 
+                        status == Unloaded)
                     {
                         hasLivingNodes = true;
 
