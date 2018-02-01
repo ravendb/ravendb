@@ -119,6 +119,14 @@ namespace Voron.Platform.Win32
         public static extern int GetFinalPathNameByHandle(SafeFileHandle handle, [In, Out] StringBuilder path,
             int bufLen, int flags);
 
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetDiskFreeSpaceEx(string lpDirectoryName,
+                out ulong lpFreeBytesAvailable,
+                out ulong lpTotalNumberOfBytes,
+                out ulong lpTotalNumberOfFreeBytes);
+
+
         public static void SetFileLength(SafeFileHandle fileHandle, long length)
         {
             if (SetFilePointerEx(fileHandle, length, IntPtr.Zero, Win32NativeFileMoveMethod.Begin) == false)
@@ -140,22 +148,18 @@ namespace Voron.Platform.Win32
                         filePath.EnsureCapacity(filePath.Capacity*2);
                     }
 
-                    filePath = filePath.Replace(@"\\?\", String.Empty); // remove extended-length path prefix
 
+                    long? freeSpaceAvailable = null;
                     var fullFilePath = filePath.ToString();
-                    var driveLetter = Path.GetPathRoot(fullFilePath);
-
-                    DriveInfo driveInfo;
-                    try
+                    if(GetDiskFreeSpaceEx(Path.GetDirectoryName(fullFilePath),
+                        out _,
+                        out _,
+                        out var totalFreeAvailable))
                     {
-                        driveInfo = new DriveInfo(driveLetter);
-                    }
-                    catch (Exception)
-                    {
-                        driveInfo = null; // probably network path
+                        freeSpaceAvailable = (long)totalFreeAvailable;
                     }
 
-                    throw new DiskFullException(driveInfo, fullFilePath, length);
+                    throw new DiskFullException(fullFilePath, length, freeSpaceAvailable);
                 }
 
                 var exception = new Win32Exception(lastError);

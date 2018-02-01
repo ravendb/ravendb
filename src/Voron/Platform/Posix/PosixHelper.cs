@@ -22,16 +22,20 @@ namespace Voron.Platform.Posix
         {
             bool usingLseek;
             var result = Syscall.AllocateFileSpace(fd, size, file, out usingLseek);
-
+            
             if (result == (int)Errno.ENOSPC)
             {
+                int matchLen = 0;
+                DriveInfo match = null;
                 foreach (var drive in DriveInfo.GetDrives())
                 {
                     if (file.StartsWith(drive.RootDirectory.Name))
-                        throw new DiskFullException(drive, file, (long)size);
+                    {
+                        if (drive.RootDirectory.Name.Length > matchLen)
+                            match = drive;
+                    }
                 }
-                // shouldn't happen, and we can throw normally here
-                throw new DiskFullException(null, file, (long)size);
+                throw new DiskFullException(file, size, match?.AvailableFreeSpace);
             }
             if (result != 0)
                 Syscall.ThrowLastError(result, $"posix_fallocate(\"{file}\", {size})");

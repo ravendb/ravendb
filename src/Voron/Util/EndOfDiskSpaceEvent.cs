@@ -6,25 +6,40 @@
 
 using System.IO;
 using System.Runtime.ExceptionServices;
+using Voron.Platform.Win32;
 
 namespace Voron.Util
 {
     public class EndOfDiskSpaceEvent
     {
         private readonly long _availableSpaceWhenEventOccurred;
-        private readonly DriveInfo _driveInfo;
+        private readonly string _path;
         private readonly ExceptionDispatchInfo _edi;
 
-        public EndOfDiskSpaceEvent(DriveInfo driveInfo, ExceptionDispatchInfo edi)
+        public EndOfDiskSpaceEvent(string path, long availableSpaceWhenEventOccurred, ExceptionDispatchInfo edi)
         {
-            _availableSpaceWhenEventOccurred = driveInfo.AvailableFreeSpace;
-            _driveInfo = driveInfo;
+            _availableSpaceWhenEventOccurred = availableSpaceWhenEventOccurred;
+            _path = path;
             _edi = edi;
+        }
+
+        private static long GetAvailableFreeSpace(string path)
+        {
+            if(StorageEnvironmentOptions.RunningOnPosix == false)
+            {
+                if(Win32NativeFileMethods.GetDiskFreeSpaceEx(path, out _, out _, out var total) == false)
+                {
+                    return 0;
+                }
+                return (long)total;
+            }
+
+            return new DriveInfo(path).AvailableFreeSpace;
         }
 
         public void AssertCanContinueWriting()
         {
-            if (_driveInfo.AvailableFreeSpace > _availableSpaceWhenEventOccurred)
+            if (GetAvailableFreeSpace(_path) > _availableSpaceWhenEventOccurred)
                 return;
             _edi.Throw();
         }

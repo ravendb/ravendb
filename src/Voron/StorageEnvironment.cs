@@ -1018,7 +1018,7 @@ namespace Voron
             if (_options.ManualFlushing)
                 return;
 
-            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DriveInfo, ExceptionDispatchInfo.Capture(exception));
+            _endOfDiskSpace = new EndOfDiskSpaceEvent(exception.DirectoryPath, exception.CurrentFreeSpace, ExceptionDispatchInfo.Capture(exception));
         }
 
         public unsafe void ValidatePageChecksum(long pageNumber, PageHeader* current)
