@@ -72,7 +72,8 @@ namespace FastTests.Issues
             var operationWithoutDetails = new HashSet<PerformanceHintType>
             {
                 PerformanceHintType.None,
-                PerformanceHintType.Replication
+                PerformanceHintType.Replication,
+                PerformanceHintType.SlowIO
             };
 
             var allKnownTypes = Enum.GetNames(typeof(PerformanceHintType)).ToHashSet();

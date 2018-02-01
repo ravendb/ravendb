@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations and {Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb");
+                    Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations ({Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb)");
                 }
                 return NumberOfCommands;
             }
