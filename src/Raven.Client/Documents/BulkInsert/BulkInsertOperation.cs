@@ -304,13 +304,16 @@ namespace Raven.Client.Documents.BulkInsert
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
-                        var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context, _defaultSerializer, new DocumentInfo
-                        {
-                            MetadataInstance = metadata
-                        });
+                        using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
+                            _defaultSerializer, new DocumentInfo
+                            {
+                                MetadataInstance = metadata
+                            }))
 
-                        _currentWriter.Flush();
-                        json.WriteJsonTo(_currentWriter.BaseStream);
+                        {
+                            _currentWriter.Flush();
+                            json.WriteJsonTo(_currentWriter.BaseStream);
+                        }
                     }
 
                     _currentWriter.Write("}");
