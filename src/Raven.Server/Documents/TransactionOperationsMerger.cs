@@ -370,21 +370,14 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool _lastWriteWasAlsoSlow;
         private void CheckOnSlowWrite(CommitStats stats)
         {
             if (stats.NumberOf4KbsWrittenToDisk == 0 ||
                 // we don't want to raise the error too often
                 stats.WriteToJournalDuration.TotalMilliseconds < 500)
             {
-                _lastWriteWasAlsoSlow = false;
                 return;
             }
-
-            var lastWasSlowToo = _lastWriteWasAlsoSlow;
-            _lastWriteWasAlsoSlow = true;
-            if (lastWasSlowToo == false)
-                return; // we want to raise it on two consecutive slow writes 
 
             var writtenDataInMb = stats.NumberOf4KbsWrittenToDisk / (double)256;
             var seconds = stats.WriteToJournalDuration.TotalSeconds;
