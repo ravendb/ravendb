@@ -30,6 +30,15 @@ class progress {
         this.percentageFormatted = `${this.toFixed(this.percentage, 1)}%`;
         this.formattedTimeLeftToProcess = this.generateTimeLeftToProcess(processedPerSecond);
     }
+    
+    markCompleted() {
+        this.processed = this.total;
+        this.isStale = false;
+        this.completed = true;
+        this.percentage = 100;
+        this.percentageFormatted = "100%";
+        this.formattedTimeLeftToProcess = "Indexing completed";
+    }
 
     private generateTimeLeftToProcess(processedPerSecond: number): string {
         if (this.isDisabled) {
@@ -144,6 +153,16 @@ class indexProgress {
 
         this.globalProgress = new progress(processed, total, dto.ProcessedPerSecond, dto.IsStale, dto.IndexRunningStatus);
     }
+    
+    public markCompleted() {
+        this.globalProgress.markCompleted();
+        
+        this.collections.forEach(c => {
+            c.documentsProgress.markCompleted();
+            c.tombstonesProgress.markCompleted();
+        });
+    }
+    
 }
 
 export = indexProgress; 
