@@ -319,11 +319,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (hasRestoreDataDirectory == false)
                 _restoreConfiguration.DataDirectory = GetDataDirectory();
 
-            if (string.IsNullOrWhiteSpace(_restoreConfiguration.IndexingStoragePath) == false &&
-                HasFilesOrDirectories(_restoreConfiguration.IndexingStoragePath))
-                throw new ArgumentException("Indexes directory must be empty of any files or folders, " +
-                                            $"path: {_restoreConfiguration.IndexingStoragePath}");
-
             _filesToRestore = GetFilesForRestore(_restoreConfiguration.BackupLocation);
             if (_filesToRestore.Count == 0)
                 throw new ArgumentException("No files to restore from the backup location, " +

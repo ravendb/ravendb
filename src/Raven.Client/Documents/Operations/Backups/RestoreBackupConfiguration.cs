@@ -10,10 +10,6 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string DataDirectory { get; set; }
 
-        public string IndexingStoragePath { get; set; }
-
-        public string TempPath { get; set; }
-
         public string EncryptionKey { get; set; }
     }
 }
