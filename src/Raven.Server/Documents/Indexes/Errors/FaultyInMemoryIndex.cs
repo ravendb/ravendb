@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             };
         }
 
-        public override IndexProgress GetProgress(DocumentsOperationContext documentsContext)
+        public override IndexProgress GetProgress(DocumentsOperationContext documentsContext, bool? isStale = null)
         {
             return new IndexProgress
             {

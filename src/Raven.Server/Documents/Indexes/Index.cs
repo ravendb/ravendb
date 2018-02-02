@@ -1576,7 +1576,7 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Rename(name);
         }
 
-        public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
+        public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext, bool? isStale = null)
         {
             using (CurrentlyInUse(out var valid))
             {
@@ -1602,7 +1602,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Name = Name,
                         Type = Type,
-                        IsStale = IsStale(documentsContext, context)
+                        IsStale = isStale ?? IsStale(documentsContext, context)
                     };
 
                     var stats = _indexStorage.ReadStats(tx);
