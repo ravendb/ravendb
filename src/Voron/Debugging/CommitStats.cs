@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 
 namespace Voron.Debugging
 {
@@ -10,5 +9,9 @@ namespace Voron.Debugging
         public int NumberOfModifiedPages;
 
         public int NumberOf4KbsWrittenToDisk;
+
+        public string JournalFilePath;
+
+        public string EnvironmentName;
     }
 }

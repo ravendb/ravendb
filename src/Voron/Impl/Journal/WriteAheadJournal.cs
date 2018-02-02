@@ -7,7 +7,6 @@
 using Sparrow;
 using Sparrow.Binary;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -62,10 +61,13 @@ namespace Voron.Impl.Journal
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
 
+        public string EnvironmentName { get; }
+
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
-            _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(Path.GetFileName(env.ToString()));
+            EnvironmentName = Path.GetFileName(env.ToString());
+            _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(EnvironmentName);
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
             _headerAccessor = env.HeaderAccessor;
@@ -1252,7 +1254,7 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx)
+        public CompressedPagesResult WriteToJournal(LowLevelTransaction tx, out string journalFilePath)
         {
             lock (_writeLock)
             {
@@ -1285,6 +1287,7 @@ namespace Voron.Impl.Journal
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Writing {journalEntry.NumberOf4Kbs * 4:#,#} kb to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
 
+                journalFilePath = CurrentFile.JournalWriter.FileName.FullPath;
 
                 if (CurrentFile.Available4Kbs == 0)
                 {
