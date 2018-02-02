@@ -20,6 +20,32 @@ namespace Sparrow.Logging
             _logger = logger;
         }
 
+        public void Info(FormattableString msg, Exception e = null)
+        {
+            try
+            {
+                var msgStr = msg.ToString();
+                Info(msgStr, e);
+            }
+            catch (Exception)
+            {
+                Info(msg.Format, e);
+            }
+        }
+
+        public void Operations(FormattableString msg, Exception e = null)
+        {
+            try
+            {
+                var msgStr = msg.ToString();
+                Operations(msgStr, e);
+            }
+            catch (Exception)
+            {
+                Info(msg.Format, e);
+            }
+        }
+
         public void Info(string msg, Exception ex = null)
         {
             _logEntry.At = DateTime.UtcNow;
