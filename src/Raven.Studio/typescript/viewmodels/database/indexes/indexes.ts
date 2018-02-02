@@ -283,7 +283,15 @@ class indexes extends viewModelBase {
             group.indexes().forEach(indexDef => {
                 const progress = this.indexingProgresses.get(indexDef.name);
                 if (progress !== indexDef.progress()) {
-                    indexDef.progress(progress);    
+                    indexDef.progress(progress);
+                }
+
+                const indexReplacement = indexDef.replacement();
+                if (indexReplacement) {
+                    const replacementProgress = this.indexingProgresses.get(indexReplacement.name);
+                    if (replacementProgress !== indexReplacement.progress()) {
+                        indexReplacement.progress(replacementProgress);
+                    }
                 }
             });
         });
