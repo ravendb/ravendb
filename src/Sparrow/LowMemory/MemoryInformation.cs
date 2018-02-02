@@ -357,7 +357,7 @@ namespace Sparrow.LowMemory
                 var totalMappedTemp = 0L;
                 foreach (var mapping in NativeMemory.FileMapping)
                 {
-                    if (mapping?.Key == null)
+                    if (mapping.Key == null)
                         continue;
 
                     if (mapping.Key.EndsWith(".buffers", StringComparison.OrdinalIgnoreCase) == false)
