@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Voron.Data.Compression;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.FreeSpace;
@@ -92,7 +93,7 @@ namespace Voron.Data.BTrees
                     // if the current page is compressed (but already opened), we need to 
                     // avoid merging it with the right (uncompressed) page
                     return null;
-                
+
                 Debug.Assert(page.IsCompressed == false);
 
                 minKeys = sibling.IsBranch ? 2 : 1; // branch must have at least 2 keys
@@ -107,7 +108,7 @@ namespace Voron.Data.BTrees
 
                     return parentPage;
                 }
-                
+
                 if (page.LastSearchPosition == 0) // this is the right page, merge left
                 {
                     if (TryMergePages(parentPage, sibling, page) == false)
@@ -167,7 +168,7 @@ namespace Voron.Data.BTrees
                         if (mergedPage.HasSpaceFor(_tx, TreeSizeOf.NodeEntryWithAnotherKey(node, key) + Constants.Tree.NodeOffsetSize) == false)
                         {
                             right.LastSearchPosition = previousSearchPosition;
-                                //previous position --> prevent mutation of parameter
+                            //previous position --> prevent mutation of parameter
                             return false;
                         }
 
@@ -362,27 +363,41 @@ namespace Voron.Data.BTrees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.ExternalScope GetActualKey(TreePage page, int pos, out Slice slice)
+        private ActualKeyScope GetActualKey(TreePage page, int pos, out Slice slice)
         {
             TreeNodeHeader* _;
             return GetActualKey(page, pos, out _, out slice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.ExternalScope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
+        private ActualKeyScope GetActualKey(TreePage page, int pos, out TreeNodeHeader* node, out Slice key)
         {
+            DecompressedLeafPage decompressedLeafPage = null;
             node = page.GetNode(pos);
             var scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);
             while (key.Size == 0)
             {
                 Debug.Assert(page.IsBranch);
                 page = _tree.GetReadOnlyTreePage(node->PageNumber);
-                node = page.GetNode(0);
+                if (page.IsCompressed == false)
+                    node = page.GetNode(0);
+                else
+                {
+                    decompressedLeafPage?.Dispose();
+                    decompressedLeafPage = _tree.DecompressPage(page, skipCache: true);
+
+                    node = decompressedLeafPage.GetNode(0);
+                }
+
                 scope.Dispose();
                 scope = TreeNodeHeader.ToSlicePtr(_tx.Allocator, node, out key);
             }
 
-            return scope;
+            return new ActualKeyScope
+            {
+                DecompressedLeafPage = decompressedLeafPage,
+                ExternalScope = scope
+            };
         }
 
         private void RebalanceRoot(TreePage page)
@@ -408,6 +423,19 @@ namespace Voron.Data.BTrees
             _cursor.Push(rootPage);
 
             _tree.FreePage(page);
+        }
+
+        public struct ActualKeyScope : IDisposable
+        {
+            public ByteStringContext.ExternalScope ExternalScope;
+
+            public DecompressedLeafPage DecompressedLeafPage;
+
+            public void Dispose()
+            {
+                ExternalScope.Dispose();
+                DecompressedLeafPage?.Dispose();
+            }
         }
     }
 }
