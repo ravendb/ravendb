@@ -386,7 +386,15 @@ namespace Voron.Data.BTrees
                     decompressedLeafPage?.Dispose();
                     decompressedLeafPage = _tree.DecompressPage(page, skipCache: true);
 
-                    node = decompressedLeafPage.GetNode(0);
+                    if (decompressedLeafPage.NumberOfEntries > 0)
+                        node = decompressedLeafPage.GetNode(0);
+                    else
+                    {
+                        // we have empty page after decompression (each compressed entry has a corresponding CompressionTombstone)
+                        // we can safely use the node key of first tombstone (they have proper order)
+
+                        node = page.GetNode(0);
+                    }
                 }
 
                 scope.Dispose();
