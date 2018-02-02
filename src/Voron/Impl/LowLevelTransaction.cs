@@ -936,7 +936,6 @@ namespace Voron.Impl
                 _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
                 _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
                 _requestedCommitStats.JournalFilePath = journalFilePath;
-                _requestedCommitStats.EnvironmentName = _journal.EnvironmentName;
             }
         }
 

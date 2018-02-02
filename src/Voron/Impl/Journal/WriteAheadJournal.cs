@@ -61,13 +61,11 @@ namespace Voron.Impl.Journal
 
         private readonly DisposeOnce<SingleAttempt> _disposeRunner;
 
-        public string EnvironmentName { get; }
 
         public WriteAheadJournal(StorageEnvironment env)
         {
             _env = env;
-            EnvironmentName = Path.GetFileName(env.ToString());
-            _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(EnvironmentName);
+            _logger = LoggingSource.Instance.GetLogger<WriteAheadJournal>(Path.GetFileName(env.ToString()));
             _dataPager = _env.Options.DataPager;
             _currentJournalFileSize = env.Options.InitialLogFileSize;
             _headerAccessor = env.HeaderAccessor;

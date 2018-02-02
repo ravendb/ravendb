@@ -12,6 +12,5 @@ namespace Voron.Debugging
 
         public string JournalFilePath;
 
-        public string EnvironmentName;
     }
 }
