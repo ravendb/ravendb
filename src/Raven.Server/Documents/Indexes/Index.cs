@@ -1354,6 +1354,7 @@ namespace Raven.Server.Documents.Indexes
                             };
 
                             tx.Commit();
+                            SlowWriteNotification.Notify(commitStats, DocumentDatabase);
 
                             stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
                         }

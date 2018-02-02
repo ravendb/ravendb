@@ -927,7 +927,7 @@ namespace Voron.Impl
             {
                 sp = Stopwatch.StartNew();
             }
-            var numberOfWrittenPages = _journal.WriteToJournal(this);
+            var numberOfWrittenPages = _journal.WriteToJournal(this, out var journalFilePath);
             FlushedToJournal = true;
 
             if (_requestedCommitStats != null)
@@ -935,6 +935,8 @@ namespace Voron.Impl
                 _requestedCommitStats.WriteToJournalDuration = sp.Elapsed;
                 _requestedCommitStats.NumberOfModifiedPages = numberOfWrittenPages.NumberOfUncompressedPages;
                 _requestedCommitStats.NumberOf4KbsWrittenToDisk = numberOfWrittenPages.NumberOf4Kbs;
+                _requestedCommitStats.JournalFilePath = journalFilePath;
+                _requestedCommitStats.EnvironmentName = _journal.EnvironmentName;
             }
         }
 
