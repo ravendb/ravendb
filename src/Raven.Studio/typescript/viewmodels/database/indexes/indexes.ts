@@ -268,10 +268,21 @@ class indexes extends viewModelBase {
         return new getIndexesProgressCommand(this.activeDatabase())
             .execute()
             .done(indexesProgressList => {
+                const progressToProcess = Array.from(this.indexingProgresses.keys());  
+                
                 for (let i = 0; i < indexesProgressList.length; i++) {
                     const dto = indexesProgressList[i];
-                    this.indexingProgresses.set(dto.Name, new indexProgress(dto));    
+                    this.indexingProgresses.set(dto.Name, new indexProgress(dto));
+                    _.pull(progressToProcess, dto.Name);
                 }
+                
+                // progressToProcess contains now non-stale indexes
+                // set progress to 100%
+                
+                progressToProcess.forEach(name => {
+                    const progress = this.indexingProgresses.get(name);
+                    progress.markCompleted();
+                });
                 
                 this.syncIndexingProgress();
             });
