@@ -115,10 +115,10 @@ namespace Raven.Server.Documents.Replication
 
         private void ReplicateToDestination()
         {
-            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
-            NativeMemory.EnsureRegistered();
             try
             {
+                AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
+                NativeMemory.EnsureRegistered();
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.FromString()} via {_connectionInfo.Url}");
 

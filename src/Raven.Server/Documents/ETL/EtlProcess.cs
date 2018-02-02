@@ -358,11 +358,19 @@ namespace Raven.Server.Documents.ETL
             var threadName = $"{Tag} process: {Name}";
             _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
-                // This has lower priority than request processing, so we let the OS
-                // schedule this appropriately
-                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
-                NativeMemory.EnsureRegistered();
-                Run();
+                try
+                {
+                    // This has lower priority than request processing, so we let the OS
+                    // schedule this appropriately
+                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                    NativeMemory.EnsureRegistered();
+                    Run();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to run ETL {Name}", e);
+                }
             }, null, threadName);            
 
             if (Logger.IsInfoEnabled)

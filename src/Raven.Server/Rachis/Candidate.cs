@@ -33,7 +33,7 @@ namespace Raven.Server.Rachis
 
         private void Run()
         {
-            using (this)
+            try
             {
                 try
                 {
@@ -180,6 +180,17 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Timeout.Start(_engine.SwitchToCandidateStateOnTimeout);
                     }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    Dispose();
+                }
+                catch (Exception)
+                {
+                    // nothing to be done here
                 }
             }
         }

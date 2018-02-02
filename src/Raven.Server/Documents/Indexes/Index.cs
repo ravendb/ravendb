@@ -561,7 +561,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info("Failed to execute indexing in " + IndexingThreadName, e);
+                        _logger.Info($"Failed to execute indexing in {IndexingThreadName}", e);
                     }
                 }
             }, null, IndexingThreadName);

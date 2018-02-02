@@ -94,7 +94,18 @@ namespace Raven.Server.Documents.Replication
                 if (_incomingWork != null)
                     return; // already set by someone else, they can start it
 
-                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => ReceiveReplicationBatches(), null, IncomingReplicationThreadName);                
+                _incomingWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
+                {
+                    try
+                    {
+                        ReceiveReplicationBatches();
+                    }
+                    catch (Exception e)
+                    {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"Error in accepting replication request ({FromToString})", e);
+                    }
+                }, null, IncomingReplicationThreadName);                
             }            
 
             if (_log.IsInfoEnabled)
@@ -821,7 +832,8 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
-            using (_copiedBuffer.ReleaseBuffer)
+            var releaser = _copiedBuffer.ReleaseBuffer;
+            try
             {
                 if (_log.IsInfoEnabled)
                     _log.Info($"Disposing IncomingReplicationHandler ({FromToString})");
@@ -876,6 +888,17 @@ namespace Raven.Server.Documents.Replication
 
                 _attachmentStreamsTempFile.Dispose();
             
+            }
+            finally
+            {
+                try
+                {
+                    releaser?.Dispose();
+                }
+                catch (Exception)
+                {
+                    // can't do anything about it...
+                }
             }
             
         }

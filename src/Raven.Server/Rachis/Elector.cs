@@ -273,7 +273,7 @@ namespace Raven.Server.Rachis
             {
                 if (_engine.Log.IsInfoEnabled)
                 {
-                    _engine.Log.Info("Failed to talk to candidate: " + _engine.Tag, e);
+                    _engine.Log.Info($"Failed to talk to candidate: {_engine.Tag}", e);
                 }
             }
             finally
