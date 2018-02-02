@@ -334,7 +334,7 @@ namespace Raven.Server.Documents.Handlers
 
                         first = false;
 
-                        var progress = index.GetProgress(context);
+                        var progress = index.GetProgress(context, isStale: true);
                         writer.WriteIndexProgress(context, progress);
                     }
                     catch (ObjectDisposedException)
