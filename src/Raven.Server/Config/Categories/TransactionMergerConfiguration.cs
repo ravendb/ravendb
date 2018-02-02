@@ -13,13 +13,13 @@ namespace Raven.Server.Config.Categories
         {
             if (IntPtr.Size == sizeof(int) || forceUsing32BitsPager)
             {
-                MaxTxSizeInMb = new Size(4, SizeUnit.Megabytes);
+                MaxTxSize = new Size(4, SizeUnit.Megabytes);
                 return;
             }
 
             var memoryInfo = MemoryInformation.GetMemoryInfo();
 
-            MaxTxSizeInMb = Size.Min(
+            MaxTxSize = Size.Min(
                 new Size(512, SizeUnit.Megabytes),
                 memoryInfo.TotalPhysicalMemory / 10);
         }
@@ -28,18 +28,18 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(1000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("TransactionMerger.MaxTimeToWaitForPreviousTxInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting MaxTimeToWaitForPreviousTxInMs { get; set; }
+        public TimeSetting MaxTimeToWaitForPreviousTx { get; set; }
 
         [Description("EXPERT: Time to wait for the previous async commit transaction before rejecting the request due to long duration IO")]
         [DefaultValue(5000)]
         [TimeUnit(TimeUnit.Milliseconds)]
         [ConfigurationEntry("TransactionMerger.MaxTimeToWaitForPreviousTxBeforeRejectingInMs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting MaxTimeToWaitForPreviousTxBeforeRejectingInMs { get; set; }
+        public TimeSetting MaxTimeToWaitForPreviousTxBeforeRejecting { get; set; }
 
         [Description("EXPERT: Maximum size for the merged transaction")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("TransactionMerger.MaxTxSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public Size MaxTxSizeInMb { get; set; }
+        public Size MaxTxSize { get; set; }
     }
 }
