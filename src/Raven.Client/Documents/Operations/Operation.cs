@@ -38,17 +38,27 @@ namespace Raven.Client.Documents.Operations
         {
             try
             {
-                var changes = await _changes().EnsureConnectedNow().ConfigureAwait(false);
-                var observable = changes.ForOperationId(_id);
-                _subscription = observable.Subscribe(this);
-                await observable.EnsureSubscribedNow().ConfigureAwait(false);
-
-                await FetchOperationStatus().ConfigureAwait(false);
+                await Process().ConfigureAwait(false);
             }
             catch (Exception e)
             {
                 _result.TrySetException(e);
             }
+        }
+
+        protected virtual async Task Process()
+        {
+            var changes = await _changes().EnsureConnectedNow().ConfigureAwait(false);
+            var observable = changes.ForOperationId(_id);
+            _subscription = observable.Subscribe(this);
+            await observable.EnsureSubscribedNow().ConfigureAwait(false);
+
+            await FetchOperationStatus().ConfigureAwait(false);
+        }
+
+        protected virtual void StopProcessing()
+        {
+            _subscription?.Dispose();
         }
 
         /// <summary>
@@ -57,7 +67,7 @@ namespace Raven.Client.Documents.Operations
         /// If we receive notification using changes API meanwhile, ignore fetched status
         /// to avoid issues with non monotonic increasing progress
         /// </summary>
-        private async Task FetchOperationStatus()
+        protected async Task FetchOperationStatus()
         {
             var command = GetOperationStateCommand(_conventions, _id);
 
@@ -88,17 +98,17 @@ namespace Raven.Client.Documents.Operations
                     }
                     break;
                 case OperationStatus.Completed:
-                    _subscription?.Dispose();
+                    StopProcessing();
                     _result.TrySetResult(change.State.Result);
                     break;
                 case OperationStatus.Faulted:
-                    _subscription?.Dispose();
+                    StopProcessing();
                     var exceptionResult = (OperationExceptionResult)change.State.Result;
                     Debug.Assert(exceptionResult != null);
                     _result.TrySetException(ExceptionDispatcher.Get(exceptionResult.Message, exceptionResult.Error, exceptionResult.Type, exceptionResult.StatusCode));
                     break;
                 case OperationStatus.Canceled:
-                    _subscription?.Dispose();
+                    StopProcessing();
                     _result.TrySetCanceled();
                     break;
             }
@@ -109,7 +119,7 @@ namespace Raven.Client.Documents.Operations
             if (error is ChangeProcessingException)
                 return;
 
-            _subscription?.Dispose();
+            StopProcessing();
 
 #pragma warning disable 4014
             Task.Factory.StartNew(Initialize);

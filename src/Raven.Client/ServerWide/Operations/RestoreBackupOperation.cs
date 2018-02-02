@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -9,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class RestoreBackupOperation : IServerOperation<RestoreBackupOperationResult>
+    public class RestoreBackupOperation : IServerOperation<OperationIdResult>
     {
         private readonly RestoreBackupConfiguration _restoreConfiguration;
 
@@ -18,12 +19,12 @@ namespace Raven.Client.ServerWide.Operations
             _restoreConfiguration = restoreConfiguration;
         }
 
-        public RavenCommand<RestoreBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new RestoreBackupCommand(conventions, _restoreConfiguration);
         }
 
-        private class RestoreBackupCommand : RavenCommand<RestoreBackupOperationResult>
+        private class RestoreBackupCommand : RavenCommand<OperationIdResult>
         {
             public override bool IsReadRequest => false;
             private readonly DocumentConventions _conventions;
@@ -56,13 +57,8 @@ namespace Raven.Client.ServerWide.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.RestoreResultOperationResult(response);
+                Result = JsonDeserializationClient.OperationIdResult(response);
             }
         }
-    }
-
-    public class RestoreBackupOperationResult
-    {
-        public long OperationId { get; set; }
     }
 }

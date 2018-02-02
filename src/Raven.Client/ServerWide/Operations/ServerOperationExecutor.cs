@@ -70,7 +70,7 @@ namespace Raven.Client.ServerWide.Operations
                 var command = operation.GetCommand(_requestExecutor.Conventions, context);
 
                 await _requestExecutor.ExecuteAsync(command, context, token: token).ConfigureAwait(false);
-                return new ServerWideOperation(_requestExecutor, () => _store.Changes(), _requestExecutor.Conventions, command.Result.OperationId);
+                return new ServerWideOperation(_requestExecutor, _requestExecutor.Conventions, command.Result.OperationId);
             }
         }
     }

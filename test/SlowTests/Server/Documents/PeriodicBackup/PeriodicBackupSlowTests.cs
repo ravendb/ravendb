@@ -472,13 +472,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                var stateRequest = new GetServerWideOperationStateOperation(restoreResult.OperationId);
-
-                SpinWait.SpinUntil(() =>
-                {
-                    var state = store.Maintenance.Server.Send(stateRequest);
-                    return state.Status == OperationStatus.Completed;
-                }, TimeSpan.FromSeconds(15));
+                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 using (var session = store.OpenAsyncSession(databaseName))
                 {
@@ -544,15 +538,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                var stateRequest = new GetServerWideOperationStateOperation(restoreResult.OperationId);
-                store.Maintenance.Server.Send(stateRequest);
-
-                var result = SpinWait.SpinUntil(() =>
-                {
-                    var state = store.Maintenance.Server.Send(stateRequest);
-                    return state.Status == OperationStatus.Completed;
-                }, TimeSpan.FromSeconds(15));
-                Assert.True(result, "Backup didn't complete?");
+                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 using (var session = store.OpenAsyncSession(restoredDatabaseName))
                 {
