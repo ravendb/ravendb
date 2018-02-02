@@ -46,9 +46,9 @@ namespace Raven.Server.Documents
             _log = LoggingSource.Instance.GetLogger<TransactionOperationsMerger>(_parent.Name);
             _shutdown = shutdown;
 
-            _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxInMs.AsTimeSpan.TotalMilliseconds;
-            _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSizeInMb.GetValue(SizeUnit.Bytes);
-            _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejectingInMs.AsTimeSpan.TotalMilliseconds;
+            _maxTimeToWaitForPreviousTxInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTx.AsTimeSpan.TotalMilliseconds;
+            _maxTxSizeInBytes = _parent.Configuration.TransactionMergerConfiguration.MaxTxSize.GetValue(SizeUnit.Bytes);
+            _maxTimeToWaitForPreviousTxBeforeRejectingInMs = _parent.Configuration.TransactionMergerConfiguration.MaxTimeToWaitForPreviousTxBeforeRejecting.AsTimeSpan.TotalMilliseconds;
         }
 
         public DatabasePerformanceMetrics GeneralWaitPerformanceMetrics = new DatabasePerformanceMetrics(MetricType.GeneralWait, 256, 1);
