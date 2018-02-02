@@ -22,7 +22,7 @@ namespace Raven.Server.Utils
                 }
                 else
                 {
-                    var exceptionString = $"UnhandledException: { args.ExceptionObject.ToString() }.";
+                    var exceptionString = $"UnhandledException: { args.ExceptionObject?.ToString()  ?? "null" }.";
                     logger.OperationsAsync(exceptionString).Wait(TimeToWaitForLog);
                 }
             };
@@ -35,8 +35,7 @@ namespace Raven.Server.Utils
                 if (args.Observed)
                     return;
 
-                var exception = args.Exception.ExtractSingleInnerException();
-                logger.InfoAsync("UnobservedTaskException occurred.", exception).Wait(TimeToWaitForLog);
+                logger.InfoAsync("UnobservedTaskException occurred.", args.Exception).Wait(TimeToWaitForLog);
             };
         }
     }
