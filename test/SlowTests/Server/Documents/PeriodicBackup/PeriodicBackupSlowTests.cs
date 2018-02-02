@@ -627,11 +627,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore");
                 restoreConfiguration.BackupLocation = backupPath;
                 restoreConfiguration.DataDirectory = emptyFolder;
-                ;
-                restoreConfiguration.IndexingStoragePath = backupPath;
-                restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
-                Assert.Contains("Indexes directory must be empty of any files or folders", e.InnerException.Message);
             }
         }
     }
