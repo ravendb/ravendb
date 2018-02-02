@@ -346,7 +346,10 @@ namespace Sparrow.LowMemory
                 long totalUnmanagedAllocations = 0;
                 foreach (var stats in NativeMemory.ThreadAllocations.Values)
                 {
-                    if (stats.ThreadInstance.IsAlive)
+                    if (stats == null)
+                        continue;
+                    var instance = stats.ThreadInstance;
+                    if (instance != null && instance.IsAlive)
                         totalUnmanagedAllocations += stats.TotalAllocated;
                 }
 
