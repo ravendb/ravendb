@@ -629,7 +629,7 @@ namespace Voron.Impl.Journal
                     _waitForJournalStateUpdateUnderTx.Reset();
                     ExceptionDispatchInfo edi = null;
                     var sp = Stopwatch.StartNew();
-                    Interlocked.Exchange(ref _updateJournalStateAfterFlush, txw =>
+                    Action<LowLevelTransaction> currentAction = txw =>
                     {
                         try
                         {
@@ -647,9 +647,10 @@ namespace Voron.Impl.Journal
                             _updateJournalStateAfterFlush = null;
                             _waitForJournalStateUpdateUnderTx.Set();
                         }
-                    });
+                    };
+                    Interlocked.Exchange(ref _updateJournalStateAfterFlush, currentAction);
 
-                    WaitForJournalStateToBeUpdated(token, transactionPersistentContext);
+                    WaitForJournalStateToBeUpdated(token, transactionPersistentContext, currentAction);
 
                     edi?.Throw();
                 }
@@ -660,7 +661,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            private void WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext)
+            private void WaitForJournalStateToBeUpdated(CancellationToken token, TransactionPersistentContext transactionPersistentContext, Action<LowLevelTransaction> currentAction)
             {
                 do
                 {
@@ -703,7 +704,8 @@ namespace Voron.Impl.Journal
                     {
                         txw?.Dispose();
                     }
-                } while (true);
+                    // if it was changed, this means that we are done
+                } while (currentAction == _updateJournalStateAfterFlush);
             }
 
             private void UpdateJournalStateUnderWriteTransactionLock(LowLevelTransaction txw, long lastProcessedJournal, long lastFlushedTransactionId, List<JournalFile> unusedJournals)
