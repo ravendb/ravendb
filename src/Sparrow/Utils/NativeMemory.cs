@@ -37,15 +37,32 @@ namespace Sparrow.Utils
             public int UnmanagedThreadId;
             public long Allocations;
             public long ReleasesFromOtherThreads;
-            public Thread ThreadInstance;
-            public string Name => ThreadInstance.Name;
+            private Thread _threadInstance;
+            private string _lastName = "Unknown";
+            public string Name => _threadInstance?.Name ?? _lastName;
 
             public long TotalAllocated => Allocations - ReleasesFromOtherThreads;
 
+            public bool IsThreadAlive()
+            {
+                var copy = _threadInstance;
+
+                if (copy == null)
+                    return false;
+
+                if (copy.IsAlive)
+                    return true;
+
+                _threadInstance = null; // intentionally not thread safe, worst case it will take time to see this
+                _lastName = copy.Name; // fine if mulitple threads setting this
+
+                return false;
+            }
+
             public ThreadStats()
             {
-                ThreadInstance = Thread.CurrentThread;
-                Id = ThreadInstance.ManagedThreadId;
+                _threadInstance = Thread.CurrentThread;
+                Id = _threadInstance.ManagedThreadId;
                 UnmanagedThreadId = PlatformDetails.GetCurrentThreadId();
             }
         }

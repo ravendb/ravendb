@@ -305,7 +305,7 @@ namespace Sparrow.LowMemory
             }
             foreach (var stats in NativeMemory.ThreadAllocations.Values)
             {
-                if (stats.ThreadInstance.IsAlive == false)
+                if (stats.IsThreadAlive() == false)
                     continue;
 
                 totalUnmanagedAllocations += stats.TotalAllocated;

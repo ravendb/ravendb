@@ -348,8 +348,7 @@ namespace Sparrow.LowMemory
                 {
                     if (stats == null)
                         continue;
-                    var instance = stats.ThreadInstance;
-                    if (instance != null && instance.IsAlive)
+                    if (stats.IsThreadAlive())
                         totalUnmanagedAllocations += stats.TotalAllocated;
                 }
 
