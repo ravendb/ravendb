@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.TransactionCommands;
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents
 
                             token.Delay();
 
-                            if (isAllDocs && IsHiLoDocument(document))
+                            if (isAllDocs && document.Id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
                                 continue;
 
                             if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
@@ -130,12 +131,6 @@ namespace Raven.Server.Documents
             {
                 Total = progress.Processed
             };
-        }
-
-        private static bool IsHiLoDocument(Document document)
-        {
-            var collection = CollectionName.GetCollectionName(document.Data);
-            return CollectionName.IsHiLoCollection(collection);
         }
 
         protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize, bool isAllDocs)
