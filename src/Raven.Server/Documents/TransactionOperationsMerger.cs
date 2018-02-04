@@ -314,22 +314,18 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        try
+                        if (_log.IsInfoEnabled)
                         {
-                            if (_log.IsInfoEnabled)
-                            {
-                                _log.Info(
-                                    $"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently",
-                                    e);
-                            }
+                            _log.Info(
+                                $"Failed to run merged transaction with {pendingOps.Count:#,#0}, will retry independently",
+                                e);
+                        }
 
-                            NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
-                            return;
-                        }
-                        finally
-                        {
-                            tx?.Dispose();
-                        }
+                        // need to dispose here since we are going to open new tx for each operation
+                        tx?.Dispose();
+
+                        NotifyTransactionFailureAndRerunIndependently(pendingOps, e);
+                        return;
                     }
 
                     switch (result)
