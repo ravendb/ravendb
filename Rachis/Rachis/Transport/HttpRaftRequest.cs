@@ -59,18 +59,21 @@ namespace Rachis.Transport
 
             return RunWithAuthRetry(async () =>
             {
-                var requestMessage = getRequestMessage();
-                try
+                using (var requestMessage = getRequestMessage())
                 {
-                    Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        var msg = $"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{await GetContentAsString(requestMessage.Content).ConfigureAwait(false)}\r\n{requestMessage.Headers}";
+                        _log.ErrorException(msg, e);
+                        throw;
+                    }
+
+                    return CheckForAuthErrors();
                 }
-                catch (Exception e)
-                {
-                    var msg = $"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{await GetContentAsString(requestMessage.Content).ConfigureAwait(false)}\r\n{requestMessage.Headers}";
-                    _log.ErrorException(msg, e);
-                    throw;
-                }
-                return CheckForAuthErrors();
             });
         }
 
@@ -88,7 +91,7 @@ namespace Rachis.Transport
             var jsonContent = requestMessageContent as JsonContent;
             if (jsonContent != null)
                 return jsonContent.Data.ToString();
-
+            
             var readAsStringAsync = requestMessageContent?.ReadAsStringAsync();
             if (readAsStringAsync != null)
                 return await readAsStringAsync.ConfigureAwait(false);
