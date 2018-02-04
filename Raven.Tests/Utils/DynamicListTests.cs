@@ -28,7 +28,9 @@ namespace Raven.Tests.Utils
             {
                 "Count", // DynamicList has Count property, so it cannot have a method with the same name
                 "ThenBy", // applies to IOrderedEnumerable
-                "ThenByDescending", // applies to IOrderedEnumerable
+                "ThenByDescending", // applies to IOrderedEnumerable,
+                "Prepend",
+                "Append"
             };
 
             var enumerableMethodsNames = enumerableMethods.Select(x => x.Name).Except(exceptFor).Distinct().ToList();
