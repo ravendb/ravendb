@@ -15,32 +15,36 @@ namespace Raven.SlowTests.Bugs
         {
             using (var store = NewDocumentStore())
             {
-                using (var session = store.OpenSession())
+                using (store.SetRequestsTimeoutFor(TimeSpan.FromMinutes(5)))
                 {
-                    for (int i = 0; i < 15000; i++)
+                    using (var session = store.OpenSession())
                     {
-                        session.Store(new User {});
+                        for (int i = 0; i < 15000; i++)
+                        {
+                            session.Store(new User { });
+                        }
+
+                        session.SaveChanges();
                     }
-                    session.SaveChanges();
-                }
 
-                store.Configuration.MaxPageSize = 20000;
+                    store.Configuration.MaxPageSize = 20000;
 
-                using (var session = store.OpenSession())
-                {
-                    var users = session.Query<User>()
-                                       .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(1)))
-                                       .Take(20000)
-                                       .ToArray();
-
-                    try
+                    using (var session = store.OpenSession())
                     {
-                        Assert.Equal(15000, users.Length);
-                    }
-                    catch (Exception)
-                    {
-                        PrintMissedDocuments(users);
-                        throw;
+                        var users = session.Query<User>()
+                            .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(2)))
+                            .Take(20000)
+                            .ToArray();
+
+                        try
+                        {
+                            Assert.Equal(15000, users.Length);
+                        }
+                        catch (Exception)
+                        {
+                            PrintMissedDocuments(users);
+                            throw;
+                        }
                     }
                 }
             }
