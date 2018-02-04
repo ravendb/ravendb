@@ -705,7 +705,7 @@ namespace Raven.Server.Documents.Indexes
             if (index == null)
                 IndexDoesNotExistException.ThrowFor(name);
 
-            index.Stop();
+            index.Stop(disableIndex: true);
 
             _documentDatabase.Changes.RaiseNotifications(new IndexChange
             {
@@ -736,9 +736,20 @@ namespace Raven.Server.Documents.Indexes
             if (_documentDatabase.Configuration.Indexing.Disabled)
                 return;
 
-            Parallel.ForEach(indexes, index => index.Stop());
+            var list = indexes.ToList();
+            Parallel.ForEach(list, index =>
+            {
+                try
+                {
+                    index.Stop(disableIndex: true);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // index was deleted ?
+                }
+            });
 
-            foreach (var index in indexes)
+            foreach (var index in list)
             {
                 _documentDatabase.Changes.RaiseNotifications(new IndexChange
                 {

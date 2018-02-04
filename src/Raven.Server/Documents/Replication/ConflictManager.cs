@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -35,7 +36,7 @@ namespace Raven.Server.Documents.Replication
             string conflictedChangeVector,
             DocumentFlags flags)
         {
-            if (id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
+            if (id.StartsWith(HiLoHandler.RavenHiloIdPrefix, StringComparison.OrdinalIgnoreCase))
             {
                 HandleHiloConflict(documentsContext, id, doc, changeVector);
                 return;
