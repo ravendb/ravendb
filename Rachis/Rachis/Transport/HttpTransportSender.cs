@@ -234,7 +234,7 @@ namespace Rachis.Transport
                         var contentHash = Hashing.XXHash64.Calculate(requestContentAsArray);
                         requestContentStream.Position = 0;
 
-                        using (var content = new StreamContent(requestContentStream))
+                        var content = new StreamContent(requestContentStream);
                         using (var httpResponseMessage = await request.WriteAsync(() => content,
                             new Dictionary<string, string>
                             {
@@ -394,7 +394,7 @@ namespace Rachis.Transport
                     _runningOps.TryRemove(op, out value);
                     if (task.Exception != null)
                     {
-                        _log.Warn("Failed to send " + details + " " + InnerMostMessage(task.Exception), task.Exception);
+                        _log.WarnException("Failed to send " + details + " " + InnerMostMessage(task.Exception) + " Details:" + task.Exception, task.Exception);
                         return;
                     }
                     _log.Info("Sent {0}", details);
