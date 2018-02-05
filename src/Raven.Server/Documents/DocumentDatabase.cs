@@ -563,7 +563,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesEnvironmentInformation()
+        private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesForBackup()
         {
             var i = 1;
             foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment())
@@ -581,7 +581,7 @@ namespace Raven.Server.Documents
                     case StorageEnvironmentWithType.StorageEnvironmentType.Index:
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
-                            Name = i++.ToString(),
+                            Name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(storageEnvironmentWithType.Name),
                             Folder = "Indexes",
                             Env = storageEnvironmentWithType.Environment
                         };
@@ -672,15 +672,10 @@ namespace Raven.Server.Documents
                     writer.WriteEndObject();
                 }
 
-                BackupMethods.Full.ToFile(GetAllStoragesEnvironmentInformation(), package);
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(), package);
 
                 file.Flush(true); // make sure that we fully flushed to disk
             }
-        }
-
-        public void IncrementalBackupTo(string backupPath)
-        {
-            BackupMethods.Incremental.ToFile(GetAllStoragesEnvironmentInformation(), backupPath);
         }
 
         /// <summary>
