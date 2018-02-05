@@ -737,6 +737,18 @@ namespace Raven.Client.Util
                     return;
                 }
 
+                if (context.Node is ParameterExpression p && 
+                    p.Name.StartsWith("<>h__TransparentIdentifier") && 
+                    DoNotIgnore)
+                {
+                    context.PreventDefault();
+                    var writer = context.GetWriter();
+                    using (writer.Operation(p))
+                    {
+                        writer.Write(p.Name.Substring(2));
+                    }
+                }
+
                 if (!(context.Node is MemberExpression member))
                     return;
 
@@ -749,7 +761,11 @@ namespace Raven.Client.Util
                     using (writer.Operation(innerMember))
                     {
                         if (DoNotIgnore)
+                        {
                             context.Visitor.Visit(member.Expression);
+                            writer.Write(".");
+
+                        }
                         writer.Write($"{member.Member.Name}");
                     }
 
@@ -762,13 +778,16 @@ namespace Raven.Client.Util
                     var writer = context.GetWriter();
                     using (writer.Operation(parameter))
                     {
+                        var name = member.Member.Name;
+
                         if (DoNotIgnore)
                         {
                             writer.Write(parameter.Name.Substring(2));
                             writer.Write(".");
+                            name = name.Replace("<>h__TransparentIdentifier", "h__TransparentIdentifier");
                         }
 
-                        writer.Write($"{member.Member.Name}");
+                        writer.Write($"{name}");
                     }
                 }
             }
@@ -1098,6 +1117,42 @@ namespace Raven.Client.Util
             {
                 if (context.Node is NewExpression newExp)
                 {
+                    if (newExp.Members != null && newExp.Members.Count > 0)
+                    {
+                        context.PreventDefault();
+                        var resultWriter = context.GetWriter();
+
+                        using (resultWriter.Operation(0))
+                        {
+                            resultWriter.Write('{');
+
+                            var posStart = resultWriter.Length;
+                            for (int itMember = 0; itMember < newExp.Members.Count; itMember++)
+                            {
+                                var member = newExp.Members[itMember];
+
+                                if (resultWriter.Length > posStart)
+                                    resultWriter.Write(',');
+
+                                string name = member.Name;
+                                if (member.Name.StartsWith("<>h__TransparentIdentifier"))
+                                {
+                                    name = name.Substring(2);
+                                }
+
+                                if (Regex.IsMatch(name, @"^\w[\d\w]*$"))
+                                    resultWriter.Write(name);
+                                else
+                                    WriteStringLiteral(name, resultWriter);
+
+                                resultWriter.Write(':');
+                                context.Visitor.Visit(newExp.Arguments[itMember]);
+                            }
+
+                            resultWriter.Write('}');
+                        }
+                    }
+
                     if (LinqMethodsSupport.IsCollection(newExp.Type) && 
                         LinqMethodsSupport.IsDictionary(newExp.Type) == false)
                     {
@@ -1199,10 +1254,22 @@ namespace Raven.Client.Util
                 }
             }
 
+            private void WriteStringLiteral(string str, JavascriptWriter writer)
+            {
+                writer.Write('"');
+                writer.Write(
+                    str
+                        .Replace("\\", "\\\\")
+                        .Replace("\r", "\\r")
+                        .Replace("\n", "\\n")
+                        .Replace("\t", "\\t")
+                        .Replace("\0", "\\0")
+                        .Replace("\"", "\\\""));
 
+                writer.Write('"');
+            }
 
         }
-
 
 
         public class NullComparisonSupport : JavascriptConversionExtension
