@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension)
                 {
                     onProgress.Invoke(result.Progress);
-                    
+
                     snapshotRestore = true;
                     sw = Stopwatch.StartNew();
                     // restore the snapshot
@@ -86,15 +86,15 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _restoreConfiguration.DataDirectory,
                         onProgress,
                         result);
-                    
+
                     // removing the snapshot from the list of files
                     _filesToRestore.RemoveAt(0);
-                } 
+                }
                 else
                 {
                     result.SnapshotRestore.Skipped = true;
                     result.SnapshotRestore.Processed = true;
-                    
+
                     onProgress.Invoke(result.Progress);
                 }
 
@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
-                }
+                    }
 
                 result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e.Message}");
                 onProgress.Invoke(result.Progress);
@@ -467,37 +467,68 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             RestoreSettings restoreSettings = null;
 
-            BackupMethods.Full.Restore(
-                backupPath,
-                dataDirectory,
-                journalDir: null,
-                settingsKey: RestoreSettings.SettingsFileName,
-                onSettings: settingsStream =>
+            using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            {
+                foreach (var zipEntry in zip.Entries)
                 {
-                    using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    var entryInfo = new FileInfo(zipEntry.FullName);
+                    var entryExtension = entryInfo.Extension;
+
+                    if (string.Equals(entryExtension, ".zip", StringComparison.OrdinalIgnoreCase))
                     {
-                        var json = context.Read(settingsStream, "read database settings for restore");
-                        json.BlittableValidation();
+                        var entryFileNameWithoutExtension = entryInfo.Name.Substring(0, entryInfo.Name.Length - 4);
 
-                        restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                        using (var entryStream = zipEntry.Open())
+                        using (var entryArchive = new ZipArchive(entryStream, ZipArchiveMode.Read, leaveOpen: true))
+                        {
+                            var restoreDirectory = dataDirectory;
+                            if (string.Equals(entryFileNameWithoutExtension, "Indexes", StringComparison.OrdinalIgnoreCase))
+                                restoreDirectory = Path.Combine(restoreDirectory, "Indexes");
+                            else if (string.Equals(entryFileNameWithoutExtension, "Configuration", StringComparison.OrdinalIgnoreCase))
+                                restoreDirectory = Path.Combine(restoreDirectory, "Configuration");
+                            else if (string.Equals(entryInfo.Directory?.Name, "Indexes", StringComparison.OrdinalIgnoreCase))
+                                restoreDirectory = Path.Combine(restoreDirectory, "Indexes", entryFileNameWithoutExtension);
 
-                        restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
-                        DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
+                            BackupMethods.Full.Restore(
+                                entryArchive,
+                                restoreDirectory,
+                                restoreDirectory,
+                                onProgress: message =>
+                                {
+                                    restoreResult.AddInfo(message);
+                                    restoreResult.SnapshotRestore.ReadCount++;
+                                    onProgress.Invoke(restoreResult.Progress);
+                                },
+                                cancellationToken: _operationCancelToken.Token);
+                        }
 
-                        if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
-                            throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
-
-                        if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
-                            throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                        continue;
                     }
-                },
-                onProgress: message =>
-                {
-                    restoreResult.AddInfo(message);
-                    restoreResult.SnapshotRestore.ReadCount++;
-                    onProgress.Invoke(restoreResult.Progress);
-                },
-                cancellationToken: _operationCancelToken.Token);
+
+                    if (string.Equals(entryInfo.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        using (var entryStream = zipEntry.Open())
+                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                        {
+                            var json = context.Read(entryStream, "read database settings for restore");
+                            json.BlittableValidation();
+
+                            restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+
+                            restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
+                            DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
+
+                            if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
+                                throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+
+                            if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
+                                throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                        }
+
+                        continue;
+                    }
+                }
+            }
 
             if (restoreSettings == null)
                 throw new InvalidDataException("Cannot restore the snapshot without the settings file!");

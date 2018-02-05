@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -495,6 +496,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session
+                        .Query<User>()
+                        .Where(x => x.Name == "oren")
+                        .ToListAsync(); // create an index to backup
+
+                    await session
+                        .Query<User>()
+                        .Where(x => x.Age > 20)
+                        .ToListAsync(); // create an index to backup
+                }
+
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
@@ -546,6 +560,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.True(users.Any(x => x.Value.Name == "oren"));
                     Assert.True(users.Any(x => x.Value.Name == "ayende"));
                 }
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfIndexes)
             }
         }
 
