@@ -67,19 +67,23 @@
                             </div>
                             <div class="separator"></div>
                             <div class="infogrid-label dashboard-memory" data-bind="with: resources">
-                                <div><i class="icon-memory"></i><span>MEM</span></div>
+                                <div><i class="icon-memory"></i><span>MEM</span> (<span class="physical-memory" data-bind="text: $root.sizeFormatter(totalMemory())" data-toggle="tooltip" title="Total Physical Memory"></span>)</div>
                                 <div>
-                                    <div data-toggle="tooltip" title="Machine Memory usage">
+                                    <div data-toggle="tooltip" title="System Commit Limit">
+                                        <i class="icon-server icon-document-group"></i>
+                                        <strong data-bind="text: $root.sizeFormatter(systemCommitLimit())"></strong>
+                                    </div>
+                                    <div data-toggle="tooltip" title="Commited Memory">
                                         <i class="icon-server machine-usage"></i>
-                                        <strong data-bind="text: $root.sizeFormatter(machineMemoryUsage()), attr: { class: machineMemoryUsageClass }" ></strong>
+                                        <strong data-bind="text: $root.sizeFormatter(commitedMemory()), attr: { class: commitedMemoryUsageClass }"></strong>
                                     </div>
-                                    <div data-toggle="tooltip" title="RavenDB memory usage">
+
+                                    <div data-toggle="tooltip" data-bind="attr: { title: processUsageTooltip }">
                                         <i class="icon-raven process-usage"></i>
-                                        <strong data-bind="text: $root.sizeFormatter(processMemoryUsage()), attr: { class: processMemoryUsageClass }" ></strong>
-                                    </div>
-                                    <div>&Sigma; <span data-bind="text: $root.sizeFormatter(totalMemory())"></span>
+                                        <strong data-bind="text: $root.sizeFormatter(processMemoryUsage()), attr: { class: processMemoryUsageClass }"></strong>
                                     </div>
                                 </div>
+                                
                                 <!-- TODO
                                 <div><small><a href="#">see details</a></small></div>
                                  -->

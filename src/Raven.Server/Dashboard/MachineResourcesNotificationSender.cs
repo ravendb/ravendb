@@ -67,22 +67,18 @@ namespace Raven.Server.Dashboard
                         ? currentProcess.WorkingSet64
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
                 var memoryInfoResult = MemoryInformation.GetMemoryInfo();
+                var systemCommitLimit = memoryInfoResult.TotalCommittableMemory.GetValue(SizeUnit.Bytes);
                 var committedMemory = memoryInfoResult.CurrentCommitCharge.GetValue(SizeUnit.Bytes);
                 var installedMemory = memoryInfoResult.InstalledMemory.GetValue(SizeUnit.Bytes);
-                var availableMemory = memoryInfoResult.AvailableMemory.GetValue(SizeUnit.Bytes);
-                var mappedSharedMem = LowMemoryNotification.GetCurrentProcessMemoryMappedShared();
-                var shared = mappedSharedMem.GetValue(SizeUnit.Bytes);
 
                 var cpuInfo = CpuUsage.Calculate();
 
                 var machineResources = new MachineResources
                 {
                     TotalMemory = installedMemory,
-                    // we report the committed memory, because that is what we care about, but if we have more committed memory than physical
-                    // then we want to report actual memory usage, to avoid confusing users
-                    MachineMemoryUsage =  committedMemory > installedMemory ? installedMemory - availableMemory : committedMemory,
+                    SystemCommitLimit = systemCommitLimit,
+                    CommitedMemory =  committedMemory,
                     ProcessMemoryUsage = workingSet,
-                    ProcessMemoryExcludingSharedUsage = Math.Max(workingSet - shared, 0),
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
                     ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
                 };

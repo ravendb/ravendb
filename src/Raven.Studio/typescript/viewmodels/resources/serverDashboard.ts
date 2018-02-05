@@ -24,7 +24,7 @@ class machineResourcesSection {
     cpuChart: dashboardChart;
     memoryChart: dashboardChart;
     
-    totalMemory: number;
+    systemCommitLimit: number;
     
     resources = ko.observable<machineResources>();
 
@@ -36,7 +36,7 @@ class machineResourcesSection {
         });
 
         this.memoryChart = new dashboardChart("#memoryChart", {
-            yMaxProvider: () => this.totalMemory,
+            yMaxProvider: () => this.systemCommitLimit,
             topPaddingProvider: () => 2,
             tooltipProvider: data => machineResourcesSection.memoryTooltip(data)
         });
@@ -48,18 +48,19 @@ class machineResourcesSection {
     }
     
     onData(data: Raven.Server.Dashboard.MachineResources) {
-        this.totalMemory = data.TotalMemory;
-        
-        this.cpuChart.onData(moment.utc(data.Date).toDate(), 
+        this.systemCommitLimit = data.SystemCommitLimit;
+
+        this.cpuChart.onData(moment.utc(data.Date).toDate(),
             [
-                    { key: "machine", value: data.MachineCpuUsage },
-                    { key: "process", value: data.ProcessCpuUsage }
-                ]);
-        this.memoryChart.onData(moment.utc(data.Date).toDate(), 
+                { key: "machine", value: data.MachineCpuUsage },
+                { key: "process", value: data.ProcessCpuUsage }
+            ]);
+        this.memoryChart.onData(moment.utc(data.Date).toDate(),
             [
-                    { key: "machine", value: data.MachineMemoryUsage },
-                    { key: "process", value: data.ProcessMemoryUsage }
-                  ]);
+                { key: "physical", value: data.TotalMemory },
+                { key: "machine", value: data.CommitedMemory },
+                { key: "process", value: data.ProcessMemoryUsage }
+            ]);
         
         if (this.resources()) {
             this.resources().update(data);
@@ -88,11 +89,13 @@ class machineResourcesSection {
     private static memoryTooltip(data: dashboardChartTooltipProviderArgs) {
         if (data) {
             const date = moment(data.date).format(serverDashboard.timeFormat);
+            const physical = generalUtils.formatBytesToSize(data.values['physical']); 
             const machine = generalUtils.formatBytesToSize(data.values['machine']); 
             const process = generalUtils.formatBytesToSize(data.values['process']);
             return `<div>
                 Time: <strong>${date}</strong><br />
-                Machine memory usage: <strong>${machine}</strong><br />
+                Physical memory: <strong>${physical}</strong><br />
+                Commited memory: <strong>${machine}</strong><br />
                 Process memory usage: <strong>${process}</strong>
                 </div>`;
         }

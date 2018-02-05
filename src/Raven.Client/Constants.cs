@@ -34,6 +34,8 @@ namespace Raven.Client
 
             public const string ServerStartupTime = "Server-Startup-Time";
 
+            public const string IsLinux = "IsLinux";
+
             public const string RefreshTopology = "Refresh-Topology";
 
             public const string TopologyEtag = "Topology-Etag";
