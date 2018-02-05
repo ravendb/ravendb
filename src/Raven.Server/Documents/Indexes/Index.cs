@@ -1574,6 +1574,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Stop(disableIndex: true);
                 SetState(IndexState.Disabled);
+                _environment?.Cleanup();
             }
         }
 
