@@ -73,8 +73,6 @@ namespace Raven.Server.Documents.TcpHandlers
                     return;
 
                 _isDisposed = true;
-                _bytesSentMetric.Dispose();
-                _bytesReceivedMetric.Dispose();
 
                 DocumentDatabase?.RunningTcpConnections.TryRemove(this);
 

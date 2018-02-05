@@ -18,8 +18,8 @@ namespace Raven.Server.Utils.Metrics
         private readonly Thread _schedulerThread;
         private readonly ManualResetEvent _done = new ManualResetEvent(false);
 
-        private readonly ConcurrentSet<MeterMetric> _scheduledActions =
-            new ConcurrentSet<MeterMetric>();
+        private readonly ConcurrentSet<WeakReference<MeterMetric>> _scheduledActions =
+            new ConcurrentSet<WeakReference<MeterMetric>>();
 
         private readonly Logger _logger;
 
@@ -51,7 +51,14 @@ namespace Raven.Server.Utils.Metrics
                 {
                     try
                     {
-                        scheduledAction.Tick();
+                        if (scheduledAction.TryGetTarget(out var target))
+                        {
+                            target.Tick();
+                        }
+                        else
+                        {
+                            _scheduledActions.TryRemove(scheduledAction);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -69,12 +76,7 @@ namespace Raven.Server.Utils.Metrics
 
         public void StartTickingMetric(MeterMetric tickable)
         {
-            _scheduledActions.TryAdd(tickable);
-        }
-
-        public void StopTickingMetric(MeterMetric tickable)
-        {
-            _scheduledActions.TryRemove(tickable);
+            _scheduledActions.TryAdd(new WeakReference<MeterMetric>(tickable));
         }
 
         public void Dispose()

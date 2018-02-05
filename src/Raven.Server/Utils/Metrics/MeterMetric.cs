@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Utils.Metrics
 {
-    public sealed class MeterMetric : IDisposable
+    public sealed class MeterMetric
     {
         private long _count;
         private long _lastCount;
@@ -51,11 +51,6 @@ namespace Raven.Server.Utils.Metrics
 
         public long Count => _count;
 
-
-        public void Dispose()
-        {
-            MetricsScheduler.Instance.StopTickingMetric(this);
-        }
 
         public void Tick()
         {

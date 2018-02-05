@@ -813,8 +813,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     // ignored
                 }
-            
-                Stats.Dispose();
+
                 try
                 {
                     TcpConnection.Dispose();

@@ -12,7 +12,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
-    public class MetricCounters : IDisposable
+    public class MetricCounters 
     {
         public readonly RequestCounters Requests = new RequestCounters();
 
@@ -31,22 +31,9 @@ namespace Raven.Server.Utils
             CreateNew();
         }
 
-        public void Dispose()
-        {
-            Requests?.RequestsPerSec?.Dispose();
-            Docs?.PutsPerSec?.Dispose();
-            Docs?.BytesPutsPerSec?.Dispose();
-            MapIndexes?.IndexedPerSec?.Dispose();
-            MapReduceIndexes?.MappedPerSec?.Dispose();
-            MapReduceIndexes?.ReducedPerSec?.Dispose();
-            SqlReplications?.BatchSize?.Dispose();
-            Attachments?.PutsPerSec?.Dispose();
-            Attachments?.BytesPutsPerSec?.Dispose();
-        }
 
         public void Reset()
         {
-            Dispose();
             CreateNew();
         }
 
