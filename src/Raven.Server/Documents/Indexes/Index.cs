@@ -1364,6 +1364,11 @@ namespace Raven.Server.Documents.Indexes
                         IndexPersistence.DisposeWriters();
                         throw;
                     }
+                    finally
+                    {
+                        if(writeOperation.IsValueCreated)
+                            writeOperation.Value.Dispose();
+                    }
 
                     return mightBeMore;
                 }

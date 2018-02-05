@@ -185,20 +185,28 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
-
-                    var stats = new IndexingStatsScope(new IndexingRunStats());
-                    reducer.Execute(null, indexContext,
-                        writeOperation,
-                        stats, CancellationToken.None);
-
-                    using (var indexWriteOperation = writeOperation.Value)
+                    try
                     {
-                        indexWriteOperation.Commit(stats);
+
+                        var stats = new IndexingStatsScope(new IndexingRunStats());
+                        reducer.Execute(null, indexContext,
+                            writeOperation,
+                            stats, CancellationToken.None);
+
+                        using (var indexWriteOperation = writeOperation.Value)
+                        {
+                            indexWriteOperation.Commit(stats);
+                        }
+
+                        index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+
+                        mapReduceContext.Dispose();
                     }
-
-                    index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
-
-                    mapReduceContext.Dispose();
+                    finally
+                    {
+                        if(writeOperation.IsValueCreated)
+                            writeOperation.Value.Dispose();
+                    }
 
                     tx.Commit();
                 }
@@ -241,20 +249,27 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     var writeOperation =
                         new Lazy<IndexWriteOperation>(() => index.IndexPersistence.OpenIndexWriter(tx.InnerTransaction));
-
-                    var stats = new IndexingStatsScope(new IndexingRunStats());
-                    reducer.Execute(null, indexContext,
-                        writeOperation,
-                        stats, CancellationToken.None);
-
-                    using (var indexWriteOperation = writeOperation.Value)
+                    try
                     {
-                        indexWriteOperation.Commit(stats);
+                        var stats = new IndexingStatsScope(new IndexingRunStats());
+                        reducer.Execute(null, indexContext,
+                            writeOperation,
+                            stats, CancellationToken.None);
+
+                        using (var indexWriteOperation = writeOperation.Value)
+                        {
+                            indexWriteOperation.Commit(stats);
+                        }
+
+                        index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+
+                        tx.Commit();
                     }
-
-                    index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
-
-                    tx.Commit();
+                    finally
+                    {
+                        if(writeOperation.IsValueCreated)
+                            writeOperation.Value.Dispose();
+                    }
                 }
 
                 using (var documentsOperationContext = DocumentsOperationContext.ShortTermSingleUse(database))
