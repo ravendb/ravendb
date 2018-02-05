@@ -25,7 +25,7 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle" data-placement="left" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task">
                                     <input id="manualMentorSelection" type="checkbox" data-bind="checked: manualChooseMentor">
-                                    <label for="manualMentorSelection">Choose preferred mentor node manually</label>
+                                    <label for="manualMentorSelection">Choose a preferred mentor node manually</label>
                                 </div>
                             </div>                            
                             <div data-bind="validationElement: preferredMentor, collapse: manualChooseMentor"> 
@@ -49,7 +49,7 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
                                     <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
-                                    <label for="createNewString">Create new SQL connection string</label>
+                                    <label for="createNewString">Create a new SQL connection string</label>
                                 </div>                               
                             </div>
                             <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">  
@@ -110,7 +110,7 @@
                     </div>
                     <div class="panel-addon" data-bind="with: testConnectionResult">
                         <div class="padding bg-success small" data-bind="visible: Success">
-                            <div>Successfully connected to server</div>
+                            <div>Successfully connected to the server</div>
                         </div>
                         <div class="padding bg-danger small"
                              data-bind="visible: !Success">

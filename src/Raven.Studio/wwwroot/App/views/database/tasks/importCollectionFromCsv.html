@@ -2,7 +2,7 @@
 <div class="panel">
     <div class="panel-body">
         <form class="flex-form" data-bind="submit: importCsv">
-            <h3>Import documents from CSV file into a collection.</h3>
+            <h3>Import documents from a CSV file into a collection.</h3>
             <div class="bg-info padding padding-xs margin-bottom"><small><i class="icon-info"></i> Note: Each column will be treated as a property.</small></div>
             <div class="form-group">
                 <label for="importCsvFilePicker" class="control-label">
@@ -29,7 +29,7 @@
                     <input placeholder="Select collection" class="form-control" type="text" name="csvImportCollection" id="csvImportCollection" data-bind="textInput: customCollectionName" />
                     <small>
                         <i class="icon-info"></i>
-                        <span>If not provided collection name will be derived from file name</span>
+                        <span>If not provided, the collection name will be derived from the file name!</span>
                     </small>
                 </div>
             </div>

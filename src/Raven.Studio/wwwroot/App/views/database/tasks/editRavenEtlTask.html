@@ -31,7 +31,7 @@
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
                                     <input id="toggle-non-encrypted-channel" type="checkbox" data-bind="checked: allowEtlOnNonEncryptedChannel">
-                                    <label  for="toggle-non-encrypted-channel">Allow ETL on non-encrypted communication channel</label>
+                                    <label  for="toggle-non-encrypted-channel">Allow ETL on a non-encrypted communication channel</label>
                                 </div>
                             </div>
                         </div>
@@ -100,7 +100,7 @@
                         <div data-bind="if: createNewConnectionString">
                             <div class="panel-addon" data-bind="with: testConnectionResult">
                                 <div class="padding bg-success small" data-bind="visible: Success">
-                                    <div>Successfully connected to node</div>
+                                    <div>Successfully connected to the node</div>
                                 </div>
                                 <div class="padding bg-danger small" data-bind="visible: !Success">
                                     Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
@@ -173,7 +173,7 @@
                                 <strong>Name:</strong> <span data-bind="text: name"></span>
                             </label>
                         </div>
-                        <label><strong>Script:</strong> <small>(leave empty to send documents w/o any modifications)</small></label>
+                        <label><strong>Script:</strong> <small>(leave empty to send documents without any modifications)</small></label>
                         <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax help</small></a></span>
                         <div data-bind="validationElement: script">
                             <pre class="form-control editor"
