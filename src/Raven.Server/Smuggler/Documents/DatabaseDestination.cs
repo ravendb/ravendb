@@ -344,7 +344,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 var currentDatabaseRecord = _database.ReadDatabaseRecord();
                 var tasks = new List<Task>();
-                
+
                 if (currentDatabaseRecord?.Revisions == null &&
                     databaseRecord?.Revisions != null)
                 {
@@ -367,7 +367,7 @@ namespace Raven.Server.Smuggler.Documents
                     databaseRecord?.RavenConnectionStrings.Count > 0)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Configuring client configuration from smuggler");
+                        _log.Info("Configuring Raven connection strings configuration from smuggler");
                     foreach (var connectionString in databaseRecord.RavenConnectionStrings)
                     {
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutRavenConnectionStringCommand(connectionString.Value, _database.Name)));
@@ -379,7 +379,7 @@ namespace Raven.Server.Smuggler.Documents
                     databaseRecord?.SqlConnectionStrings.Count > 0)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info("Configuring client configuration from smuggler");
+                        _log.Info("Configuring SQL connection strings from smuggler");
                     foreach (var connectionString in databaseRecord.SqlConnectionStrings)
                     {
                         tasks.Add(_database.ServerStore.SendToLeaderAsync(new PutSqlConnectionStringCommand(connectionString.Value, _database.Name)));

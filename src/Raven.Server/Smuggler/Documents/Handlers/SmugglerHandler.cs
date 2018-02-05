@@ -459,6 +459,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                             catch (Exception e)
                             {
                                 result.AddError($"Error occurred during import. Exception: {e.Message}");
+                                onProgress.Invoke(result.Progress);
                                 throw;
                             }
 

@@ -19,7 +19,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -59,16 +58,15 @@ namespace Raven.Server.Documents.PeriodicBackup
         public async Task<IOperationResult> Execute(Action<IOperationProgress> onProgress)
         {
             var databaseName = _restoreConfiguration.DatabaseName;
+            var result = new RestoreResult
+            {
+                DataDirectory = _restoreConfiguration.DataDirectory
+            };
 
             try
             {
                 if (onProgress == null)
                     onProgress = _ => { };
-
-                var result = new RestoreResult
-                {
-                    DataDirectory = _restoreConfiguration.DataDirectory
-                };
 
                 Stopwatch sw = null;
                 RestoreSettings restoreSettings = null;
@@ -171,6 +169,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         SmugglerRestore(_restoreConfiguration.BackupLocation, database, context, databaseRecord, onProgress, result);
 
+                        result.DatabaseRecord.Processed = true;
                         result.Documents.Processed = true;
                         result.RevisionDocuments.Processed = true;
                         result.Conflicts.Processed = true;
@@ -213,13 +212,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 else
                 {
-                    using (_serverStore.DatabasesLandlord.UnloadAndLockDatabase(_restoreConfiguration.DatabaseName, "failed restore"))
-                    {
-                        var result = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
-                        await _serverStore.Cluster.WaitForIndexNotification(result.Index);
-                    }
+                    var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
+                    await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
                 }
-                
+
+                result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e.Message}");
+                onProgress.Invoke(result.Progress);
                 throw;
             }
             finally
@@ -264,42 +262,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 ImportSingleBackupFile(database, onProgress, null, lastPath, context, destination, smugglerOptions);
             }
+
             result.Identities.Processed = true;
             result.CompareExchange.Processed = true;
-        }
-
-        private async Task<long> WriteIdentitiesAsync(string databaseName, Dictionary<string, long> identities)
-        {
-            const int batchSize = 1024;
-
-            if (identities.Count <= batchSize)
-                return await SendIdentities(identities);
-
-            long index = 0;
-            var identitiesToSend = new Dictionary<string, long>();
-            foreach (var identity in identities)
-            {
-                identitiesToSend[identity.Key] = identity.Value;
-
-                if (identitiesToSend.Count < batchSize)
-                    continue;
-
-                index = await SendIdentities(identitiesToSend);
-            }
-
-            if (identitiesToSend.Count > 0)
-                index = await SendIdentities(identitiesToSend);
-
-            return index;
-
-            async Task<long> SendIdentities(Dictionary<string, long> toSend)
-            {
-                var result = await _serverStore.SendToLeaderAsync(new UpdateClusterIdentityCommand(databaseName, toSend));
-
-                toSend.Clear();
-
-                return result.Index;
-            }
         }
 
         private void ValidateArguments()
@@ -413,14 +378,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                 AuthorizationStatus = AuthorizationStatus.DatabaseAdmin,
                 OperateOnTypes = ~(DatabaseItemType.CompareExchange | DatabaseItemType.Identities)
             };
-            var oldOperateOnTypes = options.OperateOnTypes;
-            options.OperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
 
+            options.OperateOnTypes |= DatabaseItemType.LegacyDocumentDeletions;
+            options.OperateOnTypes |= DatabaseItemType.LegacyAttachments;
+            options.OperateOnTypes |= DatabaseItemType.LegacyAttachmentDeletions;
+
+            var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
             for (var i = 0; i < _filesToRestore.Count - 1; i++)
             {
                 var filePath = Path.Combine(backupDirectory, _filesToRestore[i]);
-                ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options);
+                ImportSingleBackupFile(database, onProgress, result, filePath, context, destination, options,
+                    onDatabaseRecordAction: smugglerDatabaseRecord =>
+                    {
+                        // need to enable revisions before import
+                        database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+                    });
             }
 
             options.OperateOnTypes = oldOperateOnTypes;
@@ -448,6 +421,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
+                },
+                onDatabaseRecordAction: smugglerDatabaseRecord =>
+                {
+                    // need to enable revisions before import
+                    database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
+
+                    databaseRecord.Revisions = smugglerDatabaseRecord.Revisions;
+                    databaseRecord.Expiration = smugglerDatabaseRecord.Expiration;
+                    databaseRecord.RavenConnectionStrings = smugglerDatabaseRecord.RavenConnectionStrings;
+                    databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
+                    databaseRecord.Client = smugglerDatabaseRecord.Client;
                 });
         }
 
@@ -455,7 +439,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             Action<IOperationProgress> onProgress, RestoreResult restoreResult,
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptionsServerSide options,
-            Action<IndexDefinitionAndType> onIndexAction = null)
+            Action<IndexDefinitionAndType> onIndexAction = null,
+            Action<DatabaseRecord> onDatabaseRecordAction = null)
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
             using (var stream = new GZipStream(new BufferedStream(fileStream, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
@@ -465,9 +450,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _operationCancelToken.Token)
                 {
                     OnIndexAction = onIndexAction,
+                    OnDatabaseRecordAction = onDatabaseRecordAction
                 };
 
-                smuggler.Execute();
+                smuggler.Execute(ensureStepsProcessed: false);
             }
         }
 
