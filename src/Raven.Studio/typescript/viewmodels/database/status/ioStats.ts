@@ -803,15 +803,7 @@ class ioStats extends viewModelBase {
             }
         }
 
-        // 3. Subscriptions path
-        const subscriptionsEnv = this.data.Environments.find(x => x.Type === "Subscriptions");
-        if (subscriptionsEnv) {
-            domain.push(subscriptionsEnv.Path);
-            range.push(currentOffset);
-            currentOffset += ioStats.openedTrackHeight + ioStats.trackMargin;
-        }
-
-        // 4. Configuration path
+        // 3. Configuration path
         const configurationEnv = this.data.Environments.find(x => x.Type === "Configuration");
         if (configurationEnv) {
             domain.push(configurationEnv.Path);
