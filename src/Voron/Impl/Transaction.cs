@@ -16,7 +16,7 @@ namespace Voron.Impl
     {
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
 
-        private readonly LowLevelTransaction _lowLevelTransaction;
+        private  LowLevelTransaction _lowLevelTransaction;
 
         public LowLevelTransaction LowLevelTransaction
         {
@@ -416,19 +416,19 @@ namespace Voron.Impl
             }
 
             _lowLevelTransaction?.Dispose();
+
+            _lowLevelTransaction = null;
         }
 
         public FixedSizeTree FixedTreeFor(string treeName)
         {
-            Slice treeNameSlice;
-            Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
+            Slice.From(Allocator, treeName, ByteStringType.Immutable, out var treeNameSlice);
             return FixedTreeFor(treeNameSlice);
         }
 
         public FixedSizeTree FixedTreeFor(string treeName, ushort valSize)
         {
-            Slice treeNameSlice;
-            Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
+            Slice.From(Allocator, treeName, ByteStringType.Immutable, out var treeNameSlice);
             return FixedTreeFor(treeNameSlice, valSize);
         }
 

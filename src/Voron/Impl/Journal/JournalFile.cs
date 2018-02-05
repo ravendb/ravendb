@@ -73,10 +73,9 @@ namespace Voron.Impl.Journal
 
         public void Dispose()
         {
-
-            GC.SuppressFinalize(this);
-
-
+            _unusedPagesHashSetPool.Clear();
+            _unusedPages.Clear();
+            _pageTranslationTable.Clear();
             _journalWriter = null;
         }
 

@@ -10,6 +10,6 @@ namespace Raven.Server.Indexing
             Transaction = transaction;
         }
 
-        public readonly Transaction Transaction;
+        public Transaction Transaction;
     }
 }

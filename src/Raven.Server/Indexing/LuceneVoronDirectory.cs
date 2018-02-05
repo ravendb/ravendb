@@ -148,10 +148,12 @@ namespace Raven.Server.Indexing
             if (tx == null)
                 throw new ArgumentNullException(nameof(tx));
 
-            state = StateHolder.Current.Value = new VoronState(tx);
+            var currentValue = new VoronState(tx);
+            state = StateHolder.Current.Value = currentValue;
 
             return new DisposableAction(() =>
             {
+                currentValue.Transaction = null;
                 StateHolder.Current.Value = null;
             });
         }

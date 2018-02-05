@@ -65,7 +65,7 @@ namespace Sparrow
 
     public struct NumericComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
     {
-        public static readonly NumericComparer Instance = new NumericComparer();
+        public static readonly IComparer<long> BoxedInstanceInt64 = new NumericComparer();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(long x, long y)
@@ -96,7 +96,7 @@ namespace Sparrow
 
     public struct NumericDescendingComparer : IComparer<long>, IComparer<int>, IComparer<uint>, IComparer<ulong>
     {
-        public static readonly NumericDescendingComparer Instance = new NumericDescendingComparer();
+        public static readonly IComparer<long> BoxedInstanceInt64 = new NumericDescendingComparer();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(long x, long y)

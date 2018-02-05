@@ -17,9 +17,18 @@ namespace Voron.Util
     public class PageTable
     {
         private readonly ConcurrentDictionary<long, PagesBuffer> _values = new ConcurrentDictionary<long, PagesBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
-        private readonly SortedList<long, Dictionary<long, PagePosition>> _transactionPages = new SortedList<long, Dictionary<long, PagePosition>>();
+        private readonly SortedList<long, Dictionary<long, PagePosition>> _transactionPages = new SortedList<long, Dictionary<long, PagePosition>>(NumericComparer.BoxedInstanceInt64);
         private long _maxSeenTransaction;
 
+        public void Clear()
+        {
+            lock (_transactionPages)
+            {
+                _values.Clear();
+                _transactionPages.Clear();    
+            }
+        }
+        
         private class PagesBuffer
         {
             public readonly PagePosition[] PagePositions;
@@ -91,8 +100,7 @@ namespace Voron.Util
             // here we rely on the fact that only one thread can update the concurrent dictionary
             foreach (var item in items)
             {
-                PagesBuffer value;
-                if (_values.TryGetValue(item.Key, out value) == false)
+                if (_values.TryGetValue(item.Key, out var value) == false)
                 {
                     value = new PagesBuffer(new PagePosition[2], null);
                     _values.TryAdd(item.Key, value);
@@ -140,8 +148,7 @@ namespace Voron.Util
 
         public bool TryGetValue(LowLevelTransaction tx, long page, out PagePosition value)
         {
-            PagesBuffer bufferHolder;
-            if (_values.TryGetValue(page, out bufferHolder) == false )
+            if (_values.TryGetValue(page, out var bufferHolder) == false )
             {
                 value = null;
                 return false;
