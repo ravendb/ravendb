@@ -58,8 +58,8 @@ namespace Voron.Impl.Backup
         /// <summary>
         /// Do a full backup of a set of environments. Note that the order of the environments matter!
         /// </summary>
-        public void ToFile(IEnumerable<StorageEnvironmentInformation> envs, 
-            ZipArchive package,
+        public void ToFile(IEnumerable<StorageEnvironmentInformation> envs,
+            ZipArchive archive,
             CompressionLevel compression = CompressionLevel.Optimal,
             Action<string> infoNotify = null,
             Action backupStarted = null)
@@ -72,11 +72,16 @@ namespace Voron.Impl.Backup
             {
                 infoNotify("Voron backup " + e.Name + "started");
                 var basePath = Path.Combine(e.Folder, e.Name);
-                var env = e.Env;
-                var dataPager = env.Options.DataPager;
-                var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                Backup(env, compression, infoNotify, backupStarted, dataPager, package, basePath,
-                    copier);
+
+                var envEntry = archive.CreateEntry($"{basePath}.zip", compression);
+                using (var envEntryStream = envEntry.Open())
+                using (var envArchive = new ZipArchive(envEntryStream, ZipArchiveMode.Create, leaveOpen: true))
+                {
+                    var env = e.Env;
+                    var dataPager = env.Options.DataPager;
+                    var copier = new DataCopier(Constants.Storage.PageSize * 16);
+                    Backup(env, CompressionLevel.NoCompression, infoNotify, backupStarted, dataPager, envArchive, basePath, copier);
+                }
             }
 
             infoNotify("Voron backup db finished");
@@ -142,7 +147,7 @@ namespace Voron.Impl.Backup
                 backupStarted?.Invoke();
 
                 // data file backup
-                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compression);
+                var dataPart = package.CreateEntry(Constants.DatabaseFilename, compression);
                 Debug.Assert(dataPart != null);
 
                 if (allocatedPages > 0) //only true if dataPager is still empty at backup start
@@ -159,15 +164,7 @@ namespace Voron.Impl.Backup
                     long lastBackedupJournal = 0;
                     foreach (var journalFile in usedJournals)
                     {
-                        var journalPath = env.Options.GetJournalPath(journalFile.Number).FullPath;
-                        var journalBasePath = basePath;
-                        var journalDirectoryName = new DirectoryInfo(journalPath).Parent.Name;
-                        if (journalDirectoryName.Equals("Journal", StringComparison.OrdinalIgnoreCase))
-                        {
-                            journalBasePath = "Journal";
-                        }
-
-                        var entryName = Path.Combine(journalBasePath, StorageEnvironmentOptions.JournalName(journalFile.Number));
+                        var entryName = StorageEnvironmentOptions.JournalName(journalFile.Number);
                         var journalPart = package.CreateEntry(entryName, compression);
 
                         Debug.Assert(journalPart != null);
@@ -226,17 +223,22 @@ namespace Voron.Impl.Backup
             }
         }
 
-        public void Restore(string backupPath, 
-            string voronDataDir, 
-            string journalDir = null, 
-            string settingsKey = null,
-            Action<Stream> onSettings = null,
+        public void Restore(string backupPath,
+            string voronDataDir,
+            string journalDir = null,
             Action<string> onProgress = null,
-            CancellationToken? cancellationToken = null)
+            CancellationToken cancellationToken = default)
         {
-            if (cancellationToken == null)
-                cancellationToken = CancellationToken.None;
+            using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+                Restore(zip, voronDataDir, journalDir, onProgress, cancellationToken);
+        }
 
+        public void Restore(ZipArchive backupArchive,
+            string voronDataDir,
+            string journalDir = null,
+            Action<string> onProgress = null,
+            CancellationToken cancellationToken = default)
+        {
             journalDir = journalDir ?? voronDataDir;
 
             if (Directory.Exists(voronDataDir) == false)
@@ -247,39 +249,27 @@ namespace Voron.Impl.Backup
 
             onProgress?.Invoke("Starting snapshot restore");
 
-            using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
+            foreach (var entry in backupArchive.Entries)
             {
-                foreach (var entry in zip.Entries)
+                var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
+
+                var sw = Stopwatch.StartNew();
+
+                var folder = Path.Combine(dst, Path.GetDirectoryName(entry.FullName));
+                if (Directory.Exists(folder) == false)
                 {
-                    var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
-
-                    if (settingsKey != null && entry.Name == settingsKey)
-                    {
-                        using (var input = entry.Open())
-                        {
-                            onSettings?.Invoke(input);
-                        }
-                        continue;
-                    }
-
-                    var sw = Stopwatch.StartNew();
-
-                    var folder = Path.Combine(dst, Path.GetDirectoryName(entry.FullName));
-                    if (Directory.Exists(folder) == false)
-                    {
-                        Directory.CreateDirectory(folder);
-                    }
-
-                    using (var input = entry.Open())
-                    using (var output = SafeFileStream.Create(Path.Combine(folder, entry.Name), FileMode.CreateNew))
-                    {
-                        input.CopyTo(output, cancellationToken.Value);
-                    }
-
-                    onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{folder}', " +
-                                       $"size in bytes: {entry.Length:#,#;;0}, " +
-                                       $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
+                    Directory.CreateDirectory(folder);
                 }
+
+                using (var input = entry.Open())
+                using (var output = SafeFileStream.Create(Path.Combine(folder, entry.Name), FileMode.CreateNew))
+                {
+                    input.CopyTo(output, cancellationToken);
+                }
+
+                onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{folder}', " +
+                                   $"size in bytes: {entry.Length:#,#;;0}, " +
+                                   $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
             }
         }
     }

@@ -26,8 +26,6 @@ namespace FastTests.Issues
 
             Assert.Equal(new PathSetting("RavenData/MyWork/MyDatabaseFolder").FullPath, database.Core.DataDirectory.FullPath);
             Assert.Equal(new PathSetting("RavenData/MyWork/MyDatabaseFolder/Indexes").FullPath, database.Indexing.StoragePath.FullPath);
-
-            Assert.Equal(new PathSetting("RavenData/MyWork/MyDatabaseFolder/Journal").FullPath, database.Core.DataDirectory.Combine("Journal").FullPath);
         }
     }
 }

@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes
 
         private PoolOfThreads.LongRunningWork _indexingThread;
 
-        private bool _initialized;        
+        private bool _initialized;
 
         protected UnmanagedBuffersPoolWithLowMemoryHandling _unmanagedBuffersPool;
 
@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Indexes
                 options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                 options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
                 options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-                
+
                 environment = new StorageEnvironment(options);
 
                 IndexType type;
@@ -489,7 +489,7 @@ namespace Raven.Server.Documents.Indexes
                 if (LastIndexingTime != null)
                     _didWork = true;
 
-                _initialized = true;                
+                _initialized = true;
             }
             catch (Exception)
             {
@@ -565,9 +565,9 @@ namespace Raven.Server.Documents.Indexes
                     }
                 }
             }, null, IndexingThreadName);
-            
 
-            
+
+
         }
 
         public virtual void Stop(bool disableIndex = false)
@@ -1366,7 +1366,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                     finally
                     {
-                        if(writeOperation.IsValueCreated)
+                        if (writeOperation.IsValueCreated)
                             writeOperation.Value.Dispose();
                     }
 
@@ -2661,11 +2661,11 @@ namespace Raven.Server.Documents.Indexes
                 var canContinue = true;
 
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(
-                    _threadAllocations, 
+                    _threadAllocations,
                     ref _currentMaximumAllowedMemory,
                     allocated,
-                    _environment.Options.RunningOn32Bits, 
-                    _logger, 
+                    _environment.Options.RunningOn32Bits,
+                    _logger,
                     out ProcessMemoryUsage memoryUsage) == false)
                 {
                     _allocationCleanupNeeded = true;
@@ -2727,7 +2727,7 @@ namespace Raven.Server.Documents.Indexes
                     srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
                     srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                     srcOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
-                    srcOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError; 
+                    srcOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
 
 
@@ -2743,7 +2743,7 @@ namespace Raven.Server.Documents.Indexes
                         compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                         compactOptions.MasterKey = DocumentDatabase.MasterKey?.ToArray();//clone
                         compactOptions.DoNotConsiderMemoryLockFailureAsCatastrophicError = DocumentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
-                        
+
                         StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
                         {
                             result.Progress.TreeProgress = progressReport.TreeProgress;

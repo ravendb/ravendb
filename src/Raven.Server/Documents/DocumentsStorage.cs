@@ -243,14 +243,6 @@ namespace Raven.Server.Documents
 
         public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification)
         {
-            var basePath = config.Core.DataDirectory;
-
-            var tempPath = config.Storage.TempPath != null
-                ? config.Storage.TempPath.FullPath
-                : basePath.Combine("Scratch").FullPath;
-
-            var journalPath = basePath.Combine("Journal").FullPath;
-
             if (config.Core.RunInMemory)
                 return StorageEnvironmentOptions.CreateMemoryOnly(
                     config.Core.DataDirectory.FullPath,
@@ -260,8 +252,8 @@ namespace Raven.Server.Documents
 
             return StorageEnvironmentOptions.ForPath(
                 config.Core.DataDirectory.FullPath,
-                tempPath,
-                journalPath,
+                config.Storage.TempPath?.FullPath,
+                null,
                 ioChanges,
                 catastrophicFailureNotification
             );
