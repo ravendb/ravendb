@@ -140,6 +140,13 @@ namespace Sparrow.Json.Parsing
             return (count == amountToCopy, (int)amountToCopy);
         }
 
+        public (bool Done, int BytesRead) Skip(int count)
+        {
+            var amountToCopy = Math.Min(count, _bufSize - _pos);
+            _pos += (uint)amountToCopy;
+            return (count == amountToCopy, (int)amountToCopy);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Read()
         {
