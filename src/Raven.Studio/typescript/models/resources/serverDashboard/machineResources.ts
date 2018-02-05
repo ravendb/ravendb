@@ -1,18 +1,26 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
+import serverTime = require("common/helpers/database/serverTime");
 
 class machineResources {
     machineCpuUsage = ko.observable<number>(0);
+    systemCommitLimit = ko.observable<number>(0);
+    commitedMemory = ko.observable<number>(0);
     processCpuUsage = ko.observable<number>(0);
-    machineMemoryUsage = ko.observable<number>(0);
     processMemoryUsage = ko.observable<number>(0);
     totalMemory = ko.observable<number>(0);
     
     machineCpuUsageClass: KnockoutComputed<string>;
     processCpuUsageClass: KnockoutComputed<string>;
     machineMemoryUsageClass: KnockoutComputed<string>;
+    commitedMemoryUsageClass: KnockoutComputed<string>;
     processMemoryUsageClass: KnockoutComputed<string>;
-    
+
+    isLinux = ko.observable<boolean>();
+    processUsageTooltip: KnockoutComputed<string>;
+
     constructor(dto: Raven.Server.Dashboard.MachineResources) {
+        this.isLinux = serverTime.default.isLinux;
+
         this.update(dto);
         
         this.machineCpuUsageClass = ko.pureComputed(() => {
@@ -24,9 +32,9 @@ class machineResources {
             const usage = this.processCpuUsage();
             return this.getCpuUsageClass(usage);
         });
-        
-        this.machineMemoryUsageClass = ko.pureComputed(() => {
-            const used = this.machineMemoryUsage();
+
+        this.commitedMemoryUsageClass = ko.pureComputed(() => {
+            const used = this.commitedMemory();
             return this.getMemoryUsageClass(used);
         });
 
@@ -34,12 +42,17 @@ class machineResources {
             const used = this.processMemoryUsage();
             return this.getMemoryUsageClass(used);
         });
+
+        this.processUsageTooltip = ko.pureComputed(() => {
+            return this.isLinux() ? "RavenDB Resident Memory" : "RavenDB Memory Usage";
+        });
     }
     
     update(dto: Raven.Server.Dashboard.MachineResources) {
         this.machineCpuUsage(dto.MachineCpuUsage);
         this.processCpuUsage(dto.ProcessCpuUsage);
-        this.machineMemoryUsage(dto.MachineMemoryUsage);
+        this.systemCommitLimit(dto.SystemCommitLimit);
+        this.commitedMemory(dto.CommitedMemory);
         this.processMemoryUsage(dto.ProcessMemoryUsage);
         this.totalMemory(dto.TotalMemory);
     }

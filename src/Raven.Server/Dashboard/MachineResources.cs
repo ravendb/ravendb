@@ -12,11 +12,11 @@ namespace Raven.Server.Dashboard
 
         public long TotalMemory { get; set; } // in bytes
 
-        public long MachineMemoryUsage { get; set; } // in bytes
+        public long SystemCommitLimit { get; set; } // in bytes
+
+        public long CommitedMemory { get; set; } // in bytes
 
         public long ProcessMemoryUsage { get; set; } // in bytes
-
-        public long ProcessMemoryExcludingSharedUsage { get; set; } // in bytes
 
         public override DynamicJsonValue ToJson()
         {
@@ -25,9 +25,9 @@ namespace Raven.Server.Dashboard
             json[nameof(MachineCpuUsage)] = MachineCpuUsage;
             json[nameof(ProcessCpuUsage)] = ProcessCpuUsage;
             json[nameof(TotalMemory)] = TotalMemory;
-            json[nameof(MachineMemoryUsage)] = MachineMemoryUsage;
+            json[nameof(SystemCommitLimit)] = SystemCommitLimit;
+            json[nameof(CommitedMemory)] = CommitedMemory;
             json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
-            json[nameof(ProcessMemoryExcludingSharedUsage)] = ProcessMemoryExcludingSharedUsage;
 
             return json;
         }

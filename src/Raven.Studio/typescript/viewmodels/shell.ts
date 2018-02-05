@@ -323,6 +323,7 @@ class shell extends viewModelBase {
                
                 serverTime.default.calcTimeDifference(response.getResponseHeader("Date"));
                 serverTime.default.setStartUpTime(response.getResponseHeader("Server-Startup-Time"));
+                serverTime.default.setIsLinux(response.getResponseHeader("IsLinux"));
                 
                 buildInfo.serverBuildVersion(serverBuildResult);
 
