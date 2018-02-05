@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -234,9 +235,20 @@ namespace Raven.Server.Documents
             {
                 Initialize(options);
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 options.Dispose();
+
+                if (DocumentDatabase.Configuration.Core.RunInMemory == false && e.Message.StartsWith("No such journal", StringComparison.Ordinal))
+                {
+                    var dataDirectory = DocumentDatabase.Configuration.Core.DataDirectory;
+                    var oldJournalsDirectory = dataDirectory.Combine("Journal");
+                    if (Directory.Exists(oldJournalsDirectory.FullPath))
+                        throw new InvalidOperationException(
+                            "We could not find a journal file, but we have detected that you might have a pre-RTM directory layout. Please move all journals from 'Journal' directory to directory where '.voron' file is and reload the database.",
+                            e);
+                }
+
                 throw;
             }
         }
