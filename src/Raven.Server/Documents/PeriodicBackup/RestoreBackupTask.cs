@@ -482,9 +482,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         using (var entryArchive = new ZipArchive(entryStream, ZipArchiveMode.Read, leaveOpen: true))
                         {
                             var restoreDirectory = dataDirectory;
-                            if (string.Equals(entryFileNameWithoutExtension, "Indexes", StringComparison.OrdinalIgnoreCase))
-                                restoreDirectory = Path.Combine(restoreDirectory, "Indexes");
-                            else if (string.Equals(entryFileNameWithoutExtension, "Configuration", StringComparison.OrdinalIgnoreCase))
+                            if (string.Equals(entryFileNameWithoutExtension, "Configuration", StringComparison.OrdinalIgnoreCase))
                                 restoreDirectory = Path.Combine(restoreDirectory, "Configuration");
                             else if (string.Equals(entryInfo.Directory?.Name, "Indexes", StringComparison.OrdinalIgnoreCase))
                                 restoreDirectory = Path.Combine(restoreDirectory, "Indexes", entryFileNameWithoutExtension);
