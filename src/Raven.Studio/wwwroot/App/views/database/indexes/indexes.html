@@ -357,7 +357,7 @@
             </div>
         </div>
 
-        <div data-bind="with: progress">
+        <div data-bind="with: progress, visible: !isErrorState()">
             <hr class="small" />
             <div class="progress-container">
                 <div class="progress-overall">
