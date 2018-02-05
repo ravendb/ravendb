@@ -241,7 +241,7 @@ namespace Raven.Server.Documents
                 TxMerger.Start();
                 _addToInitLog("Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
-                
+
                 if ((options & InitializeOptions.SkipLoadingDatabaseRecord) == InitializeOptions.SkipLoadingDatabaseRecord)
                     return;
 
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents
                     _addToInitLog("Initializing IndexStore completed");
                     _indexStoreTask = null;
                 }
-               
+
                 SubscriptionStorage.Initialize();
                 _addToInitLog("Initializing SubscriptionStorage completed");
 
@@ -435,7 +435,7 @@ namespace Raven.Server.Documents
                 {
                     NotificationCenter?.Dispose();
                 });
-                
+
                 exceptionAggregator.Execute(() =>
                 {
                     SubscriptionStorage?.Dispose();
@@ -566,23 +566,38 @@ namespace Raven.Server.Documents
         private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesEnvironmentInformation()
         {
             var i = 1;
-            foreach (var index in IndexStore.GetIndexes())
+            foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment())
             {
-                var env = index._indexStorage.Environment();
-                if (env != null)
-                    yield return new FullBackup.StorageEnvironmentInformation
-                    {
-                        Name = i++.ToString(),
-                        Folder = "Indexes",
-                        Env = env
-                    };
+                switch (storageEnvironmentWithType.Type)
+                {
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
+                        yield return new FullBackup.StorageEnvironmentInformation
+                        {
+                            Name = string.Empty,
+                            Folder = string.Empty,
+                            Env = storageEnvironmentWithType.Environment
+                        };
+                        break;
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Index:
+                        yield return new FullBackup.StorageEnvironmentInformation
+                        {
+                            Name = i++.ToString(),
+                            Folder = "Indexes",
+                            Env = storageEnvironmentWithType.Environment
+                        };
+                        break;
+                    case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
+                        yield return new FullBackup.StorageEnvironmentInformation
+                        {
+                            Name = string.Empty,
+                            Folder = "Configuration",
+                            Env = storageEnvironmentWithType.Environment
+                        };
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
-            yield return new FullBackup.StorageEnvironmentInformation
-            {
-                Name = "",
-                Folder = "",
-                Env = DocumentsStorage.Environment
-            };
         }
 
         public void FullBackupTo(string backupPath)
@@ -615,7 +630,7 @@ namespace Raven.Server.Documents
                             options: databaseSmugglerOptionsServerSide);
 
                         smuggler.Execute();
-                    } 
+                    }
                 }
 
                 zipArchiveEntry = package.CreateEntry(RestoreSettings.SettingsFileName, CompressionLevel.Optimal);
@@ -692,7 +707,7 @@ namespace Raven.Server.Documents
                 RachisLogIndexNotifications.NotifyListenersAbout(index, null);
 
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 RachisLogIndexNotifications.NotifyListenersAbout(index, e);
 
@@ -816,17 +831,17 @@ namespace Raven.Server.Documents
         }
 
         public string WhoseTaskIsIt(
-            DatabaseTopology databaseTopology, 
-            IDatabaseTask configuration, 
-            IDatabaseTaskStatus taskStatus, 
+            DatabaseTopology databaseTopology,
+            IDatabaseTask configuration,
+            IDatabaseTaskStatus taskStatus,
             bool useLastResponsibleNodeIfNoAvailableNodes = false)
         {
             var whoseTaskIsIt = databaseTopology.WhoseTaskIsIt(
                 ServerStore.Engine.CurrentState, configuration,
                 getLastReponsibleNode:
                 () => ServerStore.LicenseManager.GetLastResponsibleNodeForTask(
-                    taskStatus, 
-                    databaseTopology, 
+                    taskStatus,
+                    databaseTopology,
                     configuration,
                     NotificationCenter));
 
@@ -868,7 +883,7 @@ namespace Raven.Server.Documents
             long sizeOnDiskInBytes = 0;
             foreach (var environment in storageEnvironments)
             {
-                if(environment == null)
+                if (environment == null)
                     continue;
 
                 Transaction tx = null;
@@ -985,7 +1000,6 @@ namespace Raven.Server.Documents
         public enum StorageEnvironmentType
         {
             Documents,
-            Subscriptions,
             Index,
             Configuration
         }
