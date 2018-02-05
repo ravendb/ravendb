@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Lambda2Js;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -1558,7 +1559,7 @@ namespace Raven.Client.Util
 
         public class IdentityPropertySupport : JavascriptConversionExtension
         {
-            public Dictionary<string, string> AliasesToIdProperty { get; set; }
+            public DocumentConventions Conventions { get; set; }
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {                
@@ -1566,8 +1567,7 @@ namespace Raven.Client.Util
                     return;
 
                 if (member.Expression is ParameterExpression parameter 
-                    && AliasesToIdProperty.TryGetValue(parameter.Name , out var id) 
-                    && id == member.Member.Name)
+                    && Conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();
@@ -1584,9 +1584,8 @@ namespace Raven.Client.Util
 
                 var p = GetParameter(innerMember);
 
-                if (p != null && p.StartsWith("<>h__TransparentIdentifier") 
-                    && AliasesToIdProperty.TryGetValue(innerMember.Member.Name, out id)
-                    && id == member.Member.Name)
+                if (p != null && p.StartsWith("<>h__TransparentIdentifier")
+                    && Conventions.GetIdentityProperty(member.Member.DeclaringType) == member.Member)
                 {
                     var writer = context.GetWriter();
                     context.PreventDefault();

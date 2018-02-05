@@ -54,7 +54,6 @@ namespace Raven.Client.Documents.Linq
         private StringBuilder _declareBuilder;
         private DeclareToken _declareToken;
         private List<LoadToken> _loadTokens;
-        private readonly Dictionary<string, string> _aliasesToIdPropery;
         private readonly HashSet<string> _loadAliasesMovedToOutputFuction;
         private int _insideLet = 0;
         private readonly HashSet<string> _aliasKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -109,7 +108,6 @@ namespace Raven.Client.Documents.Linq
             _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
             _jsProjectionNames = new List<string>();
-            _aliasesToIdPropery = new Dictionary<string, string>();
             _loadAliasesMovedToOutputFuction = new HashSet<string>();
         }
 
@@ -1974,7 +1972,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.NewSupport(),
                     new JavascriptConversionExtensions.ListInitSupport(),
                     new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                    new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
+                    new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions },
                     MemberInitAsJson.ForAllTypes,
                     loadSupport));
 
@@ -2067,7 +2065,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 else
                 {
                     _loadTokens.Add(LoadToken.Create(arg, name));
-                    _aliasesToIdPropery.Add(name, id);
                 }
                 return;
             }
@@ -2086,7 +2083,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 doc = $"_doc_{_loadTokens.Count}";
                 _loadTokens.Add(LoadToken.Create(arg, doc));
-                _aliasesToIdPropery.Add(name, id);
             }
 
             //add name to the list of aliases that were moved to the output function
@@ -2119,7 +2115,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             _fromAlias = alias;
             _documentQuery.AddFromAliasToWhereTokens(_fromAlias);
             var id = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType)?.Name ?? "Id";
-            _aliasesToIdPropery.Add(_fromAlias, id);
         }
 
         private string TranslateSelectBodyToJs(Expression expression)
@@ -2213,7 +2208,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     new JavascriptConversionExtensions.NewSupport(),
                     new JavascriptConversionExtensions.ListInitSupport(),
                     new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                    new JavascriptConversionExtensions.IdentityPropertySupport { AliasesToIdProperty = _aliasesToIdPropery },
+                    new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions },
                     MemberInitAsJson.ForAllTypes));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
