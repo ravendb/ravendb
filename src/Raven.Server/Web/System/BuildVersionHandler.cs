@@ -22,8 +22,7 @@ namespace Raven.Server.Web.System
     {
         private static readonly Lazy<byte[]> VersionBuffer = new Lazy<byte[]>(GetVersionBuffer);
 
-        private static readonly string IsLinux = 
-            (PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false).ToString();
+        private static readonly bool IsLinux = PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false;
 
         private static byte[] GetVersionBuffer()
         {
@@ -49,7 +48,7 @@ namespace Raven.Server.Web.System
         public async Task Get()
         {
             HttpContext.Response.Headers.Add(Constants.Headers.ServerStartupTime, ServerStore.Server.Statistics.StartUpTime.GetDefaultRavenFormat(isUtc: true));
-            HttpContext.Response.Headers.Add(Constants.Headers.IsLinux, IsLinux);
+            HttpContext.Response.Headers.Add(Constants.Headers.IsLinux, IsLinux.ToString());
             
             var versionBuffer = VersionBuffer.Value;
             await ResponseBodyStream().WriteAsync(versionBuffer, 0, versionBuffer.Length);
