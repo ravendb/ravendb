@@ -115,6 +115,7 @@ namespace Voron.Data.Compression
                 {
                     buffer.EnsureValidPointer(tx);
                     tmp = buffer.TempPage;
+                    break;
                 }
                 catch (ObjectDisposedException)
                 {
