@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Expiration;
@@ -30,6 +31,7 @@ namespace Raven.Server.Smuggler.Documents
         private CancellationToken _token;
 
         public Action<IndexDefinitionAndType> OnIndexAction;
+        public Action<DatabaseRecord> OnDatabaseRecordAction;
         public Action<(string Prefix, long Value)> OnIdentityAction;
 
         public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, 
@@ -61,7 +63,7 @@ namespace Raven.Server.Smuggler.Documents
                 var currentType = _source.GetNextType();
                 while (currentType != DatabaseItemType.None)
                 {
-                    ProcessType(currentType, result, buildType);
+                    ProcessType(currentType, result, buildType, ensureStepsProcessed);
 
                     currentType = _source.GetNextType();
                 }
@@ -98,7 +100,7 @@ namespace Raven.Server.Smuggler.Documents
             counts.Skipped = true;
         }
 
-        private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType)
+        private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType, bool ensureStepsProcessed = true)
         {
             if ((_options.OperateOnTypes & type) != type)
             {
@@ -108,7 +110,7 @@ namespace Raven.Server.Smuggler.Documents
                         // process only those when we are processing documents
                         if ((_options.OperateOnTypes & DatabaseItemType.Documents) != DatabaseItemType.Documents)
                         {
-                            SkipType(type, result);
+                            SkipType(type, result, ensureStepsProcessed);
                             return;
                         }
                         break;
@@ -117,7 +119,7 @@ namespace Raven.Server.Smuggler.Documents
                         // we cannot skip those?
                         break;
                     default:
-                        SkipType(type, result);
+                        SkipType(type, result, ensureStepsProcessed);
                         return;
                 }
             }
@@ -174,7 +176,7 @@ namespace Raven.Server.Smuggler.Documents
             _onProgress.Invoke(result.Progress);
         }
 
-        private void SkipType(DatabaseItemType type, SmugglerResult result)
+        private void SkipType(DatabaseItemType type, SmugglerResult result, bool ensureStepProcessed = true)
         {
             result.AddInfo($"Skipping '{type}' processing.");
             _onProgress.Invoke(result.Progress);
@@ -223,6 +225,9 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             var numberOfItemsSkipped = _source.SkipType(type, onSkipped: OnSkipped);
+
+            if (ensureStepProcessed == false)
+                return;
 
             counts.Skipped = true;
             counts.Processed = true;
@@ -412,7 +417,13 @@ namespace Raven.Server.Smuggler.Documents
                 var databaseRecord = _source.GetDatabaseRecord();
 
                 _token.ThrowIfCancellationRequested();
-                
+
+                if (OnDatabaseRecordAction != null)
+                {
+                    OnDatabaseRecordAction(databaseRecord);
+                    return new SmugglerProgressBase.DatabaseRecordProgress();
+                }
+
                 try
                 {
                     actions.WriteDatabaseRecord(databaseRecord, result.DatabaseRecord, _options.AuthorizationStatus);
