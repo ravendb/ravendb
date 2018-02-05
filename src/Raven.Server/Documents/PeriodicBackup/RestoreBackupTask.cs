@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             BackupMethods.Full.Restore(
                 backupPath,
                 dataDirectory,
-                journalDir: Path.Combine(dataDirectory, "Journal"),
+                journalDir: null,
                 settingsKey: RestoreSettings.SettingsFileName,
                 onSettings: settingsStream =>
                 {
