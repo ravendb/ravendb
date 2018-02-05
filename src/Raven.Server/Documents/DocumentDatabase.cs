@@ -565,7 +565,6 @@ namespace Raven.Server.Documents
 
         private IEnumerable<FullBackup.StorageEnvironmentInformation> GetAllStoragesForBackup()
         {
-            var i = 1;
             foreach (var storageEnvironmentWithType in GetAllStoragesEnvironment())
             {
                 switch (storageEnvironmentWithType.Type)
