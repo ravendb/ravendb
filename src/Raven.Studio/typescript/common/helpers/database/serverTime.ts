@@ -6,8 +6,7 @@ class serverTime {
 
     serverTimeDifference = ko.observable<number>();
     startUpTime = ko.observable<moment.Moment>();
-    isLinux = ko.observable<boolean>();
-    
+
     calcTimeDifference(serverDate: string) {
         const now = moment.utc();
         this.serverTimeDifference(now.diff(moment.utc(serverDate)));   
@@ -15,10 +14,6 @@ class serverTime {
 
     setStartUpTime(startUpTime: string) {
         this.startUpTime(moment.utc(startUpTime));
-    }
-
-    setIsLinux(isLinux: string) {
-        this.isLinux(isLinux.toLowerCase() === "true");
     }
 
     getAdjustedTime(time: moment.Moment): moment.Moment { 
