@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.BulkInsert;
+using Raven.Client.Extensions;
 using Raven.Client.Json;
 using Sparrow;
 using Xunit;
@@ -95,7 +96,7 @@ namespace FastTests.Client.BulkInsert
         [Fact]
         public async Task KilledTooEarly()
         {
-            await Assert.ThrowsAsync<BulkInsertAbortedException>(async () =>
+            var exception = await Assert.ThrowsAnyAsync<Exception>(async () =>
             {
                 using (var store = GetDocumentStore())
                 {
@@ -107,6 +108,11 @@ namespace FastTests.Client.BulkInsert
                     }
                 }
             });
+
+            if (exception is AggregateException ae)
+                exception = ae.ExtractSingleInnerException();
+
+            Assert.True(exception is BulkInsertAbortedException);
         }
 
         [Fact]
