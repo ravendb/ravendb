@@ -109,10 +109,6 @@ namespace Raven.Server.Smuggler.Documents
             var databaseRecord = new DatabaseRecord();
             ReadObject(reader =>
             {
-
-
-
-
                 if (reader.TryGet(nameof(databaseRecord.Revisions), out BlittableJsonReaderObject revisions) &&
                     revisions != null)
                 {
@@ -452,6 +448,29 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
+        private void SkipAttachmentStream(BlittableJsonReaderObject data)
+        {
+            if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue _) == false ||
+                data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
+                data.TryGet(nameof(DocumentItem.AttachmentStream.Tag), out LazyStringValue _) == false)
+                throw new ArgumentException($"Data of attachment stream is not valid: {data}");
+
+            while (size > 0)
+            {
+                var sizeToRead = (int)Math.Min(32 * 1024, size);
+                var read = _parser.Skip(sizeToRead);
+                if (read.Done == false)
+                {
+                    var read2 = _peepingTomStream.Read(_buffer.Buffer.Array, _buffer.Buffer.Offset, _buffer.Length);
+                    if (read2 == 0)
+                        throw new EndOfStreamException("Stream ended without reaching end of stream content");
+
+                    _parser.SetBuffer(_buffer, 0, read2);
+                }
+                size -= read.BytesRead;
+            }
+        }
+
         private long SkipObject(Action<long> onSkipped = null)
         {
             var count = 1;
@@ -494,9 +513,19 @@ namespace Raven.Server.Smuggler.Documents
 
                     ReadObject(builder);
 
-                    var reader = builder.CreateReader();
+                    var data = builder.CreateReader();
                     builder.Reset();
-                    yield return reader;
+
+                    if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                        metadata.TryGet(DocumentItem.ExportDocumentType.Key, out string type) &&
+                        type == DocumentItem.ExportDocumentType.Attachment)
+                    {
+                        // skip document attachments, documents with attachments are handled separately
+                        SkipAttachmentStream(data);
+                        continue;
+                    }
+
+                    yield return data;
                 }
             }
             finally
