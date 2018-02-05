@@ -104,6 +104,28 @@ class ongoingTasks extends viewModelBase {
                 this.graph.onTasksChanged(info);
             });
     }
+    
+    private watchBackupCompletion(task: ongoingTaskBackupListModel) {
+        let interval = setInterval(() => {
+            task.refreshBackupInfo()
+                .done(result => {
+                    if (!result.OnGoingBackup) {
+                        
+                        clearInterval(interval);
+                        interval = 0;
+                    }
+                })
+        }, 3000);
+        
+        
+        this.registerDisposable({
+            dispose: () => {
+                if (interval) {
+                    clearInterval(interval);
+                }
+            }
+        });
+    }
 
     private processTasksResult(result: Raven.Server.Web.System.OngoingTasksResult) { 
         this.replicationTasks([]);
@@ -128,7 +150,7 @@ class ongoingTasks extends viewModelBase {
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup));
+                    this.backupTasks.push(new ongoingTaskBackupListModel(task as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, task => this.watchBackupCompletion(task)));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
