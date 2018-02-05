@@ -50,6 +50,8 @@ namespace Sparrow
 
     public struct StringSegmentEqualityStructComparer : IEqualityComparer<StringSegment>
     {
+        public static IEqualityComparer<StringSegment> BoxedInstance = new StringSegmentEqualityComparer();
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(StringSegment x, StringSegment y)
         {

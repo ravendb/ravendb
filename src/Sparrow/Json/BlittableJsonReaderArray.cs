@@ -84,14 +84,11 @@ namespace Sparrow.Json
             if (obj == null)
                 return null;
 
-            var lazyStringValue = obj as LazyStringValue;
-            if (lazyStringValue != (LazyStringValue)null)
+            if (obj is LazyStringValue lazyStringValue)
                 return (string)lazyStringValue;
-            var lazyCompressedStringValue = obj as LazyCompressedStringValue;
-            if (lazyCompressedStringValue != null)
+            if (obj is LazyCompressedStringValue lazyCompressedStringValue)
                 return lazyCompressedStringValue;
-            string result;
-            BlittableJsonReaderObject.ConvertType(obj, out result);
+            BlittableJsonReaderObject.ConvertType(obj, out string result);
             return result;
 
         }
@@ -121,15 +118,14 @@ namespace Sparrow.Json
             result = Tuple.Create(_parent.GetObject((BlittableJsonToken)token,
                 (int)(_dataStart - _parent.BasePointer - offset)), (BlittableJsonToken)token & TypesMask);
 
-            var blittableJsonReaderBase = result.Item1 as BlittableJsonReaderBase;
-            if (blittableJsonReaderBase  != null)
+            if (result.Item1 is BlittableJsonReaderBase blittableJsonReaderBase)
             {
                 blittableJsonReaderBase.NoCache = NoCache;
                 if (NoCache == false)
                 {
                     if (_cache == null)
                     {
-                        _cache = new Dictionary<int, Tuple<object, BlittableJsonToken>>(default(NumericEqualityComparer));
+                        _cache = new Dictionary<int, Tuple<object, BlittableJsonToken>>(NumericEqualityComparer.BoxedInstanceInt32);
                     }
                     _cache[index] = result;
                 }

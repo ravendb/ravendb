@@ -64,10 +64,10 @@ namespace Voron.Impl
             public readonly TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
             public int ScratchPagesTablePoolIndex = 0;
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new Dictionary<long, PageFromScratchBuffer>(new NumericEqualityComparer());
-            public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new Dictionary<long, PageFromScratchBuffer>(new NumericEqualityComparer());
-            public readonly Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(new NumericEqualityComparer());
-            public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
+            public Dictionary<long, PageFromScratchBuffer> ScratchPagesInUse = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
+            public Dictionary<long, PageFromScratchBuffer> ScratchPagesReadyForNextTx = new Dictionary<long, PageFromScratchBuffer>(NumericEqualityComparer.BoxedInstanceInt64);
+            public readonly Dictionary<long, long> DirtyOverflowPagesPool = new Dictionary<long, long>(NumericEqualityComparer.BoxedInstanceInt64);
+            public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
 
             public void Reset()
             {
@@ -211,7 +211,7 @@ namespace Voron.Impl
             _dirtyPages = previous._dirtyPages;
             _dirtyPages.Clear();
 
-            _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
+            _freedPages = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();
@@ -277,7 +277,7 @@ namespace Voron.Impl
             _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
             _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
-            _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
+            _freedPages = new HashSet<long>(NumericEqualityComparer.BoxedInstanceInt64);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
             _transactionPages = new HashSet<PageFromScratchBuffer>(PageFromScratchBufferEqualityComparer.Instance);
             _pagesToFreeOnCommit = new Stack<long>();

@@ -62,9 +62,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected readonly ConversionScope Scope = new ConversionScope();
 
-        private readonly Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(default(NumericEqualityComparer));
+        private readonly Dictionary<int, CachedFieldItem<Field>> _fieldsCache = new Dictionary<int, CachedFieldItem<Field>>(NumericEqualityComparer.BoxedInstanceInt32);
 
-        private readonly Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(default(NumericEqualityComparer));
+        private readonly Dictionary<int, CachedFieldItem<NumericField>> _numericFieldsCache = new Dictionary<int, CachedFieldItem<NumericField>>(NumericEqualityComparer.BoxedInstanceInt32);
 
         public readonly LuceneDocument Document = new LuceneDocument();
 

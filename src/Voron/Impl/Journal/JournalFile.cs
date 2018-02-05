@@ -105,7 +105,7 @@ namespace Voron.Impl.Journal
         /// </summary>
         public void Write(LowLevelTransaction tx, CompressedPagesResult pages, LazyTransactionBuffer lazyTransactionScratch)
         {
-            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.Instance);
+            var ptt = new Dictionary<long, PagePosition>(NumericEqualityComparer.BoxedInstanceInt64);
             var cur4KbPos = _writePosIn4Kb;
 
             Debug.Assert(pages.NumberOf4Kbs > 0);

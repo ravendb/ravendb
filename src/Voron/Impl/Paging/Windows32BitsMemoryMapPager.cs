@@ -50,7 +50,7 @@ namespace Voron.Impl.Paging
     public sealed unsafe class Windows32BitsMemoryMapPager : AbstractPager
     {
         private readonly Win32NativeFileAttributes _fileAttributes;
-        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.Instance);
+        private readonly ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>> _globalMapping = new ConcurrentDictionary<long, ConcurrentSet<MappedAddresses>>(NumericEqualityComparer.BoxedInstanceInt64);
         private long _totalMapped;
         private int _concurrentTransactions;
         private readonly ReaderWriterLockSlim _globalMemory = new ReaderWriterLockSlim();
