@@ -15,6 +15,8 @@ class ongoingTaskBackupListModel extends ongoingTask {
 
     editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
+    
+    private watchProvider: (task: ongoingTaskBackupListModel) => void;
 
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
     nextBackup = ko.observable<Raven.Client.Documents.Operations.OngoingTasks.NextBackup>();
@@ -37,8 +39,9 @@ class ongoingTaskBackupListModel extends ongoingTask {
     nextBackupHumanized: KnockoutComputed<string>;
     onGoingBackupHumanized: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup, watchProvider: (task: ongoingTaskBackupListModel) => void) {
         super();
+        this.watchProvider = watchProvider;
 
         this.update(dto);
         this.initializeObservables();
@@ -170,7 +173,12 @@ class ongoingTaskBackupListModel extends ongoingTask {
                     this.backupNowInProgress(true);
 
                     const task = new backupNowCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup);
-                    task.execute().always(() => this.refreshBackupInfo().always(() => this.backupNowInProgress(false)));
+                    task.execute()
+                        .done(() => {
+                            this.refreshBackupInfo();
+                            this.watchProvider(this);
+                        })
+                        .always(() => this.backupNowInProgress(false));
                 }
             });
 
