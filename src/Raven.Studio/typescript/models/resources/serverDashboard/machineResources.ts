@@ -15,12 +15,10 @@ class machineResources {
     commitedMemoryUsageClass: KnockoutComputed<string>;
     processMemoryUsageClass: KnockoutComputed<string>;
 
-    isLinux = ko.observable<boolean>();
+    isProcessMemoryRss = ko.observable<boolean>();
     processUsageTooltip: KnockoutComputed<string>;
 
     constructor(dto: Raven.Server.Dashboard.MachineResources) {
-        this.isLinux = serverTime.default.isLinux;
-
         this.update(dto);
         
         this.machineCpuUsageClass = ko.pureComputed(() => {
@@ -44,7 +42,7 @@ class machineResources {
         });
 
         this.processUsageTooltip = ko.pureComputed(() => {
-            return this.isLinux() ? "RavenDB Resident Memory" : "RavenDB Memory Usage";
+            return this.isProcessMemoryRss() ? "RavenDB Resident Memory" : "RavenDB Memory Usage";
         });
     }
     
@@ -54,6 +52,7 @@ class machineResources {
         this.systemCommitLimit(dto.SystemCommitLimit);
         this.commitedMemory(dto.CommitedMemory);
         this.processMemoryUsage(dto.ProcessMemoryUsage);
+        this.isProcessMemoryRss(dto.IsProcessMemoryRss);
         this.totalMemory(dto.TotalMemory);
     }
 

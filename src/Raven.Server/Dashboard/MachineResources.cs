@@ -18,6 +18,8 @@ namespace Raven.Server.Dashboard
 
         public long ProcessMemoryUsage { get; set; } // in bytes
 
+        public bool IsProcessMemoryRss { get; set; } // in bytes
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -28,6 +30,7 @@ namespace Raven.Server.Dashboard
             json[nameof(SystemCommitLimit)] = SystemCommitLimit;
             json[nameof(CommitedMemory)] = CommitedMemory;
             json[nameof(ProcessMemoryUsage)] = ProcessMemoryUsage;
+            json[nameof(IsProcessMemoryRss)] = IsProcessMemoryRss;
 
             return json;
         }
