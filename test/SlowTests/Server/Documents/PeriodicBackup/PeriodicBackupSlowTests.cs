@@ -562,7 +562,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(2, stats.CountOfIndexes)
+                Assert.Equal(2, stats.CountOfIndexes);
             }
         }
 
