@@ -92,7 +92,7 @@ namespace Sparrow.LowMemory
                 overage = 
                     (memInfo.TotalPhysicalMemory * minimumFreeCommittedMemory) +  //extra to keep free
                     (memInfo.TotalPhysicalMemory - memInfo.AvailableMemory);      //actually in use now
-                if (overage >= memInfo.TotalCommittableMemory)
+                if (overage >= memInfo.TotalPhysicalMemory)
                 {
                     ThrowInsufficentMemory(memInfo);
                     return;
@@ -111,7 +111,7 @@ namespace Sparrow.LowMemory
 
         private static void ThrowInsufficentMemory(MemoryInfoResult memInfo)
         {
-            throw new InsufficientExecutionStackException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}" +
+            throw new InsufficientExecutionStackException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}" +
                 $" Will not create a new thread in this situation because it may result in a stack overflow error when trying to allocate stack space but there isn't sufficient memory for that.");
         }
 
