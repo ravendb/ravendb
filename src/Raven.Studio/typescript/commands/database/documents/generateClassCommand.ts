@@ -13,7 +13,7 @@ class generateClassCommand extends commandBase {
         const args = {
             id: this.docId,
             lang: this.lang
-        }
+        };
         return this.query<string>(url, args, this.db, null, { dataType: "text" })
             .fail((response: JQueryXHR) => this.reportError("Failed to create class code",
                 response.responseText,

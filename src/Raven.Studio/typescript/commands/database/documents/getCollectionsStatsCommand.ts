@@ -14,10 +14,10 @@ class getCollectionsStatsCommand extends commandBase {
     }
 
     execute(): JQueryPromise<collectionsStats> {
-        var finalResult = $.Deferred<collectionsStats>();
+        const finalResult = $.Deferred<collectionsStats>();
         this.query<Raven.Client.Documents.Operations.CollectionStatistics>(endpoints.databases.collections.collectionsStats, null, this.ownerDb)
             .done(results => {
-                var stats = new collectionsStats(results, this.ownerDb);
+                const stats = new collectionsStats(results, this.ownerDb);
                 finalResult.resolve(stats);
             })
             .fail((response) => {

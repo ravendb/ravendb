@@ -211,8 +211,7 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/status/debug/statusDebug',
             title: 'Debug',
             nav: false,
-            css: 'icon-debug',
-            dynamicHash: appUrls.statusDebug
+            css: 'icon-debug'
         })
        
     ];

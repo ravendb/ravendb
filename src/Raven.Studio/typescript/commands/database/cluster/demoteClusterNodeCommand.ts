@@ -10,7 +10,7 @@ class demoteClusterNodeCommand extends commandBase {
     execute(): JQueryPromise<void> {
         const args = {
             nodeTag: this.nodeTag
-        }
+        };
     
         const url = endpoints.global.rachisAdmin.adminClusterDemote + this.urlEncodeArgs(args);
 

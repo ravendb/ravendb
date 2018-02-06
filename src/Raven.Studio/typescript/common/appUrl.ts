@@ -24,7 +24,6 @@ class appUrl {
     
     // Stores some computed values that update whenever the current database updates.
     private static currentDbComputeds: computedAppUrls = {
-        adminSettings: ko.pureComputed(() => appUrl.forAdminSettings()),
         adminSettingsCluster: ko.pureComputed(() => appUrl.forCluster()),
 
         serverDashboard: ko.pureComputed(() => appUrl.forServerDashboard()),
@@ -45,8 +44,6 @@ class appUrl {
         editSqlEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
-        reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
-        tasks: ko.pureComputed(() => appUrl.forTasks(appUrl.currentDatabase())),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         exportDatabaseUrl: ko.pureComputed(() => appUrl.forExportDatabase(appUrl.currentDatabase())),
@@ -62,42 +59,19 @@ class appUrl {
 
         ioStats: ko.pureComputed(() => appUrl.forIoStats(appUrl.currentDatabase())),
 
-        requestsCount: ko.pureComputed(() => appUrl.forRequestsCount(appUrl.currentDatabase())),
-        requestsTracing: ko.pureComputed(() => appUrl.forRequestsTracing(appUrl.currentDatabase())),
         indexPerformance: ko.pureComputed(() => appUrl.forIndexPerformance(appUrl.currentDatabase())),
 
         about: ko.pureComputed(() => appUrl.forAbout()),
 
         settings: ko.pureComputed(() => appUrl.forSettings(appUrl.currentDatabase())),
-        logs: ko.pureComputed(() => appUrl.forLogs(appUrl.currentDatabase())),
-        runningTasks: ko.pureComputed(() => appUrl.forRunningTasks(appUrl.currentDatabase())),
-        alerts: ko.pureComputed(() => appUrl.forAlerts(appUrl.currentDatabase())),
         indexErrors: ko.pureComputed(() => appUrl.forIndexErrors(appUrl.currentDatabase())),
         replicationStats: ko.pureComputed(() => appUrl.forReplicationStats(appUrl.currentDatabase())),
-        userInfo: ko.pureComputed(() => appUrl.forUserInfo(appUrl.currentDatabase())),
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
-        quotas: ko.pureComputed(() => appUrl.forQuotas(appUrl.currentDatabase())),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
         expiration: ko.pureComputed(() => appUrl.forExpiration(appUrl.currentDatabase())),
         connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         conflictResolution: ko.pureComputed(() => appUrl.forConflictResolution(appUrl.currentDatabase())),
-        databaseStudioConfig: ko.pureComputed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
-
-        statusDebug: ko.pureComputed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
-        statusDebugChanges: ko.pureComputed(() => appUrl.forStatusDebugChanges(appUrl.currentDatabase())),
-        statusDebugMetrics: ko.pureComputed(() => appUrl.forStatusDebugMetrics(appUrl.currentDatabase())),
-        statusDebugConfig: ko.pureComputed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
-        statusDebugDocrefs: ko.pureComputed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
-        statusDebugCurrentlyIndexing: ko.pureComputed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
-        statusDebugQueries: ko.pureComputed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
-        statusDebugTasks: ko.pureComputed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
-
-        statusDebugRoutes: ko.pureComputed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
-        statusDebugIndexFields: ko.pureComputed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
-        statusDebugIdentities: ko.pureComputed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
-        statusDebugWebSocket: ko.pureComputed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
-        infoPackage: ko.pureComputed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         statusStorageReport: ko.pureComputed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
@@ -113,24 +87,12 @@ class appUrl {
         return isThereAny;
     }
 
-    static forUpgrade(db: database | databaseInfo) {
-        return "#databases/upgrade?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forAdminSettings(): string {
-        return "#admin/settings";
-    }
-
     static forCluster(): string {
         return "#admin/settings/cluster";
     }
     
     static forAddClusterNode(): string {
         return "#admin/settings/addClusterNode";
-    }
-
-    static forCompact(): string {
-        return "#admin/settings/compact";
     }
 
     static forAdminLogs(): string {
@@ -149,29 +111,13 @@ class appUrl {
         return "#admin/settings/debug/advanced/memoryMappedFiles";
     }
 
-    static forServerTopology(): string { 
-        return "#admin/settings/topology";
-    }
-
     static forTrafficWatch(initialFilter: string = undefined): string {
         const filter = _.isUndefined(initialFilter) ? "" : "?filter=" + encodeURIComponent(initialFilter);
         return "#admin/settings/trafficWatch" + filter;
     }
 
-    static forLicenseInformation(): string {
-        return "#admin/settings/licenseInformation";
-    }
-
     static forDebugInfo(): string {
         return "#admin/settings/debugInfo";
-    }
-
-    static forIoTest(): string {
-        return "#admin/settings/ioTest";
-    }
-
-    static forDiskIoViewer(): string {
-        return "#admin/settings/diskIoViewer";
     }
 
     static forAdminJsConsole(): string {
@@ -184,10 +130,6 @@ class appUrl {
     
     static forCertificates(): string {
         return "#admin/settings/certificates";
-    }
-
-    static forStudioConfig(): string {
-        return "#admin/settings/studioConfig";
     }
 
     static forDatabases(): string {
@@ -225,16 +167,6 @@ class appUrl {
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
-    static forEditQueryItem(itemNumber: number, res: database | databaseInfo, index: string, query?: string, sort?:string): string {
-        const databaseUrlPart = appUrl.getEncodedDbPart(res);
-        const indexUrlPart = "&index=" + index;
-        const itemNumberUrlPart = "&item=" + itemNumber;
-        const queryInfoUrlPart = query? "&query=" + encodeURIComponent(query): "";
-        const sortInfoUrlPart = sort?"&sorts=" + sort:"";
-        const dbTag = "#databases";
-        return dbTag + "/edit?" + databaseUrlPart + indexUrlPart + itemNumberUrlPart + queryInfoUrlPart + sortInfoUrlPart;
-    }
-
     static forNewDoc(db: database | databaseInfo, collection: string = null): string {
         const baseUrlPart = "#databases/edit?";
         let databasePart = appUrl.getEncodedDbPart(db);
@@ -246,10 +178,6 @@ class appUrl {
         return baseUrlPart + databasePart;
     }
 
-    /**
-    * Gets the URL for status page.
-    * @param database The database to use in the URL. If null, the current database will be used.
-    */
     static forStatus(db: database | databaseInfo): string {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
@@ -258,76 +186,8 @@ class appUrl {
         return "#databases/status/ioStats?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forRequestsCount(db: database | databaseInfo): string {
-        return "#databases/status/requests?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forRequestsTracing(db: database | databaseInfo): string {
-        return "#databases/status/requests/tracing?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forIndexPerformance(db: database | databaseInfo | string, indexName?: string): string {
         return `#databases/indexes/performance?${(appUrl.getEncodedDbPart(db))}&${appUrl.getEncodedIndexNamePart(indexName)}`;
-    }
-
-    static forStatusDebug(db: database | databaseInfo): string {
-        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugChanges(db: database | databaseInfo): string {
-        return "#databases/status/debug?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugMetrics(db: database | databaseInfo): string {
-        return "#databases/status/debug/metrics?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugConfig(db: database | databaseInfo): string {
-        return "#databases/status/debug/config?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugDocrefs(db: database | databaseInfo): string {
-        return "#databases/status/debug/docrefs?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugCurrentlyIndexing(db: database | databaseInfo): string {
-        return "#databases/status/debug/currentlyIndexing?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugQueries(db: database | databaseInfo): string {
-        return "#databases/status/debug/queries?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugTasks(db: database | databaseInfo): string {
-        return "#databases/status/debug/tasks?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugRoutes(db: database | databaseInfo): string {
-        return "#databases/status/debug/routes?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forRequestTracing(db: database | databaseInfo): string {
-        return "#databases/status/requests/tracking?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugIndexFields(db: database | databaseInfo): string {
-        return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugIdentities(db: database | databaseInfo): string {
-        return "#databases/status/debug/identities?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugWebSocket(db: database | databaseInfo): string {
-        return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forInfoPackage(db: database | databaseInfo): string {
-        return '#databases/status/infoPackage?' + appUrl.getEncodedDbPart(db);
-    }
-
-    static forSubscriptions(db: database | databaseInfo): string {
-        return '#databases/status/subscriptions?' + appUrl.getEncodedDbPart(db); 
     }
 
     static forStatusStorageReport(db: database | databaseInfo | string): string {
@@ -338,28 +198,12 @@ class appUrl {
         return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
     
-    static forLogs(db: database | databaseInfo): string {
-        return "#databases/status/logs?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forRunningTasks(db: database | databaseInfo): string {
-        return "#databases/status/runningTasks?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forAlerts(db: database | databaseInfo): string {
-        return "#databases/status/alerts?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forIndexErrors(db: database | databaseInfo): string {
         return "#databases/indexes/indexErrors?" + appUrl.getEncodedDbPart(db);
     }
 
     static forReplicationStats(db: database | databaseInfo): string {
         return "#databases/status/replicationStats?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forUserInfo(db: database | databaseInfo): string {
-        return "#databases/status/userInfo?" + appUrl.getEncodedDbPart(db);
     }
 
     static forVisualizer(db: database | databaseInfo, index: string = null): string {
@@ -372,10 +216,6 @@ class appUrl {
 
     static forDatabaseRecord(db: database | databaseInfo): string {
         return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forQuotas(db: database | databaseInfo): string {
-        return "#databases/settings/quotas?" + appUrl.getEncodedDbPart(db);
     }
 
     static forRevisions(db: database | databaseInfo): string {
@@ -396,10 +236,6 @@ class appUrl {
     
     static forConflictResolution(db: database | databaseInfo): string {
         return "#databases/settings/conflictResolution?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forDatabaseStudioConfig(db: database | databaseInfo): string {
-        return "#databases/settings/databaseStudioConfig?" + appUrl.getEncodedDbPart(db);
     }
 
     static forManageDatabaseGroup(db: database | databaseInfo): string {
@@ -470,17 +306,6 @@ class appUrl {
 
         const indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
         return "#databases/query/index" + indexPart + "?" + databasePart;
-    }
-
-    static forReporting(db: database | databaseInfo, indexName?: string): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        const indexPart = indexName ? "/" + encodeURIComponent(indexName) : "";
-        return "#databases/query/reporting" + indexPart + "?" + databasePart;
-    }
-
-    static forTasks(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks?" + databasePart;
     }
 
     static forDatabaseQuery(db: database | databaseInfo): string {
@@ -574,10 +399,6 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes/" + indexName;
     }
 
-    static forReportingRawData(db: database | databaseInfo, indexName: string) {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/facets/" + indexName;
-    }
-
     static forDatabasesRawData(): string {
         return window.location.protocol + "//" + window.location.host + "/databases";
     }
@@ -661,9 +482,8 @@ class appUrl {
 
             messagePublisher.reportError("Unknown route", "The route " + instruction.fragment + queryString + " doesn't exist, redirecting...");
 
-            const fragment = instruction.fragment;
             const appUrls = appUrl.currentDbComputeds;
-            location.href = fragment.startsWith("admin/settings") ? appUrls.adminSettings() : appUrls.databasesManagement();
+            location.href = appUrls.databasesManagement();
         });
     }
 

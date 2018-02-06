@@ -12,7 +12,7 @@ class getDocumentAtRevisionCommand extends commandBase {
     execute(): JQueryPromise<document> {
         const args = {
             changeVector: this.changeVector
-        }
+        };
 
         const url = endpoints.databases.revisions.revisions + this.urlEncodeArgs(args);
 

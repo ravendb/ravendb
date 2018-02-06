@@ -93,65 +93,6 @@ function getManageServerMenuItem() {
             hash: appUrl.forDebugAdvancedThreadsRuntime(),
             enabled: accessHelper.isGlobalAdmin
         }),
-        /* TODO
-        new leafMenuItem({
-            route: 'admin/settings/compact',
-            moduleId: 'viewmodels/manage/compact',
-            title: 'Compact',
-            nav: true,
-            css: 'icon-compact',
-            dynamicHash: appUrl.forCompact,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-       
-        new leafMenuItem({
-            route: 'admin/settings/topology',
-            moduleId: 'viewmodels/manage/topology',
-            title: 'Server Topology',
-            nav: true,
-            css: 'icon-server-topology',
-            dynamicHash: appUrl.forServerTopology,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        
-        new leafMenuItem({
-            route: 'admin/settings/licenseInformation',
-            moduleId: 'viewmodels/manage/licenseInformation',
-            title: 'License Information',
-            nav: true,
-            css: 'icon-license-information',
-            dynamicHash: appUrl.forLicenseInformation,
-            enabled: canReadOrWrite
-        }),*/
-        /*
-        new leafMenuItem({
-            route: 'admin/settings/ioTest',
-            moduleId: 'viewmodels/manage/ioTest',
-            title: 'IO Test',
-            nav: true,
-            css: 'icon-io-test',
-            dynamicHash: appUrl.forIoTest,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/diskIoViewer',
-            moduleId: 'viewmodels/manage/diskIoViewer',
-            title: 'Disk IO Viewer',
-            nav: true,
-            css: 'icon-disk-io-viewer',
-            dynamicHash: appUrl.forDiskIoViewer,
-            enabled: canReadOrWrite
-        }),
-        
-        new leafMenuItem({
-            route: 'admin/settings/studioConfig',
-            moduleId: 'viewmodels/manage/studioConfig',
-            title: 'Studio Config',
-            nav: true,
-            css: 'icon-studio-config',
-            dynamicHash: appUrl.forStudioConfig,
-            enabled: canReadOrWrite
-        }),*/
     ];
 
     return new intermediateMenuItem('Manage Server', items, 'icon-manage-server');
