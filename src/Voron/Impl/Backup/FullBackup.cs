@@ -73,14 +73,14 @@ namespace Voron.Impl.Backup
                 infoNotify("Voron backup " + e.Name + "started");
                 var basePath = Path.Combine(e.Folder, e.Name);
 
-                var envEntry = archive.CreateEntry($"{basePath}.zip", compression);
+                var envEntry = archive.CreateEntry($"{basePath}.zip", CompressionLevel.NoCompression);
                 using (var envEntryStream = envEntry.Open())
                 using (var envArchive = new ZipArchive(envEntryStream, ZipArchiveMode.Create, leaveOpen: true))
                 {
                     var env = e.Env;
                     var dataPager = env.Options.DataPager;
                     var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                    Backup(env, CompressionLevel.NoCompression, infoNotify, backupStarted, dataPager, envArchive, basePath, copier);
+                    Backup(env, compression, infoNotify, backupStarted, dataPager, envArchive, basePath, copier);
                 }
             }
 
