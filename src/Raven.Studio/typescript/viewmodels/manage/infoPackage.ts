@@ -13,7 +13,6 @@ class infoPackage extends viewModelBase {
     }
 
     private startDownload(url: string) {
-        //TODO: include auth token? 
         const $form = $("#downloadInfoPackageForm");
         $form.attr("action", appUrl.baseUrl + url);
         $form.submit();
