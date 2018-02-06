@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
@@ -572,7 +573,7 @@ namespace Raven.Server.Documents
                     case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
-                            Name = "Documents",
+                            Name = Constants.Documents.PeriodicBackup.Files.Documents,
                             Folder = string.Empty,
                             Env = storageEnvironmentWithType.Environment
                         };
@@ -581,14 +582,14 @@ namespace Raven.Server.Documents
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
                             Name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(storageEnvironmentWithType.Name),
-                            Folder = "Indexes",
+                            Folder = Constants.Documents.PeriodicBackup.Folders.Indexes,
                             Env = storageEnvironmentWithType.Environment
                         };
                         break;
                     case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
-                            Name = "Configuration",
+                            Name = Constants.Documents.PeriodicBackup.Files.Configuration,
                             Folder = string.Empty,
                             Env = storageEnvironmentWithType.Environment
                         };

@@ -13,6 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using Sparrow.Utils;
 using Voron.Data.BTrees;
+using Voron.Exceptions;
 using Voron.Impl.Journal;
 using Voron.Global;
 using Voron.Util;
@@ -236,9 +237,9 @@ namespace Voron.Impl.Backup
                     return journalFile;
                 }
             }
-            catch (Exception e)
+            catch (InvalidJournalException e)
             {
-                if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0 && e.Message.StartsWith("No such journal", StringComparison.Ordinal))
+                if (backupInfo.LastBackedUpJournal == -1 && journalNum == 0)
                 {
                     throw new InvalidOperationException("The first incremental backup creation failed because the first journal file " +
                                                         StorageEnvironmentOptions.JournalName(journalNum) + " was not found. " +
