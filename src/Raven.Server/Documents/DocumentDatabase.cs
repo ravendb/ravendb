@@ -573,8 +573,8 @@ namespace Raven.Server.Documents
                     case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
-                            Name = Constants.Documents.PeriodicBackup.Files.Documents,
-                            Folder = string.Empty,
+                            Name = string.Empty,
+                            Folder = Constants.Documents.PeriodicBackup.Folders.Documents,
                             Env = storageEnvironmentWithType.Environment
                         };
                         break;
@@ -589,8 +589,8 @@ namespace Raven.Server.Documents
                     case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
                         yield return new FullBackup.StorageEnvironmentInformation
                         {
-                            Name = Constants.Documents.PeriodicBackup.Files.Configuration,
-                            Folder = string.Empty,
+                            Name = string.Empty,
+                            Folder = Constants.Documents.PeriodicBackup.Folders.Configuration,
                             Env = storageEnvironmentWithType.Environment
                         };
                         break;

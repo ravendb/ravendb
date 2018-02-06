@@ -469,63 +469,54 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
             {
-                foreach (var zipEntry in zip.Entries)
+                foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
                 {
-                    var entryInfo = new FileInfo(zipEntry.FullName);
-                    var entryExtension = entryInfo.Extension;
+                    var directory = zipEntries.Key;
 
-                    const string zipExtension = ".zip";
-                    if (string.Equals(entryExtension, zipExtension, StringComparison.OrdinalIgnoreCase))
+                    if (string.IsNullOrWhiteSpace(directory))
                     {
-                        var entryFileNameWithoutExtension = entryInfo.Name.Substring(0, entryInfo.Name.Length - zipExtension.Length);
-
-                        using (var entryStream = zipEntry.Open())
-                        using (var entryArchive = new ZipArchive(entryStream, ZipArchiveMode.Read, leaveOpen: true))
+                        foreach (var zipEntry in zipEntries)
                         {
-                            var restoreDirectory = dataDirectory;
-                            if (string.Equals(entryFileNameWithoutExtension, Constants.Documents.PeriodicBackup.Files.Configuration, StringComparison.OrdinalIgnoreCase))
-                                restoreDirectory = Path.Combine(restoreDirectory, Constants.Documents.PeriodicBackup.Files.Configuration);
-                            else if (string.Equals(entryInfo.Directory?.Name, Constants.Documents.PeriodicBackup.Folders.Indexes, StringComparison.OrdinalIgnoreCase))
-                                restoreDirectory = Path.Combine(restoreDirectory, Constants.Documents.PeriodicBackup.Folders.Indexes, entryFileNameWithoutExtension);
-
-                            BackupMethods.Full.Restore(
-                                entryArchive,
-                                restoreDirectory,
-                                restoreDirectory,
-                                onProgress: message =>
+                            if (string.Equals(zipEntry.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                using (var entryStream = zipEntry.Open())
+                                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
-                                    restoreResult.AddInfo(message);
-                                    restoreResult.SnapshotRestore.ReadCount++;
-                                    onProgress.Invoke(restoreResult.Progress);
-                                },
-                                cancellationToken: _operationCancelToken.Token);
+                                    var json = context.Read(entryStream, "read database settings for restore");
+                                    json.BlittableValidation();
+
+                                    restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+
+                                    restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
+                                    DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
+
+                                    if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
+                                        throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
+
+                                    if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
+                                        throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
+                                }
+                            }
                         }
 
                         continue;
                     }
 
-                    if (string.Equals(entryInfo.Name, RestoreSettings.SettingsFileName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        using (var entryStream = zipEntry.Open())
-                        using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
+                        ? dataDirectory
+                        : Path.Combine(dataDirectory, directory);
+
+                    BackupMethods.Full.Restore(
+                        zipEntries,
+                        restoreDirectory,
+                        restoreDirectory,
+                        onProgress: message =>
                         {
-                            var json = context.Read(entryStream, "read database settings for restore");
-                            json.BlittableValidation();
-
-                            restoreSettings = JsonDeserializationServer.RestoreSettings(json);
-
-                            restoreSettings.DatabaseRecord.DatabaseName = _restoreConfiguration.DatabaseName;
-                            DatabaseHelper.Validate(_restoreConfiguration.DatabaseName, restoreSettings.DatabaseRecord);
-
-                            if (restoreSettings.DatabaseRecord.Encrypted && _hasEncryptionKey == false)
-                                throw new ArgumentException("Database snapshot is encrypted but the encryption key is missing!");
-
-                            if (restoreSettings.DatabaseRecord.Encrypted == false && _hasEncryptionKey)
-                                throw new ArgumentException("Cannot encrypt a non encrypted snapshot backup during restore!");
-                        }
-
-                        continue;
-                    }
+                            restoreResult.AddInfo(message);
+                            restoreResult.SnapshotRestore.ReadCount++;
+                            onProgress.Invoke(restoreResult.Progress);
+                        },
+                        cancellationToken: _operationCancelToken.Token);
                 }
             }
 

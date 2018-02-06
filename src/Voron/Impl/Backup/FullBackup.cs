@@ -73,15 +73,10 @@ namespace Voron.Impl.Backup
                 infoNotify("Voron backup " + e.Name + "started");
                 var basePath = Path.Combine(e.Folder, e.Name);
 
-                var envEntry = archive.CreateEntry($"{basePath}.zip", CompressionLevel.NoCompression);
-                using (var envEntryStream = envEntry.Open())
-                using (var envArchive = new ZipArchive(envEntryStream, ZipArchiveMode.Create, leaveOpen: true))
-                {
-                    var env = e.Env;
-                    var dataPager = env.Options.DataPager;
-                    var copier = new DataCopier(Constants.Storage.PageSize * 16);
-                    Backup(env, compression, infoNotify, backupStarted, dataPager, envArchive, basePath, copier);
-                }
+                var env = e.Env;
+                var dataPager = env.Options.DataPager;
+                var copier = new DataCopier(Constants.Storage.PageSize * 16);
+                Backup(env, compression, infoNotify, backupStarted, dataPager, archive, basePath, copier);
             }
 
             infoNotify("Voron backup db finished");
@@ -147,7 +142,7 @@ namespace Voron.Impl.Backup
                 backupStarted?.Invoke();
 
                 // data file backup
-                var dataPart = package.CreateEntry(Constants.DatabaseFilename, compression);
+                var dataPart = package.CreateEntry(Path.Combine(basePath, Constants.DatabaseFilename), compression);
                 Debug.Assert(dataPart != null);
 
                 if (allocatedPages > 0) //only true if dataPager is still empty at backup start
@@ -165,7 +160,7 @@ namespace Voron.Impl.Backup
                     foreach (var journalFile in usedJournals)
                     {
                         var entryName = StorageEnvironmentOptions.JournalName(journalFile.Number);
-                        var journalPart = package.CreateEntry(entryName, compression);
+                        var journalPart = package.CreateEntry(Path.Combine(basePath, entryName), compression);
 
                         Debug.Assert(journalPart != null);
 
@@ -230,10 +225,10 @@ namespace Voron.Impl.Backup
             CancellationToken cancellationToken = default)
         {
             using (var zip = ZipFile.Open(backupPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-                Restore(zip, voronDataDir, journalDir, onProgress, cancellationToken);
+                Restore(zip.Entries, voronDataDir, journalDir, onProgress, cancellationToken);
         }
 
-        public void Restore(ZipArchive backupArchive,
+        public void Restore(IEnumerable<ZipArchiveEntry> entries,
             string voronDataDir,
             string journalDir = null,
             Action<string> onProgress = null,
@@ -249,25 +244,22 @@ namespace Voron.Impl.Backup
 
             onProgress?.Invoke("Starting snapshot restore");
 
-            foreach (var entry in backupArchive.Entries)
+            foreach (var entry in entries)
             {
                 var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
 
                 var sw = Stopwatch.StartNew();
 
-                var folder = Path.Combine(dst, Path.GetDirectoryName(entry.FullName));
-                if (Directory.Exists(folder) == false)
-                {
-                    Directory.CreateDirectory(folder);
-                }
+                if (Directory.Exists(dst) == false)
+                    Directory.CreateDirectory(dst);
 
                 using (var input = entry.Open())
-                using (var output = SafeFileStream.Create(Path.Combine(folder, entry.Name), FileMode.CreateNew))
+                using (var output = SafeFileStream.Create(Path.Combine(dst, entry.Name), FileMode.CreateNew))
                 {
                     input.CopyTo(output, cancellationToken);
                 }
 
-                onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{folder}', " +
+                onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{dst}', " +
                                    $"size in bytes: {entry.Length:#,#;;0}, " +
                                    $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
             }

@@ -21,7 +21,7 @@ namespace Voron.Impl.Backup
 
                 success = true;
 
-                var headerPart = package.CreateEntry(headerFileName, compression);
+                var headerPart = package.CreateEntry(Path.Combine(basePath, headerFileName), compression);
                 Debug.Assert(headerPart != null);
 
                 using (var headerStream = headerPart.Open())
