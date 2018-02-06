@@ -214,7 +214,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var deleteResult = await _serverStore.DeleteDatabaseAsync(_restoreConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag });
                     await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
-                    }
+                }
 
                 result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e.Message}");
                 onProgress.Invoke(result.Progress);
@@ -474,18 +474,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var entryInfo = new FileInfo(zipEntry.FullName);
                     var entryExtension = entryInfo.Extension;
 
-                    if (string.Equals(entryExtension, ".zip", StringComparison.OrdinalIgnoreCase))
+                    const string zipExtension = ".zip";
+                    if (string.Equals(entryExtension, zipExtension, StringComparison.OrdinalIgnoreCase))
                     {
-                        var entryFileNameWithoutExtension = entryInfo.Name.Substring(0, entryInfo.Name.Length - 4);
+                        var entryFileNameWithoutExtension = entryInfo.Name.Substring(0, entryInfo.Name.Length - zipExtension.Length);
 
                         using (var entryStream = zipEntry.Open())
                         using (var entryArchive = new ZipArchive(entryStream, ZipArchiveMode.Read, leaveOpen: true))
                         {
                             var restoreDirectory = dataDirectory;
-                            if (string.Equals(entryFileNameWithoutExtension, "Configuration", StringComparison.OrdinalIgnoreCase))
-                                restoreDirectory = Path.Combine(restoreDirectory, "Configuration");
-                            else if (string.Equals(entryInfo.Directory?.Name, "Indexes", StringComparison.OrdinalIgnoreCase))
-                                restoreDirectory = Path.Combine(restoreDirectory, "Indexes", entryFileNameWithoutExtension);
+                            if (string.Equals(entryFileNameWithoutExtension, Constants.Documents.PeriodicBackup.Files.Configuration, StringComparison.OrdinalIgnoreCase))
+                                restoreDirectory = Path.Combine(restoreDirectory, Constants.Documents.PeriodicBackup.Files.Configuration);
+                            else if (string.Equals(entryInfo.Directory?.Name, Constants.Documents.PeriodicBackup.Folders.Indexes, StringComparison.OrdinalIgnoreCase))
+                                restoreDirectory = Path.Combine(restoreDirectory, Constants.Documents.PeriodicBackup.Folders.Indexes, entryFileNameWithoutExtension);
 
                             BackupMethods.Full.Restore(
                                 entryArchive,

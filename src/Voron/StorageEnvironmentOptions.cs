@@ -666,7 +666,7 @@ namespace Voron
                 var path = _journalPath.Combine(name);
                 var fileInfo = new FileInfo(path.FullPath);
                 if (fileInfo.Exists == false)
-                    throw new InvalidOperationException("No such journal " + path);
+                    throw new InvalidJournalException(journalNumber, path.FullPath);
 
                 if (fileInfo.Length < InitialLogFileSize)
                 {
@@ -930,7 +930,7 @@ namespace Voron
                 IJournalWriter value;
                 if (_logs.TryGetValue(name, out value))
                     return value.CreatePager();
-                throw new InvalidOperationException("No such journal " + journalNumber);
+                throw new InvalidJournalException(journalNumber);
             }
         }
 

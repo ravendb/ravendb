@@ -207,7 +207,7 @@ namespace Raven.Server.Documents
         }
 
         public void Initialize(bool generateNewDatabaseId = false)
-        { 
+        {
             if (_logger.IsInfoEnabled)
             {
                 _logger.Info
@@ -239,7 +239,7 @@ namespace Raven.Server.Documents
             {
                 options.Dispose();
 
-                if (DocumentDatabase.Configuration.Core.RunInMemory == false && e.Message.StartsWith("No such journal", StringComparison.Ordinal))
+                if (DocumentDatabase.Configuration.Core.RunInMemory == false && e is InvalidJournalException)
                 {
                     var dataDirectory = DocumentDatabase.Configuration.Core.DataDirectory;
                     var oldJournalsDirectory = dataDirectory.Combine("Journal");
@@ -289,7 +289,7 @@ namespace Raven.Server.Documents
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
                     tx.CreateTree(GlobalTreeSlice);
-                    
+
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
                     RevisionsStorage = new RevisionsStorage(DocumentDatabase, tx);
@@ -529,8 +529,8 @@ namespace Raven.Server.Documents
                 yield break;
 
             // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice],start))
-            {               
+            foreach (var result in table.SeekBackwardFromLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], start))
+            {
                 if (take-- <= 0)
                     yield break;
                 yield return TableValueToDocument(context, ref result.Reader);
@@ -587,7 +587,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids,string collection, int start, int take, Reference<int> totalCount)
+        public IEnumerable<Document> GetDocuments(DocumentsOperationContext context, List<Slice> ids, string collection, int start, int take, Reference<int> totalCount)
         {
             foreach (var doc in GetDocuments(context, ids, start, take, totalCount))
             {
@@ -608,7 +608,7 @@ namespace Raven.Server.Documents
                     continue;
                 }
                 if (string.Equals(c, collection, StringComparison.OrdinalIgnoreCase) == false)
-                {                    
+                {
                     totalCount.Value--;
                     continue;
                 }
@@ -1088,7 +1088,7 @@ namespace Raven.Server.Documents
                     local.Tombstone.ChangeVector,
                     modifiedTicks,
                     changeVector,
-                    local.Tombstone.Flags | documentFlags ).Etag;
+                    local.Tombstone.Flags | documentFlags).Etag;
 
                 // We have to raise the notification here because even though we have deleted
                 // a deleted value, we changed the change vector. And maybe we need to replicate 
@@ -1146,7 +1146,7 @@ namespace Raven.Server.Documents
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
                     var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
-                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false && 
+                    if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, doc.NonPersistentFlags, flags);
@@ -1191,7 +1191,7 @@ namespace Raven.Server.Documents
 
                 var etag = CreateTombstone(context,
                     lowerId,
-                    GenerateNextEtagForReplicatedTombstoneMissingDocument(context), 
+                    GenerateNextEtagForReplicatedTombstoneMissingDocument(context),
                     collectionName,
                     changeVector,
                     DateTime.UtcNow.Ticks,

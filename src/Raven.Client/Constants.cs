@@ -254,6 +254,18 @@ namespace Raven.Client
                 public const string SnapshotExtension = ".ravendb-snapshot";
 
                 public const string IncrementalBackupExtension = ".ravendb-incremental-backup";
+
+                public class Folders
+                {
+                    public const string Indexes = "Indexes";
+                }
+
+                public class Files
+                {
+                    public const string Documents = "Documents";
+
+                    public const string Configuration = "Configuration";
+                }
             }
         }
 
