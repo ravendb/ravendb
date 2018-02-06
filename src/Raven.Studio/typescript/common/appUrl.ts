@@ -36,8 +36,6 @@ class appUrl {
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
-        megeSuggestions: ko.pureComputed(() => appUrl.forMegeSuggestions(appUrl.currentDatabase())),
-        upgrade: ko.pureComputed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
@@ -48,7 +46,6 @@ class appUrl {
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
-        exploration: ko.pureComputed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.pureComputed(() => appUrl.forTasks(appUrl.currentDatabase())),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
@@ -101,8 +98,6 @@ class appUrl {
         statusDebugIdentities: ko.pureComputed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.pureComputed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
         infoPackage: ko.pureComputed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
-
-        subscriptions: ko.pureComputed(() => appUrl.forSubscriptions(appUrl.currentDatabase())),
 
         statusStorageReport: ko.pureComputed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
@@ -483,11 +478,6 @@ class appUrl {
         return "#databases/query/reporting" + indexPart + "?" + databasePart;
     }
 
-    static forExploration(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/query/exploration?" + databasePart;
-    }
-
     static forTasks(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks?" + databasePart;
@@ -504,11 +494,6 @@ class appUrl {
     static forTerms(indexName: string, db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/indexes/terms/" + encodeURIComponent(indexName) + "?" + databasePart;
-    }
-
-    static forMegeSuggestions(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/indexes/mergeSuggestions?" + databasePart;
     }
 
     static forImportDatabaseFromFile(db: database | databaseInfo): string {

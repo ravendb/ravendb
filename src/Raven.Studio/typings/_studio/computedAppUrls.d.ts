@@ -12,8 +12,6 @@ interface computedAppUrls {
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
     indexes: KnockoutComputed<string>;
-    megeSuggestions: KnockoutComputed<string>;
-    upgrade: KnockoutComputed<string>;
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
@@ -24,7 +22,6 @@ interface computedAppUrls {
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
-    exploration: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
     importCollectionFromCsv: KnockoutComputed<string>;
@@ -78,6 +75,4 @@ interface computedAppUrls {
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
-
-    subscriptions: KnockoutComputed<string>;
 }
