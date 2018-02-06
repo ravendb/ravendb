@@ -6,7 +6,6 @@ import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
-import resolveMergeCommand = require("commands/database/studio/resolveMergeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
 import getRevisionsBinDocumentMetadataCommand = require("commands/database/documents/getRevisionsBinDocumentMetadataCommand");
 import generateClassCommand = require("commands/database/documents/generateClassCommand");
@@ -266,19 +265,15 @@ class editDocument extends viewModelBase {
 
         this.document.subscribe(doc => {
             if (doc) {
-                if (this.isConflictDocument()) {
-                    this.resolveConflicts();
-                } else {
-                    const docDto = doc.toDto(true);
-                    const metaDto = docDto["@metadata"];
-                    if (metaDto) {
-                        this.metaPropsToRestoreOnSave.length = 0;
-                        documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
-                    }
-
-                    const docText = this.stringify(docDto);
-                    this.documentText(docText);
+                const docDto = doc.toDto(true);
+                const metaDto = docDto["@metadata"];
+                if (metaDto) {
+                    this.metaPropsToRestoreOnSave.length = 0;
+                    documentMetadata.filterMetadata(metaDto, this.metaPropsToRestoreOnSave);
                 }
+
+                const docText = this.stringify(docDto);
+                this.documentText(docText);
             }
         });
 
@@ -752,16 +747,6 @@ class editDocument extends viewModelBase {
     updateUrl(docId: string) {
         const editDocUrl = appUrl.forEditDoc(docId, this.activeDatabase());
         router.navigate(editDocUrl, false);
-    }
-
-    resolveConflicts() {
-        eventsCollector.default.reportEvent("document", "resolve-conflicts");
-        new resolveMergeCommand(this.activeDatabase(), this.editedDocId())
-            .execute()
-            .done((response: mergeResult) => {
-                this.documentText(response.Document);
-                //TODO: handle metadata
-            });
     }
 
     generateClass() {

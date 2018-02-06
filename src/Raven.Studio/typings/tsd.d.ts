@@ -1,4 +1,3 @@
-/// <reference path="_studio/old_dto.d.ts"/>
 /// <reference path="_studio/dto.d.ts"/>
 /// <reference path="_studio/computedAppUrls.d.ts"/>
 /// <reference path="_studio/customTypings.d.ts" />
