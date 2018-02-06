@@ -21,11 +21,6 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryGetCallable(Engine engine, object callee, out JsValue value)
         {
-            var @ref = callee as Reference;
-            if (@ref != null && @ref.IsUnresolvableReference())
-            {
-                throw new MissingMethodException($"Could not locate refrence to the method: {@ref.GetReferencedName()}");
-            }
             value = new JsValue(new ClrFunctionInstance(engine, (thisObj, values) => thisObj));
             return true;
         }
