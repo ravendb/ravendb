@@ -18,6 +18,12 @@ interface queryResultDto<T> {
     Includes: any[];
 }
 
+interface changesApiEventDto {
+    Time: string; // ISO date string
+    Type: string;
+    Value?: any;
+}
+
 interface resultsDto<T> {
     Results: T[];
 }
@@ -252,22 +258,6 @@ interface IndexingPerformanceOperationWithParent extends Raven.Client.Documents.
     Parent: Raven.Client.Documents.Indexes.IndexingPerformanceStats;
 }
 
-interface subscriptionResponseItemDto {
-    SubscriptionId: number;
-    AckEtag: number;
-    Query: string;
-    TimeOfReceivingLastAck: string;
-    Connection: subscriptionConnectionInfoDto;
-    RecentConnections: Array<subscriptionConnectionInfoDto>;
-    RecentRejectedConnections: Array<subscriptionConnectionInfoDto>;
-}
-
-interface subscriptionConnectionInfoDto {
-    ClientUri: string;
-    ConnectionException: string;
-    Stats: Raven.Server.Documents.Subscriptions.SubscriptionConnectionStats;
-}
-
 interface disabledReason {
     disabled: boolean;
     reason?: string;
@@ -376,7 +366,37 @@ type dashboardChartTooltipProviderArgs = {
     values: dictionary<number>;
 }
 
+
+interface documentBase extends dictionary<any> {
+    getId(): string;
+    getUrl(): string;
+    getDocumentPropertyNames(): Array<string>;
+}
+
 interface domainAvailabilityResult {
     Available: boolean;
     IsOwnedByMe: boolean;
 }
+
+
+interface collectionInfoDto extends Raven.Client.Documents.Queries.QueryResult<Array<documentDto>, any> {
+}
+
+interface serverBuildVersionDto {
+    BuildVersion: number;
+    ProductVersion: string;
+    CommitHash: string;
+    FullVersion: string;
+}
+
+interface clientBuildVersionDto {
+    Version: string;
+}
+
+
+interface resourceStyleMap {
+    resourceName: string;
+    styleMap: any;
+}
+
+
