@@ -75,6 +75,46 @@ namespace Sparrow.LowMemory
             public ulong ullAvailExtendedVirtual;
         }
 
+        public static void AssertNotAboutToRunOutOfMemory(float minimumFreeCommittedMemory)
+        {
+            // we are about to create a new thread, might not always be a good idea:
+            // https://ayende.com/blog/181537-B/production-test-run-overburdened-and-under-provisioned
+            // https://ayende.com/blog/181569-A/threadpool-vs-pool-thread
+
+            var memInfo = GetMemoryInfo();
+            Size overage;
+            if(memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
+            {
+                // this can happen on containers, since we get this information from the host, and
+                // sometimes this kind of stat is shared, see: 
+                // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
+
+                overage = 
+                    (memInfo.TotalPhysicalMemory * minimumFreeCommittedMemory) +  //extra to keep free
+                    (memInfo.TotalPhysicalMemory - memInfo.AvailableMemory);      //actually in use now
+                if (overage >= memInfo.TotalCommittableMemory)
+                {
+                    ThrowInsufficentMemory(memInfo);
+                    return;
+                }
+
+                return;
+            }
+
+
+            overage = (memInfo.TotalCommittableMemory * minimumFreeCommittedMemory) + memInfo.CurrentCommitCharge;
+            if (overage >= memInfo.TotalCommittableMemory)
+            {
+                ThrowInsufficentMemory(memInfo);
+            }
+        }
+
+        private static void ThrowInsufficentMemory(MemoryInfoResult memInfo)
+        {
+            throw new InsufficientExecutionStackException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}" +
+                $" Will not create a new thread in this situation because it may result in a stack overflow error when trying to allocate stack space but there isn't sufficient memory for that.");
+        }
+
         [return: MarshalAs(UnmanagedType.Bool)]
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern unsafe bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);

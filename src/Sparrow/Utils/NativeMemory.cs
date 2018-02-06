@@ -105,18 +105,7 @@ namespace Sparrow.Utils
             // fun, so let's try to avoid it explicitly.
             // This is not expected to be called frequently, since we are caching the memory used here
 
-            var memInfo = MemoryInformation.GetMemoryInfo();
-            var overage = memInfo.CurrentCommitCharge * _minimumFreeCommittedMemory;
-            if (overage >= memInfo.TotalCommittableMemory)
-            {
-                throw new OutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}." +
-                    $" To prevent the system running out of commit charge entirely, we'll avoid allocating any more memory, denying allocation for {new Size(size, SizeUnit.Bytes)}")
-                {
-                    Data = {
-                        ["Recoverable"] = "Nope"// not use false here to avoid boxing :-)
-                    }
-                };
-            }
+            MemoryInformation.AssertNotAboutToRunOutOfMemory(_minimumFreeCommittedMemory);
 
             try
             {
