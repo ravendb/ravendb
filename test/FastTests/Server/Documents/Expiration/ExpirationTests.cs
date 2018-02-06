@@ -44,7 +44,9 @@ namespace FastTests.Server.Documents.Expiration
                 {DefaultFormat.DateTimeFormatsToRead[5], DateTimeKind.Utc},
                 {DefaultFormat.DateTimeFormatsToRead[6], DateTimeKind.Utc},
             };
-            foreach (var dateTimeFormat in DefaultFormat.DateTimeFormatsToRead)
+            Assert.Equal(utcFormats.Count, DefaultFormat.DateTimeFormatsToRead.Length);
+
+            foreach (var dateTimeFormat in utcFormats)
             {
                 using (var store = GetDocumentStore())
                 {
@@ -54,12 +56,15 @@ namespace FastTests.Server.Documents.Expiration
                     {
                         Name = "Company Name"
                     };
-                    var expiry = SystemTime.UtcNow.AddMinutes(5);
+                    var expiry = DateTime.Now; // intentionally local time
+                    if (dateTimeFormat.Value == DateTimeKind.Utc)
+                        expiry = expiry.ToUniversalTime();
+
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(company);
                         var metadata = session.Advanced.GetMetadataFor(company);
-                        metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat);
+                        metadata[Constants.Documents.Metadata.Expires] = expiry.ToString(dateTimeFormat.Key);
                         await session.SaveChangesAsync();
                     }
 
@@ -71,8 +76,8 @@ namespace FastTests.Server.Documents.Expiration
                         var expirationDate = metadata.GetString(Constants.Documents.Metadata.Expires);
                         Assert.NotNull(expirationDate);
                         var dateTime = DateTime.ParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                        Assert.Equal(utcFormats[dateTimeFormat], dateTime.Kind);
-                        Assert.Equal(expiry.ToString(dateTimeFormat), expirationDate);
+                        Assert.Equal(dateTimeFormat.Value, dateTime.Kind);
+                        Assert.Equal(expiry.ToString(dateTimeFormat.Key), expirationDate);
                     }
 
                     var database = await GetDocumentDatabaseInstanceFor(store);

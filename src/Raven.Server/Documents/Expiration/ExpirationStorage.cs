@@ -50,7 +50,8 @@ namespace Raven.Server.Documents.Expiration
             // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here
             // and we'll use the normal cleanup routine to clean things up later.
 
-            var ticksBigEndian = Bits.SwapBytes(date.ToUniversalTime().Ticks);
+            var expiry = date.ToUniversalTime();
+            var ticksBigEndian = Bits.SwapBytes(expiry.Ticks);
 
             var tree = context.Transaction.InnerTransaction.ReadTree(DocumentsByExpiration);
             using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
