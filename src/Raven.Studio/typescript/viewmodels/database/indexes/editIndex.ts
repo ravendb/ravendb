@@ -543,10 +543,7 @@ class editIndex extends viewModelBase {
         });
     }
 
-    copyIndex() {
-        eventsCollector.default.reportEvent("index", "copy");
-        app.showBootstrapDialog(new copyIndexDialog(this.editedIndex().name(), this.activeDatabase(), false));
-    }
+    //TODO: copy index
     */
     formatIndex(mapIndex: number) {
         eventsCollector.default.reportEvent("index", "format-index");

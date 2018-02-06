@@ -360,14 +360,6 @@ interface triggerInfoDto {
     Name: string;
 }
 
-interface dataExplorationRequestDto {
-    Linq: string;
-    Collection: string;
-    TimeoutSeconds: number;
-    PageSize: number;
-}
-
-
 
 interface performanceRunItemDto {
     displayName: string;
