@@ -80,14 +80,16 @@ namespace Sparrow.LowMemory
 
         public static void AssertNotAboutToRunOutOfMemory(float minimumFreeCommittedMemory)
         {
+            if (IsRunningOnDocker)
+                return;
+
             // we are about to create a new thread, might not always be a good idea:
             // https://ayende.com/blog/181537-B/production-test-run-overburdened-and-under-provisioned
             // https://ayende.com/blog/181569-A/threadpool-vs-pool-thread
 
             var memInfo = GetMemoryInfo();
             Size overage;
-            if(IsRunningOnDocker || 
-                memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
+            if(memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
             {
                 // this can happen on containers, since we get this information from the host, and
                 // sometimes this kind of stat is shared, see: 
@@ -104,7 +106,6 @@ namespace Sparrow.LowMemory
 
                 return;
             }
-
 
             overage = (memInfo.TotalCommittableMemory * minimumFreeCommittedMemory) + memInfo.CurrentCommitCharge;
             if (overage >= memInfo.TotalCommittableMemory)
