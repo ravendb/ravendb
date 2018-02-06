@@ -1090,6 +1090,8 @@ namespace Raven.Server.Documents
                     changeVector,
                     local.Tombstone.Flags | documentFlags).Etag;
 
+                EnsureLastEtagIsPersisted(context, etag);
+
                 // We have to raise the notification here because even though we have deleted
                 // a deleted value, we changed the change vector. And maybe we need to replicate 
                 // that. Another issue is that the last tombstone etag has changed, and we need 
@@ -1125,8 +1127,6 @@ namespace Raven.Server.Documents
                     };
                 }
 
-                EnsureLastEtagIsPersisted(context, doc.Etag);
-
                 collectionName = ExtractCollectionName(context, doc.Data);
                 var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
@@ -1141,6 +1141,8 @@ namespace Raven.Server.Documents
                     changeVector = tombstoneEtag.ChangeVector;
                     etag = tombstoneEtag.Etag;
                 }
+
+                EnsureLastEtagIsPersisted(context, etag);
 
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
