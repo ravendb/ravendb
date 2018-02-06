@@ -258,10 +258,7 @@ namespace Raven.Client
                 public class Folders
                 {
                     public const string Indexes = "Indexes";
-                }
 
-                public class Files
-                {
                     public const string Documents = "Documents";
 
                     public const string Configuration = "Configuration";

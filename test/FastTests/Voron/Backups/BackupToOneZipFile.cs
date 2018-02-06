@@ -3,8 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Revisions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Subscriptions;
@@ -12,23 +10,22 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Voron.Impl.Backup;
-using Raven.Server.Json;
 
 namespace FastTests.Voron.Backups
 {
     public class BackupToOneZipFile : RavenLowLevelTestBase
     {
-        [Fact(Skip="Should add database record to backup and restore")]
+        [Fact(Skip = "Should add database record to backup and restore")]
         public async Task FullBackupToOneZipFile()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             Directory.CreateDirectory(tempFileName);
-            
+
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var context = DocumentsOperationContext.ShortTermSingleUse(database);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, database.Name, false, 13);
-               
+
                 await database.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions
                 {
                     Query = "from Users",
@@ -62,7 +59,7 @@ namespace FastTests.Voron.Backups
 
                     tx.Commit();
                 }
-                
+
                 foreach (var index in database.IndexStore.GetIndexes())
                 {
                     index._indexStorage.Environment().Options.ManualFlushing = true;
