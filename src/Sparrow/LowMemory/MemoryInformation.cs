@@ -75,6 +75,9 @@ namespace Sparrow.LowMemory
             public ulong ullAvailExtendedVirtual;
         }
 
+        private static bool IsRunningOnDocker =>
+          string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER")) == false;
+
         public static void AssertNotAboutToRunOutOfMemory(float minimumFreeCommittedMemory)
         {
             // we are about to create a new thread, might not always be a good idea:
@@ -83,7 +86,8 @@ namespace Sparrow.LowMemory
 
             var memInfo = GetMemoryInfo();
             Size overage;
-            if(memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
+            if(IsRunningOnDocker || 
+                memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
             {
                 // this can happen on containers, since we get this information from the host, and
                 // sometimes this kind of stat is shared, see: 
