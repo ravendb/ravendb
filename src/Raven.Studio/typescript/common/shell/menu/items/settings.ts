@@ -40,15 +40,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-client-configuration',
             dynamicHash: appUrls.clientConfiguration
         }),
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/quotas',
-            moduleId: 'viewmodels/database/settings/quotas',
-            title: 'Quotas',
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: appUrls.quotas
-        }),*/
         new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: 'viewmodels/database/settings/revisions',
@@ -73,15 +64,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-manage-dbgroup',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
-        /*TODO
-        new leafMenuItem({
-            route: 'databases/settings/databaseStudioConfig',
-            moduleId: 'viewmodels/databaseStudioConfig',
-            title: 'Studio Config',
-            nav: true,
-            css: 'icon-studio-config',
-            dynamicHash: appUrls.databaseStudioConfig
-        })*/
         new separatorMenuItem(),
         new separatorMenuItem('Tasks'),
         new leafMenuItem({
@@ -155,16 +137,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-ongoing-tasks',
             dynamicHash: appUrls.ongoingTasksUrl
-        }),
-        /* TODO:
-        new leafMenuItem({
-            route: 'databases/tasks/csvImport',
-            moduleId: 'viewmodels/database/tasks/csvImport',
-            title: 'CSV Import',
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: csvImportUrl
-        })*/
+        })
     ];
 
     return new intermediateMenuItem('Settings', items, 'icon-settings');

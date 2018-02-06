@@ -1,6 +1,5 @@
 // Interface
 interface computedAppUrls {
-    adminSettings: KnockoutComputed<string>;
     adminSettingsCluster: KnockoutComputed<string>;
 
     databases: KnockoutComputed<string>;
@@ -21,8 +20,6 @@ interface computedAppUrls {
     editSqlEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
-    reporting: KnockoutComputed<string>;
-    tasks: KnockoutComputed<string>;
     importDatabaseFromFileUrl: KnockoutComputed<string>;
     importCollectionFromCsv: KnockoutComputed<string>;
     exportDatabaseUrl: KnockoutComputed<string>;
@@ -36,36 +33,15 @@ interface computedAppUrls {
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
-    requestsCount: KnockoutComputed<string>;
-    requestsTracing: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
-    logs: KnockoutComputed<string>;
-    runningTasks: KnockoutComputed<string>;
-    alerts: KnockoutComputed<string>;
     indexErrors: KnockoutComputed<string>;
     replicationStats: KnockoutComputed<string>;
-    userInfo: KnockoutComputed<string>;
     visualizer: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
-    quotas: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
     expiration: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
     conflictResolution: KnockoutComputed<string>;
-    databaseStudioConfig: KnockoutComputed<string>;
-    statusDebug: KnockoutComputed<string>;
-    statusDebugChanges: KnockoutComputed<string>;
-    statusDebugMetrics: KnockoutComputed<string>;
-    statusDebugConfig: KnockoutComputed<string>;
-    statusDebugDocrefs: KnockoutComputed<string>;
-    statusDebugCurrentlyIndexing: KnockoutComputed<string>;
-    statusDebugQueries: KnockoutComputed<string>;
-    statusDebugTasks: KnockoutComputed<string>;
-    statusDebugRoutes: KnockoutComputed<string>;
-    statusDebugIndexFields: KnockoutComputed<string>;
-    statusDebugIdentities: KnockoutComputed<string>;
-    statusDebugWebSocket: KnockoutComputed<string>;
-    infoPackage: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;
 

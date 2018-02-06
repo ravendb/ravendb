@@ -7,7 +7,6 @@ import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import appUrl = require("common/appUrl");
 import messagePublisher = require("common/messagePublisher");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import mergedIndexesStorage = require("common/storage/mergedIndexesStorage");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 import starredDocumentsStorage = require("common/storage/starredDocumentsStorage");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
@@ -28,7 +27,6 @@ class databasesManager {
     databases = ko.observableArray<database>([]);
 
     onDatabaseDeletedCallbacks = [
-        (q, n) => mergedIndexesStorage.onDatabaseDeleted(q, n),
         (q, n) => recentQueriesStorage.onDatabaseDeleted(q, n),
         (q, n) => starredDocumentsStorage.onDatabaseDeleted(q, n),
         (q, n) => savedPatchesStorage.onDatabaseDeleted(q, n)

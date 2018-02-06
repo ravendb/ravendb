@@ -48,15 +48,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.indexErrors,
             badgeData:  ko.pureComputed(() => { return footer.default.stats() ? footer.default.stats().countOfIndexingErrors() : null; }) 
         }),
-        /* TODO
-        new leafMenuItem({
-            title: "Merge suggestions",
-            nav: true,
-            route: "databases/indexes/mergeSuggestions",
-            moduleId: "viewmodels/database/indexes/indexMergeSuggestions",
-            css: 'icon-merge',
-            dynamicHash: appUrls.megeSuggestions
-        }),*/
         new leafMenuItem({
             title: 'Edit Index',
             route: 'databases/indexes/edit(/:indexName)',

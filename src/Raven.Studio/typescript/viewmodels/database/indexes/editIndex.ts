@@ -135,12 +135,6 @@ class editIndex extends viewModelBase {
 
         return $.Deferred<canActivateResultDto>().resolve({ can: true });
 
-        /* TODO merge suggesions
-        var mergeSuggestion: indexMergeSuggestion = mergedIndexesStorage.getMergedIndex(db, indexToEditName);
-        if (mergeSuggestion != null) {
-            this.mergeSuggestion(mergeSuggestion);
-            this.editedIndex(mergeSuggestion.mergedIndexDefinition);
-        }*/
     }
 
     activate(indexToEditName: string) {

@@ -20,7 +20,6 @@ import registration = require("viewmodels/shell/registration");
 import collection = require("models/database/documents/collection");
 
 import appUrl = require("common/appUrl");
-import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
 import messagePublisher = require("common/messagePublisher");
@@ -103,7 +102,6 @@ class shell extends viewModelBase {
 
         extensions.install();
 
-        dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
         helpBindingHandler.install();
 
@@ -287,17 +285,6 @@ class shell extends viewModelBase {
         accessHelper.canReadWriteSettings(true);
         accessHelper.canReadSettings(true);
         
-        /*
-        //TODO: implement this!
-        new getServerConfigsCommand()
-            .execute()
-            .done((serverConfigs: serverConfigsDto) => {
-                accessHelper.isGlobalAdmin(serverConfigs.IsGlobalAdmin);
-                accessHelper.canReadWriteSettings(serverConfigs.CanReadWriteSettings);
-                accessHelper.canReadSettings(serverConfigs.CanReadSettings);
-            })
-            .always(() => deferred.resolve());
-        */
         return deferred;
     }
 
