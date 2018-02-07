@@ -30,7 +30,7 @@ namespace Raven.Server.Utils
                 return new DiskSpaceResult
                 {
                     DriveName = Syscall.GetRootMountString(drivesInfo, pathToCheck),
-                    TotalFreeSpace = new Size((long)(statvfs.f_bsize * statvfs.f_bfree), SizeUnit.Bytes),
+                    TotalFreeSpace = new Size((long)(statvfs.f_bsize * statvfs.f_bavail), SizeUnit.Bytes),
                     TotalSize = new Size((long)(statvfs.f_bsize * statvfs.f_blocks), SizeUnit.Bytes)
                 };
             }
