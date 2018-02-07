@@ -22,7 +22,7 @@ namespace Voron.Exceptions
 
         public DiskFullException(string filePath, long requestedFileSize, long? freeSpace)
             : base(
-                $"There is not enough space for file {filePath} to {Sizes.Humane(requestedFileSize)}" +
+                $"There is not enough space for file {filePath} to {Sizes.Humane(requestedFileSize)}. " +
                 $"Currently available space: {Sizes.Humane(freeSpace)}"
             )
         {
