@@ -46,12 +46,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.LetsEncrypt.Email", ConfigurationEntryScope.ServerWideOnly)]
         public string CertificateLetsEncryptEmail { get; set; }
 
-        [Description("The path of the (512-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
+        [Description("The path of the (256-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.MasterKey.Path", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyPath { get; set; }
 
-        [Description("A command or executable to run which will provide a (512-bit) Master Key, If specified, RavenDB will use this key to protect secrets.")]
+        [Description("A command or executable to run which will provide a (256-bit) Master Key, If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.MasterKey.Exec", ConfigurationEntryScope.ServerWideOnly)]
         public string MasterKeyExec { get; set; }
