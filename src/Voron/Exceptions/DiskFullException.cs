@@ -6,6 +6,8 @@
 
 using System;
 using System.IO;
+using Sparrow;
+using Sparrow.Utils;
 
 namespace Voron.Exceptions
 {
@@ -20,8 +22,8 @@ namespace Voron.Exceptions
 
         public DiskFullException(string filePath, long requestedFileSize, long? freeSpace)
             : base(
-                $"There is not enough space for file {filePath} to {requestedFileSize / 1024:N1} KB. " +
-                $"Currently available space: {(freeSpace / 1024) ?? -1:N1} KB"
+                $"There is not enough space for file {filePath} to {Sizes.Humane(requestedFileSize)}" +
+                $"Currently available space: {Sizes.Humane(freeSpace)}"
             )
         {
             DirectoryPath = Path.GetDirectoryName(filePath);
