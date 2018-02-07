@@ -230,8 +230,11 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
-                    if (GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb) == false)
-                        installedMemoryInKb = (long)memoryStatus.ullTotalPhys;
+                    // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function 
+                    // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
+                    // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA. 
+                    // Malformed SMBIOS data may indicate a problem with the user's computer.
+                    var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
 
                     SetMemoryRecords((long)memoryStatus.ullAvailPhys);
                     
@@ -241,7 +244,9 @@ namespace Sparrow.LowMemory
                         CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
                         AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
                         TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                        InstalledMemory = new Size(installedMemoryInKb, SizeUnit.Kilobytes),
+                        InstalledMemory = fetchedInstalledMemory ? 
+                            new Size(installedMemoryInKb, SizeUnit.Kilobytes) : 
+                            new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
                         MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
                         {
                             High = new MemoryInfoResult.MemoryUsageIntervals
