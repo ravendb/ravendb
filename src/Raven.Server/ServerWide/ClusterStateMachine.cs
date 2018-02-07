@@ -395,6 +395,10 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
+                    if (record.Topology.RelevantFor(removed))
+                    {
+                        record.Topology.RemoveFromTopology(removed);
+                    }
                     var updated = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
 
                     UpdateValue(index, items, lowerKey, key, updated);
