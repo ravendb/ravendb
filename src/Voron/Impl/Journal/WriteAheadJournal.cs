@@ -1003,6 +1003,9 @@ namespace Voron.Impl.Journal
 
                             _journalsToDelete.Add(toDelete);
                         }
+
+                        _parent._waj._env.Options.SetLastReusedJournalCountOnSync(_journalsToDelete.Count);
+                        
                         foreach (var kvp in _journalsToDelete)
                         {
                             _parent._journalsToDelete.Remove(kvp.Key);

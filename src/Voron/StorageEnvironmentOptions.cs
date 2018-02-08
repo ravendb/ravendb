@@ -38,6 +38,13 @@ namespace Voron
         public event EventHandler<RecoveryErrorEventArgs> OnRecoveryError;
         public event EventHandler<NonDurabilitySupportEventArgs> OnNonDurableFileSystemError;
         private long _reuseCounter;
+        private long _lastReusedJournalCountOnSync;
+
+        public void SetLastReusedJournalCountOnSync(long journalNum)
+        {
+            _lastReusedJournalCountOnSync = journalNum; 
+        }
+        
         public abstract override string ToString();
 
         private bool _forceUsing32BitsPager;
@@ -1059,6 +1066,7 @@ namespace Voron
 
         public void TryStoreJournalForReuse(VoronPathSetting filename)
         {
+            var reusedCount = 0;
             try
             {
                 var fileModifiedDate = new FileInfo(filename.FullPath).LastWriteTimeUtc;
@@ -1068,6 +1076,15 @@ namespace Voron
                 File.Move(filename.FullPath, newName);
                 lock (_journalsForReuse)
                 {
+                    reusedCount = _journalsForReuse.Count;
+                    
+                    if ( reusedCount > _lastReusedJournalCountOnSync)
+                    {
+                        if (File.Exists(newName))
+                            File.Delete(newName);
+                        return;
+                    }
+
                     var ticks = fileModifiedDate.Ticks;
 
                     while (_journalsForReuse.ContainsKey(ticks))
@@ -1079,7 +1096,7 @@ namespace Voron
             catch (Exception ex)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info("Can't store journal for reuse : " + filename, ex);
+                    _log.Info(reusedCount > _lastReusedJournalCountOnSync ? "Can't remove" : "Can't store" + " journal for reuse : " + filename, ex);
                 try
                 {
                     if (File.Exists(filename.FullPath))
