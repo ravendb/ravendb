@@ -1,9 +1,9 @@
 param(
-    $Version = "4.0.0-custom-40")
+    $Version = "4.1.0-custom-41")
 
 $ErrorActionPreference = "Stop"
 
-function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
+function BuildUbuntuDockerImage ( $projectDir, $version = "4.1.0-custom-41" ) {
     $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
     $packagePath = [io.path]::combine($projectDir, "artifacts", $packageFileName)
 
