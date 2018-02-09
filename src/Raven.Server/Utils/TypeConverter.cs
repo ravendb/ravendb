@@ -103,14 +103,14 @@ namespace Raven.Server.Utils
                 supporeted.Add(IsSupportedType(propertyValue));
             }
 
-            return supporeted.All(v=>v);
+            return supporeted.All(v => v);
         }
-
 
         public static object ToBlittableSupportedType(object value, bool flattenArrays = false)
         {
             return ToBlittableSupportedType(value, value, flattenArrays, 0);
         }
+
         private static object ToBlittableSupportedType(object root, object value, bool flattenArrays, int recursiveLevel)
         {
             if (recursiveLevel > MaxAllowedRecursiveLevelForType)
@@ -133,7 +133,7 @@ namespace Raven.Server.Utils
             if (value is bool)
                 return value;
 
-            if (value is int || value is long || value is double || value is decimal || value is float)
+            if (value is int || value is long || value is double || value is decimal || value is float || value is short || value is byte)
                 return value;
 
             if (value is LazyNumberValue)
@@ -156,7 +156,7 @@ namespace Raven.Server.Utils
             {
                 var @object = new DynamicJsonValue();
                 foreach (var key in dictionary.Keys)
-                    @object[key.ToString()] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel+1);
+                    @object[key.ToString()] = ToBlittableSupportedType(root, dictionary[key], flattenArrays, recursiveLevel: recursiveLevel + 1);
 
                 return @object;
             }
