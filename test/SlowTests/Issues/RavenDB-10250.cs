@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Sparrow.Json.Parsing;
@@ -11,9 +8,11 @@ namespace SlowTests.Issues
 {
     public class RavenDB_10250 : RavenTestBase
     {
-        public class User
+        private class User
         {
+#pragma warning disable 169,649
             public string Name;
+#pragma warning restore 169,649
         }
 
         [Fact]
