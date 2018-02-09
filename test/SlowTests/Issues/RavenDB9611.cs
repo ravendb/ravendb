@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -10,13 +8,13 @@ namespace SlowTests.Issues
 {
     public class RavenDB9611 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name;
             public string[] Groups;
         }
 
-        public class Group
+        private class Group
         {
             public string[] Tags;
         }

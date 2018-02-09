@@ -1,15 +1,13 @@
 ﻿using FastTests;
-using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Extensions;
 using Xunit;
 
 namespace SlowTests.Client
 {
     public class RavenDB_6407 : RavenTestBase
     {
-        public class User
+        private class User
         {
             public string Name;
             public string Email;

@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections.Generic")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Globalization")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Linq")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Text.RegularExpressions")),
 

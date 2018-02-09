@@ -9,61 +9,61 @@ namespace FastTests.Server.Documents.Indexing
 {
     public class IndexMerging : RavenTestBase
     {
-        public class Person
+        private class Person
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public string AddressId { get; set; }
         }
 
-        public class PersonWithAddress
+        private class PersonWithAddress
         {
             public string Id { get; set; }
             public string Name { get; set; }
             public Address Address { get; set; }
         }
 
-        public class Address
+        private class Address
         {
             public string Id { get; set; }
             public string Street { get; set; }
             public int ZipCode { get; set; }
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
             public string Email { get; set; }
             public int Age { get; set; }
         }
 
-        public class UsersByName : AbstractIndexCreationTask<User>
+        private class UsersByName : AbstractIndexCreationTask<User>
         {
             public UsersByName()
             {
                 Map = usersCollection => from user in usersCollection
-                    select new { user.Name };
+                                         select new { user.Name };
                 Index(x => x.Name, FieldIndexing.Search);
 
             }
         }
 
-        public class UsersByAge : AbstractIndexCreationTask<User>
+        private class UsersByAge : AbstractIndexCreationTask<User>
         {
             public UsersByAge()
             {
                 Map = users => from u in users
-                    select new { u.Age };
+                               select new { u.Age };
 
             }
         }
 
-        public class UsersByEmail : AbstractIndexCreationTask<User>
+        private class UsersByEmail : AbstractIndexCreationTask<User>
         {
             public UsersByEmail()
             {
                 Map = users => from user in users
-                    select new { user.Email };
+                               select new { user.Email };
 
             }
         }
@@ -73,10 +73,10 @@ namespace FastTests.Server.Documents.Indexing
             public Person_ByName_1()
             {
                 Map = persons => from p in persons
-                    select new
-                    {
-                        Name = p.Name
-                    };
+                                 select new
+                                 {
+                                     Name = p.Name
+                                 };
             }
         }
 
@@ -85,10 +85,10 @@ namespace FastTests.Server.Documents.Indexing
             public Person_ByName_2()
             {
                 Map = persons => from p in persons
-                    select new
-                    {
-                        Name = p.Name
-                    };
+                                 select new
+                                 {
+                                     Name = p.Name
+                                 };
             }
         }
 
@@ -97,10 +97,10 @@ namespace FastTests.Server.Documents.Indexing
             public Person_ByName_3()
             {
                 Map = persons => from person in persons
-                    select new
-                    {
-                        Name = person.Name
-                    };
+                                 select new
+                                 {
+                                     Name = person.Name
+                                 };
             }
         }
 
@@ -109,10 +109,10 @@ namespace FastTests.Server.Documents.Indexing
             public Complex_Person_ByName_1()
             {
                 Map = persons => from p in persons
-                    select new
-                    {
-                        Street = p.Address.Street
-                    };
+                                 select new
+                                 {
+                                     Street = p.Address.Street
+                                 };
             }
         }
 
@@ -121,10 +121,10 @@ namespace FastTests.Server.Documents.Indexing
             public Complex_Person_ByName_2()
             {
                 Map = persons => from p in persons
-                    select new
-                    {
-                        Street = p.Address.Street
-                    };
+                                 select new
+                                 {
+                                     Street = p.Address.Street
+                                 };
             }
         }
 
@@ -133,10 +133,10 @@ namespace FastTests.Server.Documents.Indexing
             public Complex_Person_ByName_3()
             {
                 Map = persons => from person in persons
-                    select new
-                    {
-                        Street = person.Address.Street
-                    };
+                                 select new
+                                 {
+                                     Street = person.Address.Street
+                                 };
             }
         }
 
