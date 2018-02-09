@@ -1,9 +1,6 @@
-param(
-    $Version = "4.0.0-custom-40")
-
 $ErrorActionPreference = "Stop"
 
-function BuildWindowsDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
+function BuildWindowsDockerImage ( $projectDir, $version) {
     $packageFileName = "RavenDB-$version-windows-x64.zip"
     $packagePath = [io.path]::combine($projectDir, "artifacts", $packageFileName)
 
@@ -27,5 +24,10 @@ function BuildWindowsDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
 
     Remove-Item "./ravendb-nanoserver/RavenDB.zip"
 }
+
+$versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
+$fname = $(Get-ChildItem "../artifacts" | Where-Object { $_.Name -Match $versionRegex } | Select-Object -First 1).Name
+$match = $fname | select-string -Pattern $versionRegex
+$version = $match.Matches[0].Groups[1]
 
 BuildWindowsDockerImage ".." $Version
