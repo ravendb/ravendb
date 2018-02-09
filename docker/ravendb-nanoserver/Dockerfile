@@ -2,7 +2,7 @@ FROM microsoft/dotnet:runtime-nanoserver
 
 HEALTHCHECK --start-period=60s CMD powershell -c 'C:\healthcheck.ps1'
 
-ENV RAVEN_ARGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
+ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
 EXPOSE 8080 38888 161
 
