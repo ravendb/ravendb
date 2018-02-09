@@ -273,11 +273,16 @@ namespace FastTests.Issues
                 {
                     var list = session.Query<DummyIndexCount.Result, DummyIndexCount>()
                         .Where(x => x.IntCount.Any(d => d == 2))
-                        .As<Dummy>()
                         .ToList();
 
                     Assert.Equal(1, list.Count);
                     Assert.Equal(newGuid, list[0].Guid);
+                    Assert.Equal(new int[] { 2 }, list[0].IntCount);
+                    Assert.Equal(new short[] { 2 }, list[0].ShortCount);
+                    Assert.Equal(new byte[] { byte.MaxValue }, list[0].ByteCount);
+                    Assert.Equal(new float[] { 1 }, list[0].FloatCount);
+                    Assert.Equal(new decimal[] { 1 }, list[0].DecimalCount);
+                    Assert.Equal(new double[] { 1 }, list[0].DoubleCount);
                 }
             }
         }
