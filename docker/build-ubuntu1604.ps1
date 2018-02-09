@@ -1,9 +1,6 @@
-param(
-    $Version = "4.0.0-custom-40")
-
 $ErrorActionPreference = "Stop"
 
-function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
+function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.1-custom-40" ) {
     $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
     $packagePath = [io.path]::combine($projectDir, "artifacts", $packageFileName)
 
@@ -29,4 +26,9 @@ function BuildUbuntuDockerImage ( $projectDir, $version = "4.0.0-custom-40" ) {
     Remove-Item "./ravendb-ubuntu1604/RavenDB.tar.bz2"
 }
 
-BuildUbuntuDockerImage ".." $Version
+$versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
+$fname = $(Get-ChildItem "../artifacts" | Where-Object { $_.Name -Match $versionRegex } | Select-Object -First 1).Name
+$match = $fname | select-string -Pattern $versionRegex
+$version = $match.Matches[0].Groups[1]
+
+BuildUbuntuDockerImage ".." $version 
