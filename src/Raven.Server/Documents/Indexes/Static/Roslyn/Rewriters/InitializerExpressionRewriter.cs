@@ -59,7 +59,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     castedExpression = castedExpression.Add(CastExpression(typeToCast, rankCount, expression));
                 }
 
-
                 return node.WithExpressions(castedExpression);
             }
 
