@@ -221,7 +221,7 @@ namespace FastTests.Issues
             Assert.Equal(0, store.Maintenance.Send(new GetIndexErrorsOperation(new[] { indexName }))[0].Errors.Length);
         }
 
-        public class User
+        private class User
         {
             public string Name { get; set; }
 
@@ -230,12 +230,12 @@ namespace FastTests.Issues
             public SortedDictionary<DateTime, long> LoginsByTicks { get; set; }
         }
 
-        public class LastAccess
+        private class LastAccess
         {
             public long Count { get; set; }
         }
 
-        public class LastAccessPerUserDateTimeIndex : AbstractIndexCreationTask<User, LastAccessPerUserDateTimeIndex.Result>
+        private class LastAccessPerUserDateTimeIndex : AbstractIndexCreationTask<User, LastAccessPerUserDateTimeIndex.Result>
         {
             public class Result
             {
@@ -257,7 +257,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class LastAccessPerUserDateTimeDefaultIndex : AbstractIndexCreationTask<User, LastAccessPerUserDateTimeIndex.Result>
+        private class LastAccessPerUserDateTimeDefaultIndex : AbstractIndexCreationTask<User, LastAccessPerUserDateTimeIndex.Result>
         {
             private readonly LastAccess _defaultLastAccess = new LastAccess();
 
@@ -284,7 +284,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class LastAccessPerUserTicksIndex : AbstractIndexCreationTask<User, LastAccessPerUserTicksIndex.Result>
+        private class LastAccessPerUserTicksIndex : AbstractIndexCreationTask<User, LastAccessPerUserTicksIndex.Result>
         {
             public class Result
             {

@@ -282,7 +282,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class DateIndex : AbstractIndexCreationTask<Date, DateIndex.Result>
+        private class DateIndex : AbstractIndexCreationTask<Date, DateIndex.Result>
         {
             public class Result
             {
@@ -300,7 +300,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class LastAccessIndex : AbstractIndexCreationTask<User, LastAccessIndex.Result>
+        private class LastAccessIndex : AbstractIndexCreationTask<User, LastAccessIndex.Result>
         {
             public class Result
             {
@@ -330,7 +330,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class LastAccessPerName : AbstractIndexCreationTask<User, LastAccessPerName.Result>
+        private class LastAccessPerName : AbstractIndexCreationTask<User, LastAccessPerName.Result>
         {
             public class Result
             {
@@ -372,7 +372,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class DummyIndex : AbstractIndexCreationTask<Dummy, DummyIndex.Result>
+        private class DummyIndex : AbstractIndexCreationTask<Dummy, DummyIndex.Result>
         {
             public class Result
             {
@@ -390,7 +390,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class DummyGuidList : AbstractIndexCreationTask<Dummy, DummyGuidList.Result>
+        private class DummyGuidList : AbstractIndexCreationTask<Dummy, DummyGuidList.Result>
         {
             public class Result
             {
@@ -429,7 +429,7 @@ namespace FastTests.Issues
             }
         }
 
-        public class DummyIndexCount : AbstractIndexCreationTask<Dummy, DummyIndexCount.Result>
+        private class DummyIndexCount : AbstractIndexCreationTask<Dummy, DummyIndexCount.Result>
         {
             public class Result
             {
@@ -498,12 +498,12 @@ namespace FastTests.Issues
             }
         }
 
-        public class Date
+        private class Date
         {
             public DateTime DateTime { get; set; }
         }
 
-        public class User
+        private class User
         {
             public User()
             {
@@ -515,7 +515,7 @@ namespace FastTests.Issues
             public Dictionary<DateTime, long> LoginsByDay { get; set; }
         }
 
-        public class Dummy
+        private class Dummy
         {
             public Guid Guid { get; set; }
 
