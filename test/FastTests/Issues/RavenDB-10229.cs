@@ -268,7 +268,7 @@ namespace FastTests.Issues
                 }
 
                 WaitForIndexing(store);
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenSession())
                 {
                     var list = session.Query<DummyIndexCount.Result, DummyIndexCount>()
@@ -439,7 +439,7 @@ namespace FastTests.Issues
 
                 public short[] ShortCount { get; set; }
 
-                public byte[] ByteCount { get; set; }
+                public List<byte> ByteCount { get; set; }
 
                 public float[] FloatCount { get; set; }
 
@@ -463,7 +463,7 @@ namespace FastTests.Issues
                         {
                             dummy.Short
                         },
-                        ByteCount = new[]
+                        ByteCount = new List<byte>
                         {
                             dummy.Byte
                         },
