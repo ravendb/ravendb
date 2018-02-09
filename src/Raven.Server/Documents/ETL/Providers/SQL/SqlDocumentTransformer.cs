@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
+using Jint.Native;
+using Jint.Runtime;
+using Jint.Runtime.Interop;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -12,6 +16,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
     {
+        private static readonly JsValue DefaultVarCharSize = 50;
+        
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
@@ -31,6 +37,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
 
             LoadToDestinations = tables;
+        }
+
+        public override void Initalize()
+        {
+            base.Initalize();
+
+            SingleRun.ScriptEngine.SetValue("varchar",
+                new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.AnsiStringType, values)));
+
+            SingleRun.ScriptEngine.SetValue("nvarchar",
+                new ClrFunctionInstance(SingleRun.ScriptEngine, (value, values) => ToVarcharTranslator(VarcharFunctionCall.StringType, values)));
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -135,6 +152,40 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     continue;
 
                 GetOrAdd(sqlTable.TableName).Deletes.Add(item);
+            }
+        }
+
+        private JsValue ToVarcharTranslator(JsValue type, JsValue[] args)
+        {
+            if (args[0].IsString() == false)
+                throw new InvalidOperationException("varchar() / nvarchar(): first argument must be a string");
+
+            var sizeSpecified = args.Length > 1;
+
+            if (sizeSpecified && args[1].IsNumber() == false)
+                throw new InvalidOperationException("varchar() / nvarchar(): second argument must be a number");
+
+            var item = SingleRun.ScriptEngine.Object.Construct(Arguments.Empty);
+
+            item.Put(nameof(VarcharFunctionCall.Type), type, true);
+            item.Put(nameof(VarcharFunctionCall.Value), args[0], true);
+            item.Put(nameof(VarcharFunctionCall.Size), sizeSpecified ? args[1] : DefaultVarCharSize, true);
+
+            return item;
+        }
+
+        public class VarcharFunctionCall
+        {
+            public static JsValue AnsiStringType = new JsValue(DbType.AnsiString.ToString());
+            public static JsValue StringType = new JsValue(DbType.String.ToString());
+
+            public DbType Type { get; set; }
+            public object Value { get; set; }
+            public int Size { get; set; }
+
+            private VarcharFunctionCall()
+            {
+
             }
         }
     }
