@@ -1,16 +1,16 @@
 ## RavenDB Docker Support
 
-The files here support building and running RavenDB 4.0 in a docker container on either Linux or Windows (nanoserver).
+The files here support building and running RavenDB 4.1 in a docker container on either Linux or Windows (nanoserver).
 
 ### Official images
 
  Official Docker images are available on our [Docker Hub](https://hub.docker.com/r/ravendb/ravendb/). We provide images in two flavors: ubuntu-based (to be run on Linux containers) and nanoserver-based (to be run using Windows containers). The following tags are available:
 
-- `ubuntu-latest` - contains the latest version of RavenDB 4.0 running on Ubuntu 16.04 container
+- `ubuntu-latest` - contains the latest version of RavenDB 4.1 running on Ubuntu 16.04 container
 
-- `windows-nanoserver-latest` - contains the latest version of RavenDB 4.0 running running on Windows nanoserver
+- `windows-nanoserver-latest` - contains the latest version of RavenDB 4.1 running running on Windows nanoserver
 
-- every 4.0 release is going to have its own image set for both Ubuntu and Windows containers
+- every 4.1 release is going to have its own image set for both Ubuntu and Windows containers
 
 - `latest` points to `ubuntu-latest`
 
@@ -32,9 +32,9 @@ Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub
 
 You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
-Run Ubuntu-based image: [run-ubuntu1604.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-ubuntu1604.ps1)
+Run Ubuntu-based image: [run-ubuntu1604.ps1](https://github.com/ravendb/ravendb/blob/v4.1/docker/run-ubuntu1604.ps1)
 
-Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v4.0/docker/run-nanoserver.ps1)
+Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v4.1/docker/run-nanoserver.ps1)
 
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
@@ -125,6 +125,6 @@ Mount it as a docker volume and use `--config-path PATH_TO_CONFIG` command line 
 
 These images were built using the following Dockerfiles:
 
-- [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-nanoserver/Dockerfile)
+- [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.1/docker/ravendb-nanoserver/Dockerfile)
 
-- [Ubuntu 16.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.0/docker/ravendb-ubuntu1604/Dockerfile)
+- [Ubuntu 16.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v4.1/docker/ravendb-ubuntu1604/Dockerfile)

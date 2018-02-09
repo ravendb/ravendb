@@ -11,7 +11,7 @@ Type:
 * RavenDB as Daemon (systemd - applies to Ubuntu 16.04)
 Open bash terminal, and create file /etc/systemd/system/ravendb.service, using super user permissions, containing:
     [Unit]
-    Description=RavenDB v4.0
+    Description=RavenDB v4.1
     After=network.target
 
     [Service]

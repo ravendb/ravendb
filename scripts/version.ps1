@@ -10,7 +10,7 @@ function SetBuiltAtEnvironmentVariableInTeamCity($builtAt) {
     SetTeamCityEnvironmentVariable 'env.BUILT_AT' $($builtAt.ToString('o'))
 }
 
-$DEV_BUILD_NUMBER = 40
+$DEV_BUILD_NUMBER = 41
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
@@ -83,7 +83,7 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
 
     $repoOwner = "ravendb"
     $repo = "ravendb"
-    $branch = "v4.0"
+    $branch = "v4.1"
     $remoteFilePath = 'src/CommonAssemblyInfo.cs'
     
     write-host "Build file URI for: $repoOwner/$($repo):$($remoteFilePath)"

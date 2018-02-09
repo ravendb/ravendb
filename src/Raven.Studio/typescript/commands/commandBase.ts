@@ -9,7 +9,7 @@ import protractedCommandsDetector = require("common/notifications/protractedComm
 class commandBase {
 
     // TODO: better place for this?
-    static ravenClientVersion = '4.0.0.0';
+    static ravenClientVersion = '4.1.0.0';
 
     execute(): JQueryPromise<any> {
         throw new Error("Execute must be overridden.");

@@ -111,7 +111,7 @@ Running as service in Linux, add to your daemon script:
 - Add RavenDB Client package:
 
 ```
-   dotnet add package RavenDB.Client --version 4.0.0-*
+   dotnet add package RavenDB.Client --version 4.1.0-*
 ```
 
 - Replace the content of Program.cs with the following:
