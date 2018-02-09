@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Documents.Indexing;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -18,7 +16,14 @@ namespace FastTests.Issues
 {
     public class RavenDB_7940 : RavenTestBase
     {
-        public class Person_ByName_1 : AbstractIndexCreationTask<IndexMerging.Person>
+        private class Person
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string AddressId { get; set; }
+        }
+
+        private class Person_ByName_1 : AbstractIndexCreationTask<Person>
         {
             public Person_ByName_1()
             {
@@ -34,7 +39,7 @@ namespace FastTests.Issues
         public async Task RecreatingIndexesToARecreatedDatabase()
         {
             var path = NewDataPath();
-            using (var store = GetDocumentStore(new RavenTestBase.Options
+            using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = x => Path.GetFileName(path),
                 Path = path
