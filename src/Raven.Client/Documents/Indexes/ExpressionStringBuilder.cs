@@ -895,16 +895,37 @@ namespace Raven.Client.Documents.Indexes
             {
                 return "float?";
             }
-
-            if (type == typeof(long) || type == typeof(int) || type == typeof(short) || type == typeof(byte))
+            if (type == typeof(long))
             {
-                // on the server, int, short and byte are represented as long
                 return "long";
             }
-            if (type == typeof(long?) || type == typeof(int?) || type == typeof(short?) || type == typeof(byte?))
+            if (type == typeof(long?))
             {
-                // on the server, int?, short? and byte? are represented as long?
                 return "long?";
+            }
+            if (type == typeof(int))
+            {
+                return "int";
+            }
+            if (type == typeof(int?))
+            {
+                return "int?";
+            }
+            if (type == typeof(short))
+            {
+                return "short";
+            }
+            if (type == typeof(short?))
+            {
+                return "short?";
+            }
+            if (type == typeof(byte))
+            {
+                return "byte";
+            }
+            if (type == typeof(byte?))
+            {
+                return "byte?";
             }
             if (type.GetTypeInfo().IsEnum)
             {
@@ -1526,7 +1547,7 @@ namespace Raven.Client.Documents.Indexes
 
             Out(IsIndexerCall(node) ? "]" : ")");
 
-            if (node.Type.GetTypeInfo().IsValueType && 
+            if (node.Type.GetTypeInfo().IsValueType &&
                 TypeExistsOnServer(node.Type) &&
                 node.Type.Name != typeof(KeyValuePair<,>).Name)
             {
