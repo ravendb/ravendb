@@ -8,6 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
@@ -52,7 +53,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
-            buildVersion = 40;
+            buildVersion = ServerVersion.DevBuildNumber;
             _reader = new StreamReader(_stream);
             _csvReader = new CsvReader(_reader);
             _csvReader.Configuration.Delimiter = ",";
