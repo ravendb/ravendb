@@ -15,9 +15,13 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         public override SyntaxNode VisitInitializerExpression(InitializerExpressionSyntax node)
         {
             TypeSyntax typeToCast = null;
+            var rankCount = 0;
 
             if (node.Parent is ArrayCreationExpressionSyntax array)
+            {
                 typeToCast = array.Type.ElementType;
+                rankCount = array.Type.RankSpecifiers.Count - 1;
+            }
             else if (node.IsKind(SyntaxKind.CollectionInitializerExpression) && node.Parent is ObjectCreationExpressionSyntax obj) // e.g. List<int> { document.Field }
             {
                 var name = obj.Type as GenericNameSyntax;
@@ -44,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         {
                             var innerExpression = expressions[0];
 
-                            expressions = expressions.Replace(innerExpression, SyntaxFactory.ParseExpression($"({typeToCast})({innerExpression})"));
+                            expressions = expressions.Replace(innerExpression, CastExpression(typeToCast, rankCount, innerExpression));
                             initializerExpression = initializerExpression.WithExpressions(expressions);
                         }
 
@@ -52,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         continue;
                     }
 
-                    castedExpression = castedExpression.Add(SyntaxFactory.ParseExpression($"({typeToCast})({expression})"));
+                    castedExpression = castedExpression.Add(CastExpression(typeToCast, rankCount, expression));
                 }
 
 
@@ -60,6 +64,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             }
 
             return node;
+        }
+
+        private static ExpressionSyntax CastExpression(TypeSyntax typeToCast, int rankCount, ExpressionSyntax expression)
+        {
+            string rank = null;
+            for (var i = 0; i < rankCount; i++)
+                rank += "[]";
+
+            return SyntaxFactory.ParseExpression($"({typeToCast}{rank})({expression})");
         }
     }
 }
