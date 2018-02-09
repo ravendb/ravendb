@@ -16,13 +16,11 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron.Util;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.ServerWide.Context;
@@ -913,6 +911,84 @@ loadToOrders(orderData);
                         Assert.Equal(2, dbCommand.ExecuteScalar());
                         dbCommand.CommandText = " SELECT COUNT(*) FROM OrderLines";
                         Assert.Equal(3, dbCommand.ExecuteScalar());
+                    }
+                }
+            }
+        }
+
+        [NonLinuxFact]
+        public async Task CanUseVarcharAndNVarcharFunctions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                CreateRdbmsSchema(store, @"
+CREATE TABLE [dbo].[Users]
+(
+    [Id] [nvarchar](50) NOT NULL,
+    [FirstName] [varchar](30) NOT NULL,
+    [LastName] [nvarchar](30) NULL,
+    [FirstName2] [varchar](30) NOT NULL,
+    [LastName2] [nvarchar](30) NULL
+)
+");
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Joe Doń"
+                    });
+                    
+                    await session.SaveChangesAsync();
+                }
+                
+                var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses > 0);
+
+                AddEtl(store, new SqlEtlConfiguration()
+                {
+                    Name = "CanUserNonVarcharAndNVarcharFunctions",
+                    FactoryName = "System.Data.SqlClient",
+                    ConnectionStringName = "test",
+                    SqlTables =
+                    {
+                        new SqlEtlTable {TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                    },
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Name = "varchartest",
+                            Collections = {"Users"},
+                            Script = @"
+
+var names = this.Name.split(' ');
+
+loadToUsers(
+{
+    FirstName: varchar(names[0], 30),
+    LastName: nvarchar(names[1], 30),
+    FirstName2: varchar(names[0]),
+    LastName2:  nvarchar(names[1]),
+});
+"
+                        }
+                    }
+                }, new SqlConnectionString
+                {
+                    Name = "test",
+                    ConnectionString =  GetConnectionString(store)
+                });
+
+                etlDone.Wait(TimeSpan.FromMinutes(5));
+
+                using (var con = new SqlConnection())
+                {
+                    con.ConnectionString = GetConnectionString(store);
+                    con.Open();
+
+                    using (var dbCommand = con.CreateCommand())
+                    {
+                        dbCommand.CommandText = " SELECT COUNT(*) FROM Users";
+                        Assert.Equal(1, dbCommand.ExecuteScalar());
                     }
                 }
             }

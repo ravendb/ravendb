@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.ETL
             _key = key;
         }
 
-        public void Initalize()
+        public virtual void Initalize()
         {
             _returnRun = Database.Scripts.GetScriptRunner(_key, true, out SingleRun);
             if (SingleRun == null)
