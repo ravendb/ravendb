@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel;
+using System.IO;
 using System.Reflection;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
@@ -75,8 +76,9 @@ namespace Raven.Server.Monitoring.Snmp
                 foreach (var field in typeof(Server).GetFields())
                 {
                     var fieldValue = GetFieldValue(field);
+                    var fullOid = field.Name == nameof(UpTimeGlobal) ? fieldValue.Oid : Root + fieldValue.Oid;
 
-                    array.Add(CreateJsonItem(Root + fieldValue.Oid, fieldValue.Description));
+                    array.Add(CreateJsonItem(fullOid, fieldValue.Description));
                 }
 
                 return array;
