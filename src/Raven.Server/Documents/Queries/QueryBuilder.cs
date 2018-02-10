@@ -851,8 +851,9 @@ namespace Raven.Server.Documents.Queries
         {
             long l = 0;
             // this is known to be 0-9 with possibly _
+            bool isNegative = token[0] == '-';
 
-            for (var index = 0; index < token.Length; index++)
+            for (var index = isNegative  ? 1 : 0; index < token.Length; index++)
             {
                 var ch = token[index];
                 if (ch == '_')
@@ -861,7 +862,8 @@ namespace Raven.Server.Documents.Queries
                     ThrowInvalidInt64(token);
                 l = (l * 10) + (ch - '0');
             }
-            return l;
+
+            return isNegative ? -l : l;
         }
 
         private static void ThrowInvalidInt64(string token)
