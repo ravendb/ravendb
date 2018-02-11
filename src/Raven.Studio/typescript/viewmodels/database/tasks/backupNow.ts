@@ -1,10 +1,12 @@
 import confirmViewModelBase = require("viewmodels/confirmViewModelBase");
 
-class deleteDatabaseConfirm extends confirmViewModelBase<backupNowConfirmResult> {
+class backupNowConfirm extends confirmViewModelBase<backupNowConfirmResult> {
     private isFullBackup = ko.observable<boolean>(true);
 
     constructor(private fullBackupType: string) {
         super();
+        
+        this.fullBackupType = this.fullBackupType !== 'Snapshot' ? this.fullBackupType + ' Backup' : this.fullBackupType;
     }
 
     fullBackup() {
@@ -26,4 +28,4 @@ class deleteDatabaseConfirm extends confirmViewModelBase<backupNowConfirmResult>
 
 }
 
-export = deleteDatabaseConfirm;
+export = backupNowConfirm;
