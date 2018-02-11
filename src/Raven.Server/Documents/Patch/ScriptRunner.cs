@@ -388,7 +388,12 @@ namespace Raven.Server.Documents.Patch
                 var metadata = jsValue.IsObject() == false ? objectInstance : jsValue.AsObject();
                 var value = metadata.Get(Constants.Documents.Metadata.Id);
                 if (value.IsString() == false)
-                    return JsValue.Null;
+                {
+                    // search either @metadata.Id or Id
+                    value = metadata.Get(Constants.Documents.Metadata.IdProperty);
+                    if (value.IsString() == false)
+                        return JsValue.Null;
+                }
                 return value;
             }
 
