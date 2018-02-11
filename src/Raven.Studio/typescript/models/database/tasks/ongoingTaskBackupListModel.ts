@@ -97,8 +97,10 @@ class ongoingTaskBackupListModel extends ongoingTask {
                 this.refreshBackupInfo();
             }
 
-            return `in ${formatDuration} (${this.getBackupType(this.backupType(), nextBackup.IsFull)})`;
-        });
+            let backupType = this.getBackupType(this.backupType(), nextBackup.IsFull);
+            const backupTypeText = backupType !== 'Snapshot' ?  backupType + ' Backup' : backupType;             
+            return `in ${formatDuration} (${backupTypeText})`;
+    });
 
         this.onGoingBackupHumanized = ko.pureComputed(() => {
             const onGoingBackup = this.onGoingBackup();
