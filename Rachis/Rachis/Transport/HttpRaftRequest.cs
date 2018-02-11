@@ -67,7 +67,14 @@ namespace Rachis.Transport
                     }
                     catch (Exception e)
                     {
-                        var msg = $"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{await GetContentAsString(requestMessage.Content).ConfigureAwait(false)}\r\n{requestMessage.Headers}";
+                        string contentAsString;
+                        //HttpClient::SendAsync() disposes requestMessage.Content if it is StreamContent
+                        if (requestMessage.Content is StreamContent)
+                            contentAsString = "[StreamContent data is not available]";
+                        else
+                            contentAsString = await GetContentAsString(requestMessage.Content).ConfigureAwait(false);
+
+                        var msg = $"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{contentAsString}\r\n{requestMessage.Headers}";
                         _log.ErrorException(msg, e);
                         throw;
                     }
