@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
         private readonly ServerStore _store;
 
         public ClusterIndex(ServerStore store)
-            : base("3.2.2")
+            : base(SnmpOids.Cluster.Index)
         {
             _store = store;
         }

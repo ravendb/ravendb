@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Cluster
         private readonly ServerStore _store;
 
         public ClusterTerm(ServerStore store)
-            : base("3.2.1")
+            : base(SnmpOids.Cluster.Term)
         {
             _store = store;
         }
