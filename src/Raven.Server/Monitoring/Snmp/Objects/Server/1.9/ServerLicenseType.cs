@@ -8,7 +8,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly ServerStore _store;
 
         public ServerLicenseType(ServerStore store)
-            : base("1.9.1")
+            : base(SnmpOids.Server.ServerLicenseType)
         {
             _store = store;
         }
