@@ -27,15 +27,13 @@ namespace Sparrow.Platform.Posix
         public static extern IntPtr Set(byte* dest, int c, long count);
 
         [DllImport(LIBC_6, EntryPoint = "syscall", SetLastError = true)]
-        private static extern long syscall0(long number);
+        public static extern long syscall0(long number);
 
-        public static int gettid()
-        {
-            if (PlatformDetails.RunningOnMacOsx)
-                return 0;
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sched_getaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 
-            return (int)syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
-        }
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sched_setaffinity(int pid, IntPtr cpusetsize, ref ulong cpuset);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int setpriority(int which, int who, int prio);
@@ -449,6 +447,5 @@ namespace Sparrow.Platform.Posix
         public ulong f_flag;     /* mount flags */
         public ulong f_namemax;  /* maximum filename length */
         public fixed int f_spare[6];
-        
     }
 }

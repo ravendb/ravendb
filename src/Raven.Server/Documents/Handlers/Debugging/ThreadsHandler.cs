@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     {
                                         int? managedThreadId = null;
                                         string threadName = null;
-                                        if (threadAllocations.TryGetValue(thread.Id, out var threadAllocation))
+                                        if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadAllocation))
                                         {
                                             managedThreadId = threadAllocation.Id;
                                             threadName = threadAllocation.Name ?? "Thread Pool Thread";
