@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -39,7 +38,7 @@ namespace FastTests
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
-        private MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
+        private readonly MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 

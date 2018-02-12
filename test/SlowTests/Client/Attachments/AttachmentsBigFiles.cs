@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Client.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Utils;

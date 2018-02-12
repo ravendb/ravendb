@@ -21,7 +21,7 @@ using Sparrow.Binary;
 using Voron.Data.Fixed;
 using SlowTests.Authentication;
 using FastTests.Sparrow;
-using FastTests.Server.NotificationCenter;
+using SlowTests.Server.NotificationCenter;
 
 /*
     Code reference - please DO NOT REMOVE:
