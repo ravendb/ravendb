@@ -2,11 +2,13 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 
 namespace Raven.Server.Utils
@@ -92,7 +94,7 @@ namespace Raven.Server.Utils
                     Name = name,
                     IsBackground = true,
                 };
-
+                
                 thread.Start();
             }
             pooled.StartedAt = DateTime.UtcNow;
@@ -101,15 +103,16 @@ namespace Raven.Server.Utils
 
         internal class PooledThread
         {
-            static FieldInfo _runtimeThreadField;
-            static FieldInfo _threadFieldName;
+            private static readonly FieldInfo RuntimeThreadField;
+            private static readonly FieldInfo ThreadFieldName;
 
-            private ManualResetEvent _waitForWork = new ManualResetEvent(false);
+            private readonly ManualResetEvent _waitForWork = new ManualResetEvent(false);
             private Action<object> _action;
             private object _state;
             private string _name;
-            private PoolOfThreads _parent;
+            private readonly PoolOfThreads _parent;
             private LongRunningWork _workIsDone;
+            private ulong _currentUnmangedThreadId;
             private ProcessThread _currentProcessThread;
             private Process _currentProcess;
 
@@ -118,12 +121,11 @@ namespace Raven.Server.Utils
             static PooledThread()
             {
                 var t = Thread.CurrentThread;
-                _runtimeThreadField = typeof(Thread).GetField("_runtimeThread", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                Debug.Assert(_runtimeThreadField != null);
-                var runtimeThread = _runtimeThreadField.GetValue(t);
-                _threadFieldName = runtimeThread.GetType().GetField("m_Name", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                Debug.Assert(_threadFieldName != null);
-
+                RuntimeThreadField = typeof(Thread).GetField("_runtimeThread", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                Debug.Assert(RuntimeThreadField != null);
+                var runtimeThread = RuntimeThreadField.GetValue(t);
+                ThreadFieldName = runtimeThread.GetType().GetField("m_Name", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                Debug.Assert(ThreadFieldName != null);
             }
 
             public PooledThread(PoolOfThreads pool)
@@ -202,10 +204,13 @@ namespace Raven.Server.Utils
 
             private bool ResetThreadAffinity()
             {
+                if (PlatformDetails.RunningOnMacOsx)
+                    return true;
+
                 try
                 {
                     _currentProcess.Refresh();
-                    _currentProcessThread.ProcessorAffinity = _currentProcess.ProcessorAffinity;
+                    SetThreadAffinityByPlatform(_currentProcess.ProcessorAffinity.ToInt64());
                     return true;
                 }
                 catch (PlatformNotSupportedException)
@@ -243,30 +248,57 @@ namespace Raven.Server.Utils
 
             private void InitializeProcessThreads()
             {
-                var unmanagedThreadId = PlatformDetails.GetCurrentThreadId();
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    // Mac OSX threads API doesn't provide a way to set thread affinity
+                    // we can use thread_policy_set which will make sure that two threads will run
+                    // on different cpus, however we cannot choose which cpus will be used
+
+                    // from thread_policy.h about using THREAD_AFFINITY_POLICY:
+                    // This may be used to express affinity relationships between threads in  
+                    // the task. Threads with the same affinity tag will be scheduled to
+                    // share an L2 cache if possible. That is, affinity tags are a hint to
+                    // the scheduler for thread placement.
+
+                    return;
+                }
+
+                _currentUnmangedThreadId = PlatformDetails.GetCurrentThreadId();
                 _currentProcess = Process.GetCurrentProcess();
+
+                if (PlatformDetails.RunningOnLinux)
+                {
+                    // we set the thread affinity by the unmanaged thread id
+                    SetLinuxThreadAffinity(_currentProcess.ProcessorAffinity.ToInt64());
+                    return;
+                }
+
                 foreach (ProcessThread pt in _currentProcess.Threads)
                 {
-                    if (pt.Id == unmanagedThreadId)
+                    if (pt.Id == (uint)_currentUnmangedThreadId)
                     {
                         _currentProcessThread = pt;
                         break;
                     }
                 }
+
                 if (_currentProcessThread == null)
-                    throw new InvalidOperationException("Unable to get the current process thread: " + unmanagedThreadId + ", this should not be possible");
+                    throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmangedThreadId + ", this should not be possible");
             }
 
 
-            private void ResetCurrentThreadName()
+            private static void ResetCurrentThreadName()
             {
                 var t = Thread.CurrentThread;
-                var runtimeThread = _runtimeThreadField.GetValue(t);
-                _threadFieldName.SetValue(runtimeThread, null);
+                var runtimeThread = RuntimeThreadField.GetValue(t);
+                ThreadFieldName.SetValue(runtimeThread, null);
             }
 
             internal void SetThreadAffinity(int numberOfCoresToReduce, long? threadMask)
             {
+                if (PlatformDetails.RunningOnMacOsx)
+                    return;
+
                 if (numberOfCoresToReduce <= 0 && threadMask == null)
                     return;
 
@@ -277,7 +309,7 @@ namespace Raven.Server.Utils
                 {
                     try
                     {
-                        _currentProcessThread.ProcessorAffinity = new IntPtr(currentAffinity);
+                        SetThreadAffinityByPlatform(currentAffinity);
                     }
                     catch (PlatformNotSupportedException)
                     {
@@ -297,7 +329,7 @@ namespace Raven.Server.Utils
                     for (int i = 0; i < numberOfCoresToReduce; i++)
                     {
                         // remove the N least significant bits
-                        // we do that because it is typical that the first cores (0,1, etc) are more 
+                        // we do that because it is typical that the first cores (0, 1, etc) are more 
                         // powerful and we want to keep them for other things, such as request processing
                         currentAffinity &= currentAffinity - 1;
                     }
@@ -309,7 +341,7 @@ namespace Raven.Server.Utils
                 
                 try
                 {
-                    _currentProcessThread.ProcessorAffinity = new IntPtr(currentAffinity);
+                    SetThreadAffinityByPlatform(currentAffinity);
                 }
                 catch (PlatformNotSupportedException)
                 {
@@ -321,6 +353,33 @@ namespace Raven.Server.Utils
                     // race with the setting of the processor cores? we can live with it, since it has little
                     // impact and should be very rare
                 }
+            }
+
+            private void SetThreadAffinityByPlatform(long affinity)
+            {
+                Debug.Assert(PlatformDetails.RunningOnMacOsx == false);
+
+                if (PlatformDetails.RunningOnPosix == false)
+                {
+                    // windows
+                    _currentProcessThread.ProcessorAffinity = new IntPtr(affinity);
+                    return;
+                }
+
+                if (PlatformDetails.RunningOnLinux)
+                {
+                    SetLinuxThreadAffinity(affinity);
+                }
+            }
+
+            private void SetLinuxThreadAffinity(long affinity)
+            {
+                var ulongAffinity = (ulong)affinity;
+                var result = Syscall.sched_setaffinity((int)_currentUnmangedThreadId, new IntPtr(sizeof(ulong)), ref ulongAffinity);
+                if (result != 0)
+                    throw new InvalidOperationException(
+                        $"Failed to set affinity for thread: {_currentUnmangedThreadId}, " +
+                        $"affinity: {affinity}, result: {result}, error: {Marshal.GetLastWin32Error()}");
             }
         }
     }

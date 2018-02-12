@@ -123,8 +123,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var workingSet =
-                    PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx
+                var workingSet = PlatformDetails.RunningOnLinux == false
                         ? currentProcess.WorkingSet64
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
                 var memInfo = MemoryInformation.GetMemoryInfo();

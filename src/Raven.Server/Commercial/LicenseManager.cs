@@ -877,11 +877,12 @@ namespace Raven.Server.Commercial
                                 $"when the number of cores on this machine is: {ProcessorInfo.ProcessorCount}");
                 return;
             }
+
             try
             {
                 var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
                 if (currentlyAssignedCores == cores &&
-                    _lastPerformanceHint != null && 
+                    _lastPerformanceHint != null &&
                     _lastPerformanceHint.Value.AddDays(7) > DateTime.UtcNow)
                 {
                     // we already set the correct number of assigned cores
@@ -908,6 +909,7 @@ namespace Raven.Server.Commercial
                             bitMask |= 1L << bitNumber;
                             cores--;
                         }
+
                         affinityMask = affinityMask >> 1;
                         bitNumber++;
                     }
@@ -919,7 +921,7 @@ namespace Raven.Server.Commercial
 
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
-                if (addPerformanceHint && 
+                if (addPerformanceHint &&
                     ProcessorInfo.ProcessorCount > cores)
                 {
                     _lastPerformanceHint = DateTime.UtcNow;
@@ -933,6 +935,10 @@ namespace Raven.Server.Commercial
                         "LicenseManager");
                     _serverStore.NotificationCenter.Add(notification);
                 }
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // nothing to do
             }
             catch (Exception e)
             {
