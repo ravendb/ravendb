@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Posix.macOS;
 using Voron.Platform.Posix;
 
 namespace Sparrow.Platform
@@ -28,7 +29,7 @@ namespace Sparrow.Platform
                 return (ulong)Syscall.syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
 
             // OSX
-            return OsxSyscall.pthread_self();
+            return macSyscall.pthread_self();
         }
 
         private static bool IsWindows8OrNewer()

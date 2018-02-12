@@ -20,6 +20,7 @@ namespace Sparrow.Platform.Posix
 
         public ulong AvailableRam => freeram;
         public ulong TotalRam => totalram;
+        public ulong TotalSwap => totalswap;
     }
     
     [StructLayout(LayoutKind.Sequential)]
@@ -41,5 +42,6 @@ namespace Sparrow.Platform.Posix
         
         public ulong AvailableRam => freeram;
         public ulong TotalRam => totalram;
+        public ulong TotalSwap => totalswap;
     }
 }
