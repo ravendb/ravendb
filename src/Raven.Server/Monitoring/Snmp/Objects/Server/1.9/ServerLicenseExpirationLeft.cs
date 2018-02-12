@@ -9,7 +9,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         private readonly ServerStore _store;
 
         public ServerLicenseExpirationLeft(ServerStore store)
-            : base("1.9.3")
+            : base(SnmpOids.Server.ServerLicenseExpirationLeft)
         {
             _store = store;
         }

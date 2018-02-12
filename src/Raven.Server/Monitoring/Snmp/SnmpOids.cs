@@ -69,6 +69,16 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Server last request time")]
             public const string LastRequestTime = "1.8";
+            
+            [Description("Server license type")]
+            public const string ServerLicenseType = "1.9.1";
+            
+            [Description("Server license expiration date")]
+            public const string ServerLicenseExpiration = "1.9.2";
+            
+            [Description("Server license expiration left")]
+            public const string ServerLicenseExpirationLeft = "1.9.3";
+            
 
             public static DynamicJsonArray ToJson()
             {
