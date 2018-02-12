@@ -34,7 +34,7 @@ namespace Sparrow.Utils
         public class ThreadStats
         {
             public int Id;
-            public int UnmanagedThreadId;
+            public ulong UnmanagedThreadId;
             public long Allocations;
             public long ReleasesFromOtherThreads;
             private Thread _threadInstance;
