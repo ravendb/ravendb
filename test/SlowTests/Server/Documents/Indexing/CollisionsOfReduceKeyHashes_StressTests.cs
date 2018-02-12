@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Documents.Indexing.Static;
+using SlowTests.Server.Documents.Indexing.Static;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Indexing
