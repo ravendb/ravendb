@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Indexes
     {
         public static string FindMapIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields)
         {
-            return FindName(collection, fields);
+            return FindName(collection, fields, isMapReduce: false);
         }
 
         public static string FindMapReduceIndexName(string collection, IReadOnlyCollection<AutoIndexField> fields,
@@ -24,10 +24,10 @@ namespace Raven.Server.Documents.Indexes
 
             var reducedByFields = string.Join("And", groupBy.Select(GetName).OrderBy(x => x));
 
-            return $"{FindName(collection, fields)}ReducedBy{reducedByFields}";
+            return $"{FindName(collection, fields, isMapReduce: true)}ReducedBy{reducedByFields}";
         }
 
-        private static string FindName(string collection, IReadOnlyCollection<AutoIndexField> fields)
+        private static string FindName(string collection, IReadOnlyCollection<AutoIndexField> fields, bool isMapReduce)
         {
             if (string.IsNullOrWhiteSpace(collection))
                 throw new ArgumentNullException(nameof(collection));
@@ -40,7 +40,14 @@ namespace Raven.Server.Documents.Indexes
                     ? "AllDocs" : collection;
 
             if (fields.Count == 0)
-                return $"Auto/{collection}";
+            {
+                var collectionOnly = $"Auto/{collection}";
+
+                if (isMapReduce == false)
+                    return $"{collectionOnly}/By{Constants.Documents.Indexing.Fields.DocumentIdFieldName.ToUpperFirstLetter()}";
+
+                return collectionOnly;
+            }
             
             var combinedFields = string.Join("And", fields.Select(GetName).OrderBy(x => x));
 

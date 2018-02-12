@@ -172,6 +172,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (field.OrderingType == OrderByFieldType.Score)
                         continue;
 
+                    if (field.Name == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                        continue;
+
                     var fieldName = field.Name;
 
 #if FEATURE_CUSTOM_SORTING

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Extensions;
 using Sparrow.Json;
@@ -29,11 +31,26 @@ namespace Raven.Server.Documents.Indexes.Auto
                 Priority = Priority,
             };
 
-            var map = $"{Collections.First()}:[{string.Join(";", MapFields.Select(x => $"<Name:{x.Value.Name}>"))}]";
-            indexDefinition.Maps.Add(map);
+            void AddFields(IEnumerable<string> mapFields, IEnumerable<(string Name, IndexFieldOptions Options)> indexFields)
+            {
+                var map = $"{Collections.First()}:[{string.Join(";", mapFields.Select(x => $"<Name:{x}>"))}]";
+                indexDefinition.Maps.Add(map);
 
-            foreach (var kvp in IndexFields)
-                indexDefinition.Fields[kvp.Key] = kvp.Value.ToIndexFieldOptions();
+                foreach (var field in indexFields)
+                    indexDefinition.Fields[field.Name] = field.Options;
+            }
+
+            if (MapFields.Count > 0)
+                AddFields(MapFields.Select(x => x.Value.Name), IndexFields.Select(x => (x.Key, x.Value.ToIndexFieldOptions())));
+            else
+            {
+                // auto index was created to handle queries like startsWith(id(), 'users/')
+
+                AddFields(new[] { Constants.Documents.Indexing.Fields.DocumentIdFieldName }, new []
+                {
+                    (Constants.Documents.Indexing.Fields.DocumentIdFieldName, new IndexFieldOptions())
+                });
+            }
 
             return indexDefinition;
         }
