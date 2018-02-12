@@ -18,7 +18,6 @@ namespace Raven.Server.Dashboard
         private readonly TimeSpan _notificationsThrottle;
 
         private DateTime _lastSentNotification = DateTime.MinValue;
-        private static bool IsLinux = PlatformDetails.RunningOnPosix && PlatformDetails.RunningOnMacOsx == false;
 
         public MachineResourcesNotificationSender(string resourceName,
             ConcurrentSet<ConnectedWatcher> watchers, TimeSpan notificationsThrottle, CancellationToken shutdown)
@@ -65,7 +64,7 @@ namespace Raven.Server.Dashboard
         {
             using (var currentProcess = Process.GetCurrentProcess())
             {
-                var workingSet = IsLinux == false
+                var workingSet = PlatformDetails.RunningOnLinux == false
                         ? currentProcess.WorkingSet64 
                         : MemoryInformation.GetRssMemoryUsage(currentProcess.Id);
 
@@ -82,7 +81,7 @@ namespace Raven.Server.Dashboard
                     SystemCommitLimit = systemCommitLimit,
                     CommitedMemory =  committedMemory,
                     ProcessMemoryUsage = workingSet,
-                    IsProcessMemoryRss = IsLinux,
+                    IsProcessMemoryRss = PlatformDetails.RunningOnPosix,
                     MachineCpuUsage = cpuInfo.MachineCpuUsage,
                     ProcessCpuUsage = Math.Min(cpuInfo.MachineCpuUsage, cpuInfo.ProcessCpuUsage) // min as sometimes +-1% due to time sampling
                 };

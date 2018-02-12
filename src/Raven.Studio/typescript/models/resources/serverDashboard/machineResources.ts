@@ -42,7 +42,7 @@ class machineResources {
         });
 
         this.processUsageTooltip = ko.pureComputed(() => {
-            return this.isProcessMemoryRss() ? "RavenDB Resident Memory" : "RavenDB Memory Usage";
+            return this.isProcessMemoryRss() ? "RavenDB Resident Memory" : "RavenDB Working Set";
         });
     }
     
