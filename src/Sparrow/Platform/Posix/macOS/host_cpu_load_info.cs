@@ -1,4 +1,4 @@
-﻿namespace Sparrow.Platform.Posix
+﻿namespace Sparrow.Platform.Posix.macOS
 {
     public unsafe struct host_cpu_load_info
     {

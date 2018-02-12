@@ -1,6 +1,6 @@
-﻿namespace Sparrow.Platform.Posix
+﻿namespace Sparrow.Platform.Posix.macOS
 {
-    public enum FlavorMacOs
+    public enum Flavor
     {
         // host_statistics()
         HOST_LOAD_INFO = 1,         /* System loading stats */

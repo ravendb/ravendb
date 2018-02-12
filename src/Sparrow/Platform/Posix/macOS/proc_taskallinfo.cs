@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Sparrow.Platform.Posix
+namespace Sparrow.Platform.Posix.macOS
 {
     // from proc_info.h
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
