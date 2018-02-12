@@ -6,7 +6,7 @@
 
 using System.Threading.Tasks;
 using FastTests;
-using FastTests.Server.Documents.Expiration;
+using SlowTests.Server.Documents.Expiration;
 using Xunit;
 
 namespace StressTests.Core.Expiration
