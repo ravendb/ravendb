@@ -1,3 +1,4 @@
+using System;
 using Lextm.SharpSnmpLib;
 using Raven.Client.Util;
 using Raven.Server.ServerWide;
@@ -20,7 +21,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
             if (status.Expiration.HasValue == false)
                 return null;
 
-            return new TimeTicks(SystemTime.UtcNow - status.Expiration.Value);
+            var timeLeft = status.Expiration.Value - SystemTime.UtcNow;
+            return new TimeTicks(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero);
         }
     }
 }
