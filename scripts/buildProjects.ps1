@@ -1,5 +1,5 @@
-function BuildServer ( $srcDir, $outDir, $spec, $debug ) {
-    write-host "Building Server for $($spec.Name)..."
+function BuildServer ( $srcDir, $outDir, $target, $debug ) {
+    write-host "Building Server for $($target.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
 
@@ -10,11 +10,11 @@ function BuildServer ( $srcDir, $outDir, $spec, $debug ) {
     $configuration = if ($debug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
     
-    $commandArgs += $( "--runtime", "$($spec.Runtime)" )
+    $commandArgs += $( "--runtime", "$($target.Runtime)" )
     $commandArgs += "$srcDir"
 
-    if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
-        $commandArgs += "/p:Platform=$($spec.Arch)"
+    if ([string]::IsNullOrEmpty($target.Arch) -eq $false) {
+        $commandArgs += "/p:Platform=$($target.Arch)"
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'
@@ -85,8 +85,8 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildTool ( $toolName, $srcDir, $outDir, $spec, $debug ) {
-    write-host "Building $toolName for $($spec.Name)..."
+function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
+    write-host "Building $toolName for $($target.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
 
@@ -95,11 +95,11 @@ function BuildTool ( $toolName, $srcDir, $outDir, $spec, $debug ) {
     $commandArgs += @( "--output", $quotedOutput )
     $configuration = if ($debug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
-    $commandArgs += $( "--runtime", "$($spec.Runtime)" )
+    $commandArgs += $( "--runtime", "$($target.Runtime)" )
     $commandArgs += "$srcDir"
 
-    if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
-        $commandArgs += "/p:Platform=$($spec.Arch)"
+    if ([string]::IsNullOrEmpty($target.Arch) -eq $false) {
+        $commandArgs += "/p:Platform=$($target.Arch)"
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'
