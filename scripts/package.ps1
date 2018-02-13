@@ -1,50 +1,53 @@
 
-function CreateRavenPackage ( $projectDir, $releaseDir, $outDirs, $spec, $version, $buildOptions ) {
-    write-host "Create package for $($spec.runtime)..."
-    $packageDir = [io.path]::combine($outDirs.Main, "package")
+function CreateRavenPackage ( $projectDir, $releaseDir, $packOpts ) {
+    $target = $packOpts.Target
+    write-host "Create package for $($target.runtime)..."
+    $packageDir = [io.path]::combine($packOpts.outDirs.Main, "package")
     New-Item -ItemType Directory -Path $packageDir | Out-Null
 
-    CreatePackageLayout $packageDir $projectDir $outDirs $spec $buildOptions
+    CreatePackageLayout $packageDir $projectDir $packOpts
 
-    $releaseArchiveFile = GetRavenArchiveFileName $version $spec
+    $releaseArchiveFile = GetRavenArchiveFileName $packOpts.VersionInfo.Version $target
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
-    if ($spec.IsUnix) {
-        CreateArchiveFromDir $releaseArchivePath $packageDir $spec "RavenDB"
+    if ($target.IsUnix) {
+        CreateArchiveFromDir $releaseArchivePath $packageDir $target "RavenDB"
     } else {
-        CreateArchiveFromDir $releaseArchivePath $packageDir $spec
+        CreateArchiveFromDir $releaseArchivePath $packageDir $target
     }
     
-    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Server)"
-    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Rvn)"
-    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($outDirs.Drtools)"
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Server)"
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Rvn)"
+    Remove-Item -Recurse -ErrorAction SilentlyContinue "$($packOpts.OutDirs.Drtools)"
 }
 
-function GetRavenArchiveFileName ( $version, $spec ) {
-    "RavenDB-$version-$($spec.Name)"
+function GetRavenArchiveFileName ( $version, $target ) {
+    "RavenDB-$version-$($target.Name)"
 }
 
-function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec, $buildOptions ) {
-    LayoutRegularPackage $packageDir $projectDir $outDirs $spec $buildOptions
+function CreatePackageLayout ( $packageDir, $projectDir, $packOpts ) {
+    LayoutRegularPackage $packageDir $projectDir $packOpts
 }
 
-function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec, $buildOptions ) {
-    CopyStudioPackage $outDirs $buildOptions
+function LayoutRegularPackage ( $packageDir, $projectDir, $packOpts ) {
+    $target = $packOpts.Target
+
+    CopyStudioPackage $packOpts
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
-    CopyStartScript $spec $packageDir
-    CopyStartAsServiceScript $spec $packageDir
-    CopyTools $outDirs
-    CopyReadmeFile $spec $packageDir
-    CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
+    CopyStartScript $projectDir $packageDir $packOpts
+    CopyStartAsServiceScript $projectDir $packageDir $packOpts
+    CopyTools $packOpts.OutDirs
+    CopyReadmeFile $target $packageDir
+    CreatePackageServerLayout $projectDir $($packOpts.OutDirs.Server) $packageDir $target
 }
-function CopyStudioPackage ( $outDirs, $buildOptions ) {
-    if ($buildOptions.DontBuildStudio) {
+function CopyStudioPackage ( $packOpts ) {
+    if ($packOpts.SkipCopyStudioPackage) {
         write-host "Skip copying Studio..."
         return;
     }
 
-    $studioZipPath = [io.path]::combine($outDirs.Studio, "Raven.Studio.zip")
-    $dst = $outDirs.Server
+    $studioZipPath = [io.path]::combine($packOpts.OutDirs.Studio, "Raven.Studio.zip")
+    $dst = $packOpts.OutDirs.Server
     write-host "Copying Studio $studioZipPath -> $dst"
     Copy-Item "$studioZipPath" -Destination $dst
     CheckLastExitCode
@@ -72,12 +75,12 @@ function CopyTools ( $outDirs ) {
     Copy-Item -Recurse "$drtoolsContents" -Destination "$($outDirs.Server)" -Force 
 }
 
-function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $spec ) {
+function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $target ) {
     write-host "Create package server directory layout..."
 
     $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.json")
 
-    if ($spec.IsUnix) { 
+    if ($target.IsUnix) { 
         $settingsFileName = "settings.posix.json" 
      } else { 
         $settingsFileName = "settings.windows.json" 

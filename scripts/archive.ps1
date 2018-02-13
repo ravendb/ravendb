@@ -35,11 +35,11 @@ function UnpackTarGzToDir ( $archivePath, $outDir ) {
     }
 }
 
-function CreateArchiveFromDir ( $targetFilename, $dir, $spec, $wrapperDirName ) {
-    if ($spec.PkgType -eq "zip") {
+function CreateArchiveFromDir ( $targetFilename, $dir, $target, $wrapperDirName ) {
+    if ($target.PkgType -eq "zip") {
         ZipFilesFromDir $targetFilename $dir
     }
-    elseif ($spec.PkgType -eq "tar.bz2") {
+    elseif ($target.PkgType -eq "tar.bz2") {
         TarBzFilesFromDir $targetFilename $dir $wrapperDirName
     }
     else {
