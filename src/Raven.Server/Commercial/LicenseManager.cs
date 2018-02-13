@@ -32,6 +32,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.System;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -1411,15 +1412,23 @@ namespace Raven.Server.Commercial
                     return;
 
                 var settingsPath = _serverStore.Configuration.ConfigPath;
-                var originalSettings = File.ReadAllText(settingsPath);
-                dynamic jsonObj = JsonConvert.DeserializeObject(originalSettings);
 
-                // write new setting
-                jsonObj[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
+                using (_serverStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                {
+                    BlittableJsonReaderObject settingsJson;
 
-                var jsonString = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
-                SetupManager.WriteSettingsJsonLocally(settingsPath, jsonString);
+                    using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
+                    {
+                        settingsJson = context.ReadForMemory(fs, "settings-json");
+                        settingsJson.Modifications = new DynamicJsonValue(settingsJson);
+                        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
+                    }
 
+                    var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
+
+                    var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
+                    SetupManager.WriteSettingsJsonLocally(settingsPath, indentedJson);
+                }
                 _eulaAcceptedButHasPendingRestart = true;
             }
         }
