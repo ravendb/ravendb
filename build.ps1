@@ -137,13 +137,13 @@ if ($JustStudio) {
     exit 0
 }
 
-Foreach ($spec in $targets) {
-    $specOutDir = [io.path]::combine($OUT_DIR, $spec.Name)
+Foreach ($target in $targets) {
+    $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $spec $Debug
-    BuildTool rvn $RVN_SRC_DIR $specOutDir $spec $Debug
-    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $spec $Debug
+    BuildServer $SERVER_SRC_DIR $specOutDir $target $Debug
+    BuildTool rvn $RVN_SRC_DIR $specOutDir $target $Debug
+    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $Debug
     
     $specOutDirs = @{
         "Main" = $specOutDir;
@@ -155,12 +155,15 @@ Foreach ($spec in $targets) {
         "Drtools" = $([io.path]::combine($specOutDir, "drtools"));
     }
 
-    $buildOptions = @{
-        "DontBuildStudio" = !!$DontBuildStudio;
+    $packOpts = @{
+        "Target" = $target;
+        "SkipCopyStudioPackage" = !!$DontBuildStudio;
+        "VersionInfo" = $versionObj;
+        "OutDirs" = $specOutDirs;
     }
     
     if ($buildNumber -ne $DEV_BUILD_NUMBER -or $buildType -eq 'nightly') {
-        if ($spec.IsUnix -eq $False) {
+        if ($target.IsUnix -eq $False) {
             $serverPath = [io.path]::combine($specOutDirs.Server, "Raven.Server.exe");
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
             $drtoolsPath = [io.path]::combine($specOutDirs.Drtools, "Voron.Recovery.exe");
@@ -171,7 +174,7 @@ Foreach ($spec in $targets) {
         }
     }
 
-    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version $buildOptions
+    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $packOpts
 }
 
 write-host "Done creating packages."
