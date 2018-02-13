@@ -23,6 +23,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -435,26 +436,33 @@ namespace Raven.Server.Web.System
 
                 var setupInfo = JsonDeserializationServer.UnsecuredSetupInfo(setupInfoJson);
 
-                var settingsJson = File.ReadAllText(ServerStore.Configuration.ConfigPath);
+                BlittableJsonReaderObject settingsJson;
+                using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
+                {
+                    settingsJson = context.ReadForMemory(fs, "settings-json");
+                }
 
-                dynamic jsonObj = JsonConvert.DeserializeObject(settingsJson);
-
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured);
-                jsonObj[RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork);
+                settingsJson.Modifications = new DynamicJsonValue(settingsJson)
+                {
+                    [RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true,
+                    [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = nameof(SetupMode.Unsecured),
+                    [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = nameof(UnsecuredAccessAddressRange.PublicNetwork)
+                };
 
                 if (setupInfo.Port == 0)
                     setupInfo.Port = 8080;
 
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.Port)));
 
                 if (setupInfo.TcpPort == 0)
                     setupInfo.TcpPort = 38888;
 
-                jsonObj[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
+                settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.TcpServerUrls)] = string.Join(";", setupInfo.Addresses.Select(ip => IpAddressToUrl(ip, setupInfo.TcpPort, "tcp")));
 
-                var json = JsonConvert.SerializeObject(jsonObj, Formatting.Indented);
+                var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
-                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, json);
+                var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
+                SetupManager.WriteSettingsJsonLocally(ServerStore.Configuration.ConfigPath, indentedJson);
             }
 
             return NoContent();
@@ -588,11 +596,11 @@ namespace Raven.Server.Web.System
                                 continue;
 
                             var tag = entry.FullName[0].ToString();
-                            using (var sr = new StreamReader(entry.Open()))
-                            {
-                                dynamic jsonObj = JsonConvert.DeserializeObject(sr.ReadToEnd());
-                                urlByTag[tag] = jsonObj[nameof(ConfigurationNodeInfo.PublicServerUrl)];
-                            }
+
+                            using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json"))
+                                if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
+                                    urlByTag[tag] = publicServerUrl;
+                            
                         }
                     }
 
