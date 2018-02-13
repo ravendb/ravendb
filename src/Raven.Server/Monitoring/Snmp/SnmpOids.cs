@@ -110,7 +110,7 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Cluster term")]
             public const string Term = "3.2.1";
 
-            [Description("Cluster state")]
+            [Description("Cluster index")]
             public const string Index = "3.2.2";
 
             [Description("Cluster ID")]
@@ -154,7 +154,7 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of attachments")]
             public const string CountOfAttachments = "5.2.{0}.1.6";
 
-            [Description("Number of unique indexes")]
+            [Description("Number of unique attachments")]
             public const string CountOfUniqueAttachments = "5.2.{0}.1.7";
 
             [Description("Number of alerts")]
@@ -237,9 +237,6 @@ namespace Raven.Server.Monitoring.Snmp
 
                 [Description("Index name")]
                 public const string Name = "5.2.{0}.4.{{0}}.2";
-
-                [Description("Index etag")]
-                public const string Etag = "5.2.{0}.4.{{0}}.3";
 
                 [Description("Index priority")]
                 public const string Priority = "5.2.{0}.4.{{0}}.4";
@@ -358,9 +355,11 @@ namespace Raven.Server.Monitoring.Snmp
                         array.Add(CreateJsonItem(Root + oid, fieldValue.Description));
                     }
 
-                    djv[kvp.Key] = array;
-
-                    djv[nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value);
+                    djv[kvp.Key] = new DynamicJsonValue
+                    {
+                        [$"@{nameof(General)}"] = array,
+                        [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value) 
+                    };
                 }
 
                 return djv;
