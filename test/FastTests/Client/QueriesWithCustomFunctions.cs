@@ -1765,7 +1765,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                                     ToUpper = u.Name.ToUpper(),
                                     ToLower = u.Name.ToLower(),
                                     Contains = u.Name.Contains("e"),
-
+                                    Format = $"Name: {u.Name}, LastName : {u.LastName}",
                                     Split = u.Name.Split('r', StringSplitOptions.None),
                                     SplitLimit = u.Name.Split(new char[] { 'r' }, 3),
                                     SplitArray = u.Name.Split(new char[] { 'r', 'e' }),
@@ -1789,6 +1789,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                         "ToUpper : u.Name.toUpperCase(), " +
                         "ToLower : u.Name.toLowerCase(), " +
                         "Contains : u.Name.indexOf(\"e\") !== -1, " +
+                        "Format : \"Name: {0}, LastName : {1}\".format(u.Name, u.LastName), " +
                         "Split : u.Name.split(new RegExp(\"r\", \"g\")), " +
                         "SplitLimit : u.Name.split(new RegExp(\"r\", \"g\")), " +
                         "SplitArray : u.Name.split(new RegExp(\"r\"+\"|\"+\"e\", \"g\")), " +
@@ -1813,6 +1814,7 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                     Assert.Equal("Jerry".ToUpper(), queryResult[0].ToUpper);
                     Assert.Equal("Jerry".ToLower(), queryResult[0].ToLower);
                     Assert.Equal("Jerry".Contains("e"), queryResult[0].Contains);
+                    Assert.Equal("Name: Jerry, LastName : Garcia", queryResult[0].Format);
                     Assert.Equal("Jerry".Split('r', StringSplitOptions.None), queryResult[0].Split);
                     Assert.Equal("Jerry".Split(new char[] { 'r' }, 3), queryResult[0].SplitLimit);
                     Assert.Equal("Jerry".Split(new char[] { 'r', 'e' }), queryResult[0].SplitArray);
@@ -1829,6 +1831,8 @@ from Users as u load u.FriendId as _doc_0, u.DetailIds as _docs_1[] select outpu
                     Assert.True(queryResult[1].EndsWith);
                     Assert.Equal("Bo", queryResult[1].Substr);
                     Assert.Equal("Bob, Weir, 0", queryResult[1].Join);
+                    Assert.Equal("Name: Bob, LastName : Weir", queryResult[1].Format);
+
 
                     Assert.Equal("  John   ".Trim(), queryResult[2].Trim);
                     Assert.Null(queryResult[2].ArrayJoin);
