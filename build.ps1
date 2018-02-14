@@ -11,6 +11,7 @@ param(
     [switch]$JustNuget,
     [switch]$Debug,
     [switch]$DryRunVersionBump = $false,
+    [switch]$DryRunSign = $false,
     [switch]$Help)
 
 $ErrorActionPreference = "Stop"
@@ -158,6 +159,7 @@ Foreach ($target in $targets) {
     $packOpts = @{
         "Target" = $target;
         "SkipCopyStudioPackage" = !!$DontBuildStudio;
+        "DryRunSign" = $DryRunSign;
         "VersionInfo" = $versionObj;
         "OutDirs" = $specOutDirs;
     }
@@ -168,9 +170,9 @@ Foreach ($target in $targets) {
             $rvnPath = [io.path]::combine($specOutDirs.Rvn, "rvn.exe");
             $drtoolsPath = [io.path]::combine($specOutDirs.Drtools, "Voron.Recovery.exe");
             
-            SignFile $PROJECT_DIR $serverPath
-            SignFile $PROJECT_DIR $rvnPath
-            SignFile $PROJECT_DIR $drtoolsPath
+            SignFile $PROJECT_DIR $serverPath $DryRunSign
+            SignFile $PROJECT_DIR $rvnPath $DryRunSign
+            SignFile $PROJECT_DIR $drtoolsPath $DryRunSign
         }
     }
 

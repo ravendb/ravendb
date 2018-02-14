@@ -42,7 +42,7 @@ function CopyStartCmd ( $projectDir, $targetDir, $packOpts ) {
 
     if ($packOpts.VersionInfo.BuildType.ToLower() -ne 'custom') {
         write-host "Signing $startPs1TargetPath"
-        SignFile $projectDir $startPs1TargetPath
+        SignFile $projectDir $startPs1TargetPath $packOpts.DryRunSign
     }
 
 }
@@ -55,7 +55,7 @@ function CopyStartAsServiceCmd ( $projectDir, $targetDir, $packOpts ) {
 
     if ($packOpts.VersionInfo.BuildType.ToLower() -ne 'custom') {
         write-host "Signing $startAsServicePs1TargetPath"
-        SignFile $projectDir $startAsServicePs1TargetPath
+        SignFile $projectDir $startAsServicePs1TargetPath $packOpts.DryRunSign
     }
 }
 
