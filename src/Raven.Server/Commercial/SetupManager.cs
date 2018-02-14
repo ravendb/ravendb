@@ -1148,7 +1148,7 @@ namespace Raven.Server.Commercial
                 ? null
                 : settingsJsonObject[RavenConfiguration.GetKey(x => x.Security.CertificatePassword)];
 
-            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCert.Export(X509ContentType.Pfx), certPassword);
+            serverStore.Server.Certificate = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCert.Export(X509ContentType.Pfx), certPassword, serverStore);
 
             string publicServerUrl = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)];
             SetupMode setupMode = settingsJsonObject[RavenConfiguration.GetKey(x => x.Core.SetupMode)];
@@ -1312,7 +1312,7 @@ namespace Raven.Server.Commercial
                                 await serverStore.LicenseManager.Activate(setupInfo.License, skipLeaseLicense: false);
 
                             serverStore.Server.Certificate =
-                                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password);
+                                SecretProtection.ValidateCertificateAndCreateCertificateHolder("Setup", serverCert, serverCertBytes, setupInfo.Password, serverStore);
 
                             foreach (var node in setupInfo.NodeSetupInfos)
                             {
