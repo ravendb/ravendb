@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -1385,6 +1386,9 @@ namespace Raven.Client.Util
                     case "ToCharArray":
                         newName = "toCharArray";
                         break;
+                    case "Format":
+                        newName = "format";
+                        break;
                     default:
                         return;
                 }
@@ -1400,16 +1404,7 @@ namespace Raven.Client.Util
                             if (mce.Arguments.Count > 2)
                             {
                                 writer.Write("[");
-
-                                for (int i = 1; i < mce.Arguments.Count; i++)
-                                {
-                                    if (i != 1)
-                                    {
-                                        writer.Write(", ");
-                                    }
-                                    context.Visitor.Visit(mce.Arguments[i]);
-                                }
-
+                                WriteArguments(context, mce.Arguments, writer, 1);
                                 writer.Write("]");
                             }
                             else
@@ -1446,6 +1441,19 @@ namespace Raven.Client.Util
                                 writer.Write(")");
                             }
                             writer.Write(".split('')");
+                            break;
+                        case "format":
+                            context.Visitor.Visit(mce.Arguments[0]);
+                            writer.Write(".format(");
+                            if (mce.Arguments.Count == 2 && mce.Arguments[1] is NewArrayExpression nae)
+                            {
+                                WriteArguments(context, nae.Expressions, writer);
+                            }
+                            else
+                            {
+                                WriteArguments(context, mce.Arguments, writer, 1);
+                            }
+                            writer.Write(")");
                             break;
                         default:
                             context.Visitor.Visit(mce.Object);
@@ -1508,15 +1516,7 @@ namespace Raven.Client.Util
                             }
                             else
                             {
-                                for (var i = 0; i < mce.Arguments.Count; i++)
-                                {
-                                    if (i != 0)
-                                    {
-                                        writer.Write(", ");
-                                    }
-
-                                    context.Visitor.Visit(mce.Arguments[i]);
-                                }
+                                WriteArguments(context, mce.Arguments, writer);
                             }
 
                             writer.Write(")");
@@ -1527,6 +1527,19 @@ namespace Raven.Client.Util
                             }
                             break;
                     }
+                }
+            }
+
+            private static void WriteArguments(JavascriptConversionContext context, IReadOnlyList<Expression> arguments, JavascriptWriter writer, int start = 0)
+            {
+                for (var i = start; i < arguments.Count; i++)
+                {
+                    if (i != start)
+                    {
+                        writer.Write(", ");
+                    }
+
+                    context.Visitor.Visit(arguments[i]);
                 }
             }
         }
@@ -1599,7 +1612,7 @@ namespace Raven.Client.Util
                 }
             }
 
-            private string GetParameter(MemberExpression expression)
+            public static string GetParameter(MemberExpression expression)
             {
                 while (expression.Expression is MemberExpression memberExpression)
                 {
@@ -1609,6 +1622,5 @@ namespace Raven.Client.Util
                 return (expression.Expression as ParameterExpression)?.Name;
             }
         }
-
     }
 }
