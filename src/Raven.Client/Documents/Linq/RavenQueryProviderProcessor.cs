@@ -1953,28 +1953,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
 
             var loadSupport = new JavascriptConversionExtensions.LoadSupport { DoNotTranslate = true };
-            var js = expression.Arguments[1].CompileToJavascript(
-                new JavascriptCompilationOptions(
-                    new JavascriptConversionExtensions.MathSupport(),
-                    new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.TransparentIdentifierSupport(),
-                    new JavascriptConversionExtensions.InvokeSupport(),
-                    new JavascriptConversionExtensions.DateTimeSupport(),
-                    new JavascriptConversionExtensions.NullCoalescingSupport(),
-                    new JavascriptConversionExtensions.NestedConditionalSupport(),
-                    new JavascriptConversionExtensions.StringSupport(),
-                    new JavascriptConversionExtensions.ConstSupport(),
-                    new JavascriptConversionExtensions.MetadataSupport(),
-                    new JavascriptConversionExtensions.CompareExchangeSupport(),
-                    new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
-                    new JavascriptConversionExtensions.NullComparisonSupport(),
-                    new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.NewSupport(),
-                    new JavascriptConversionExtensions.ListInitSupport(),
-                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                    new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions },
-                    MemberInitAsJson.ForAllTypes,
-                    loadSupport));
+            var js = ToJs(expression.Arguments[1], false, loadSupport);
 
             if (loadSupport.HasLoad == false)
             {
@@ -2017,7 +1996,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
             else if (loadSupport.Arg is MemberExpression)
             {
-                arg = ToJs(loadSupport.Arg);
+                arg = ToJs(loadSupport.Arg, true);
             }
             else
             {
@@ -2026,8 +2005,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
                 return;
             }
-
-            var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
 
             if (_loadTokens == null)
             {
@@ -2185,31 +2162,43 @@ The recommended method is to use full text search (mark the field as Analyzed an
             sb.Append(name).Append(" : ").Append(js);
         }
 
-        private string ToJs(Expression expression)
+        private string ToJs(Expression expression, bool loadArg = false, JavascriptConversionExtensions.LoadSupport loadSupport = null)
         {
-            var js = expression.CompileToJavascript(
-                new JavascriptCompilationOptions(
-                    new JavascriptConversionExtensions.MathSupport(),
-                    new JavascriptConversionExtensions.LinqMethodsSupport(),
-                    new JavascriptConversionExtensions.TransparentIdentifierSupport(),
-                    new JavascriptConversionExtensions.InvokeSupport(),
-                    new JavascriptConversionExtensions.DateTimeSupport(),
-                    new JavascriptConversionExtensions.NullCoalescingSupport(),
-                    new JavascriptConversionExtensions.NestedConditionalSupport(),
-                    new JavascriptConversionExtensions.StringSupport(),
-                    new JavascriptConversionExtensions.ConstSupport(),
-                    new JavascriptConversionExtensions.LoadSupport(),
-                    new JavascriptConversionExtensions.MetadataSupport(),
-                    new JavascriptConversionExtensions.CompareExchangeSupport(),
-                    new JavascriptConversionExtensions.ValueTypeParseSupport(),
-                    new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
-                    new JavascriptConversionExtensions.NullComparisonSupport(),
-                    new JavascriptConversionExtensions.NullableSupport(),
-                    new JavascriptConversionExtensions.NewSupport(),
-                    new JavascriptConversionExtensions.ListInitSupport(),
-                    new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
-                    new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions },
-                    MemberInitAsJson.ForAllTypes));
+            if (loadSupport == null)
+            {
+                loadSupport = new JavascriptConversionExtensions.LoadSupport();
+            }
+
+            var extentions = new List<JavascriptConversionExtension>
+            {
+                new JavascriptConversionExtensions.MathSupport(),
+                new JavascriptConversionExtensions.LinqMethodsSupport(),
+                new JavascriptConversionExtensions.TransparentIdentifierSupport(),
+                new JavascriptConversionExtensions.InvokeSupport(),
+                new JavascriptConversionExtensions.DateTimeSupport(),
+                new JavascriptConversionExtensions.NullCoalescingSupport(),
+                new JavascriptConversionExtensions.NestedConditionalSupport(),
+                new JavascriptConversionExtensions.StringSupport(),
+                new JavascriptConversionExtensions.ConstSupport(),
+                new JavascriptConversionExtensions.MetadataSupport(),
+                new JavascriptConversionExtensions.CompareExchangeSupport(),
+                new JavascriptConversionExtensions.ValueTypeParseSupport(),
+                new JavascriptConversionExtensions.JsonPropertyAttributeSupport(),
+                new JavascriptConversionExtensions.NullComparisonSupport(),
+                new JavascriptConversionExtensions.NullableSupport(),
+                new JavascriptConversionExtensions.NewSupport(),
+                new JavascriptConversionExtensions.ListInitSupport(),
+                new JavascriptConversionExtensions.WrappedConstantSupport<T> { DocumentQuery = _documentQuery, ProjectionParameters = _projectionParameters },
+                loadSupport,
+                MemberInitAsJson.ForAllTypes
+        };
+
+            if (loadArg == false)
+            {
+                extentions.Add(new JavascriptConversionExtensions.IdentityPropertySupport { Conventions = _documentQuery.Conventions });
+            }
+
+            var js = expression.CompileToJavascript(new JavascriptCompilationOptions(extentions.ToArray()));
 
             if (expression.Type == typeof(TimeSpan) && expression.NodeType != ExpressionType.MemberAccess)
             {
@@ -2219,7 +2208,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             return js;
         }
-
 
         private bool HasComputation(MemberExpression memberExpression)
         {
