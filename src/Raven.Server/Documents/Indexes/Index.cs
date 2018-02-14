@@ -559,15 +559,12 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
-                    if (_logger.IsInfoEnabled)
+                    if (_logger.IsOperationsEnabled)
                     {
-                        _logger.Info($"Failed to execute indexing in {IndexingThreadName}", e);
+                        _logger.Operations($"Failed to execute indexing in {IndexingThreadName}", e);
                     }
                 }
             }, null, IndexingThreadName);
-
-
-
         }
 
         public virtual void Stop(bool disableIndex = false)
