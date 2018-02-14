@@ -47,6 +47,8 @@ using Raven.Server.Commercial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Https;
 using Raven.Server.Monitoring.Snmp;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web.ResponseCompression;
@@ -233,7 +235,7 @@ namespace Raven.Server
         }
 
         private Task _currentRefreshTask = Task.CompletedTask;
-
+        
         public void RefreshClusterCertificate(object state)
         {
             // If the setup mode is anything but SetupMode.LetsEncrypt, we'll
@@ -246,12 +248,13 @@ namespace Raven.Server
             // distribute it via the cluster. We'll update the cert only when all nodes
             // confirm they got it (or if there are less than 3 days to spare).
 
-
             var currentCertificate = Certificate;
             if (currentCertificate == null)
             {
                 return; // shouldn't happen, but just in case
             }
+
+            var forceRenew = state as bool? ?? false;
 
             var currentRefreshTask = _currentRefreshTask;
             if (currentRefreshTask.IsCompleted == false)
@@ -260,13 +263,13 @@ namespace Raven.Server
                 return;
             }
 
-            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate); });
+            var refreshCertificate = new Task(async () => { await DoActualCertificateRefresh(currentCertificate, forceRenew: forceRenew); });
             if (Interlocked.CompareExchange(ref _currentRefreshTask, currentRefreshTask, refreshCertificate) != currentRefreshTask)
                 return;
             refreshCertificate.Start();
         }
 
-        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate)
+        private async Task DoActualCertificateRefresh(CertificateHolder currentCertificate, bool forceRenew = false)
         {
             try
             {
@@ -328,6 +331,22 @@ namespace Raven.Server
                 // but if we have less than 20 days, we'll try anyway
                 if (DateTime.Today.DayOfWeek != DayOfWeek.Saturday && remainingDays > 20)
                     return;
+                
+                if (ServerStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer && forceRenew == false)
+                {
+                    var alert = AlertRaised.Create(
+                        null,
+                        "Certificate Renewal Warning",
+                        "It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.",
+                        AlertType.Certificates_DeveloperLetsEncryptRenewal,
+                        NotificationSeverity.Warning);
+
+                    ServerStore.NotificationCenter.Add(alert);
+
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("It's time to renew your Let's Encrypt server certificate but automatic renewal is turned off when using the developer license. Go to the certificate page in the studio and trigger the renewal manually.");
+                    return;
+                }
 
                 try
                 {
@@ -448,7 +467,7 @@ namespace Raven.Server
             var cert = await SetupManager.RefreshLetsEncryptTask(setupInfo, ServerStore, ServerStore.ServerShutdown);
 
             return SecretProtection.ValidateCertificateAndCreateCertificateHolder("Let's Encrypt Refresh", cert, Convert.FromBase64String(setupInfo.Certificate),
-                setupInfo.Password);
+                setupInfo.Password, ServerStore);
         }
 
         private (IPAddress[] Addresses, int Port) GetServerAddressesAndPort()
@@ -488,9 +507,9 @@ namespace Raven.Server
             try
             {
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
-                    return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
+                    return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword, ServerStore);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments);
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(Configuration.Security.CertificateExec, Configuration.Security.CertificateExecArguments, ServerStore);
 
                 return null;
             }
@@ -1033,7 +1052,7 @@ namespace Raven.Server
         internal void SetCertificate(X509Certificate2 certificate, byte[] rawBytes, string password)
         {
             var certificateHolder = Certificate;
-            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password);
+            var newCertHolder = SecretProtection.ValidateCertificateAndCreateCertificateHolder("Auto Update", certificate, rawBytes, password, ServerStore);
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
                 _httpsConnectionAdapter.SetCertificate(certificate);

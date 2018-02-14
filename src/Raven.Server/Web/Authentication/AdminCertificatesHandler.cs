@@ -610,7 +610,7 @@ namespace Raven.Server.Web.Authentication
 
             try
             {
-                Server.RefreshClusterCertificate(null);
+                Server.RefreshClusterCertificate(true);
             }
             catch (Exception e)
             {
