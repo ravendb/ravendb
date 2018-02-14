@@ -1118,10 +1118,10 @@ namespace Sparrow.Json
         {
 #if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
             throw new InvalidOperationException(
-                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Allocated by:" + allocation.AllocatedBy);
+                $"UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Allocated by: {allocation.AllocatedBy}. Thread name: {Thread.CurrentThread.Name}");
 #else
             throw new InvalidOperationException(
-                "UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused!");
+                $"UseAfterFree detected! Attempt to return memory from previous generation, Reset has already been called and the memory reused! Thread name: {Thread.CurrentThread.Name}");
 #endif
         }
 
