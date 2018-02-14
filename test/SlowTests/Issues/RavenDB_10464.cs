@@ -15,13 +15,17 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0"
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeBeforeDeletionOfSupersededAutoIndex)] = "0";
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle)] = "0";
+                }
             }))
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "joe" }, "users/joe");
-                    session.Store(new User { Name = "doe"}, "users/doe");
+                    session.Store(new User { Name = "doe" }, "users/doe");
 
                     session.SaveChanges();
 
