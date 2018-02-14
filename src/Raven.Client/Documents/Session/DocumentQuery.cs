@@ -30,8 +30,7 @@ namespace Raven.Client.Documents.Session
         {
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
-            var identityProperty = Conventions.GetIdentityProperty(typeof(TProjection));
-            var fields = propertyInfos.Select(p => p == identityProperty ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : p.Name).ToArray();
+            var fields = propertyInfos.Select(p => p.Name).ToArray();
             return SelectFields<TProjection>(new QueryData(fields, projections));
         }
 
@@ -814,7 +813,7 @@ namespace Raven.Client.Documents.Session
             using (QueryOperation.EnterQueryContext())
             {
                 var command = QueryOperation.CreateRequest();
-                TheSession.RequestExecutor.Execute(command, TheSession.Context, sessionInfo:TheSession.SessionInfo);
+                TheSession.RequestExecutor.Execute(command, TheSession.Context, sessionInfo: TheSession.SessionInfo);
                 QueryOperation.SetResult(command.Result);
             }
 
@@ -823,9 +822,21 @@ namespace Raven.Client.Documents.Session
 
         private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(QueryData queryData = null)
         {
-            var newFieldsToFetch = queryData != null && queryData.Fields.Length > 0
-                ? FieldsToFetchToken.Create(queryData.Fields, queryData.Projections.ToArray(), queryData.IsCustomFunction)
-                : null;
+            FieldsToFetchToken newFieldsToFetch;
+            if (queryData != null && queryData.Fields.Length > 0)
+            {
+                var fields = queryData.Fields;
+
+                var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
+                if (identityProperty != null)
+                    fields = queryData.Fields
+                        .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                        .ToArray();
+
+                newFieldsToFetch = FieldsToFetchToken.Create(fields, queryData.Projections.ToArray(), queryData.IsCustomFunction);
+            }
+            else
+                newFieldsToFetch = null;
 
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
