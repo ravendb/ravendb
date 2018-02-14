@@ -89,14 +89,13 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
     write-host "Build file URI for: $repoOwner/$($repo):$($remoteFilePath)"
     $fileUri = GetGitHubFileUri $repoOwner $repo $remoteFilePath
     $githubFileData = GetFileDataFromGitHub $fileUri $branch
-    $origFileContent = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($githubFileData.content))
     
     write-host "Calculate new version"
     $newVersion = SemverMinor $version
     write-host "New version is: $newVersion"
     
     write-host "Get updated file contents for $fileUri"
-    $assemblyInfoFileContent = GetAssemblyInfoWithBumpedVersion $origFileContent $newVersion
+    $assemblyInfoFileContent = GetAssemblyInfoWithBumpedVersion $projectDir $newVersion $githubFileData.content
 
     if (!$assemblyInfoFileContent) {
         return
@@ -178,14 +177,21 @@ function GetFileDataFromGitHub($fileUri, $branch) {
     $data
 }
 
-function GetAssemblyInfoWithBumpedVersion ($origFileContent, $newVersion) {
-    $assemblyInfoFileContents = $origFileContent |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyVersion\(".*"\)\]', "[assembly: AssemblyVersion(""$newVersion"")]" } |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyFileVersion\(".*"\)\]', "[assembly: AssemblyFileVersion(""$newVersion.40"")]" } |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyInformationalVersion\(".*"\)\]', "[assembly: AssemblyInformationalVersion(""$newVersion"")]" } |
-    Out-String
+function GetAssemblyInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileContent) {
+    Write-Host "Set version in $assemblyInfoFile..."
 
-    "{0}`r`n" -f $assemblyInfoFileContents.TrimEnd()
+    $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
+
+    $assemblyVersionPattern = [regex]'\[assembly: AssemblyVersion\(".*"\)\]'
+    $result = $assemblyVersionPattern.Replace($result, "[assembly: AssemblyVersion(""$newVersion"")]")
+
+    $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]';
+    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.40"")]"); 
+
+    $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
+    $result = $assemblyInfoVersionPattern.Replace($result, "[assembly: AssemblyInformationalVersion(""$newVersion"")]")
+
+    return $result
 }
 
 function SemverMinor ($versionPrefix) {
