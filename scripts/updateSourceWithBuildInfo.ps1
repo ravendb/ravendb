@@ -47,13 +47,20 @@ function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit
 
     $fileVersion = "$($version.Split("-")[0]).$buildNumber"
 
-    $content = (Get-Content $assemblyInfoFile) |
-    Foreach-Object { $_ -replace "{commit}", $commit } |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyFileVersion\(".*"\)\]', "[assembly: AssemblyFileVersion(""$fileVersion"")]" } |
-    Foreach-Object { $_ -replace '\[assembly: AssemblyInformationalVersion\(".*"\)\]', "[assembly: AssemblyInformationalVersion(""$version"")]" }
+    $inputText = [System.IO.File]::ReadAllText($assemblyInfoFile)
 
-    Set-Content -Path $assemblyInfoFile -Value $content -Encoding UTF8
+    $commitPattern = [regex]'{commit}'
+    $result = $commitPattern.Replace($inputText, $commit)
+
+    $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]';
+    $result = $assemblyFileVersionPattern.Replace($inputText, "[assembly: AssemblyFileVersion(""$fileVersion"")]"); 
+
+    $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
+    $result = $assemblyInfoVersionPattern.Replace($inputText, "[assembly: AssemblyInformationalVersion(""$version"")]")
+
+    [System.IO.File]::WriteAllText($assemblyInfoFile, $result, [System.Text.Encoding]::UTF8)
 }
+
 
 function UpdateRavenVersion ( $projectDir, $buildNumber, $version, $commit, $versionInfoFile ) {
     write-host "Set version in $versionInfoFile"
