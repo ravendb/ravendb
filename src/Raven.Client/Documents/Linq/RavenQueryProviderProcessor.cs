@@ -2015,8 +2015,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 arg = _documentQuery.ProjectionParameter(constantExpression.Value);
             }
-            else if (loadSupport.Arg is MemberExpression)
+            else if (loadSupport.Arg is MemberExpression memberExpression)
             {
+                // if memberExpression is <>h__TransparentIdentifier0.<>h__TransparentIdentifier1....<>h__TransparentIdentifierN.something
+                // then loadSupport.Arg is 'something' which is not a real path (a real path should be 'x.something')
+                // but a name of a variable that was previously defined in a 'let' statment.
+
+                var param = memberExpression.Expression is ParameterExpression parameter
+                            ? parameter.Name
+                            : memberExpression.Expression is MemberExpression innerMemberExpression
+                                ? innerMemberExpression.Member.Name
+                                : string.Empty;
+
+                if (param.StartsWith("<>h__TransparentIdentifier"))
+                {
+                    //the load argument was defined in a previous let statment, i.e :
+                    //  let detailId = "details/1-A" 
+                    //  let deatil = session.Load<Detail>(detailId)
+                    //  ...
+                    //so we use js load() method (inside output function) instead of using a LoadToken
+
+                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    return;
+                }
+
                 arg = ToJs(loadSupport.Arg);
             }
             else
@@ -2026,8 +2048,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
                 return;
             }
-
-            var id = _documentQuery.Conventions.GetIdentityProperty(expression.Members[1].DeclaringType)?.Name ?? "Id";
 
             if (_loadTokens == null)
             {
