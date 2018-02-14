@@ -1,4 +1,9 @@
-function SignFile( $projectDir, $filePath ) {
+function SignFile( $projectDir, $filePath, $dryRun ) {
+
+    if ($dryRun) {
+        Write-Host "[DRY RUN] Sign file $filePath.."
+        return;
+    }
 
     $signTool = "C:\Program Files (x86)\Windows Kits\8.1\bin\x64\signtool.exe"
     if (!(Test-Path $signTool))
