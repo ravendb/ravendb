@@ -279,11 +279,13 @@ namespace Raven.Server.Smuggler.Documents
 
             private void SendCommands()
             {
-                //fire and forget, do not hold-up smuggler operations waiting for Raft command
-                AsyncHelpers.RunSync(() => _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand
+                AsyncHelpers.RunSync(async () =>
                 {
-                    Commands = _compareExchangeCommands
-                }));
+                    using (_database.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    {
+                        return await _database.ServerStore.SendToLeaderAsync(new AddOrUpdateCompareExchangeBatchCommand(_compareExchangeCommands, context));
+                    }
+                });
 
                 _compareExchangeCommands.Clear();
             }

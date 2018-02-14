@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.NotificationCenter.Notifications;
@@ -32,22 +33,12 @@ namespace Raven.Server.Rachis
         private Task _topologyModification;
         private readonly RachisConsensus _engine;
 
-        public delegate object ConvertResultFromLeader(JsonOperationContext ctx, long index, object result);
+        public delegate object ConvertResultFromLeader(JsonOperationContext ctx, object result);
 
         private TaskCompletionSource<object> _newEntriesArrived = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         private readonly ConcurrentDictionary<long, CommandState> _entries =
             new ConcurrentDictionary<long, CommandState>();
-
-        private class CommandState
-        {
-            public long CommandIndex;
-            public object Result;
-            public JsonOperationContext Context;
-            public ConvertResultFromLeader ConvertResult;
-            public TaskCompletionSource<(long, object)> TaskCompletionSource;
-            public Action<TaskCompletionSource<(long, object)>> OnNotify;
-        }
 
         private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
@@ -615,48 +606,62 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task<(long Index, object Result)> PutAsync(JsonOperationContext ctx, CommandBase cmd)
+        public async Task<(long Index, object Result)> PutAsync(CommandBase cmd, TimeSpan timeout)
         {
             Task<(long Index, object Result)> task;
+            long index;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
             {
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
-                var index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
+                index = _engine.InsertToLeaderLog(context, Term, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
-                task = AddToEntries(index, GetConvertResult(cmd), ctx);
+                task = AddToEntries(index, GetConvertResult(cmd));
             }
 
             _newEntry.Set();
-            return task;
+
+            if (await task.WaitWithTimeout(timeout) == false)
+            {
+                if (_entries.TryGetValue(index, out CommandState state))
+                {
+                    state.ConvertResult?.AboutToTimeout();
+                }
+
+                throw new TimeoutException($"Waited for {timeout} but the command was not applied in this time.");
+            }
+
+            return await task;
         }
 
-        private ConvertResultFromLeader GetConvertResult(CommandBase cmd)
+        private static ConvertResultAction GetConvertResult(CommandBase cmd)
         {
             switch (cmd)
             {
-                case AddOrUpdateCompareExchangeBatchCommand _:
-                case CompareExchangeCommandBase _:
-                    return CompareExchangeCommandBase.ConvertResult;
+                case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
+                    return new ConvertResultAction(batchCmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
+                case CompareExchangeCommandBase cmpExchange:
+                    return new ConvertResultAction(cmpExchange.ContextToWriteResult, CompareExchangeCommandBase.ConvertResult);
                 default:
                     return null;
             }
         }
 
-        public Task<(long Index, object Result)> AddToEntries(long index, ConvertResultFromLeader convertResult, JsonOperationContext ctx)
+        public Task<(long Index, object Result)> AddToEntries(long index, ConvertResultAction convertResult)
         {
             var tcs = new TaskCompletionSource<(long Index, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+
             _entries[index] =
                 new
                     CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
                     {
                         CommandIndex = index,
                         TaskCompletionSource = tcs,
-                        ConvertResult = convertResult,
-                        Context = ctx
-                };
+                        ConvertResult = convertResult
+                    };
+
             return tcs.Task;
         }
 
@@ -907,16 +912,16 @@ namespace Raven.Server.Rachis
 
         public void SetStateOf(long index, object result)
         {
-            if (_entries.TryGetValue(index, out CommandState value))
+            if (_entries.TryGetValue(index, out CommandState state))
             {
-                if (value.ConvertResult == null)
+                if (state.ConvertResult == null)
                 {
                     ValidateUsableReturnType(result);
-                    value.Result = result;
+                    state.Result = result;
                 }
                 else
                 {
-                    value.Result = value.ConvertResult(value.Context, index, result);
+                    state.Result = state.ConvertResult.Apply(result);
                 }
             }
         }
@@ -933,6 +938,47 @@ namespace Raven.Server.Rachis
             if (TypeConverter.IsSupportedType(result) == false)
             {
                 throw new InvalidOperationException("We don't support type " + result.GetType().FullName + ".");
+            }
+        }
+
+        private class CommandState
+        {
+            public long CommandIndex;
+            public object Result;
+            public ConvertResultAction ConvertResult;
+            public TaskCompletionSource<(long, object)> TaskCompletionSource;
+            public Action<TaskCompletionSource<(long, object)>> OnNotify;
+        }
+
+        public class ConvertResultAction
+        {
+            private readonly JsonOperationContext _contextToWriteBlittableResult;
+            private readonly ConvertResultFromLeader _action;
+            private readonly SingleUseFlag _timeout = new SingleUseFlag();
+
+            public ConvertResultAction(JsonOperationContext contextToWriteBlittableResult, ConvertResultFromLeader action)
+            {
+                _contextToWriteBlittableResult = contextToWriteBlittableResult ?? throw new ArgumentNullException(nameof(contextToWriteBlittableResult));
+                _action = action ?? throw new ArgumentNullException(nameof(action));
+            }
+
+            public object Apply(object result)
+            {
+                lock (this)
+                {
+                    if (_timeout.IsRaised())
+                        return null;
+
+                    return _action(_contextToWriteBlittableResult, result);
+                }
+            }
+
+            public void AboutToTimeout()
+            {
+                lock (this)
+                {
+                    _timeout.Raise();
+                }
             }
         }
     }

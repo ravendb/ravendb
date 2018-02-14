@@ -12,10 +12,12 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string Key;
         public long Index;
+        [JsonDeserializationIgnore]
+        public JsonOperationContext ContextToWriteResult;
 
         protected CompareExchangeCommandBase() { }
 
-        protected CompareExchangeCommandBase(string key, long index)
+        protected CompareExchangeCommandBase(string key, long index, JsonOperationContext context)
         {
             if (String.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -24,6 +26,7 @@ namespace Raven.Server.ServerWide.Commands
 
             Key = key;
             Index = index;
+            ContextToWriteResult = context;
         }
 
         public abstract (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index);
@@ -55,16 +58,19 @@ namespace Raven.Server.ServerWide.Commands
             }
         }
 
-        public static object ConvertResult(JsonOperationContext ctx, long index, object result)
+        public static object ConvertResult(JsonOperationContext ctx, object result)
         {
             if (result is ValueTuple<long, object> tuple)
             {
                 if (tuple.Item2 is BlittableJsonReaderObject value)
+                {
                     return new CompareExchangeResult
                     {
                         Index = tuple.Item1,
-                        Value = ctx.ReadObject(value, "clone-context")
+                        Value = ctx.ReadObject(value, "cmpXchg result clone")
                     };
+                }
+
                 return new CompareExchangeResult
                 {
                     Index = tuple.Item1,
@@ -78,7 +84,7 @@ namespace Raven.Server.ServerWide.Commands
     public class RemoveCompareExchangeCommand : CompareExchangeCommandBase
     {
         public RemoveCompareExchangeCommand() { }
-        public RemoveCompareExchangeCommand(string key, long index) : base(key, index) { }
+        public RemoveCompareExchangeCommand(string key, long index, JsonOperationContext contextToReturnResult) : base(key, index, contextToReturnResult) { }
 
         public override unsafe (long Index, object Value) Execute(TransactionOperationContext context, Table items, long index)
         {
@@ -109,7 +115,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public AddOrUpdateCompareExchangeCommand() { }
 
-        public AddOrUpdateCompareExchangeCommand(string key, BlittableJsonReaderObject value, long index) : base(key, index)
+        public AddOrUpdateCompareExchangeCommand(string key, BlittableJsonReaderObject value, long index, JsonOperationContext contextToReturnResult) 
+            : base(key, index, contextToReturnResult)
         {
             Value = value;
         }
