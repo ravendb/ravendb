@@ -46,6 +46,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
                 var command = CommandBase.CreateFrom(commandJson);
 
+                switch (command)
+                {
+                    case AddOrUpdateCompareExchangeBatchCommand batchCmpExchange:
+                        batchCmpExchange.ContextToWriteResult = context;
+                        break;
+                    case CompareExchangeCommandBase cmpExchange:
+                        cmpExchange.ContextToWriteResult = context;
+                        break;
+                }
+
                 var isClusterAdmin = IsClusterAdmin();
                 command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 

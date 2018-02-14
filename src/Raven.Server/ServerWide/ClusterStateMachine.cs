@@ -753,7 +753,7 @@ namespace Raven.Server.ServerWide
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    _parent.CurrentLeader.AddToEntries(index, null, null);
+                    _parent.CurrentLeader.AddToEntries(index, null);
                 }
             };
         }
@@ -989,7 +989,7 @@ namespace Raven.Server.ServerWide
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var compareExchange = (CompareExchangeCommandBase)JsonDeserializationCluster.Commands[type](cmd);
-            result = compareExchange.Execute(context,items,index);
+            result = compareExchange.Execute(context, items, index);
             OnTransactionDispose(context, index);
         }
 

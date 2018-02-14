@@ -126,7 +126,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index);
+                var command = new AddOrUpdateCompareExchangeCommand(key, updateJson, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
@@ -158,7 +158,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var command = new RemoveCompareExchangeCommand(key, index);
+                var command = new RemoveCompareExchangeCommand(key, index, context);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     (var raftIndex, var res) = await ServerStore.SendToLeaderAsync(command);
