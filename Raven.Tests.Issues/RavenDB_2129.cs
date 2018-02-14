@@ -34,12 +34,16 @@ namespace Raven.Tests.Issues
                 RunReplication(store1, store2, db: "SomeDB");
 
                 SystemTime.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10); // this will force replication information update when session is opened
+                
+                await store1.GetReplicationInformerForDatabase("SomeDB")
+                    .UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store1.AsyncDatabaseCommands.ForDatabase("SomeDB"),force:true);                    
 
                 using (var session = store1.OpenAsyncSession("SomeDB"))
                 {
                     await session.StoreAsync(new Person { Name = "Person1" });
                     await session.SaveChangesAsync();
                 }
+                
 
                 WaitForReplication(store2, "people/1", db: "SomeDB");
 
