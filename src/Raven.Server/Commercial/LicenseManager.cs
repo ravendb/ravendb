@@ -602,7 +602,6 @@ namespace Raven.Server.Commercial
                 {
                     _licenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
                 }
-
                 return licenseChanged ? leasedLicense.License : null;
             }
         }
@@ -1257,7 +1256,7 @@ namespace Raven.Server.Commercial
                 databaseTopology.Members.Contains(lastResponsibleNode) == false)
             {
                 var taskName = databaseTask.GetTaskName();
-                var message = $"Node {lastResponsibleNode} cannot exceute the task: '{taskName}'";
+                var message = $"Node {lastResponsibleNode} cannot execute the task: '{taskName}'";
                 var alert = AlertRaised.Create(
                     null,
                     $@"You've reached your license limit ({EnumHelper.GetDescription(LimitType.HighlyAvailableTasks)})",
@@ -1267,7 +1266,7 @@ namespace Raven.Server.Commercial
                     key: message,
                     details: new MessageDetails
                     {
-                        Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be exceuted " +
+                        Message = $"The {GetTaskType(databaseTask)} task: '{taskName}' will not be executed " +
                                   $"by node {lastResponsibleNode} (because it is {GetNodeState(databaseTopology, lastResponsibleNode)}) " +
                                   $"or by any other node because your current license " +
                                   $"doesn't include the dynamic nodes distribution feature. " + Environment.NewLine +
@@ -1379,7 +1378,7 @@ namespace Raven.Server.Commercial
             {
                 var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                var message = $"Couldn't get license support info, repsonse: {responseString}, status code: {response.StatusCode}";
+                var message = $"Couldn't get license support info, response: {responseString}, status code: {response.StatusCode}";
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message);
 
@@ -1390,6 +1389,7 @@ namespace Raven.Server.Commercial
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var json = context.Read(licenseSupportStream, "license support info");
+
                 return JsonDeserializationServer.LicenseSupportInfo(json);
             }
         }
