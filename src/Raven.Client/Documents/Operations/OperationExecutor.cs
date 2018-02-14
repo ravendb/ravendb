@@ -39,13 +39,13 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation, sessionInfo));
         }
 
-        public Task SendAsync(IOperation operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
+        public async Task SendAsync(IOperation operation, SessionInfo sessionInfo = null, CancellationToken token = default(CancellationToken))
         {
             using (GetContext(out JsonOperationContext context))
             {
                 var command = operation.GetCommand(_store, _requestExecutor.Conventions, context, _requestExecutor.Cache);
 
-                return _requestExecutor.ExecuteAsync(command, context, sessionInfo, token);
+                await _requestExecutor.ExecuteAsync(command, context, sessionInfo, token).ConfigureAwait(false);
             }
         }
 
