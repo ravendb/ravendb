@@ -588,7 +588,7 @@ namespace Raven.Server.ServerWide
 
                             if (GetClusterTopology(context).AllNodes.Count > confirmations && replaceImmediately == false)
                             {
-                                if (Server.Certificate?.Certificate != null &&
+                                if (Server.Certificate?.Certificate?.NotAfter != null &&
                                     (Server.Certificate.Certificate.NotAfter - DateTime.Now).TotalDays > 3)
                                 {
                                     if (Logger.IsOperationsEnabled)
