@@ -245,7 +245,7 @@ namespace Raven.Server.Web.Authentication
             
             foreach (var x509Certificate in collection)
             {
-                if (serverStore.Server.Certificate.Certificate.Thumbprint.Equals(x509Certificate.Thumbprint))
+                if (serverStore.Server.Certificate.Certificate?.Thumbprint != null && serverStore.Server.Certificate.Certificate.Thumbprint.Equals(x509Certificate.Thumbprint))
                     throw new InvalidOperationException($"You are trying to import the same server certificate ({x509Certificate.Thumbprint}) as the one which is already loaded. This is not supported.");
             }
 
@@ -324,7 +324,7 @@ namespace Raven.Server.Web.Authentication
                     throw new InvalidOperationException($"Cannot delete {clientCertDef?.Name} because it's the current client certificate being used");
                 }
 
-                if (clientCert != null && Server.Certificate.Certificate.Thumbprint.Equals(thumbprint))
+                if (clientCert != null && Server.Certificate.Certificate?.Thumbprint != null && Server.Certificate.Certificate.Thumbprint.Equals(thumbprint))
                 {
                     var serverCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + thumbprint);
                     throw new InvalidOperationException($"Cannot delete {serverCertDef?.Name} because it's the current server certificate being used");
@@ -410,13 +410,17 @@ namespace Raven.Server.Web.Authentication
                         {
                             foreach (var localCertKey in ServerStore.Cluster.GetCertificateKeysFromLocalState(context))
                             {
-                                using (var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey))
-                                {
-                                    var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                                var localCertificate = ServerStore.Cluster.GetLocalState(context, localCertKey);
 
-                                    if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                                        certificates.Add((localCertKey, localCertificate));
-                                }
+                                if (localCertificate == null)
+                                    continue;
+
+                                var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
+
+                                if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
+                                    certificates.Add((localCertKey, localCertificate));
+                                else 
+                                    localCertificate.Dispose();
                             }
                         }
                         else
@@ -427,6 +431,8 @@ namespace Raven.Server.Web.Authentication
 
                                 if (showSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
                                     certificates.Add(item);
+                                else
+                                    item.Value.Dispose();
                             }
                         }
                     }
@@ -607,6 +613,9 @@ namespace Raven.Server.Web.Authentication
         {
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
                 throw new InvalidOperationException("Cannot force renew the let's encrypt server certificate. This server wasn't set up using the let's encrypt setup mode.");
+
+            if (Server.Certificate.Certificate == null)
+                throw new InvalidOperationException("Cannot force renew the let's encrypt server certificate. The server certificate is not loaded.");
 
             try
             {
