@@ -685,6 +685,18 @@ namespace Raven.Server.Documents.Patch
                     return Undefined.Instance;
                 if (o is long lng)
                     return new JsValue(lng);
+                if (o is BlittableJsonReaderArray bjra)
+                {
+                    var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                    var args = new JsValue[1];
+                    for (var i = 0; i < bjra.Length; i++)
+                    {
+                        var value = TranslateToJs(ScriptEngine, context, bjra[i]);
+                        args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
+                        ScriptEngine.Array.PrototypeObject.Push(jsArray, args);
+                    }
+                    return jsArray;
+                }
                 if (o is List<object> list)
                 {
                     var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
