@@ -22,7 +22,7 @@ namespace Raven.Server.Utils
         public static X509Certificate2 CreateSelfSignedCertificate(string commonNameValue, string issuerName)
         {
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName);
-            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 1, out _);
+            var selfSignedCertificateBasedOnPrivateKey = CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, 0, out _);
             selfSignedCertificateBasedOnPrivateKey.Verify();
             return selfSignedCertificateBasedOnPrivateKey;
         }
@@ -155,7 +155,9 @@ namespace Raven.Server.Utils
 
             // Valid For
             DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
-            DateTime notAfter = notBefore.AddYears(yearsUntilExpiration);
+
+            // For testing purposes, with developer license. Making the default expiration 3 months.
+            DateTime notAfter = yearsUntilExpiration == 0 ? DateTime.UtcNow.Date.AddMonths(3) : notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
 
