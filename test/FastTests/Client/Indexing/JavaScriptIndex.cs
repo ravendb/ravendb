@@ -29,7 +29,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact(Skip = "WIP")]
+        [Fact]
         public void CanUseJavaScriptMultiMapIndex()
         {
             using (var store = GetDocumentStore())
