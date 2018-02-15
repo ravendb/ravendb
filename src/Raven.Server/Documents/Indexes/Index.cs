@@ -2281,7 +2281,7 @@ namespace Raven.Server.Documents.Indexes
         {
             // the catch all field name means that we have dynamic fields names
 
-            if (Definition.HasDynamicFields || IndexPersistence.ContainsField(f))
+            if (Definition.HasDynamicFields || Type == IndexType.JavaScriptMapReduce || Type == IndexType.JavaScriptMap || IndexPersistence.ContainsField(f))
                 return;
 
             ThrowInvalidField(f);
