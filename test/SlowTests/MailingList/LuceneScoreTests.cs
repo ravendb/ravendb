@@ -74,9 +74,17 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results =
-                        session.Advanced.DocumentQuery<Book, BooksSearch>().WhereLucene("Text", "wire each time").WaitForNonStaleResults().
-                            Select(b => new BookSummary() { Author = b.Author, Description = b.Description, Id = b.Id }).ToList();
-
+                        session.Advanced.DocumentQuery<Book, BooksSearch>()
+                            .WhereLucene("Text", "wire each time")
+                            .WaitForNonStaleResults()
+                            .ToList()
+                            .Select(b => new BookSummary()
+                            {
+                                Author = b.Author,
+                                Description = b.Description,
+                                Id = b.Id
+                            })
+                            .ToList();
 
                     Assert.Throws<NonUniqueObjectException>(() => session.Advanced.GetMetadataFor(results[0]));
                 }
