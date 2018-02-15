@@ -455,6 +455,8 @@ namespace Raven.Server.Documents.Queries.Results
                         {
                             buffer.Add(item);
                         }
+
+                        fieldToFetch.QueryField.SourceIsArray = true;
                     }
                     else
                     {
