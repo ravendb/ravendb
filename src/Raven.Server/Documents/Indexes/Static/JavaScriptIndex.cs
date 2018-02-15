@@ -10,7 +10,9 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
+using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -26,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static
             foreach (var map in definition.Maps)
             {
                 _jint.Execute(map);
-                ExtractFields(map);
+                //ExtractFields(map);
             }
             var definitions = _jint.GetValue("globalDefinition").AsObject();
             var maps = definitions.GetProperty("maps").Value.AsArray();
@@ -55,7 +57,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var fields = new HashSet<string>();
             foreach (var (key, val) in _collectionFunctions)
             {
-                Maps.Add(key, val.Select(x => (IndexingFunc)(enm => MyWrapper(x, enm))).ToList());
+                Maps.Add(key, val.Select(x => (IndexingFunc)(enm => JintMapFuncWrapper(x, enm))).ToList());
                 foreach (var field in ExtractFields(val.LastOrDefault()?.LastOrDefault()))
                 {
                     fields.Add(field);
@@ -63,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
             OutputFields = fields.ToArray();
             //TODO: we can extract the fields for the simple cases but for the general case it will require alot of effort.
-            OutputFields = new string[]{"Name","Count"};
+            OutputFields = new string[]{};
         }
 
         private static void ExtractFields(string map)
@@ -219,11 +221,18 @@ namespace Raven.Server.Documents.Indexes.Static
                 yield break;
         }
 
-        private IEnumerable MyWrapper(List<JsValue> jsValues, IEnumerable<dynamic> items)
+        private IEnumerable JintMapFuncWrapper(List<JsValue> jsValues, IEnumerable<dynamic> items)
         {
             foreach (var item in items)
             {
-                JsValue jsItem = JsValue.FromObject(_jint, item);
+                var dbj = item as DynamicBlittableJson;
+                if( dbj == null)
+                    continue;
+                var id = dbj.GetId();
+                if(id == DynamicNullObject.Null)
+                    continue;
+                var boi = new BlittableObjectInstance(_jint, null, dbj.BlittableJson, id, null);
+                JsValue jsItem = boi;
                 var filtered = false;
                 foreach (var function in jsValues)
                 {

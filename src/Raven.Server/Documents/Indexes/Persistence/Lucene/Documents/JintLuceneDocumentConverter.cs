@@ -4,6 +4,7 @@ using System.Text;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
+using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
@@ -33,7 +34,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 try
                 {
-                    field = _fields[property];
+                    if (_fields.TryGetValue(property, out field) == false)
+                    {
+                        field = IndexField.Create(property,new IndexFieldOptions(), new IndexFieldOptions());
+                        _fields.Add(property, field);
+                    }
                 }
                 catch (KeyNotFoundException e)
                 {
