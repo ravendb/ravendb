@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(!results.ToList().Any());
+                Assert.True(!results.Any());
 
                 // *****************************************************************************************************************************************
                 // We find 1 Product - Note Phrase is not a match, it matches on the word "Vertical" in the Attributes
@@ -109,7 +109,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(!results.ToList().Any());
+                Assert.True(!results.Any());
 
                 // *****************************************************************************************************************************************
                 // We find 2 Products - Note Phrase is not a match, it matches on the word "Switch"
