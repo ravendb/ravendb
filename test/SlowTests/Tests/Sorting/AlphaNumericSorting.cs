@@ -391,6 +391,7 @@ namespace SlowTests.Tests.Sorting
                     var titlesFromServer = session.Advanced.DocumentQuery<Track, TracksIndex>()
                         .AddOrder(x => x.Title, ordering: OrderingType.AlphaNumeric)
                         .Take(1024)
+                        .ToList()
                         .Select(x => x.Title)
                         .ToList();
 
@@ -405,6 +406,7 @@ namespace SlowTests.Tests.Sorting
                     var titlesFromServer = session.Advanced.DocumentQuery<Track, TracksIndex>()
                         .AddOrder(x => x.Title, true, ordering: OrderingType.AlphaNumeric)
                         .Take(1024)
+                        .ToList()
                         .Select(x => x.Title)
                         .ToList();
 
