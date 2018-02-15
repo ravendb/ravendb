@@ -1994,8 +1994,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 arg = _documentQuery.ProjectionParameter(constantExpression.Value);
             }
-            else if (loadSupport.Arg is MemberExpression)
+            else if (loadSupport.Arg is MemberExpression memberExpression)
             {
+                // if memberExpression is <>h__TransparentIdentifierN...TransparentIdentifier1.TransparentIdentifier0.something
+                // then the load-argument is 'something' which is not a real path (a real path should be 'x.something')
+                // but a name of a variable that was previously defined in a 'let' statment.
+
+                var param = memberExpression.Expression is ParameterExpression parameter
+                    ? parameter.Name
+                    : memberExpression.Expression is MemberExpression innerMemberExpression
+                        ? innerMemberExpression.Member.Name
+                        : string.Empty;
+
+                if (param == "<>h__TransparentIdentifier0")
+                {
+                    //the load argument was defined in a previous let statment, i.e :
+                    //  let detailId = "details/1-A" 
+                    //  let deatil = session.Load<Detail>(detailId)
+                    //  ...
+                    //so we use js load() method (inside output function) instead of using a LoadToken
+
+                    AppendLineToOutputFunction(name, ToJs(expression.Arguments[1]));
+                    return;
+                }
                 arg = ToJs(loadSupport.Arg, true);
             }
             else
