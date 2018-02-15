@@ -1003,13 +1003,13 @@ namespace Raven.Server.Utils.Cli
                 new[] {"generateClientCert <name> <path-to-output-folder> [password]", "Generate a new trusted client certificate with 'ClusterAdmin' security clearance."},
                 new[] {"trustServerCert <name> <path-to-pfx> [password]", "Register a server certificate of another node to be trusted on this server."},
                 new[] {"trustClientCert <name> <path-to-pfx> [password]", "Register a client certificate to be trusted on this server with 'ClusterAdmin' security clearance."},
+                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."}
             };
 
             string[][] commandExperimentalDescription =
             {
                 new[] {"createDb <database> <dir>", "Create database named 'database' in DataDir 'dir'"},
                 new[] {"importDir <database> <path>", "Smuggler import entire directory (halts cli) from path"},
-                new[] {"replaceClusterCert [-replaceImmediately] <name> <path-to-pfx> [password]", "Replace the cluster certificate."},
             };
 
             var msg = new StringBuilder("RavenDB CLI Help" + Environment.NewLine);
@@ -1051,6 +1051,7 @@ namespace Raven.Server.Utils.Cli
             [Command.TrustServerCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustServerCert },
             [Command.TrustClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandTrustClientCert },
             [Command.GenerateClientCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandGenerateClientCert },
+            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert},
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },
@@ -1066,7 +1067,6 @@ namespace Raven.Server.Utils.Cli
             [Command.ImportDir] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandImportDir, Experimental = true },
             [Command.CreateDb] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandCreateDb, Experimental = true },
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true }, // test cli
-            [Command.ReplaceClusterCert] = new SingleAction { NumOfArgs = 2, DelegateFync = CommandReplaceClusterCert, Experimental = true }
         };
 
         public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
