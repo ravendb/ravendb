@@ -37,7 +37,7 @@ namespace SlowTests.MailingList
                 session.Store(catalog);
                 session.SaveChanges();
 
-                var catalogs = session.Advanced.DocumentQuery<Catalog>().WaitForNonStaleResults().WhereEquals("Type", "Waterfront").Select(c => c.PropertyId);
+                var catalogs = session.Advanced.DocumentQuery<Catalog>().WaitForNonStaleResults().WhereEquals("Type", "Waterfront").ToList().Select(c => c.PropertyId);
                 var properties = session.Advanced.DocumentQuery<Property>();
                 properties.OpenSubclause();
                 var first = true;
@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                     first = false;
                 }
                 properties.CloseSubclause();
-                var refinedProperties = properties.AndAlso().WhereGreaterThanOrEqual("BedroomCount", "2").Select(p => p.Id);
+                var refinedProperties = properties.AndAlso().WhereGreaterThanOrEqual("BedroomCount", "2").ToList().Select(p => p.Id);
 
                 Assert.NotEqual(0, refinedProperties.Count());
             }

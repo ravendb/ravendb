@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(!results.Any());
+                Assert.True(!results.ToList().Any());
 
                 // *****************************************************************************************************************************************
                 // We find 1 Product - Note Phrase is not a match, it matches on the word "Vertical" in the Attributes
@@ -63,7 +63,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(results.Count<Product>() == 1);
+                Assert.True(results.ToList().Count<Product>() == 1);
 
                 // *****************************************************************************************************************************************
                 // We SHOULD find 1 Product - Note Phrase is not a match, it SHOULD match on the word "Vertical" in the Attributes
@@ -76,7 +76,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(results.Count<Product>() == 1);
+                Assert.True(results.ToList().Count<Product>() == 1);
             }
         }
 
@@ -109,7 +109,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(!results.Any());
+                Assert.True(!results.ToList().Any());
 
                 // *****************************************************************************************************************************************
                 // We find 2 Products - Note Phrase is not a match, it matches on the word "Switch"
@@ -122,7 +122,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(results.Count<Product>() == 2);
+                Assert.True(results.ToList().Count<Product>() == 2);
 
                 // *****************************************************************************************************************************************
                 // We find 2 Products - Note Phrase is not a match, it matches on the word "Sound" in the attributes
@@ -135,7 +135,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(results.Count<Product>() == 1);
+                Assert.True(results.ToList().Count<Product>() == 1);
 
                 // *****************************************************************************************************************************************
                 // We SHOULD find 3 Products - Note Phrase is not a match, it should match on the words "Switch" in Name or "Sound" in the attributes
@@ -148,7 +148,7 @@ namespace SlowTests.MailingList
                   .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
-                Assert.True(results.Count<Product>() == 3);
+                Assert.True(results.ToList().Count<Product>() == 3);
             }
         }
 
