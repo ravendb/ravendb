@@ -9,43 +9,48 @@ using Raven.Client.Documents.Queries.Suggestions;
 
 namespace Raven.Client.Documents.Session
 {
-    public interface IAsyncDocumentQueryBase<T> 
+    public interface IAsyncDocumentQueryBase<T>
     {
         /// <summary>
         /// Register the query as a lazy-count query and return a lazy instance that will evaluate the query when needed.
         /// </summary>
-        Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default(CancellationToken));
+        Lazy<Task<int>> CountLazilyAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Executed the query and returns the results.
         /// </summary>
-        Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken));
+        Task<List<T>> ToListAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Returns first element or throws if sequence is empty.
         /// </summary>
-        Task<T> FirstAsync(CancellationToken token = default(CancellationToken));
+        Task<T> FirstAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Returns first element or default value for type if sequence is empty.
         /// </summary>
-        Task<T> FirstOrDefaultAsync(CancellationToken token = default(CancellationToken));
+        Task<T> FirstOrDefaultAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Returns first element or throws if sequence is empty or contains more than one element.
         /// </summary>
-        Task<T> SingleAsync(CancellationToken token = default(CancellationToken));
+        Task<T> SingleAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Returns first element or default value for given type if sequence is empty. Throws if sequence contains more than
         ///     one element.
         /// </summary>
-        Task<T> SingleOrDefaultAsync(CancellationToken token = default(CancellationToken));
+        Task<T> SingleOrDefaultAsync(CancellationToken token = default);
+
+        /// <summary>
+        ///     Checks if the given query matches any records
+        /// </summary>
+        Task<bool> AnyAsync(CancellationToken token = default);
 
         /// <summary>
         /// Gets the total count of records for this query
         /// </summary>
-        Task<int> CountAsync(CancellationToken token = default(CancellationToken));
+        Task<int> CountAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Register the query as a lazy query and return a lazy
@@ -64,7 +69,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Asynchronous query against a raven index
     /// </summary>
-    public interface IAsyncDocumentQuery<T> : 
+    public interface IAsyncDocumentQuery<T> :
         IDocumentQueryBase<T, IAsyncDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
@@ -78,7 +83,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Gets the query result. Executing this method for the first time will execute the query.
         /// </summary>
-        Task<QueryResult> GetQueryResultAsync(CancellationToken token = default(CancellationToken));
+        Task<QueryResult> GetQueryResultAsync(CancellationToken token = default);
 
         /// <summary>
         ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value

@@ -723,8 +723,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IEnumerator<T> GetEnumerator()
         {
-            InitSync();
-            return QueryOperation.Complete<T>().GetEnumerator();
+            return ExecuteQueryOperation(null).GetEnumerator();
         }
 
         /// <inheritdoc />
@@ -751,10 +750,16 @@ namespace Raven.Client.Documents.Session
             return ExecuteQueryOperation(2).SingleOrDefault();
         }
 
-        private IEnumerable<T> ExecuteQueryOperation(int take)
+        /// <inheritdoc />
+        bool IDocumentQueryBase<T>.Any()
         {
-            if (PageSize.HasValue == false || PageSize > take)
-                Take(take);
+            return ExecuteQueryOperation(1).Any();
+        }
+
+        private List<T> ExecuteQueryOperation(int? take)
+        {
+            if (take.HasValue && (PageSize.HasValue == false || PageSize > take)) 
+                Take(take.Value);
 
             InitSync();
 

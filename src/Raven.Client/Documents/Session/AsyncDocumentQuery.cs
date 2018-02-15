@@ -6,10 +6,8 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -727,11 +725,9 @@ namespace Raven.Client.Documents.Session
 #endif
 
         /// <inheritdoc />
-        async Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
+        Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
         {
-            await InitAsync(token).ConfigureAwait(false);
-            var tuple = await ProcessEnumerator(QueryOperation).WithCancellation(token).ConfigureAwait(false);
-            return tuple.Item2;
+            return ExecuteQueryOperation(null, token);
         }
 
         /// <inheritdoc />
@@ -762,10 +758,17 @@ namespace Raven.Client.Documents.Session
             return operation.SingleOrDefault();
         }
 
-        private async Task<IEnumerable<T>> ExecuteQueryOperation(int take, CancellationToken token)
+        /// <inheritdoc />
+        async Task<bool> IAsyncDocumentQueryBase<T>.AnyAsync(CancellationToken token)
         {
-            if (PageSize.HasValue == false || PageSize > take)
-                Take(take);
+            var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
+            return operation.Any();
+        }
+
+        private async Task<List<T>> ExecuteQueryOperation(int? take, CancellationToken token)
+        {
+            if (take.HasValue && (PageSize.HasValue == false || PageSize > take)) 
+                Take(take.Value);
 
             await InitAsync(token).ConfigureAwait(false);
 
@@ -790,12 +793,6 @@ namespace Raven.Client.Documents.Session
             Take(0);
             var result = await GetQueryResultAsync(token).ConfigureAwait(false);
             return result.TotalResults;
-        }
-
-        private static Task<Tuple<QueryResult, List<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
-        {
-            var list = currentQueryOperation.Complete<T>();
-            return Task.FromResult(Tuple.Create(currentQueryOperation.CurrentQueryResults, list));
         }
 
         /// <inheritdoc />
