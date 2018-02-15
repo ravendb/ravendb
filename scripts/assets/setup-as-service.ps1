@@ -13,6 +13,15 @@ function CheckPortIsClosed($port) {
     return $result -eq $false
 }
 
+function SetAclOnServerDirectory($dir) {
+    $acl = Get-Acl $dir
+    $permissions = "LocalService", "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow"
+    $rule = New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule -ArgumentList $permissions
+    $acl.SetAccessRuleProtection($False, $False)
+    $acl.AddAccessRule($rule)
+    Set-Acl -Path $dir -AclObject $acl
+}
+
 $scriptDirectory = Get-ScriptDirectory;
 $settingsJson = "settings.json";
 $rvn = "rvn.exe";
@@ -37,6 +46,8 @@ if ((CheckPortIsClosed $port) -eq $false) {
     Write-Error "Port $port is not available.";
     exit 2
 }
+
+SetAclOnServerDirectory $(Join-Path -Path $(Get-ScriptDirectory) -ChildPath "Server")
 
 try
 {
@@ -73,4 +84,3 @@ Write-Host "You can now finish setting up the RavenDB service in the browser"
 
 Start-Sleep -Seconds 3
 Start-Process $url 
-
