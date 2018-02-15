@@ -84,9 +84,9 @@ namespace SlowTests.Tests
                     Assert.Equal("F1", results1[0].FirstName);
 
                     results1 = session
-                       .Advanced
-                      .DocumentQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
-                      .ToList();
+                        .Advanced
+                        .DocumentQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
+                        .ToList();
 
                     Assert.Equal(1, results1.Count);
                     Assert.Equal(2, results1[0].Count);
@@ -107,13 +107,9 @@ namespace SlowTests.Tests
 
                     var results3 = session
                         .Advanced
-                       .DocumentQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
-                       .Select(x => new EmployeeCount
-                       {
-                           Count = x.Count,
-                           FirstName = x.FirstName
-                       })
-                       .ToList();
+                        .DocumentQuery<SimpleMapReduceIndex.Result, SimpleMapReduceIndex>()
+                        .SelectFields<EmployeeCount>()
+                        .ToList();
 
                     Assert.Equal(1, results3.Count);
                     Assert.Equal(2, results3[0].Count);
