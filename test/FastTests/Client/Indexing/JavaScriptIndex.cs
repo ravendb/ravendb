@@ -23,17 +23,39 @@ namespace FastTests.Client.Indexing
                     session.Store(new User{Name = "Brendan Eich" , IsActive = true});
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    //WaitForUserToContinueTheTest(store);
                     session.Query<User>("UsersByName").Single(x => x.Name == "Brendan Eich");
                 }
                 
             }
         }
 
+        [Fact]
+        public void CanUseJavaScriptMultiMapIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersAndProductsByName());
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Brendan Eich", IsActive = true });
+                    session.Store(new Product {Name = "Shampoo", IsAvailable = true});
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    session.Query<User>("UsersAndProductsByName").Single(x => x.Name == "Brendan Eich");
+                }
+
+            }
+        }
         private class User
         {
             public string Name { get; set; }
             public bool IsActive { get; set; }
+        }
+
+        private class Product
+        {
+            public string Name { get; set; }
+            public bool IsAvailable { get; set; }
         }
         private class UsersByName : AbstractIndexCreationTask
         {
@@ -45,6 +67,26 @@ namespace FastTests.Client.Indexing
                     Maps = new HashSet<string>
                     {
                         "collection(\'Users\')\r\n    .map(function (u) { \r\n        return { Name: u.Name, Count: 1}; \r\n    });"
+                    },
+                    Type = IndexType.JavaScriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,                    
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class UsersAndProductsByName : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "UsersAndProductsByName",
+                    Maps = new HashSet<string>
+                    {
+                        "collection(\'Users\')\r\n    .map(function (u) { \r\n        return { Name: u.Name, Count: 1}; \r\n    });",
+                        "collection(\'Products\')\r\n    .map(function (p) { \r\n        return { Name: p.Name, Count: 1}; \r\n    });"
                     },
                     Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
