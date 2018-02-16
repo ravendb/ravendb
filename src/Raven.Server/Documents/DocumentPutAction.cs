@@ -445,14 +445,7 @@ namespace Raven.Server.Documents
                 if (tombstoneTable.IsOwned(reader.Id))
                 {
                     tombstoneTable.Delete(reader.Id);
-                    return;
                 }
-
-                // this is using a different collection, so we need to handle that.
-
-                collectionName = new CollectionName(TableValueToId(context, (int)TombstoneTable.Collection, ref reader));
-                tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
-                tombstoneTable.Delete(reader.Id);
             }
         }
 
