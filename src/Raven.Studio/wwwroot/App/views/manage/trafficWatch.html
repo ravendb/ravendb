@@ -21,19 +21,19 @@
             </div>
         </div>
         <div class="flex-end text-muted">
-            <div class="text-center"><small>Min duration:</small></div>
+            <div class="text-center"><small>Minimum duration:</small></div>
             <div class="text-center">
                 <small><strong data-bind="text: stats.min"></strong></small>
             </div>
         </div>
         <div class="flex-end text-muted" data-toggle="tooltip" title="Average request duration (excluding web sockets)" data-placement="right" >
-            <div class="text-center"><small>Avg duration:</small></div>
+            <div class="text-center"><small>Average duration:</small></div>
             <div class="text-center">
                 <small><strong data-bind="text: stats.avg"></strong></small>
             </div>
         </div>
         <div class="flex-end text-muted">
-            <div class="text-center"><small>Max duration:</small></div>
+            <div class="text-center"><small>Maximum duration:</small></div>
             <div class="text-center">
                 <small><strong data-bind="text: stats.max"></strong></small>
             </div>
@@ -54,7 +54,7 @@
     <div class="flex-grow">
         <div class="has-error results-error" data-bind="visible: isBufferFull">
             <div class="help-block">
-                <i class="icon-danger"></i><span>Log buffer is full. <a href="#" data-bind="click: clear">Clear all entries.</a></span>
+                <i class="icon-danger"></i><span> The log buffer is full. <a href="#" data-bind="click: clear">Clear all entries.</a></span>
             </div>
         </div>
         <div class="scroll-stretch">
