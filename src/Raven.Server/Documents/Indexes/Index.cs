@@ -295,9 +295,9 @@ namespace Raven.Server.Documents.Indexes
                         return AutoMapReduceIndex.Open(environment, documentDatabase);
                     case IndexType.Map:
                         return MapIndex.Open(environment, documentDatabase);
-                    case IndexType.JavaScriptMap:
+                    case IndexType.JavascriptMap:
                         return MapIndex.Open(environment, documentDatabase);
-                    case IndexType.JavaScriptMapReduce:
+                    case IndexType.JavascriptMapReduce:
                         return MapReduceIndex.Open(environment, documentDatabase);
                     case IndexType.MapReduce:
                         return MapReduceIndex.Open(environment, documentDatabase);
@@ -2283,7 +2283,7 @@ namespace Raven.Server.Documents.Indexes
         {
             // the catch all field name means that we have dynamic fields names
 
-            if (Definition.HasDynamicFields || Type == IndexType.JavaScriptMapReduce || Type == IndexType.JavaScriptMap || IndexPersistence.ContainsField(f))
+            if (Definition.HasDynamicFields || IndexPersistence.ContainsField(f))
                 return;
 
             ThrowInvalidField(f);

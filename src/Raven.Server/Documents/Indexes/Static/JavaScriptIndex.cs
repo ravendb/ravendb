@@ -59,17 +59,16 @@ namespace Raven.Server.Documents.Indexes.Static
             if (reduce.IsNull() == false)
             {
                 GroupByFields = new string[] { };
-                Reduce = items => JintReduceFuncWrapper(reduce, items);
-                Console.WriteLine("Not NULL!");
+                Reduce = new JintReduceFuncWrapper(reduce, _jint).IndexingFunction;
             }
             var fields = new HashSet<string>();
             foreach (var (key, val) in _collectionFunctions)
             {
-                Maps.Add(key, val.Select(x => (IndexingFunc)(enm => JintMapFuncWrapper(x, enm))).ToList());
-                foreach (var field in ExtractFields(val.LastOrDefault()?.LastOrDefault()))
+                Maps.Add(key, val.Select(x => (IndexingFunc)new JintMapFuncWrapper(x, _jint).IndexingFunction).ToList());
+                /*foreach (var field in ExtractFields(val.LastOrDefault()?.LastOrDefault()))
                 {
                     fields.Add(field);
-                }
+                }*/
             }
 
             //Reduce = (IndexingFunc)JintReduceFuncWrapper;
@@ -226,64 +225,81 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private IEnumerable<string> ExtractFields(JsValue map)
+        private class JintReduceFuncWrapper
         {
-            var bluh = map.ToString();
-            
-            if (map == null)
-                yield break;
-        }
-
-        private IEnumerable JintReduceFuncWrapper(JsValue reduce, IEnumerable<dynamic> items)
-        {
-            foreach (var item in items)
+            public JintReduceFuncWrapper(JsValue reduce, Engine engine)
             {
-                if (GetValue(item, out JsValue jsItem))
-                    continue;
-                jsItem = reduce.Invoke(jsItem);
-                yield return jsItem.AsObject();
+                Reduce = reduce;
+                Engine = engine;
             }
-        }
 
-        private IEnumerable JintMapFuncWrapper(List<JsValue> jsValues, IEnumerable<dynamic> items)
-        {
-            foreach (var item in items)
+            public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
             {
-                if (GetValue(item, out JsValue jsItem))
-                    continue;
-                var filtered = false;
-                foreach (var function in jsValues)
+                foreach (var item in items)
                 {
-                    jsItem = function.Invoke(jsItem);
-                    //filter
-                    if (jsItem.IsBoolean())
-                    {
-                        if (jsItem.AsBoolean())
-                        {
-                            filtered = true;
-                            break;
-                        }
-                    }
-                }
-                if (filtered == false)
-                {
-                    //Fanout
-                    if (jsItem.IsArray())
-                    {
-                        var array = jsItem.AsArray();
-                        var len = array.GetLength();
-                        for (var i = 0; i < len; i++)
-                        {
-                            yield return array.Get(i.ToString());
-                        }
-                    }
-                    else
-                        yield return jsItem.AsObject();
+                    if (GetValue(Engine, item, out JsValue jsItem))
+                        continue;
+                    jsItem = Reduce.Invoke(jsItem);
+                    yield return jsItem.AsObject();
                 }
             }
+
+            public Engine Engine { get; }
+
+            public JsValue Reduce { get; }
         }
 
-        private bool GetValue(dynamic item, out JsValue jsItem)
+        private class JintMapFuncWrapper
+        {
+            public JintMapFuncWrapper(List<JsValue> jsValues, Engine engine)
+            {
+                Functions = jsValues;
+                Engine = engine;
+            }
+
+            public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
+            {
+                foreach (var item in items)
+                {
+                    if (GetValue(Engine, item, out JsValue jsItem))
+                        continue;
+                    var filtered = false;
+                    foreach (var function in Functions)
+                    {
+                        jsItem = function.Invoke(jsItem);
+                        //filter
+                        if (jsItem.IsBoolean())
+                        {
+                            if (jsItem.AsBoolean())
+                            {
+                                filtered = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (filtered == false)
+                    {
+                        //Fanout
+                        if (jsItem.IsArray())
+                        {
+                            var array = jsItem.AsArray();
+                            var len = array.GetLength();
+                            for (var i = 0; i < len; i++)
+                            {
+                                yield return array.Get(i.ToString());
+                            }
+                        }
+                        else
+                            yield return jsItem.AsObject();
+                    }
+                }
+            }
+
+            public List<JsValue> Functions { get;}
+            public Engine Engine { get; }
+        }
+
+        public static bool GetValue(Engine engine , dynamic item, out JsValue jsItem)
         {
             jsItem = null;
             var dbj = item as DynamicBlittableJson;
@@ -292,7 +308,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var id = dbj.GetId();
             if (id == DynamicNullObject.Null)
                 return true;
-            var boi = new BlittableObjectInstance(_jint, null, dbj.BlittableJson, id, null);
+            var boi = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
             jsItem = boi;
             return false;
         }

@@ -330,12 +330,22 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
-        private IndexType DetectStaticIndexType()
+        public IndexType DetectStaticIndexType()
         {
-            if (string.IsNullOrWhiteSpace(Reduce))
-                return IndexType.Map;
+            var firstMap = Maps.First()?.TrimStart();
+            if (firstMap == null)
+                throw new ArgumentNullException("Index definitions contains no maps");
+            if (firstMap.StartsWith("from") || firstMap.StartsWith("docs"))
+            {
+                if (string.IsNullOrWhiteSpace(Reduce))
+                    return IndexType.Map;
 
-            return IndexType.MapReduce;
+                return IndexType.MapReduce;
+            }
+            if (string.IsNullOrWhiteSpace(Reduce))
+                return IndexType.JavascriptMap;
+
+            return IndexType.JavascriptMapReduce;
         }
 
 #if FEATURE_TEST_INDEX
