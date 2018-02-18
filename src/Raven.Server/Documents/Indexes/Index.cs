@@ -297,6 +297,8 @@ namespace Raven.Server.Documents.Indexes
                         return MapIndex.Open(environment, documentDatabase);
                     case IndexType.JavaScriptMap:
                         return MapIndex.Open(environment, documentDatabase);
+                    case IndexType.JavaScriptMapReduce:
+                        return MapReduceIndex.Open(environment, documentDatabase);
                     case IndexType.MapReduce:
                         return MapReduceIndex.Open(environment, documentDatabase);
                     default:

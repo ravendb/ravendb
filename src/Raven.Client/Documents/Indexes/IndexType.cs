@@ -21,7 +21,7 @@
 
         public static bool IsMapReduce(this IndexType self)
         {
-            return self == IndexType.MapReduce || self == IndexType.AutoMapReduce;
+            return self == IndexType.MapReduce || self == IndexType.AutoMapReduce || self == IndexType.JavaScriptMapReduce;
         }
 
         public static bool IsAuto(this IndexType self)
@@ -31,7 +31,7 @@
 
         public static bool IsStatic(this IndexType self)
         {
-            return self == IndexType.Map || self == IndexType.MapReduce;
+            return self == IndexType.Map || self == IndexType.MapReduce || self == IndexType.JavaScriptMap || self == IndexType.JavaScriptMapReduce;
         }
     }
 }

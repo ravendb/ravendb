@@ -84,6 +84,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 case IndexType.JavaScriptMap:
                     _converter = new JintLuceneDocumentConverter(fields);
                     break;
+                case IndexType.JavaScriptMapReduce:
+                    _converter = new JintLuceneDocumentConverter(fields, reduceOutput: true);
+                    break;
                 case IndexType.Faulty:
                     _converter = null;
                     break;
