@@ -2,6 +2,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Operations
 {
@@ -35,6 +36,36 @@ namespace Raven.Server.Web.Operations
 
             return NoContent();
         }
+
+        [RavenAction("/admin/operations/list", "GET", AuthorizationStatus.Operator)]
+        public Task ListOperations()
+        {
+            var operationsList = new DynamicJsonArray();
+            foreach (var op in ServerStore.Operations.GetAll())
+            {
+                if(op == null) //precaution
+                    continue;
+                
+                operationsList.Add(new DynamicJsonValue
+                {
+                    ["OperationId"] = op.Id,
+                    ["Status"] = op.State.Status,
+                    ["IsKillable"] = op.Killable,
+                    ["Progress"] = op.State.Progress.ToJson(),
+                    ["Details"] = op.Description.ToJson()
+                });
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, operationsList);
+                }
+            }
+
+            return Task.CompletedTask;
+        }        
 
         [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
         public Task State()

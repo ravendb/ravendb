@@ -10,6 +10,14 @@ namespace Raven.Server.Utils
     {
         private const int Retries = 50;
 
+        public static void CreateDirectoryIfNotExists(string dirPath)
+        {
+            if (Directory.Exists(dirPath) == false)
+            {
+                Directory.CreateDirectory(dirPath);
+            }
+        }
+
         public static void DeleteFile(string file)
         {
             try
