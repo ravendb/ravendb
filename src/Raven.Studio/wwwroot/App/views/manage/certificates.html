@@ -3,7 +3,7 @@
         <div class="panel padding padding-lg">
             <h2 class="text-warning"><i class="icon-unsecure"></i> Authentication is off</h2>
             <p class="margin-top margin-lg">
-                RavenDB uses certificates to authenticate clients but the server certificate information has not been set up.<br />
+                RavenDB uses certificates to authenticate clients, but the server certificate information has not been set up.<br />
                 Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and fill in your certificate information under either:
             </p>
             <div class="flex-horizontal margin-top margin-lg">
@@ -24,11 +24,11 @@
             <div class="text-info bg-info padding padding-sm small">
                 <div class="padding padding-sm">
                     If either option is specified, RavenDB will use <em>HTTPS/SSL</em> for all network activities.<br/>
-                    The certificate path setting takes precedence over executable configuration option.
+                    The certificate path setting takes precedence over executable configuration options.
                 </div>
             </div>
             <div class="text-center margin-top margin-lg">
-                For more information please head on to the <a href="https://ravendb.net/docs" target="_blank">RavenDB 4.0 Documentation</a>.
+                For more information please see <a href="https://ravendb.net/docs" target="_blank">RavenDB 4.0 Documentation</a>.
             </div>
         </div>
     </div>
@@ -42,7 +42,7 @@
                     </button>
                     <button class="btn btn-default" data-bind="click: enterUploadCertificateMode">
                         <i class="icon-upload"></i>
-                        <span>Upload client certificates</span>
+                        <span>Upload client certificate</span>
                     </button>
                     <button class="btn btn-default" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Exports cluster certificates into .pfx file">
                         <i class="icon-export"></i>
@@ -96,7 +96,7 @@
                         <div class="flex-horizontal margin-bottom">
                             <div class="flex-grow">
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
-                                <h3 data-bind="visible: mode() === 'upload'">Upload client certificates</h3>
+                                <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
                             </div>
                             <div class="flex-start">
@@ -227,7 +227,7 @@
                                     <i class="icon-info"></i>
                                 </div>
                                 <div class="small">
-                                    With user role set to <strong data-bind="text: securityClearanceLabel"></strong> the user of this certificate is going to have access to all databases
+                                    With the user role set to <strong data-bind="text: securityClearanceLabel"></strong>, the user of this certificate is going to have access to all databases.
                                 </div>
                             </div>
     

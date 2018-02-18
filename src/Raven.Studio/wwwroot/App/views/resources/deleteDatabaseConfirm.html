@@ -12,7 +12,7 @@
                 <strong data-bind="visible: databasesToDelete.length > 1, text: databasesToDelete.length"></strong>
                 <span data-bind="text: databasesToDelete.length === 1 ? 'database:' : 'databases:'"></span><br/>
                 <span data-bind="visible: databasesToDelete.length > 1">
-                    <i class="icon-warning"></i><span>The delete option selected below will apply to all of the deleted databases</span>
+                    <i class="icon-warning"></i><span>The delete option selected below will apply to all of the deleted databases.</span>
                 </span>                
                 <div class="margin-top margin-top-sm">
                     <ul data-bind="foreach: databasesToDelete" style="max-height: 100px; overflow-y: auto;">
@@ -29,7 +29,7 @@
                     <div class="text-left">Database will be deleted from the server.<br>
                         The physical files will be left untouched on disk.<br>
                         <i class="icon-warning"></i><span style="font-style: italic;">Database Record, Identities &amp; Compare Exchange</span>
-                        data will Not be recovered if the database is to be added again in the future, so please export this data before deleting if needed.
+                        data will not be recovered if the database is to be added again in the future. Please export this data before deleting if needed.
                     </div>
                     <div class="padding">
                         <button type="button" class="btn btn-info" data-bind="click: exportDatabase, attr: { title: 'Export Data for database ' + databasesToDelete[0].name }">

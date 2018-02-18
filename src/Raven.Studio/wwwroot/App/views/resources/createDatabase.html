@@ -286,11 +286,11 @@
                 <input class="form-control" type="number" min="0" title="Set the number of nodes that will contain the database" 
                        data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackupOrFromOfflineMigration || $root.disableReplicationFactorInput">
                 <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackupOrFromOfflineMigration && $root.showReplicationFactorWarning">
-                    With replication factor set to 1 data won't be replicated.
+                    With the replication factor set to 1, the data won't be replicated!
                 </div>
                 <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackupOrFromOfflineMigration">
                     The backup will be restored only to the current node <br/>
-                    After restore this database can be added to other nodes using the 'Manage group' button
+                    After restore, this database can be added to other nodes using the 'Manage group' button.
                 </div>
             </div>
         </div>
@@ -310,7 +310,7 @@
             <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
             <label for="manual_mode">Set replication nodes manually</label>
         </div>
-        <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</small>
+        <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among the cluster's nodes.</small>
         <small class="toggle-caption" data-bind="visible: manualMode()">Select replication nodes from the list below.</small>
 
         <div class="panel panel-info padding" data-bind="visible: manualMode()">
