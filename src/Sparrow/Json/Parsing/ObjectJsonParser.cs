@@ -438,7 +438,7 @@ namespace Sparrow.Json.Parsing
                 {
                     var d = (decimal)current;
 
-                    if (DecimalHelper.Instance.IsDouble(ref d))
+                    if (DecimalHelper.Instance.IsDouble(ref d) || d> long.MaxValue || d < long.MinValue)
                     {
                         var s = EnsureDecimalPlace((double)d, d.ToString(CultureInfo.InvariantCulture));
                         SetStringBuffer(s);
