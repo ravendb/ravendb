@@ -508,7 +508,7 @@ namespace Raven.Server.Web.System
                     ? new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate))
                     : new X509Certificate2(Convert.FromBase64String(setupInfo.Certificate), setupInfo.Password);
 
-                var cn = nodeCert.GetNameInfo(X509NameType.DnsName, false);
+                var cn = nodeCert.GetNameInfo(X509NameType.SimpleName, false);
 
                 var contentDisposition = $"attachment; filename={cn}.Cluster.Settings.zip";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
