@@ -22,20 +22,67 @@ using Voron.Data.Fixed;
 using SlowTests.Authentication;
 using FastTests.Sparrow;
 using SlowTests.Server.NotificationCenter;
-
-/*
-    Code reference - please DO NOT REMOVE:
-         
-    DebuggerAttachedTimeout.DisableLongTimespan = true;
-    
-    Console.WriteLine(Process.GetCurrentProcess().Id);
-    Console.WriteLine();
-    
-    LoggingSource.Instance.SetupLogMode(LogMode.Information, @"c:\work\ravendb\logs");
- */
+using FastTests;
+using Xunit;
+using Raven.Client.Documents.Commands.Batches;
+using Sparrow.Json;
+using Raven.Client.Documents.Operations;
+using SlowTests.Issues;
 
 namespace Tryouts
 {
+    public class BlittableTest : RavenTestBase
+    {
+        [Fact]
+        public void TestDecimalNumbers()
+        {
+            using (var store = GetDocumentStore())
+            {
+                                
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+
+                    for (var i = 0; i < 1000; i++)
+                    {
+                        var blittable = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+                        {
+                            ["Number"] = Decimal.MaxValue - (decimal)i  - (decimal)0.1
+                            //["Number"] = double.MaxValue - (double)i - (double)0.1
+
+                        }, "someDoc");
+
+                        store.Commands().Put($"users/{i}", null, blittable,new Dictionary<string, object>
+                        {
+                            { Raven.Client.Constants.Documents.Metadata.Collection, "MyUsesrs" }
+                        });
+                    }
+
+                 //   var operation = store.Operations.Send(new PatchByQueryOperation("from MyUsesrs as u update { u.Number -= 1;}"));
+
+                 
+
+                    Thread.Sleep(10);
+                    //where u.Number < {Decimal.MaxValue - 500}
+                    var r = store.Commands().Query(new Raven.Client.Documents.Queries.IndexQuery()
+                    {
+                        Query = $@"from MyUsesrs as u
+
+order by u.Number as double
+select {{Number:u.Number}}
+"
+                    });
+
+                    var results = r.Results.ToList();
+
+                    var user = store.Commands().Get("users/1");
+                    Console.WriteLine(user["Number"]);                    
+                }
+                
+
+                
+            }
+        }
+    }
     class Program
     {
         private const int DocumentsCount = 1000;
@@ -47,8 +94,7 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
-            using (var test = new NotificationCenterTests())
-                test.Can_update_alert();                
+            new RavenDB_10537().TestDecimalNumbers();
         }
 
         private static void SerialStores()
