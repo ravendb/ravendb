@@ -368,11 +368,21 @@ namespace Raven.Server.Web.System
                         ? new X509Certificate2(Convert.FromBase64String(certDef.Certificate))
                         : new X509Certificate2(Convert.FromBase64String(certDef.Certificate), certDef.Password);
 
-                    cn = certificate.GetNameInfo(X509NameType.DnsName, false);
+                    cn = certificate.GetNameInfo(X509NameType.SimpleName, false);
                 }
                 catch (Exception e)
                 {
                     throw new BadRequestException($"Failed to extract the CN property from the certificate {certificate?.FriendlyName}. Maybe the password is wrong?", e);
+                }
+
+                if (cn == null)
+                {
+                    throw new BadRequestException($"Failed to extract the CN property from the certificate. CN is null");
+                }
+
+                if (cn.LastIndexOf('*') > 0)
+                {
+                    throw new NotSupportedException("The wildcard CN name contains a '*' which is not at the first character of the string. It is not supported in the Setup Wizard, you can do a manual setup instead.");
                 }
 
                 try
