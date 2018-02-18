@@ -607,7 +607,24 @@ namespace Raven.Server.Web.Authentication
             
             return Task.CompletedTask;
         }
-        
+
+        [RavenAction("/admin/certificates/mode", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task Mode()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("SetupMode");
+                    writer.WriteString(ServerStore.Configuration.Core.SetupMode.ToString());
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task ForceRenew()
         {
