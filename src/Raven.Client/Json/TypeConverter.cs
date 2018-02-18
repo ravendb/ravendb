@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -41,7 +42,7 @@ namespace Raven.Client.Json
             if (type == typeof(Guid))
                 return ((Guid)value).ToString("D");
 
-            if (type.IsSubclassOf(typeof(Enum)))
+            if (type.GetTypeInfo().IsSubclassOf(typeof(Enum)))
                 return value.ToString();
 
             var dictionary = value as IDictionary;
