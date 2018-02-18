@@ -623,7 +623,7 @@ namespace Raven.Server.Web.Authentication
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Failed to force renew the let's encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.DnsName, false)}", e);
+                throw new InvalidOperationException($"Failed to force renew the let's encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;

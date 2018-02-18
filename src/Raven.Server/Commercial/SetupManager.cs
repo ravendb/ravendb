@@ -1066,7 +1066,7 @@ namespace Raven.Server.Commercial
             publicTcpUrl = null;
             var node = setupInfo.NodeSetupInfos[nodeTag];
 
-            var cn = cert.GetNameInfo(X509NameType.DnsName, false);
+            var cn = cert.GetNameInfo(X509NameType.SimpleName, false);
             if (cn[0] == '*')
             {
                 var parts = cn.Split("*.");
