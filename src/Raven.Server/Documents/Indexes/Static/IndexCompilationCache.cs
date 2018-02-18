@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var key = new CacheKey(list);
-            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => IndexCompiler.Compile(definition)));
+            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => GenerateIndex(definition)));
 
             try
             {
@@ -44,6 +44,25 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 IndexCache.TryRemove(key, out _);
                 throw;
+            }
+        }
+
+        private static StaticIndexBase GenerateIndex(IndexDefinition definition)
+        {
+            switch (definition.DetectStaticIndexType())
+            {
+                case IndexType.None:
+                case IndexType.AutoMap:
+                case IndexType.AutoMapReduce:
+                case IndexType.Map:
+                case IndexType.MapReduce:
+                case IndexType.Faulty:
+                    return IndexCompiler.Compile(definition);
+                case IndexType.JavascriptMap:
+                case IndexType.JavascriptMapReduce:
+                    return new JavaScriptIndex(definition);                
+                default:
+                    throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }
         }
 

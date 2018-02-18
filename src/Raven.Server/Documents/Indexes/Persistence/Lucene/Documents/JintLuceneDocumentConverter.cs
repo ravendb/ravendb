@@ -15,6 +15,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
+        private static IndexFieldOptions _defaultFieldOptionds = new IndexFieldOptions();
+
         protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             var documentToProcess = document as ObjectInstance;
@@ -27,22 +29,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateKeyField(key));
                 newFields++;
             }
-
+            //TODO: Recurse?
             foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 IndexField field;
 
-                try
+                if (_fields.TryGetValue(property, out field) == false)
                 {
-                    if (_fields.TryGetValue(property, out field) == false)
-                    {
-                        field = IndexField.Create(property,new IndexFieldOptions(), new IndexFieldOptions());
-                        _fields.Add(property, field);
-                    }
-                }
-                catch (KeyNotFoundException e)
-                {
-                    throw new InvalidOperationException($"Field '{property}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
+                    field = IndexField.Create(property, _defaultFieldOptionds, _defaultFieldOptionds);
+                    _fields.Add(property, field);
                 }
 
                 var value = GetValue(propertyDescriptor.Value);

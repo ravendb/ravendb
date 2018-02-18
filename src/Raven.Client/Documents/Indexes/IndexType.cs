@@ -6,9 +6,9 @@
         AutoMap,
         AutoMapReduce,
         Map,
-        JavaScriptMap,
+        JavascriptMap,
         MapReduce,
-        JavaScriptMapReduce,
+        JavascriptMapReduce,
         Faulty
     }
 
@@ -16,12 +16,12 @@
     {
         public static bool IsMap(this IndexType self)
         {
-            return self == IndexType.Map || self == IndexType.AutoMap || self == IndexType.JavaScriptMap;
+            return self == IndexType.Map || self == IndexType.AutoMap || self == IndexType.JavascriptMap;
         }
 
         public static bool IsMapReduce(this IndexType self)
         {
-            return self == IndexType.MapReduce || self == IndexType.AutoMapReduce || self == IndexType.JavaScriptMapReduce;
+            return self == IndexType.MapReduce || self == IndexType.AutoMapReduce || self == IndexType.JavascriptMapReduce;
         }
 
         public static bool IsAuto(this IndexType self)
@@ -31,7 +31,7 @@
 
         public static bool IsStatic(this IndexType self)
         {
-            return self == IndexType.Map || self == IndexType.MapReduce || self == IndexType.JavaScriptMap || self == IndexType.JavaScriptMapReduce;
+            return self == IndexType.Map || self == IndexType.MapReduce || self == IndexType.JavascriptMap || self == IndexType.JavascriptMapReduce;
         }
     }
 }
