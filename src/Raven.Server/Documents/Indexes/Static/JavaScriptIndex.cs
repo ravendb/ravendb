@@ -54,6 +54,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 list.Add(chainList);
             }
+
+            var reduce = definitions.GetProperty("reduce").Value;
+            if (reduce.IsNull() == false)
+            {
+                GroupByFields = new string[] { };
+                Reduce = items => JintReduceFuncWrapper(reduce, items);
+                Console.WriteLine("Not NULL!");
+            }
             var fields = new HashSet<string>();
             foreach (var (key, val) in _collectionFunctions)
             {
@@ -63,10 +71,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     fields.Add(field);
                 }
             }
+
+            //Reduce = (IndexingFunc)JintReduceFuncWrapper;
             OutputFields = fields.ToArray();
             //TODO: we can extract the fields for the simple cases but for the general case it will require alot of effort.
             OutputFields = new string[]{};
+            HasDynamicFields = true;
         }
+
+
 
         private static void ExtractFields(string map)
         {
@@ -221,18 +234,23 @@ namespace Raven.Server.Documents.Indexes.Static
                 yield break;
         }
 
+        private IEnumerable JintReduceFuncWrapper(JsValue reduce, IEnumerable<dynamic> items)
+        {
+            foreach (var item in items)
+            {
+                if (GetValue(item, out JsValue jsItem))
+                    continue;
+                jsItem = reduce.Invoke(jsItem);
+                yield return jsItem.AsObject();
+            }
+        }
+
         private IEnumerable JintMapFuncWrapper(List<JsValue> jsValues, IEnumerable<dynamic> items)
         {
             foreach (var item in items)
             {
-                var dbj = item as DynamicBlittableJson;
-                if( dbj == null)
+                if (GetValue(item, out JsValue jsItem))
                     continue;
-                var id = dbj.GetId();
-                if(id == DynamicNullObject.Null)
-                    continue;
-                var boi = new BlittableObjectInstance(_jint, null, dbj.BlittableJson, id, null);
-                JsValue jsItem = boi;
                 var filtered = false;
                 foreach (var function in jsValues)
                 {
@@ -263,6 +281,20 @@ namespace Raven.Server.Documents.Indexes.Static
                         yield return jsItem.AsObject();
                 }
             }
+        }
+
+        private bool GetValue(dynamic item, out JsValue jsItem)
+        {
+            jsItem = null;
+            var dbj = item as DynamicBlittableJson;
+            if (dbj == null)
+                return true;
+            var id = dbj.GetId();
+            if (id == DynamicNullObject.Null)
+                return true;
+            var boi = new BlittableObjectInstance(_jint, null, dbj.BlittableJson, id, null);
+            jsItem = boi;
+            return false;
         }
 
         private static string Code = @"

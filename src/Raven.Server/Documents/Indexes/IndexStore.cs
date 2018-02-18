@@ -298,6 +298,9 @@ namespace Raven.Server.Documents.Indexes
                 case IndexType.MapReduce:
                     index = MapReduceIndex.CreateNew(definition, _documentDatabase);
                     break;
+                case IndexType.JavaScriptMapReduce:
+                    index = JavaScriptMapReduceIndex.CreateNew(definition, _documentDatabase);
+                    break;
                 default:
                     throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
             }
@@ -359,7 +362,8 @@ namespace Raven.Server.Documents.Indexes
             var map = definition.Maps.First();            
             if (map != null && map.TrimStart().StartsWith("from") == false)
             {
-                definition.Type = IndexType.JavaScriptMap;
+                var isReduce = string.IsNullOrEmpty(definition.Reduce) == false;
+                definition.Type = isReduce? IndexType.JavaScriptMapReduce:IndexType.JavaScriptMap;
             }
             ValidateIndexName(definition.Name, isStatic: true);
             definition.RemoveDefaultValues();
@@ -819,6 +823,9 @@ namespace Raven.Server.Documents.Indexes
                             break;
                         case IndexType.MapReduce:
                             index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            break;
+                        case IndexType.JavaScriptMapReduce:
+                            index = JavaScriptMapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
