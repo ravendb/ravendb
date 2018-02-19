@@ -14,6 +14,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import addNewNodeToDatabaseGroup = require("viewmodels/resources/addNewNodeToDatabaseGroup");
 import reorderNodesInDatabaseGroupCommand = require("commands/database/dbGroup/reorderNodesInDatabaseGroupCommand");
 import license = require("models/auth/licenseModel");
+import eventsCollector = require("common/eventsCollector");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -109,6 +110,7 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     saveNewOrder() {
+        eventsCollector.default.reportEvent("db-group", "save-order");
         const newOrder = this.currentDatabaseInfo().nodes().map(x => x.tag());
         
         new reorderNodesInDatabaseGroupCommand(this.activeDatabase().name, newOrder)

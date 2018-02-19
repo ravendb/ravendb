@@ -4,6 +4,7 @@ import getGlobalClientConfigurationCommand = require("commands/resources/getGlob
 import saveClientConfigurationCommand = require("commands/resources/saveClientConfigurationCommand");
 import getClientConfigurationCommand = require("commands/resources/getClientConfigurationCommand");
 import appUrl = require("common/appUrl");
+import eventsCollector = require("common/eventsCollector");
 
 class clientConfiguration extends viewModelBase {
     model: clientConfigurationModel;
@@ -107,6 +108,8 @@ class clientConfiguration extends viewModelBase {
         if (!this.isValid(this.model.validationGroup)) {
             return;
         }
+        
+        eventsCollector.default.reportEvent("client-configuration", "save");
 
         this.spinners.save(true);
         this.model.disabled(this.hasGlobalConfiguration() ? !this.overrideServer() : this.model.isDefined().length === 0);

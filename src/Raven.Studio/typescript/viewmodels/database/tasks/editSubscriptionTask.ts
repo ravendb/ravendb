@@ -18,6 +18,7 @@ import subscriptionConnectionDetailsCommand = require("commands/database/tasks/g
 import queryCompleter = require("common/queryCompleter");
 import subscriptionRqlSyntax = require("viewmodels/database/tasks/subscriptionRqlSyntax");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
+import eventsCollector = require("common/eventsCollector");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
@@ -112,6 +113,8 @@ class editSubscriptionTask extends viewModelBase {
         if (!this.validate()) { 
              return;
         }
+        
+        eventsCollector.default.reportEvent("subscription-task", "save");
 
         // 2. Create/add the new replication task
         const dto = this.editedSubscription().toDto();
@@ -157,6 +160,8 @@ class editSubscriptionTask extends viewModelBase {
             return;
         }
 
+        eventsCollector.default.reportEvent("subscription-task", "test");
+        
         this.columnsSelector.reset();
 
         const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);

@@ -241,6 +241,7 @@ class documents extends viewModelBase {
     }
 
     newDocumentInCollection(docs: documents, $event: JQueryEventObject) {
+        eventsCollector.default.reportEvent("document", "new-in-collection");
         const url = appUrl.forNewDoc(this.activeDatabase(), this.currentCollection().name);
         if ($event.ctrlKey) {
             window.open(url);
