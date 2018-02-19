@@ -1,11 +1,3 @@
-const enum ResponseCodes {
-    Forbidden = 403,
-    NotFound = 404,
-    PreconditionFailed = 412,
-    InternalServerError = 500,
-    ServiceUnavailable = 503
-}
-
 const enum checkbox {
     UnChecked = 0,
     SomeChecked = 1,
