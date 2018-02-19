@@ -27,6 +27,8 @@ class ongoingTasks extends viewModelBase {
     myNodeTag = ko.observable<string>();
 
     private graph = new databaseGroupGraph();
+    
+    private watchedBackups = new Map<number, number>();
 
     // The Ongoing Tasks Lists:
     replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>(); 
@@ -106,25 +108,29 @@ class ongoingTasks extends viewModelBase {
     }
     
     private watchBackupCompletion(task: ongoingTaskBackupListModel) {
-        let interval = setInterval(() => {
+        if (!this.watchedBackups.has(task.taskId)) {
+            let intervalId = setInterval(() => {
             task.refreshBackupInfo()
                 .done(result => {
                     if (!result.OnGoingBackup) {
-                        
-                        clearInterval(interval);
-                        interval = 0;
+                        clearInterval(intervalId);
+                        intervalId = 0;
+                        this.watchedBackups.delete(task.taskId);
                     }
                 })
-        }, 3000);
-        
-        
-        this.registerDisposable({
-            dispose: () => {
-                if (interval) {
-                    clearInterval(interval);
+            }, 3000);
+            this.watchedBackups.set(task.taskId, intervalId);
+            
+            this.registerDisposable({
+                dispose: () => {
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                        intervalId = 0;
+                        this.watchedBackups.delete(task.taskId);
+                    }
                 }
-            }
-        });
+            });    
+        }
     }
 
     private processTasksResult(result: Raven.Server.Web.System.OngoingTasksResult) { 
