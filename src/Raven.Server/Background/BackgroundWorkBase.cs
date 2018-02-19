@@ -111,6 +111,9 @@ namespace Raven.Server.Background
                     }
                     catch (Exception e)
                     {
+                        if (_shutdown.IsCancellationRequested)
+                            return;
+
                         if (Logger.IsInfoEnabled)
                             Logger.Info("Error in the background worker", e);
                     }
