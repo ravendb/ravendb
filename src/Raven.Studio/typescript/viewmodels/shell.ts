@@ -18,6 +18,7 @@ import allRoutes = require("common/shell/routes");
 import popoverUtils = require("common/popoverUtils");
 import registration = require("viewmodels/shell/registration");
 import collection = require("models/database/documents/collection");
+import constants = require("common/constants/constants");
 
 import appUrl = require("common/appUrl");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
@@ -314,7 +315,7 @@ class shell extends viewModelBase {
                 buildInfo.serverBuildVersion(serverBuildResult);
 
                 const currentBuildVersion = serverBuildResult.BuildVersion;
-                if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+                if (currentBuildVersion !== constants.DEV_BUILD_NUMBER) {
                     buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
             });
@@ -371,8 +372,8 @@ class shell extends viewModelBase {
 
     private configureAnalytics(track: boolean, [buildVersionResult]: [serverBuildVersionDto]) {
         const currentBuildVersion = buildVersionResult.BuildVersion;
-        const shouldTrack = track && currentBuildVersion !== DEV_BUILD_NUMBER;
-        if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+        const shouldTrack = track && currentBuildVersion !== constants.DEV_BUILD_NUMBER;
+        if (currentBuildVersion !== constants.DEV_BUILD_NUMBER) {
             buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
         }
 
