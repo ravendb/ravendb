@@ -198,10 +198,10 @@ class createDatabase extends dialogViewModelBase {
             const selectedCount = this.databaseModel.replication.nodes().length;
 
             if (clusterNodes.length && selectedCount === clusterNodes.length)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
     }
 

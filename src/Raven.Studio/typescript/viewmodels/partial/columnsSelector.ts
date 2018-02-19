@@ -144,9 +144,9 @@ class columnsSelector<T> {
             const checkedCount = allVisibleColumns.filter(x => x.visible()).length;
 
             if (allVisibleColumns.length && checkedCount === allVisibleColumns.length)
-                return checkbox.Checked;
+                return "checked";
 
-            return  checkedCount > 0 ? checkbox.SomeChecked : checkbox.UnChecked;
+            return checkedCount > 0 ? "some_checked" : "unchecked";
         });
     }
 
