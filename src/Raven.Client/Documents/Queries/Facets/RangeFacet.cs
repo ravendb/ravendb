@@ -173,15 +173,7 @@ namespace Raven.Client.Documents.Queries.Facets
             //i.e. new DateTime(10, 4, 2001) || dateTimeVar.AddDays(2) || val +100
             if (operation.Right is NewExpression || operation.Right is MethodCallExpression || operation.Right is BinaryExpression)
             {
-                try
-                {
-                    var invoke = Expression.Lambda(operation.Right).Compile();
-                    return invoke.DynamicInvoke();
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Could not understand expression " + operation.Right, e);
-                }
+                return TryInvokeLambda(operation.Right);
             }
 
             throw new InvalidOperationException(string.Format("Unable to parse expression: {0} {1} {2}",
@@ -227,6 +219,11 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 var operand = expression.Operand;
 
+                if (operand is BinaryExpression)
+                {
+                    return TryInvokeLambda(operand);
+                }
+
                 switch (operand.NodeType)
                 {
                     case ExpressionType.MemberAccess:
@@ -238,19 +235,24 @@ namespace Raven.Client.Documents.Queries.Facets
                     case ExpressionType.Convert:
                         return ParseUnaryExpression((UnaryExpression)operand);
                     case ExpressionType.New:
-                        try
-                        {
-                            var invoke = Expression.Lambda(operand).Compile();
-                            return invoke.DynamicInvoke();
-                        }
-                        catch (Exception e)
-                        {
-                            throw new InvalidOperationException("Could not understand expression " + operand, e);
-                        }
+                        return TryInvokeLambda(operand);
                 }
             }
 
             throw new NotSupportedException("Not supported unary expression type " + expression.NodeType);
+        }
+
+        private static object TryInvokeLambda(Expression expression)
+        {
+            try
+            {
+                var invoke = Expression.Lambda(expression).Compile();
+                return invoke.DynamicInvoke();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Could not understand expression " + expression, e);
+            }
         }
 
         private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
