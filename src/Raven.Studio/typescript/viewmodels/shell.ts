@@ -76,7 +76,7 @@ class shell extends viewModelBase {
     favNodeBadge = new favNodeBadge();
 
     displayUsageStatsInfo = ko.observable<boolean>(false);
-    trackingTask = $.Deferred();
+    trackingTask = $.Deferred<boolean>();
 
     studioLoadingFakeRequest: requestExecution;
 
@@ -109,7 +109,7 @@ class shell extends viewModelBase {
             viewModelBase.clientVersion(v.Version));
 
         buildInfo.serverBuildVersion.subscribe(buildVersionDto => {
-            this.initAnalytics({ SendUsageStats: true }, [ buildVersionDto ]);
+            this.initAnalytics([ buildVersionDto ]);        
         });
 
         activeDatabaseTracker.default.database.subscribe(newDatabase => footer.default.forDatabase(newDatabase));
@@ -332,22 +332,29 @@ class shell extends viewModelBase {
         this.navigate(this.appUrls.adminSettingsCluster());
     }
 
-    private initAnalytics(config: any, buildVersionResult: [serverBuildVersionDto]) {
+    private initAnalytics(buildVersionResult: [serverBuildVersionDto]) {
         if (eventsCollector.gaDefined()) {
-            if (config == null || !("SendUsageStats" in config)) {
-                // ask user about GA
-                this.displayUsageStatsInfo(true);
-
-                this.trackingTask.done((accepted: boolean) => {
-                    this.displayUsageStatsInfo(false);
-
-                    if (accepted) {
-                        this.configureAnalytics(true, buildVersionResult);
-                    }
-                });
-            } else {
-                this.configureAnalytics(config.SendUsageStats, buildVersionResult);
-            }
+            
+            studioSettings.default.globalSettings()
+                .done(settings => {
+                    const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
+                    if (_.isUndefined(shouldTraceUsageMetrics)) {
+                    // ask user about GA
+                    this.displayUsageStatsInfo(true);
+    
+                    this.trackingTask.done((accepted: boolean) => {
+                        this.displayUsageStatsInfo(false);
+    
+                        if (accepted) {
+                            this.configureAnalytics(true, buildVersionResult);
+                        }
+                        
+                        settings.sendUsageStats.setValue(accepted);
+                    });
+                } else {
+                    this.configureAnalytics(shouldTraceUsageMetrics, buildVersionResult);
+                }
+            });
         } else {
             // user has uBlock etc?
             this.configureAnalytics(false, buildVersionResult);
