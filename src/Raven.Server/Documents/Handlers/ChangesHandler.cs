@@ -9,6 +9,7 @@ using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
+using Raven.Client.Extensions;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -102,7 +103,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    var segments = new[]{segment1,segment2};
+                    var segments = new[] {segment1, segment2};
                     int index = 0;
                     var receiveAsync = webSocket.ReceiveAsync(segments[index].Buffer, Database.DatabaseShutdown);
                     var jsonParserState = new JsonParserState();
@@ -117,7 +118,8 @@ namespace Raven.Server.Documents.Handlers
 
                         while (true)
                         {
-                            using (var builder = new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
+                            using (var builder =
+                                new BlittableJsonDocumentBuilder(context, BlittableJsonDocumentBuilder.UsageMode.None, debugTag, parser, jsonParserState))
                             {
                                 parser.NewDocument();
                                 builder.ReadObjectDocument();
@@ -157,6 +159,14 @@ namespace Raven.Server.Documents.Handlers
                     /* Client was disconnected, write to log */
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Client was disconnected", ex);
+                }
+                catch
+                {
+#pragma warning disable 4014
+                    sendTask.IgnoreUnobservedExceptions();
+#pragma warning restore 4014
+
+                    throw;
                 }
                 finally
                 {
