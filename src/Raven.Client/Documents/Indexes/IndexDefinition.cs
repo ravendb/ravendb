@@ -332,11 +332,13 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexType DetectStaticIndexType()
         {
-            var firstMap = Maps.First()?.TrimStart();
+            var firstMap = Maps.FirstOrDefault()?.TrimStart();
             if (firstMap == null)
-                throw new ArgumentNullException("Index definitions contains no maps");
+                throw new ArgumentNullException("Index definitions contains no Maps");
             if (firstMap.StartsWith("from") || firstMap.StartsWith("docs"))
             {
+                // C# indexes must start with "from" for query synatx or
+                // "docs" for method syntax
                 if (string.IsNullOrWhiteSpace(Reduce))
                     return IndexType.Map;
 
@@ -395,7 +397,6 @@ namespace Raven.Client.Documents.Indexes
                 LockMode = LockMode,
                 Fields = fields,
                 Name = Name,
-                Type = Type,
                 Priority = Priority,
                 Reduce = Reduce,
                 Maps = new HashSet<string>(Maps),

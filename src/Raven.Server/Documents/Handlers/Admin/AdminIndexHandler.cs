@@ -26,9 +26,11 @@ namespace Raven.Server.Documents.Handlers.Admin
                 foreach (var indexToAdd in indexes)
                 {
                     var indexDefinition = JsonDeserializationServer.IndexDefinition((BlittableJsonReaderObject)indexToAdd);
-
                     if (indexDefinition.Maps == null || indexDefinition.Maps.Count == 0)
                         throw new ArgumentException("Index must have a 'Maps' fields");
+
+                    indexDefinition.Type = indexDefinition.DetectStaticIndexType();
+                   
                     var index = await Database.IndexStore.CreateIndex(indexDefinition);
                     createdIndexes.Add(index.Name);
                 }

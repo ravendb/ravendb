@@ -31,7 +31,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
-                    Type = IndexType.Map
                 }, database))
                 {
                     DocumentQueryResult queryResult;
@@ -101,7 +100,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
-                    Type = IndexType.Map,
                     Configuration =
                     {
                         {RavenConfiguration.GetKey(x => x.Indexing.MapTimeout), "33"}
@@ -132,7 +130,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Name = "Users_ByName",
                     Maps = { "from user in docs.Users select new { user.Name }" },
-                    Type = IndexType.Map,
                     Configuration =
                     {
                         { "TestKey", "TestValue" }
@@ -198,7 +195,6 @@ namespace FastTests.Server.Documents.Indexing.Static
             };
             indexDefinition.Name = "n1";
             indexDefinition.Reduce = "c";
-            indexDefinition.Type = IndexType.MapReduce;
             indexDefinition.Fields = new Dictionary<string, IndexFieldOptions>
             {
                 {"f1", new IndexFieldOptions
@@ -264,7 +260,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Name = "Index1",
                     Maps = { "from doc in docs select new { doc.Name }" },
-                    Type = IndexType.Map
                 }, database))
                 {
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -354,7 +349,6 @@ namespace FastTests.Server.Documents.Indexing.Static
                 {
                     Name = "Index1",
                     Maps = { "from doc in docs.Users select new { doc.Name }" },
-                    Type = IndexType.Map
                 }, database))
                 {
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))

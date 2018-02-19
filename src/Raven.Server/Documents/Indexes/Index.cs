@@ -294,12 +294,10 @@ namespace Raven.Server.Documents.Indexes
                     case IndexType.AutoMapReduce:
                         return AutoMapReduceIndex.Open(environment, documentDatabase);
                     case IndexType.Map:
-                        return MapIndex.Open(environment, documentDatabase);
                     case IndexType.JavascriptMap:
                         return MapIndex.Open(environment, documentDatabase);
-                    case IndexType.JavascriptMapReduce:
-                        return MapReduceIndex.Open(environment, documentDatabase);
                     case IndexType.MapReduce:
+                    case IndexType.JavascriptMapReduce:
                         return MapReduceIndex.Open(environment, documentDatabase);
                     default:
                         throw new ArgumentException($"Unknown index type {type} for index {name}");

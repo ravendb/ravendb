@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
-using System.Text;
 using Esprima;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
-using Jint.Native.Array;
 using Jint.Native.Function;
-using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 
@@ -18,53 +13,55 @@ namespace Raven.Server.Documents.Indexes.Static
 {
     public class JavaScriptIndex : StaticIndexBase
     {
-        private readonly Engine _jint;
-
         public JavaScriptIndex(IndexDefinition definition)
-        {            
+        {
             _definitions = definition;
-            _jint = new Engine();
-            _jint.Execute(Code);
+            var jint = new Engine();
+            jint.Execute(Code);
             foreach (var map in definition.Maps)
             {
-                _jint.Execute(map);
+                jint.Execute(map);
                 //ExtractFields(map);
             }
-            var definitions = _jint.GetValue("globalDefinition").AsObject();
+            // TODO: This code currently assume proper strucutre, but need to make sure
+            // TODO: we get proper errors if the maps contains a value that is null, or a number, etc
+            // TODO: That kind of error should throw, but we should be able to get clear error message and ensure that the
+            // TODO: user has a proper way to recover from that
+
+            var definitions = jint.GetValue("globalDefinition").AsObject();
             var maps = definitions.GetProperty("maps").Value.AsArray();
-            var mapLength = maps.GetLength();
-            _collectionFunctions = new Dictionary<string, List<List<JsValue>>>();
-            for (int i = 0; i < mapLength; i++)
+            var _collectionFunctions = new Dictionary<string, List<MapOperation>>();
+            for (int i = 0; i < maps.GetLength(); i++)
             {
                 var map = maps.Get(i.ToString()).AsObject();
                 var mapCollection = map.Get("Collection").AsString();
                 if (_collectionFunctions.TryGetValue(mapCollection, out var list) == false)
                 {
-                    list = new List<List<JsValue>>();
+                    list = new List<MapOperation>();
                     _collectionFunctions.Add(mapCollection, list);
                 }
-                var chainList = new List<JsValue>();
+                var operation = new MapOperation();
                 var mapChain = map.Get("Chain").AsArray();
 
                 var chainLength = mapChain.GetLength();
                 for (int j = 0; j < chainLength; j++)
                 {
                     var method = mapChain.Get(j.ToString());
-                    chainList.Add(method);
+                    operation.Steps.Add(method.As<FunctionInstance>());
                 }
-                list.Add(chainList);
+                list.Add(operation);
             }
 
             var reduce = definitions.GetProperty("reduce").Value;
             if (reduce.IsNull() == false)
             {
                 GroupByFields = new string[] { };
-                Reduce = new JintReduceFuncWrapper(reduce, _jint).IndexingFunction;
+                Reduce = new JintReduceFuncWrapper(reduce.As<FunctionInstance>(), jint).IndexingFunction;
             }
             var fields = new HashSet<string>();
             foreach (var (key, val) in _collectionFunctions)
             {
-                Maps.Add(key, val.Select(x => (IndexingFunc)new JintMapFuncWrapper(x, _jint).IndexingFunction).ToList());
+                Maps.Add(key, val.Select(x => (IndexingFunc)new JintMapFuncWrapper(x, jint).IndexingFunction).ToList());
                 /*foreach (var field in ExtractFields(val.LastOrDefault()?.LastOrDefault()))
                 {
                     fields.Add(field);
@@ -78,238 +75,108 @@ namespace Raven.Server.Documents.Indexes.Static
             HasDynamicFields = true;
         }
 
-
-
-        private static void ExtractFields(string map)
-        {
-            JavaScriptParser parser = new JavaScriptParser(map);
-            var res = parser.ParseProgram();
-            foreach (var statement in res.Body)
-            {
-                var s = statement.As<Statement>();
-                switch (s.Type)
-                {
-                    case Nodes.AssignmentExpression:
-                        break;
-                    case Nodes.ArrayExpression:
-                        break;
-                    case Nodes.BlockStatement:
-                        break;
-                    case Nodes.BinaryExpression:
-                        break;
-                    case Nodes.BreakStatement:
-                        break;
-                    case Nodes.CallExpression:
-                        break;
-                    case Nodes.CatchClause:
-                        break;
-                    case Nodes.ConditionalExpression:
-                        break;
-                    case Nodes.ContinueStatement:
-                        break;
-                    case Nodes.DoWhileStatement:
-                        break;
-                    case Nodes.DebuggerStatement:
-                        break;
-                    case Nodes.EmptyStatement:
-                        break;
-                    case Nodes.ExpressionStatement:
-                        break;
-                    case Nodes.ForStatement:
-                        break;
-                    case Nodes.ForInStatement:
-                        break;
-                    case Nodes.FunctionDeclaration:
-                        break;
-                    case Nodes.FunctionExpression:
-                        break;
-                    case Nodes.Identifier:
-                        break;
-                    case Nodes.IfStatement:
-                        break;
-                    case Nodes.Literal:
-                        break;
-                    case Nodes.LabeledStatement:
-                        break;
-                    case Nodes.LogicalExpression:
-                        break;
-                    case Nodes.MemberExpression:
-                        break;
-                    case Nodes.NewExpression:
-                        break;
-                    case Nodes.ObjectExpression:
-                        break;
-                    case Nodes.Program:
-                        break;
-                    case Nodes.Property:
-                        break;
-                    case Nodes.RestElement:
-                        break;
-                    case Nodes.ReturnStatement:
-                        break;
-                    case Nodes.SequenceExpression:
-                        break;
-                    case Nodes.SwitchStatement:
-                        break;
-                    case Nodes.SwitchCase:
-                        break;
-                    case Nodes.TemplateElement:
-                        break;
-                    case Nodes.TemplateLiteral:
-                        break;
-                    case Nodes.ThisExpression:
-                        break;
-                    case Nodes.ThrowStatement:
-                        break;
-                    case Nodes.TryStatement:
-                        break;
-                    case Nodes.UnaryExpression:
-                        break;
-                    case Nodes.UpdateExpression:
-                        break;
-                    case Nodes.VariableDeclaration:
-                        break;
-                    case Nodes.VariableDeclarator:
-                        break;
-                    case Nodes.WhileStatement:
-                        break;
-                    case Nodes.WithStatement:
-                        break;
-                    case Nodes.ArrayPattern:
-                        break;
-                    case Nodes.AssignmentPattern:
-                        break;
-                    case Nodes.SpreadElement:
-                        break;
-                    case Nodes.ObjectPattern:
-                        break;
-                    case Nodes.ArrowParameterPlaceHolder:
-                        break;
-                    case Nodes.MetaProperty:
-                        break;
-                    case Nodes.Super:
-                        break;
-                    case Nodes.TaggedTemplateExpression:
-                        break;
-                    case Nodes.YieldExpression:
-                        break;
-                    case Nodes.ArrowFunctionExpression:
-                        break;
-                    case Nodes.ClassBody:
-                        break;
-                    case Nodes.ClassDeclaration:
-                        break;
-                    case Nodes.ForOfStatement:
-                        break;
-                    case Nodes.MethodDefinition:
-                        break;
-                    case Nodes.ImportSpecifier:
-                        break;
-                    case Nodes.ImportDefaultSpecifier:
-                        break;
-                    case Nodes.ImportNamespaceSpecifier:
-                        break;
-                    case Nodes.ImportDeclaration:
-                        break;
-                    case Nodes.ExportSpecifier:
-                        break;
-                    case Nodes.ExportNamedDeclaration:
-                        break;
-                    case Nodes.ExportAllDeclaration:
-                        break;
-                    case Nodes.ExportDefaultDeclaration:
-                        break;
-                    case Nodes.ClassExpression:
-                        break;
-                }
-            }
-        }
-
         private class JintReduceFuncWrapper
         {
-            public JintReduceFuncWrapper(JsValue reduce, Engine engine)
+            public JintReduceFuncWrapper(FunctionInstance reduce, Engine engine)
             {
                 Reduce = reduce;
                 Engine = engine;
             }
+            private readonly JsValue[] _oneItemArray = new JsValue[1];
 
             public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
             {
-                foreach (var item in items)
+                try
                 {
-                    if (GetValue(Engine, item, out JsValue jsItem) == false)
-                        continue;
-                    jsItem = Reduce.Invoke(jsItem);
-                    yield return jsItem.AsObject();
+                    foreach (var item in items)
+                    {
+                        if (GetValue(Engine, item, out JsValue jsItem) == false)
+                            continue;
+                        _oneItemArray[0] = jsItem;
+                        jsItem = Reduce.Call(JsValue.Null, _oneItemArray);
+                        yield return jsItem.AsObject();
+                    }
+                }
+                finally
+                {
+                    _oneItemArray[0] = null;
                 }
             }
 
             public Engine Engine { get; }
 
-            public JsValue Reduce { get; }
+            public FunctionInstance Reduce { get; }
         }
 
         private class JintMapFuncWrapper
         {
-            public JintMapFuncWrapper(List<JsValue> jsValues, Engine engine)
+            public JintMapFuncWrapper(MapOperation operation, Engine engine)
             {
-                Functions = jsValues;
+                Functions = operation.Steps;
                 Engine = engine;
             }
+            private readonly JsValue[] _oneItemArray = new JsValue[1];
+            
 
-            public IEnumerable IndexingFunction(IEnumerable<dynamic> items)
+            public IEnumerable IndexingFunction(IEnumerable<object> items)
             {
-                foreach (var item in items)
+                try
                 {
-                    if (GetValue(Engine, item, out JsValue jsItem) == false)
-                        continue;
-                    var filtered = false;
-                    foreach (var function in Functions)
+                    foreach (var item in items)
                     {
-                        jsItem = function.Invoke(jsItem);
-                        //filter
-                        if (jsItem.IsBoolean())
+                        if (GetValue(Engine, item, out JsValue jsItem) == false)
+                            continue;
+                        var filtered = false;
+                        foreach (var function in Functions)
                         {
-                            if (jsItem.AsBoolean())
+                            _oneItemArray[0] = jsItem;
+                            jsItem = function.Call(JsValue.Null, _oneItemArray);
+                            //filter
+                            if (jsItem.IsBoolean())
                             {
-                                filtered = true;
-                                break;
+                                if (jsItem.AsBoolean() == false)
+                                {
+                                    filtered = true;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if (filtered == false)
-                    {
-                        //Fanout
-                        if (jsItem.IsArray())
+                        if (filtered == false)
                         {
-                            var array = jsItem.AsArray();
-                            var len = array.GetLength();
-                            for (var i = 0; i < len; i++)
+                            //Fanout
+                            if (jsItem.IsArray())
                             {
-                                yield return array.Get(i.ToString());
+                                var array = jsItem.AsArray();
+                                var len = array.GetLength();
+                                for (var i = 0; i < len; i++)
+                                {
+                                    yield return array.Get(i.ToString());
+                                }
                             }
+                            else
+                                yield return jsItem.AsObject();
                         }
-                        else
-                            yield return jsItem.AsObject();
                     }
+                }
+                finally
+                {
+                    _oneItemArray[0] = null;
                 }
             }
 
-            public List<JsValue> Functions { get;}
+            public List<FunctionInstance> Functions { get;}
             public Engine Engine { get; }
         }
 
         public static bool GetValue(Engine engine , dynamic item, out JsValue jsItem)
         {
             jsItem = null;
-            var dbj = item as DynamicBlittableJson;
-            if (dbj == null)
+            if (!(item is DynamicBlittableJson dbj))
                 return false;
             var id = dbj.GetId();
             if (id == DynamicNullObject.Null)
                 return false;
-            var boi = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
-            jsItem = boi;
+            jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
             return true;
         }
 
@@ -339,8 +206,10 @@ function groupBy(lambda) {
 }";
 
         private IndexDefinition _definitions;
-        private Dictionary<string, List<List<JsValue>>> _collectionFunctions;
 
-        //       public IEnumerable IndexingFunc(IEnumerable<dynamic> items);
+        public class MapOperation
+        {
+            public List<FunctionInstance> Steps = new List<FunctionInstance>();
+        }
     }
 }
