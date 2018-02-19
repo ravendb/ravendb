@@ -765,8 +765,11 @@ more responsive application.
                 else
                 {
                     if (result.DeferredCommandsDictionary.TryGetValue((documentInfo.Id, CommandType.ClientAnyCommand, null), out ICommandData command))
+                    {
+                        // here we explicitly want to throw for all types of deferred commands, if the document
+                        // is being deleted, we never want to allow any other operations on it
                         ThrowInvalidDeletedDocumentWithDeferredCommand(command);
-
+                    }
                     string changeVector = null;
                     if (DocumentsById.TryGetValue(documentInfo.Id, out documentInfo))
                     {
@@ -803,7 +806,7 @@ more responsive application.
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
 
-                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
+                if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachment, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
                 var onOnBeforeStore = OnBeforeStore;
@@ -1015,8 +1018,9 @@ more responsive application.
         {
             DeferredCommandsDictionary[(command.Id, command.Type, command.Name)] = command;
             DeferredCommandsDictionary[(command.Id, CommandType.ClientAnyCommand, null)] = command;
-            if (command.Type != CommandType.AttachmentPUT)
-                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachmentPUT, null)] = command;
+            if (command.Type != CommandType.AttachmentPUT && 
+                command.Type != CommandType.AttachmentDELETE)
+                DeferredCommandsDictionary[(command.Id, CommandType.ClientNotAttachment, null)] = command;
         }
 
         public void AssertNotDisposed()
