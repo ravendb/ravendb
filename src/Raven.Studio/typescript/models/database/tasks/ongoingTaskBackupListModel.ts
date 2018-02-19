@@ -133,6 +133,10 @@ class ongoingTaskBackupListModel extends ongoingTask {
         this.lastIncrementalBackup(dto.LastIncrementalBackup);
         this.nextBackup(dto.NextBackup);
         this.onGoingBackup(dto.OnGoingBackup);
+        
+        if (this.onGoingBackup) {
+            this.watchProvider(this);
+        }
     }
 
     private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
