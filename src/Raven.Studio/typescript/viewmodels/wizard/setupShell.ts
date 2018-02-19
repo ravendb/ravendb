@@ -11,6 +11,7 @@ import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteB
 import requestExecution = require("common/notifications/requestExecution");
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import buildInfo = require("models/resources/buildInfo");
+import constants = require("common/constants/constants");
 
 class setupShell extends viewModelBase {
 
@@ -55,7 +56,7 @@ class setupShell extends viewModelBase {
                 buildInfo.serverBuildVersion(serverBuildResult);
 
                 const currentBuildVersion = serverBuildResult.BuildVersion;
-                if (currentBuildVersion !== DEV_BUILD_NUMBER) {
+                if (currentBuildVersion !== constants.DEV_BUILD_NUMBER) {
                     buildInfo.serverMainVersion(Math.floor(currentBuildVersion / 10000));
                 }
             });
