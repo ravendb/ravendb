@@ -153,7 +153,7 @@ try {
     SwitchDaemon
 
     # build windows image
-    $winPackageWildcard = "..\artifacts\RavenDB-4.0.0-nightly-*-*-windows-x64.zip"
+    $winPackageWildcard = "..\artifacts\*nightly-*-*-windows-x64.zip"
     $version = DetermineVersionFromPackageFilename $winPackageWildcard
     Copy-Item -Path $winPackageWildcard -Destination ".\ravendb-nanoserver\RavenDB.zip" -Force
 
