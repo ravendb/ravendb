@@ -460,7 +460,7 @@ namespace Voron
 
             public override IVirtualPager CreateScratchPager(string name)
             {
-                var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}";
+                var filename = Path.Combine(tempPath, $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-{name}");
                 if (RunningOnPosix)
                     return new PosixTempMemoryMapPager(filename, InitialFileSize);
                 return new Win32MemoryMapPager(filename, InitialFileSize,
