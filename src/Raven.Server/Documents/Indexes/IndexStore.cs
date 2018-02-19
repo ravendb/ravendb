@@ -290,16 +290,12 @@ namespace Raven.Server.Documents.Indexes
             switch (definition.Type)
             {
                 case IndexType.Map:
+                case IndexType.JavascriptMap:
                     index = MapIndex.CreateNew(definition, _documentDatabase);
                     break;
-                case IndexType.JavascriptMap:
-                    index = JavaScriptMapIndex.CreateNew(definition, _documentDatabase);
-                    break;
                 case IndexType.MapReduce:
-                    index = MapReduceIndex.CreateNew(definition, _documentDatabase);
-                    break;
                 case IndexType.JavascriptMapReduce:
-                    index = JavaScriptMapReduceIndex.CreateNew(definition, _documentDatabase);
+                    index = MapReduceIndex.CreateNew(definition, _documentDatabase);
                     break;
                 default:
                     throw new NotSupportedException($"Cannot create {definition.Type} index from IndexDefinition");
@@ -809,16 +805,12 @@ namespace Raven.Server.Documents.Indexes
                     switch (staticIndexDefinition.Type)
                     {
                         case IndexType.Map:
+                        case IndexType.JavascriptMap:
                             index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                             break;
-                        case IndexType.JavascriptMap:
-                            index = JavaScriptMapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
-                            break;
                         case IndexType.MapReduce:
-                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
-                            break;
                         case IndexType.JavascriptMapReduce:
-                            index = JavaScriptMapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                            index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                             break;
                         default:
                             throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
