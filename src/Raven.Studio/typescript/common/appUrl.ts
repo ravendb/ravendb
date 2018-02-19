@@ -440,7 +440,7 @@ class appUrl {
     */
     static forCurrentPage(db: database) {
         const routerInstruction = router.activeInstruction();
-        if (routerInstruction) {
+        if (routerInstruction && routerInstruction.queryParams) {
 
             let currentDatabaseName: string = null;
             const dbInUrl = routerInstruction.queryParams[database.type];
