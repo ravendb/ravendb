@@ -14,6 +14,7 @@ import router = require("plugins/router");
 import clusterGraph = require("models/database/cluster/clusterGraph");
 import assignCores = require("viewmodels/manage/assignCores");
 import license = require("models/auth/licenseModel");
+import eventsCollector = require("common/eventsCollector");
 
 class cluster extends viewModelBase {
 
@@ -128,6 +129,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to promote current node to become member/promotable?", ["Cancel", "Yes, promote"])
             .done(result => {
                if (result.can) {
+                   eventsCollector.default.reportEvent("cluster", "promote");
                    this.spinners.promote.push(node.tag());
                    new promoteClusterNodeCommand(node.tag())
                        .execute()
@@ -140,6 +142,7 @@ class cluster extends viewModelBase {
          this.confirmationMessage("Are you sure?", "Do you want to demote current node to become watcher?", ["Cancel", "Yes, demote"])
             .done(result => {
                if (result.can) {
+                   eventsCollector.default.reportEvent("cluster", "demote");
                    this.spinners.demote.push(node.tag());
                    new demoteClusterNodeCommand(node.tag())
                        .execute()
@@ -152,6 +155,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want current leader to step down?`, ["Cancel", "Step down"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("cluster", "step-down");
                     this.spinners.stepdown(true);
                     new leaderStepDownCommand()
                         .execute()
@@ -164,6 +168,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Remove"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("cluster", "delete-node");
                     this.spinners.delete.push(node.tag());
                     new removeNodeFromClusterCommand(node.tag())
                         .execute()
@@ -180,6 +185,7 @@ class cluster extends viewModelBase {
         this.confirmationMessage("Are you sure?", `Do you want force timeout on waiting for leader?`, ["Cancel", "Yes, force"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("cluster", "timeout");
                     this.spinners.forceTimeout(true);
                     new forceLeaderTimeoutCommand()
                         .execute()

@@ -114,6 +114,8 @@ class revisionsBin extends viewModelBase {
     deleteSelected() {
         const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
 
+        eventsCollector.default.reportEvent("revisionsBin", "delete-selected");
+        
         this.confirmationMessage("Are you sure?", "Do you want to delete selected items and its revisions?", ["Cancel", "Yes, delete"])
             .done(result => {
                 if (result.can) {

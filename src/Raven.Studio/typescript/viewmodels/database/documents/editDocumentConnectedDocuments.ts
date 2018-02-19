@@ -401,14 +401,6 @@ class connectedDocuments {
         }
     }
 
-    private documentToConnectedDoc(doc: document): connectedDocumentItem {
-        return {
-            id: doc.getId(),
-            href: appUrl.forEditDoc(doc.getId(), this.db()),
-            deletedRevision: doc.__metadata.hasFlag("DeleteRevision")
-        };
-    }
-
     private docIdToConnectedDoc(docId: string): connectedDocumentItem {
         return {
             id: docId,

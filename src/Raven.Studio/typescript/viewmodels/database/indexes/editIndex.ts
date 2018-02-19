@@ -343,10 +343,12 @@ class editIndex extends viewModelBase {
     }
 
     addConfigurationOption() {
+        eventsCollector.default.reportEvent("index", "add-configuration-option");
         this.editedIndex().addConfigurationOption();
     }
 
     removeConfigurationOption(item: configurationItem) {
+        eventsCollector.default.reportEvent("index", "remove-configuration-option");
         this.editedIndex().removeConfigurationOption(item);
     }
 
@@ -565,6 +567,7 @@ class editIndex extends viewModelBase {
     }
 
     fileSelected() {
+        eventsCollector.default.reportEvent("index", "additional-source");
         const fileInput = <HTMLInputElement>document.querySelector("#additionalSourceFilePicker");
         const self = this;
         if (fileInput.files.length === 0) {

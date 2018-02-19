@@ -7,7 +7,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 import getClusterObserverDecisionsCommand = require("commands/database/cluster/getClusterObserverDecisionsCommand");
 import toggleClusterObserverCommand = require("commands/database/cluster/toggleClusterObserverCommand");
-
+import eventsCollector = require("common/eventsCollector");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class clusterObserverLog extends viewModelBase {
@@ -109,6 +109,7 @@ class clusterObserverLog extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to suspend cluster observer?", ["No", "Yes, suspend"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("observer-log", "suspend");
                     this.spinners.toggleObserver(true);
                     new toggleClusterObserverCommand(true)
                         .execute()
@@ -124,6 +125,7 @@ class clusterObserverLog extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to resume cluster observer?", ["No", "Yes, resume"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("observer-log", "resume");
                     this.spinners.toggleObserver(true);
                     new toggleClusterObserverCommand(false)
                         .execute()
