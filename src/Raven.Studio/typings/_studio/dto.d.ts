@@ -400,3 +400,4 @@ interface resourceStyleMap {
 }
 
 
+type checkbox = "unchecked" | "some_checked" | "checked";

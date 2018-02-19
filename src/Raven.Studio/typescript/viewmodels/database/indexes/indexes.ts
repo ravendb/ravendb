@@ -138,10 +138,10 @@ class indexes extends viewModelBase {
             const selectedCount = this.selectedIndexesName().length;
             const indexesCount = this.getAllIndexes().length;
             if (indexesCount && selectedCount === indexesCount)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
     }
 

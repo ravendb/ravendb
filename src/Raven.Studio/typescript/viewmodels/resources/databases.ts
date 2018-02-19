@@ -71,10 +71,10 @@ class databases extends viewModelBase {
             const databases = this.databases().sortedDatabases().filter(x => !x.filteredOut());
             const selectedCount = this.selectedDatabases().length;
             if (databases.length && selectedCount === databases.length)
-                return checkbox.Checked;
+                return "checked";
             if (selectedCount > 0)
-                return checkbox.SomeChecked;
-            return checkbox.UnChecked;
+                return "some_checked";
+            return "unchecked";
         });
     }
 
