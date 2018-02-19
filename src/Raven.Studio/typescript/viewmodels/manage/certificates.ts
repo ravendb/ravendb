@@ -13,6 +13,7 @@ import endpoints = require("endpoints");
 import copyToClipboard = require("common/copyToClipboard");
 import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
+import eventsCollector = require("common/eventsCollector");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -112,6 +113,7 @@ class certificates extends viewModelBase {
         this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + certificate.Thumbprint + "", ["No", "Yes, delete"])
             .done(result => {
                 if (result.can) {
+                    eventsCollector.default.reportEvent("certificates", "delete");
                     new deleteCertificateCommand(certificate.Thumbprint)
                         .execute()
                         .always(() => this.loadCertificates());
@@ -120,16 +122,19 @@ class certificates extends viewModelBase {
     }
 
     exportClusterCertificates() {
+        eventsCollector.default.reportEvent("certificates", "export-certs");
         const targetFrame = $("form#certificates_export_form");
         targetFrame.attr("action", this.exportCertificateUrl);
         targetFrame.submit();
     }
     
     enterGenerateCertificateMode() {
+        eventsCollector.default.reportEvent("certificates", "generate");
         this.model(certificateModel.generate());
     }
     
     enterUploadCertificateMode() {
+        eventsCollector.default.reportEvent("certificates", "upload");
         this.model(certificateModel.upload());
     }
 

@@ -362,6 +362,7 @@ class patch extends viewModelBase {
     }
 
     enterTestMode() {
+        eventsCollector.default.reportEvent("patch", "test-mode");
         this.test.enterTestMode('');
     }
 

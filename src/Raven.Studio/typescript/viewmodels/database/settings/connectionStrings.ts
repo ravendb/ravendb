@@ -149,6 +149,7 @@ class connectionStrings extends viewModelBase {
     }
     
     onAddRavenEtl() {
+        eventsCollector.default.reportEvent("connection-strings", "add-raven-etl");
         this.editedRavenEtlConnectionString(connectionStringRavenEtlModel.empty());
         this.editedRavenEtlConnectionString().topologyDiscoveryUrls.subscribe(() => this.clearTestResult());
         this.editedRavenEtlConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
@@ -158,6 +159,7 @@ class connectionStrings extends viewModelBase {
     }
 
     onAddSqlEtl() {
+        eventsCollector.default.reportEvent("connection-strings", "add-sql-etl");
         this.editedSqlEtlConnectionString(connectionStringSqlEtlModel.empty());
         this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
 

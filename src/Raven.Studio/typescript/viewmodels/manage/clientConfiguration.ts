@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import clientConfigurationModel = require("models/database/settings/clientConfigurationModel");
 import saveGlobalClientConfigurationCommand = require("commands/resources/saveGlobalClientConfigurationCommand");
 import getGlobalClientConfigurationCommand = require("commands/resources/getGlobalClientConfigurationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class clientConfiguration extends viewModelBase {
 
@@ -46,6 +47,8 @@ class clientConfiguration extends viewModelBase {
         if (!this.isValid(this.model.validationGroup)) {
             return;
         }
+        
+        eventsCollector.default.reportEvent("client-configuration", "save");
         
         this.spinners.save(true);
         this.model.disabled(this.model.isDefined().length === 0);

@@ -192,7 +192,7 @@ class editDocument extends viewModelBase {
         this.addNotification(this.changeNotification);
     }
 
-    private initValidation() {      
+    private initValidation() {
         const rg1 = /^[^\\]*$/; // forbidden character - backslash
         this.userSpecifiedId.extend({
             validation: [
@@ -469,6 +469,8 @@ class editDocument extends viewModelBase {
         this.isCreatingNewDocument(true);
 
         this.syncChangeNotification();
+        
+        eventsCollector.default.reportEvent("document", "clone");
 
         // 2. Remove the '@change-vector' & '@flags' from metadata view for the clone 
         const docDto = this.document().toDto(true);
@@ -492,7 +494,7 @@ class editDocument extends viewModelBase {
         this.userSpecifiedId(docId);
     }
 
-    saveDocument() {       
+    saveDocument() {
         if (this.isValid(this.globalValidationGroup)) {
             eventsCollector.default.reportEvent("document", "save");
             this.saveInternal(this.userSpecifiedId());

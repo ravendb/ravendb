@@ -8,6 +8,7 @@ import collection = require("models/database/documents/collection");
 import conflictResolutionScriptSyntax = require("viewmodels/database/settings/conflictResolutionScriptSyntax");
 import getConflictSolverConfigurationCommand = require("commands/database/documents/getConflictSolverConfigurationCommand");
 import saveConflictSolverConfigurationCommand = require("commands/database/documents/saveConflictSolverConfigurationCommand");
+import eventsCollector = require("common/eventsCollector");
 
 class conflictResolution extends viewModelBase {
 
@@ -63,6 +64,8 @@ class conflictResolution extends viewModelBase {
     save() {
         let hasAnyErrors = false;
         this.spinners.save(true);
+        
+        eventsCollector.default.reportEvent("conflict-resolution", "save");
         
         const model = this.model();
         
