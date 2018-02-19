@@ -134,9 +134,10 @@ class ongoingTaskBackupListModel extends ongoingTask {
         this.nextBackup(dto.NextBackup);
         this.onGoingBackup(dto.OnGoingBackup);
         
-        if (this.onGoingBackup) {
+        if (this.onGoingBackup()) {
             this.watchProvider(this);
         }
+        this.backupNowInProgress(!!this.onGoingBackup());
     }
 
     private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
@@ -183,8 +184,8 @@ class ongoingTaskBackupListModel extends ongoingTask {
                         .done(() => {
                             this.refreshBackupInfo();
                             this.watchProvider(this);
-                        })
-                        .always(() => this.backupNowInProgress(false));
+                        });
+                        // backupNowInProgress is set to false after operation is finished
                 }
             });
 
