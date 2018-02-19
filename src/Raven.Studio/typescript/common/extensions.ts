@@ -383,21 +383,21 @@ class extensions {
             update(element, valueAccessor, allBindings, viewModel, bindingContext) {
                 const checkboxValue: checkbox = ko.unwrap(valueAccessor());
                 switch (checkboxValue) {
-                case checkbox.Checked:
-                    element.checked = true;
-                    element.readOnly = false;
-                    element.indeterminate = false;
-                    break;
-                case checkbox.SomeChecked:
-                    element.readOnly = true;
-                    element.indeterminate = true;
-                    element.checked = false;
-                    break;
-                case checkbox.UnChecked:
-                    element.checked = false;
-                    element.readOnly = false;
-                    element.indeterminate = false;
-                    break;
+                    case "checked":
+                        element.checked = true;
+                        element.readOnly = false;
+                        element.indeterminate = false;
+                        break;
+                    case "some_checked":
+                        element.readOnly = true;
+                        element.indeterminate = true;
+                        element.checked = false;
+                        break;
+                    case "unchecked":
+                        element.checked = false;
+                        element.readOnly = false;
+                        element.indeterminate = false;
+                        break;
                 }
             }
         };
