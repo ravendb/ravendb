@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var item in items)
                 {
-                    if (GetValue(Engine, item, out JsValue jsItem))
+                    if (GetValue(Engine, item, out JsValue jsItem) == false)
                         continue;
                     jsItem = Reduce.Invoke(jsItem);
                     yield return jsItem.AsObject();
@@ -261,7 +261,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 foreach (var item in items)
                 {
-                    if (GetValue(Engine, item, out JsValue jsItem))
+                    if (GetValue(Engine, item, out JsValue jsItem) == false)
                         continue;
                     var filtered = false;
                     foreach (var function in Functions)
@@ -304,13 +304,13 @@ namespace Raven.Server.Documents.Indexes.Static
             jsItem = null;
             var dbj = item as DynamicBlittableJson;
             if (dbj == null)
-                return true;
+                return false;
             var id = dbj.GetId();
             if (id == DynamicNullObject.Null)
-                return true;
+                return false;
             var boi = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, null);
             jsItem = boi;
-            return false;
+            return true;
         }
 
         private static string Code = @"
