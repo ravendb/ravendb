@@ -428,15 +428,17 @@ namespace Raven.Server.Documents.Indexes.Debugging
             switch (self.Type)
             {
                 case IndexType.Map:
+                case IndexType.JavascriptMap:
                     return ((MapIndex)self)._compiled.OutputFields;
                 case IndexType.MapReduce:
+                case IndexType.JavascriptMapReduce:
                     return ((MapReduceIndex)self)._compiled.OutputFields;
                 case IndexType.AutoMap:
                     return ((AutoMapIndex)self).Definition.IndexFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:
                     return ((AutoMapReduceIndex)self).Definition.IndexFields.Keys.ToArray();
                 default:
-                    throw new ArgumentException("Unknown index type");
+                    throw new ArgumentException("Unknown index type: " + self.Type);
             }
         }
     }

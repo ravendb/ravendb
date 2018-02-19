@@ -91,7 +91,7 @@ namespace FastTests.Client.Indexing
                     Name = "UsersByName",
                     Maps = new HashSet<string>
                     {
-                        "collection(\'Users\')\r\n    .map(function (u) { \r\n        return { Name: u.Name, Count: 1}; \r\n    });"
+                        @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                     },
                     Type = IndexType.JavascriptMap,
                     LockMode = IndexLockMode.Unlock,
@@ -110,8 +110,8 @@ namespace FastTests.Client.Indexing
                     Name = "UsersAndProductsByName",
                     Maps = new HashSet<string>
                     {
-                        "collection(\'Users\')\r\n    .map(function (u) { \r\n        return { Name: u.Name, Count: 1}; \r\n    });",
-                        "collection(\'Products\')\r\n    .map(function (p) { \r\n        return { Name: p.Name, Count: 1}; \r\n    });"
+                        @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                        @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                     },
                     Type = IndexType.JavascriptMap,
                     LockMode = IndexLockMode.Unlock,
@@ -130,10 +130,10 @@ namespace FastTests.Client.Indexing
                     Name = "UsersAndProductsByNameAndCount",
                     Maps = new HashSet<string>
                     {
-                        "collection(\'Users\')\r\n    .map(function (u) { \r\n        return { Name: u.Name, Count: 1}; \r\n    });",
-                        "collection(\'Products\')\r\n    .map(function (p) { \r\n        return { Name: p.Name, Count: 1}; \r\n    });"
+                        @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
+                        @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                     },
-                    Reduce = "groupBy(x => x.Name)\r\n    .aggregate((key,values) => {\r\n        return {\r\n            Name: key,\r\n            Count: values.reduce((total, val) => val.Count + total,0)\r\n        };\r\n    });\r\n",
+                    Reduce = @"groupBy(x => x.Name).aggregate((key,values) => {return {Name: key,Count: values.reduce((total, val) => val.Count + total,0)};})",
                     Type = IndexType.JavascriptMapReduce,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
