@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Jint.Native;
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateKeyField(key));
                 newFields++;
             }
-            //TODO: Recurse?
+
             foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
                 IndexField field;
@@ -40,39 +41,41 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     _fields.Add(property, field);
                 }
 
-                var value = GetValue(propertyDescriptor.Value);
-                newFields += GetRegularFields(instance, field, value, indexContext);
+                foreach (var value in GetValue(propertyDescriptor.Value))
+                {
+                    newFields += GetRegularFields(instance, field, value, indexContext);
+                }                
             }
 
             return newFields;
         }
 
-        private object GetValue(JsValue jsValue)
+        private IEnumerable GetValue(JsValue jsValue)
         {
             if (jsValue.IsNull())
-                return null;
+                yield return null;
             if (jsValue.IsString())
-                return jsValue.AsString();
+                yield return jsValue.AsString();
             if (jsValue.IsBoolean())
-                return jsValue.AsBoolean();
+                yield return jsValue.AsBoolean();
             if (jsValue.IsNumber())
-                return jsValue.AsNumber();
+                yield return jsValue.AsNumber();
             if (jsValue.IsDate())
-                return jsValue.AsDate();
+                yield return jsValue.AsDate();
             if (jsValue.IsObject())
-                return jsValue.ToString();                        
+                yield return jsValue.ToString();                        
             if (jsValue.IsArray())
             {
                 var arr = jsValue.AsArray();
                 var len = arr.GetLength();
-                var arrayValue = new object[len];
                 for (var i = 0; i < len; i++)
                 {
-                    arrayValue[i] = arrayValue.GetValue(i);
+                    foreach (var val in GetValue(arr.Get(i.ToString())))
+                    {
+                        yield return val;
+                    }
                 }
-                return arrayValue;
-            }                                   
-            return null;
+            }
         }
     }
 }
