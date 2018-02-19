@@ -121,7 +121,15 @@ gulp.task('z_bower', function () {
 });
 
 gulp.task('z_release:favicon', function() {
-    return gulp.src("wwwroot/favicon.ico")
+    return gulp.src([
+            "wwwroot/android-chrome*",
+            "wwwroot/apple*",
+            "wwwroot/browserconfig.xml",
+            "wwwroot/favicon*",
+            "wwwroot/manifest.json",
+            "wwwroot/mstile-*",
+            "wwwroot/safari-pinned-tab*"
+        ])
         .pipe(gulp.dest(PATHS.releaseTarget));
 });
 
