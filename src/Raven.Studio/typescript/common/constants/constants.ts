@@ -1,3 +1,3 @@
 ﻿export = {
-    DEV_BUILD_NUMBER: 40
+    DEV_BUILD_NUMBER: 41
 };
