@@ -194,13 +194,11 @@ namespace Raven.Server.Documents
             exceptionAggregator.Execute(() =>
             {
                 ContextPool?.Dispose();
-                ContextPool = null;
             });
 
             exceptionAggregator.Execute(() =>
             {
                 Environment?.Dispose();
-                Environment = null;
             });
 
             exceptionAggregator.ThrowIfNeeded();
