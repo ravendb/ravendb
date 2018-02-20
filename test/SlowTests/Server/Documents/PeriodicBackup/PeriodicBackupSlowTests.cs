@@ -586,7 +586,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("Cannot restore data to an existing database", e.InnerException.Message);
 
-                restoreConfiguration.DatabaseName = "test";
+                restoreConfiguration.DatabaseName = "test-" + Guid.NewGuid();
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("Backup location can't be null or empty", e.InnerException.Message);
