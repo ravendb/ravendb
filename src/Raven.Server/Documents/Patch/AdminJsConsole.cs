@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
+using Sparrow.Json;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
@@ -35,8 +37,11 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
+                DocumentsOperationContext docsCtx = null;
                 using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
-                using (var result = run.Run(null, "execute", new object[] { _server, _database }))
+                using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+                using (_database?.DocumentsStorage.ContextPool.AllocateOperationContext(out docsCtx))
+                using (var result = run.Run(ctx, docsCtx, "execute", new object[] { _server, _database }))
                 {
                     var toJson = RavenCli.ConvertResultToString(result);
 

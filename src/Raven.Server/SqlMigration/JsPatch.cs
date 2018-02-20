@@ -32,7 +32,7 @@ namespace Raven.Server.SqlMigration
 
             try
             {
-                return _runner.Run(_context, FunctionName, new object[] { document }).TranslateToObject(_context);
+                return _runner.Run(_context, _context, FunctionName, new object[] { document }).TranslateToObject(_context);
             }
             catch (Exception e)
             {

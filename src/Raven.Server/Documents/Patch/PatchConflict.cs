@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Patch
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
             using (_database.Scripts.GetScriptRunner(patch, false, out var run))
-            using (var result = run.Run(context, "resolve", new object[] { _docs, _hasTombstone, TombstoneResolverValue }))
+            using (var result = run.Run(context, context, "resolve", new object[] { _docs, _hasTombstone, TombstoneResolverValue }))
             {
                 if (result.IsNull)
                 {

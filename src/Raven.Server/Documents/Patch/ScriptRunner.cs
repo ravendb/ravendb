@@ -80,7 +80,8 @@ namespace Raven.Server.Documents.Patch
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
-            private DocumentsOperationContext _context;
+            private DocumentsOperationContext  _docsCtx;
+            private JsonOperationContext _jsonCtx;
             public PatchDebugActions DebugActions;
             public bool DebugMode;
             public List<string> DebugOutput;
@@ -246,7 +247,7 @@ namespace Raven.Server.Documents.Patch
                 if (obj.IsObject())
                 {
                     var result = new ScriptRunnerResult(this, obj);
-                    using (var jsonObj = result.TranslateToObject(_context))
+                    using (var jsonObj = result.TranslateToObject(_jsonCtx))
                     {
                         return jsonObj.ToString();
                     }
@@ -305,9 +306,9 @@ namespace Raven.Server.Documents.Patch
                 BlittableJsonReaderObject reader = null;
                 try
                 {
-                    reader = JsBlittableBridge.Translate(_context, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    reader = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-                    var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
+                    var put = _database.DocumentsStorage.Put(_docsCtx, id, _docsCtx.GetLazyString(changeVector), reader);
 
                     if (DebugMode)
                     {
@@ -351,7 +352,7 @@ namespace Raven.Server.Documents.Patch
                 AssertNotReadOnly();
                 if (DebugMode)
                     DebugActions.DeleteDocument.Add(id);
-                var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
+                var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
                 return new JsValue(result != null);
             }
 
@@ -363,7 +364,7 @@ namespace Raven.Server.Documents.Patch
 
             private void AssertValidDatabaseContext()
             {
-                if (_context == null)
+                if (_docsCtx == null)
                     throw new InvalidOperationException("Unable to put documents when this instance is not attached to a database operation");
             }
 
@@ -448,9 +449,9 @@ namespace Raven.Server.Documents.Patch
                     [Constants.Documents.Metadata.LastModified] = boi.LastModified,
                 };
 
-                metadata = _context.ReadObject(metadata, boi.DocumentId);
+                metadata = _jsonCtx.ReadObject(metadata, boi.DocumentId);
 
-                return TranslateToJs(ScriptEngine, _context, metadata);
+                return TranslateToJs(ScriptEngine, _jsonCtx, metadata);
             }
 
             private JsValue CompareExchange(JsValue self, JsValue[] args)
@@ -563,7 +564,7 @@ namespace Raven.Server.Documents.Patch
                 if (value == null)
                     return null;
 
-                var jsValue = TranslateToJs(ScriptEngine, _context, value);
+                var jsValue = TranslateToJs(ScriptEngine, _jsonCtx, value);
                 return jsValue.AsObject().Get("Object");
             }
 
@@ -573,8 +574,8 @@ namespace Raven.Server.Documents.Patch
                     return JsValue.Undefined;
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
-                var document = _database.DocumentsStorage.Get(_context, id);
-                return TranslateToJs(ScriptEngine, _context, document);
+                var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                return TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
             public void DisposeClonedDocuments()
@@ -587,38 +588,45 @@ namespace Raven.Server.Documents.Patch
             private JsValue[] _args = Array.Empty<JsValue>();
             private JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
-            public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args)
             {
-                _context = ctx;
+                _docsCtx = docCtx;
+                _jsonCtx = jsonCtx ?? ThrowArgumentNull();
                 Reset();
                 if (_args.Length != args.Length)
                     _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
-                    _args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
-                JsValue result;
+                    _args[i] = TranslateToJs(ScriptEngine, jsonCtx, args[i]);
                 try
                 {
                     var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
-                    result = call.Call(Undefined.Instance, _args);
+                    var result = call.Call(Undefined.Instance, _args);
+                    return new ScriptRunnerResult(this, result);
                 }
                 catch (JavaScriptException e)
                 {
-                    throw CreateFullError(ctx, e);
+                    throw CreateFullError(e);
                 }
                 finally
                 {
                     _refResolver.ExplodeArgsOn(null, null);
+                    _docsCtx = null;
+                    _jsonCtx = null;
                 }
-                return new ScriptRunnerResult(this, result);
             }
 
-            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
+            private static JsonOperationContext ThrowArgumentNull()
+            {
+                throw new ArgumentNullException("jsonCtx");
+            }
+
+            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(JavaScriptException e)
             {
                 string msg;
                 if (e.Error.IsString())
                     msg = e.Error.AsString();
                 else if (e.Error.IsObject())
-                    msg = JsBlittableBridge.Translate(ctx, ScriptEngine, e.Error.AsObject()).ToString();
+                    msg = JsBlittableBridge.Translate(_jsonCtx, ScriptEngine, e.Error.AsObject()).ToString();
                 else
                     msg = e.Error.ToString();
 
