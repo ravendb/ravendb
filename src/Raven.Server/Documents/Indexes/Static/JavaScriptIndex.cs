@@ -80,6 +80,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     IndexName = _definitions.Name
                 };
                 operation.Analyze();
+                if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
+                {
+                    collectionNames = new HashSet<CollectionName>();
+                    ReferencedCollections.Add(mapCollection, collectionNames);
+                }
+                collectionNames.UnionWith(operation.ReferencedCollection);
+
                 list.Add(operation);
             }
             var reduce = definitions.GetProperty(ReduceProperty).Value.As<FunctionInstance>();
@@ -342,11 +349,16 @@ function groupBy(lambda) {
                 var funcDeclField = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
 
                 HasDynamicReturns = false;
-
+                               
                 if (!(MapFunc is ScriptFunctionInstance sfi))
                     return;
 
                 var theFuncAst = (IFunction)funcDeclField.GetValue(sfi);
+
+                var loadSearcher = new EsprimaReferencedCollectionVisitor();
+                loadSearcher.VisitFunctionExpression(theFuncAst);
+                ReferencedCollection.UnionWith(loadSearcher.ReferencedCollection);
+
                 foreach (var returnStatement in GetReturnStatements(theFuncAst.Body))
                 {
                     if (returnStatement.Argument == null) // return;
@@ -373,6 +385,8 @@ function groupBy(lambda) {
                     }
                 }
             }
+
+            public HashSet<CollectionName> ReferencedCollection { get; set; } = new HashSet<CollectionName>();
 
             private bool CompareFields(ObjectExpression oe)
             {

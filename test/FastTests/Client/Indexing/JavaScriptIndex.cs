@@ -46,7 +46,24 @@ namespace FastTests.Client.Indexing
 
             }
         }
+        [Fact]
+        public void CanUseJavaScriptIndexWithLoadDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new UsersWithProductsByName());
+                using (var session = store.OpenSession())
+                {
+                    var productId = "Products/1";
+                    session.Store(new User { Name = "Brendan Eich", IsActive = true,Product = productId });
+                    session.Store(new Product { Name = "Shampoo", IsAvailable = true }, productId);
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+                    session.Query<User>("UsersWithProductsByName").Single(x => x.Name == "Brendan Eich");
+                }
 
+            }
+        }
         [Fact(Skip = "The code for this is not yet ready")]
         public void CanUseJavaScriptMapReduceIndex()
         {
@@ -69,6 +86,7 @@ namespace FastTests.Client.Indexing
         {
             public string Name { get; set; }
             public bool IsActive { get; set; }
+            public string Product { get; set; }
         }
 
         private class Product
@@ -112,6 +130,25 @@ namespace FastTests.Client.Indexing
                     {
                         @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                         @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
+                    },
+                    Type = IndexType.JavascriptMap,
+                    LockMode = IndexLockMode.Unlock,
+                    Priority = IndexPriority.Normal,
+                    Configuration = new IndexConfiguration()
+                };
+            }
+        }
+
+        private class UsersWithProductsByName : AbstractIndexCreationTask
+        {
+            public override IndexDefinition CreateIndexDefinition()
+            {
+                return new IndexDefinition
+                {
+                    Name = "UsersWithProductsByName",
+                    Maps = new HashSet<string>
+                    {
+                        @"map('Users', function (u){ return { Name: u.Name, Count: 1, Product: load(u.Product,'Products').Name};})",
                     },
                     Type = IndexType.JavascriptMap,
                     LockMode = IndexLockMode.Unlock,
