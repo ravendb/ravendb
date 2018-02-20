@@ -31,6 +31,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\target.ps1'
 . '.\scripts\help.ps1'
 . '.\scripts\sign.ps1'
+. '.\scripts\docker.ps1'
 
 if ($Help) {
     Help
@@ -184,3 +185,5 @@ write-host "Done creating packages."
 if ($buildType -eq 'stable') {
     BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
 }
+
+LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR

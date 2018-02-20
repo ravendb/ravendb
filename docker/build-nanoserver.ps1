@@ -1,39 +1,41 @@
 param(
     $Repo = "ravendb/ravendb",
-    $DockerSettingsFile = "src\Raven.Server\Properties\Settings\settings.docker.windows.json")
+    $ArtifactsDir = "..\artifacts",
+    $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.windows.json",
+    $DockerfileDir = "./ravendb-nanoserver")
 
 $ErrorActionPreference = "Stop"
-function BuildWindowsDockerImage ( $projectDir, $version, $repo, $settingsFile) {
+function BuildWindowsDockerImage ($version) {
     $packageFileName = "RavenDB-$version-windows-x64.zip"
-    $packagePath = [io.path]::combine($projectDir, "artifacts", $packageFileName)
+    $artifactsPackagePath = Join-Path -Path $ArtifactsDir -ChildPath $packageFileName
 
-    if ([string]::IsNullOrEmpty($packagePath))
+    if ([string]::IsNullOrEmpty($artifactsPackagePath))
     {
         throw "PackagePath cannot be empty."
     }
 
-    if ($(Test-Path $packagePath) -eq $False) {
+    if ($(Test-Path $artifactsPackagePath) -eq $False) {
         throw "Package file does not exist."
     }
+    
+    $dockerPackagePath = Join-Path -Path $DockerfileDir -ChildPath "RavenDB.zip"
+    Copy-Item -Path $artifactsPackagePath -Destination $dockerPackagePath -Force
+    Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
-    Copy-Item -Path $packagePath -Destination ./ravendb-nanoserver/RavenDB.zip -Force
-
-    $settingsPath = Join-Path -Path $projectDir -ChildPath $settingsFile
-    Copy-Item -Path $settingsPath -Destination ./ravendb-nanoserver/settings.json -Force
 
     write-host "Build docker image: $version"
     write-host "Tags: $($repo):$version-windows-nanoserver $($repo):windows-nanoserver-latest"
 
-    docker build ./ravendb-nanoserver `
+    docker build $DockerfileDir `
         -t "$($repo):$version-windows-nanoserver" `
         -t "$($repo):windows-nanoserver-latest"
 
-    Remove-Item "./ravendb-nanoserver/RavenDB.zip"
+    Remove-Item -Path $dockerPackagePath
 }
 
 function GetVersionFromArtifactName() {
     $versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
-    $fname = $(Get-ChildItem "../artifacts" `
+    $fname = $(Get-ChildItem $ArtifactsDir `
         | Where-Object { $_.Name -Match $versionRegex } `
         | Sort-Object LastWriteTime -Descending `
         | Select-Object -First 1).Name
@@ -47,4 +49,4 @@ function GetVersionFromArtifactName() {
     return $version
 }
 
-BuildWindowsDockerImage ".." $(GetVersionFromArtifactName) $Repo $DockerSettingsFile
+BuildWindowsDockerImage $(GetVersionFromArtifactName)
