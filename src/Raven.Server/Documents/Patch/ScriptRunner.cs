@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.Patch
                 else
                     msg = e.Error.ToString();
 
-                msg = "At " + e.Column + ":" + e.LineNumber + Environment.NewLine + msg;
+                msg = "At " + e.Column + ":" + e.LineNumber + " " + msg;
                 var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
                 return javaScriptException;
             }
