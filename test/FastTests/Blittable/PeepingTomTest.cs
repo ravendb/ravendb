@@ -84,6 +84,12 @@ namespace FastTests.Blittable
 
                 var expectedLength = originalSize < PeepingTomStream.BufferWindowSize ? originalSize : PeepingTomStream.BufferWindowSize;
 
+                if (expectedLength != length)
+                {
+                    var expected = System.Text.Encoding.UTF8.GetString(bytes, bytes.Length - expectedLength, expectedLength);
+                    var actual = System.Text.Encoding.UTF8.GetString(peepWindow);
+                    Assert.Equal(expected, actual);
+                }
                 Assert.Equal(expectedLength, length);
 
                 for (var i = 0; i < peepWindow.Length; i++)
