@@ -337,7 +337,7 @@ namespace Raven.Server.Web.System
                     // so just report empty values then
                 }
 
-                var size = new Size(GetTotalSize(db));
+                var size = new Size(db?.GetSizeOnDiskInBytes() ?? 0);
 
                 var databaseInfo = new DatabaseInfo
                 {
@@ -446,25 +446,6 @@ namespace Raven.Server.Web.System
         private static TimeSpan GetUptime(DocumentDatabase db)
         {
             return SystemTime.UtcNow - db.StartTime;
-        }
-
-        private static long GetTotalSize(DocumentDatabase db)
-        {
-            if (db == null)
-                return 0;
-
-            return db.GetAllStoragesEnvironment().Sum(env =>
-                {
-
-                    try
-                    {
-                        return env.Environment.Stats().AllocatedDataFileSizeInBytes;
-                    }
-                    catch (Exception)
-                    {
-                        return 0;
-                    }
-                });
         }
 
         private static NodeId GetNodeId(InternalReplication node, string responsible = null)
