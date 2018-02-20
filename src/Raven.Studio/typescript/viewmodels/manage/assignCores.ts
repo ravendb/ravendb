@@ -11,7 +11,7 @@ class assignCores extends dialogViewModelBase {
         const coresCount = this.assignedCores;
         
         return coresCount() && (coresCount.isValid()) ?
-            `${this.pluralize(coresCount(), 'core', 'cores')} will be leased from license limits` : "";          
+            `${this.pluralize(coresCount(), 'core', 'cores')} will be leased from Cluster License limit` : "";          
     });
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
