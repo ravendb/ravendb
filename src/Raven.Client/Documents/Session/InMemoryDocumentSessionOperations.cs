@@ -726,10 +726,10 @@ more responsive application.
             return result;
         }
 
-        private static void UpdateMetadataModifications(DocumentInfo documentInfo)
+        private static bool UpdateMetadataModifications(DocumentInfo documentInfo)
         {
             if (documentInfo.MetadataInstance == null || ((MetadataAsDictionary)documentInfo.MetadataInstance).Changed == false)
-                return;
+                return false;
 
             if (documentInfo.Metadata.Modifications == null || documentInfo.Metadata.Modifications.Properties.Count == 0)
             {
@@ -740,6 +740,8 @@ more responsive application.
             {
                 documentInfo.Metadata.Modifications[prop] = documentInfo.MetadataInstance[prop];
             }
+
+            return true;
         }
 
         private void PrepareForEntitiesDeletion(SaveChangesData result, IDictionary<string, DocumentsChanges[]> changes)
@@ -801,7 +803,7 @@ more responsive application.
         {
             foreach (var entity in DocumentsByEntity)
             {
-                UpdateMetadataModifications(entity.Value);
+                var metadataUpdated = UpdateMetadataModifications(entity.Value);
                 var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 if (entity.Value.IgnoreChanges || EntityChanged(document, entity.Value, null) == false)
                     continue;
@@ -815,7 +817,7 @@ more responsive application.
                     var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
                     onOnBeforeStore(this, beforeStoreEventArgs);
                     if (beforeStoreEventArgs.MetadataAccessed)
-                        UpdateMetadataModifications(entity.Value);
+                        metadataUpdated |= UpdateMetadataModifications(entity.Value);
                     if (beforeStoreEventArgs.MetadataAccessed ||
                         EntityChanged(document, entity.Value, null))
                         document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
@@ -828,6 +830,16 @@ more responsive application.
                     DocumentsById.Remove(entity.Value.Id);
 
                 entity.Value.Document = document;
+                if (metadataUpdated)
+                {
+                    // we need to preserve the metadata after the changes, otherwise we'll consume the changes
+                    // and any metadata changes will be gone afterward from the session data
+                    if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+                    {
+                        ThrowMissingDocumentMetadata(document);
+                    }
+                    entity.Value.Metadata = Context.ReadObject(metadata, entity.Value.Id, BlittableJsonDocumentBuilder.UsageMode.None);
+                }
 
                 string changeVector;
                 if (UseOptimisticConcurrency)
@@ -845,6 +857,11 @@ more responsive application.
 
                 result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, document));
             }
+        }
+
+        private static void ThrowMissingDocumentMetadata(BlittableJsonReaderObject document)
+        {
+            throw new InvalidOperationException("Missing metadata in document. Unable to find " + Constants.Documents.Metadata.Key + " in " + document);
         }
 
         private static void ThrowInvalidDeletedDocumentWithDeferredCommand(ICommandData resultCommand)
