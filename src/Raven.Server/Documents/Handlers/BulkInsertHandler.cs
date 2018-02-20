@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
 
                                     progress.BatchCount++;
                                     progress.Processed += numberOfCommands;
-                                    progress.LastProcessedId = array.Last().Id;
+                                    progress.LastProcessedId = array[numberOfCommands-1].Id;
 
                                     onProgress(progress);
 
