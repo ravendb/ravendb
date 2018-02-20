@@ -2,14 +2,18 @@
 {
     public enum IndexType
     {
-        None,
-        AutoMap,
-        AutoMapReduce,
-        Map,
-        JavascriptMap,
-        MapReduce,
-        JavascriptMapReduce,
-        Faulty
+        // the values here are PERSISTENT and should not
+        // be changed in such a way that they are backward 
+        // incompatible
+
+        None                = 0,
+        AutoMap             = 1,
+        AutoMapReduce       = 2,
+        Map                 = 3,
+        MapReduce           = 4,
+        Faulty              = 5,
+        JavascriptMap       = 6,
+        JavascriptMapReduce = 7,
     }
 
     internal static class IndexTypeExtensions
