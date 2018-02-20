@@ -263,16 +263,31 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/databases/*/admin/periodic-backup/config", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetConfiguration()
+        {
+            var result = new DynamicJsonValue
+            {
+                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = ServerStore.Configuration.Backup.LocalRootPath?.Combine(Database.Name).FullPath,
+                [nameof(ServerStore.Configuration.Backup.AllowedAwsRegions)] = ServerStore.Configuration.Backup.AllowedAwsRegions,
+                [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations
+            };
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, result);
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
                 "update-periodic-backup",
-                beforeSetupConfiguration: (_, readerObject) =>
-                {
-                    ServerStore.LicenseManager.AssertCanAddPeriodicBackup(readerObject);
-                    VerifyPeriodicBackupConfiguration(readerObject);
-                },
+                beforeSetupConfiguration: BeforeSetupConfiguration,
                 fillJson: (json, readerObject, index) =>
                 {
                     var taskIdName = nameof(PeriodicBackupConfiguration.TaskId);
@@ -283,14 +298,34 @@ namespace Raven.Server.Web.System
                 });
         }
 
-        private static void VerifyPeriodicBackupConfiguration(BlittableJsonReaderObject readerObject)
+        private void BeforeSetupConfiguration(string _, ref BlittableJsonReaderObject readerObject, JsonOperationContext context)
         {
-            readerObject.TryGet(
-                nameof(PeriodicBackupConfiguration.FullBackupFrequency),
-                out string fullBackupFrequency);
-            readerObject.TryGet(
-                nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency),
-                out string incrementalBackupFrequency);
+            ServerStore.LicenseManager.AssertCanAddPeriodicBackup(readerObject);
+            VerifyPeriodicBackupConfiguration(ref readerObject, context);
+        }
+
+        private void AssertDestinationAndRegionAreAllowed(BlittableJsonReaderObject readerObject)
+        {
+            var configuration = JsonDeserializationCluster.PeriodicBackupConfiguration(readerObject);
+
+            foreach (var backupDestination in configuration.GetDestinations())
+            {
+                ServerStore.Configuration.Backup.AssertDestinationAllowed(backupDestination);
+            }
+
+            if (configuration.S3Settings != null && configuration.S3Settings.Disabled == false)
+                ServerStore.Configuration.Backup.AssertRegionAllowed(configuration.S3Settings.AwsRegionName);
+
+            if (configuration.GlacierSettings != null && configuration.GlacierSettings.Disabled == false)
+                ServerStore.Configuration.Backup.AssertRegionAllowed(configuration.GlacierSettings.AwsRegionName);
+        }
+
+        private void VerifyPeriodicBackupConfiguration(ref BlittableJsonReaderObject readerObject, JsonOperationContext context)
+        {
+            AssertDestinationAndRegionAreAllowed(readerObject);
+
+            readerObject.TryGet(nameof(PeriodicBackupConfiguration.FullBackupFrequency), out string fullBackupFrequency);
+            readerObject.TryGet(nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency), out string incrementalBackupFrequency);
 
             if (VerifyBackupFrequency(fullBackupFrequency) == null &&
                 VerifyBackupFrequency(incrementalBackupFrequency) == null)
@@ -311,8 +346,43 @@ namespace Raven.Server.Web.System
                 return;
 
             localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
-            if (string.IsNullOrWhiteSpace(folderPath))
-                throw new ArgumentException("Backup directory cannot be null or empty");
+
+            // If Backup.LocalRootPath is not defined (there is no restriction), the user supplies a non-empty path and we use it.
+            if (ServerStore.Configuration.Backup.LocalRootPath == null)
+            {
+                if (string.IsNullOrWhiteSpace(folderPath))
+                {
+                    throw new ArgumentException("Backup directory cannot be null or empty");
+                }
+            }
+            else
+            {
+                // Backup.LocalRootPath is defined. We expect the studio to send the LocalRootPath as the folderPath. 
+                if (ServerStore.Configuration.Backup.LocalRootPath.Combine(Database.Name).FullPath.Equals(folderPath) == false)
+                {
+                    // If we got an empty path (e.g. not sent by studio) we make sure to override it with the LocalRootPath.
+                    if (string.IsNullOrWhiteSpace(folderPath))
+                    {
+                        folderPath = ServerStore.Configuration.Backup.LocalRootPath.Combine(Database.Name).FullPath;
+
+                        readerObject.Modifications = new DynamicJsonValue
+                        {
+                            [nameof(LocalSettings)] = new DynamicJsonValue
+                            {
+                                [nameof(LocalSettings.Disabled)] = disabled,
+                                [nameof(LocalSettings.FolderPath)] = folderPath
+                            }
+                        };
+
+                        readerObject = context.ReadObject(readerObject, "modified backup configuration");
+                    }
+                    else
+                    {
+                        throw new ArgumentException(
+                            $"The administrator has restricted local backups to the following path: {ServerStore.Configuration.Backup.LocalRootPath?.Combine(Database.Name).FullPath}. Please specify it as the backup directory or leave this field empty.");
+                    }
+                }
+            }
 
             var originalFolderPath = folderPath;
             while (true)
@@ -617,7 +687,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void AssertCanAddOrUpdateEtl(string databaseName, BlittableJsonReaderObject etlConfiguration)
+        private void AssertCanAddOrUpdateEtl(string databaseName, ref BlittableJsonReaderObject etlConfiguration, JsonOperationContext context)
         {
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
