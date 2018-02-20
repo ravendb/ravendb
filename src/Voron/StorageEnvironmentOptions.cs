@@ -227,7 +227,7 @@ namespace Voron
         {
             var pathSetting = new VoronPathSetting(path);
             var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
-            var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : null;
+            var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : pathSetting.Combine("Journals");
 
             return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification);
         }
@@ -289,8 +289,11 @@ namespace Voron
                 IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
                 : base(tempPath ?? basePath, ioChangesNotifications, catastrophicFailureNotification)
             {
+                Debug.Assert(basePath != null);
+                Debug.Assert(journalPath != null);
+
                 _basePath = basePath;
-                _journalPath = journalPath ?? basePath;
+                _journalPath = journalPath;
 
                 if (Directory.Exists(_basePath.FullPath) == false)
                     Directory.CreateDirectory(_basePath.FullPath);
@@ -367,15 +370,11 @@ namespace Voron
                 return _basePath.FullPath;
             }
 
-            public override AbstractPager DataPager
-            {
-                get { return _dataPager.Value; }
-            }
+            public override AbstractPager DataPager => _dataPager.Value;
 
-            public override VoronPathSetting BasePath
-            {
-                get { return _basePath; }
-            }
+            public override VoronPathSetting BasePath => _basePath;
+
+            public VoronPathSetting JournalPath => _journalPath;
 
             public override AbstractPager OpenPager(VoronPathSetting filename)
             {
