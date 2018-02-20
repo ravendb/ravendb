@@ -12,6 +12,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -233,19 +234,9 @@ namespace Raven.Server.Documents
             {
                 Initialize(options);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 options.Dispose();
-
-                if (DocumentDatabase.Configuration.Core.RunInMemory == false && e is InvalidJournalException)
-                {
-                    var dataDirectory = DocumentDatabase.Configuration.Core.DataDirectory;
-                    var oldJournalsDirectory = dataDirectory.Combine("Journal");
-                    if (Directory.Exists(oldJournalsDirectory.FullPath))
-                        throw new InvalidOperationException(
-                            "We could not find a journal file, but we have detected that you might have a pre-RTM directory layout. Please move all journals from 'Journal' directory to directory where '.voron' file is and reload the database.",
-                            e);
-                }
 
                 throw;
             }
@@ -276,7 +267,7 @@ namespace Raven.Server.Documents
             try
             {
                 ContextPool = new DocumentsContextPool(DocumentDatabase);
-                Environment = new StorageEnvironment(options);
+                Environment = LayoutUpdater.OpenEnvironment(options);
 
                 using (var tx = Environment.WriteTransaction())
                 {

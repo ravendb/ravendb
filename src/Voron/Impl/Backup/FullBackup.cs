@@ -234,7 +234,7 @@ namespace Voron.Impl.Backup
             Action<string> onProgress = null,
             CancellationToken cancellationToken = default)
         {
-            journalDir = journalDir ?? voronDataDir;
+            journalDir = journalDir ?? Path.Combine(voronDataDir, "Journals");
 
             if (Directory.Exists(voronDataDir) == false)
                 Directory.CreateDirectory(voronDataDir);
@@ -246,7 +246,9 @@ namespace Voron.Impl.Backup
 
             foreach (var entry in entries)
             {
-                var dst = Path.GetExtension(entry.Name) == ".journal" ? journalDir : voronDataDir;
+                var dst = string.Equals(Path.GetExtension(entry.Name), ".journal", StringComparison.OrdinalIgnoreCase)
+                    ? journalDir
+                    : voronDataDir;
 
                 var sw = Stopwatch.StartNew();
 
