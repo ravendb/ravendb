@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Sparrow.Json;
-using static Sparrow.Json.JsonOperationContext;
 
 namespace Sparrow
 {
@@ -11,11 +10,11 @@ namespace Sparrow
     {
         public const int BufferWindowSize = 4096;
 
-        private readonly ManagedPinnedBuffer _bufferWindow;
+        private readonly JsonOperationContext.ManagedPinnedBuffer _bufferWindow;
         private int _pos;
         private readonly Stream _stream;
         private bool _firstWindow = true;
-        private ReturnBuffer _returnedBuffer;
+        private JsonOperationContext.ReturnBuffer _returnedBuffer;
 
         public PeepingTomStream(Stream stream, JsonOperationContext context)
         {
