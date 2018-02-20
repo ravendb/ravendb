@@ -323,9 +323,8 @@ class editDocument extends viewModelBase {
         });
 
         this.lastModifiedAsAgo = ko.pureComputed(() => {
-            const now = timeHelpers.utcNowWithMinutePrecision();
             const metadata = this.metadata();
-            return metadata ? moment.utc(metadata.lastModified()).from(now) : "";
+            return metadata ? metadata.lastModifiedInterval() : "";
         });
 
         this.latestRevisionUrl = ko.pureComputed(() => {
@@ -425,7 +424,7 @@ class editDocument extends viewModelBase {
             }
             return collectionForNewDocument.toLocaleLowerCase() + "/";
         }
-
+        
         return collectionForNewDocument + "/";
     }
 
