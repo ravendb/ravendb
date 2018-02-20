@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Sparrow;
 using Voron;
@@ -38,8 +39,8 @@ namespace Raven.Server.Documents
             options.MasterKey = db.MasterKey?.ToArray();
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
-            Environment = new StorageEnvironment(options);
-            
+            Environment = LayoutUpdater.OpenEnvironment(options);
+
             NotificationsStorage = new NotificationsStorage(db.Name);
 
             OperationsStorage = new OperationsStorage();
