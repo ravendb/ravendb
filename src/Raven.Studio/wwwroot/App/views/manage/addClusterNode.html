@@ -2,10 +2,10 @@
     <div class="row flex-row absolute-fill">
         <form class="col-xs-12 col-lg-6 flex-vertical">
             <div class="flex-header">
-                <button class="btn btn-primary" data-bind="click: save, disable: spinners.save, css: { 'btn-spinner': spinners.save }">
-                    <i class="icon-save"></i> <span>Save</span>
+                <button class="btn btn-primary" title="Saves the new cluster node" data-bind="click: save, disable: spinners.save, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-plus"></i> <span>Add</span>
                 </button>
-                <button class="btn btn-default" data-bind="click: cancelOperation"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                <button class="btn btn-default" title="Cancel" data-bind="click: cancelOperation"><i class="icon-cancel"></i> <span>Cancel</span></button>
             </div>
             <div class="panel">
                 <div class="flex-form">
@@ -42,7 +42,7 @@
                                 <label for="assigned-cores" class="control-label">Assigned Cores</label>
                                 <div class="flex-grow">
                                     <div data-bind="validationElement: assignedCores">
-                                        <input autocomplete="off" type="text" class="form-control" data-bind="numericInput: assignedCores, disable: usaAvailableCores" id="assigned-cores" placeholder="Assigned cores for the new node">
+                                        <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: assignedCores, disable: usaAvailableCores" id="assigned-cores" placeholder="Enter number of assigned cores for the new node">
                                     </div>
                                 </div>
                             </div>
@@ -51,7 +51,7 @@
                             <div class="flex-grow">
                             </div>
                             <div>
-                                <button type="submit" class="btn btn-default" 
+                                <button type="submit" class="btn btn-default" title="Test connection to newly created node"
                                         data-bind="click: $root.testConnection, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
                                     <i class="icon-rocket"></i>
                                     <span>Test connection</span>
