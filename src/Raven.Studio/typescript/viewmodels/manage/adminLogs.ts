@@ -152,7 +152,7 @@ class adminLogs extends viewModelBase {
     
     // noinspection JSMethodCanBeStatic
     itemHtmlProvider(item: string) {    
-        const hasError = item.includes("EXCEPTION:");  
+        const hasError = item.includes("EXCEPTION:") || item.includes("Exception:");
                
         return $("<pre class='item'></pre>")
             .toggleClass("bg-danger", hasError)
