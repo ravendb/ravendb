@@ -39,6 +39,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
+using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Metrics;
@@ -273,7 +274,7 @@ namespace Raven.Server.Documents.Indexes
                 options.MasterKey = documentDatabase.MasterKey?.ToArray();//clone
                 options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
-                environment = new StorageEnvironment(options);
+                environment = LayoutUpdater.OpenEnvironment(options);
 
                 IndexType type;
                 try
@@ -371,7 +372,7 @@ namespace Raven.Server.Documents.Indexes
                 StorageEnvironment storageEnvironment = null;
                 try
                 {
-                    storageEnvironment = new StorageEnvironment(options);
+                    storageEnvironment = LayoutUpdater.OpenEnvironment(options);
                     Initialize(storageEnvironment, documentDatabase, configuration, performanceHints);
                 }
                 catch (Exception)
@@ -2787,7 +2788,7 @@ namespace Raven.Server.Documents.Indexes
             var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
             try
             {
-                _environment = new StorageEnvironment(options);
+                _environment = LayoutUpdater.OpenEnvironment(options);
                 InitializeInternal(_environment, DocumentDatabase, Configuration, PerformanceHints);
             }
             catch

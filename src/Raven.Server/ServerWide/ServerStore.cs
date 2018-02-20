@@ -48,6 +48,7 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
+using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Sparrow;
@@ -388,7 +389,7 @@ namespace Raven.Server.ServerWide
 
                 try
                 {
-                    _env = new StorageEnvironment(options);
+                    _env = LayoutUpdater.OpenEnvironment(options);
                 }
                 catch (Exception e)
                 {
