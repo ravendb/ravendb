@@ -123,19 +123,18 @@ namespace Raven.Abstractions.Streaming
         private void GetPropertiesAndWriteCsvHeader(RavenJObject result, out bool includeId)
         {
             includeId = false;
-            properties = DocumentHelpers.GetPropertiesFromJObject(result,
-                parentPropertyPath: "",
-                includeNestedProperties: true,
-                includeMetadata: false,
-                excludeParentPropertyNames: true).ToList();
 
-            if (customColumns != null && customColumns.Length > 0)
+            if (customColumns == null || customColumns.Length == 0)
             {
-                // since user defined custom CSV columns filter list generated using GetPropertiesFromJObject
-                // we interate over customColumns instead of properties to maintain columns order requested by user
-                properties = customColumns
-                    .SelectMany(c => properties.Where(p => p.StartsWith(c)))
-                    .ToList();
+                properties = DocumentHelpers.GetPropertiesFromJObject(result,
+                    parentPropertyPath: "",
+                    includeNestedProperties: true,
+                    includeMetadata: false,
+                    excludeParentPropertyNames: true).ToList();
+            }
+            else
+            {
+                properties = customColumns;
             }
 
             RavenJToken token;
