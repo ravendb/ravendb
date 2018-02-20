@@ -23,7 +23,7 @@ namespace Raven.Server.Smuggler.Documents
         public Document Transform(Document document, JsonOperationContext context)
         {
             object translatedResult;
-            using (var result = _run.Run(null, "execute", new object[] { document }))
+            using (var result = _run.Run(context, null, "execute", new object[] { document }))
             {
                 try
                 {

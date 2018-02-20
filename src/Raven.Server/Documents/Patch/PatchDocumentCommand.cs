@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Patch
             // we will to acccess this value, and the original document data may be changed by
             // the actions of the script, so we translate (which will create a clone) then use
             // that clone later
-            using (var scriptResult = _run.Run(context, "execute", new[] { documentInstance, args }))
+            using (var scriptResult = _run.Run(context, context, "execute", new[] { documentInstance, args }))
             {
                 var modifiedDocument = scriptResult.TranslateToObject(_externalContext ?? context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 

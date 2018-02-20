@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                SingleRun.Run(Context, "execute", new object[] { Current.Document }).Dispose();
+                SingleRun.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach

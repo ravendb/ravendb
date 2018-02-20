@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, ref BlittableJsonReaderObject transformResult)
         {
-            using (var result = run.Run(context, "execute", new[] { document }))
+            using (var result = run.Run(context, context, "execute", new[] { document }))
             {
                 var resultAsBool = result.BooleanValue;
                 if (resultAsBool != null)
