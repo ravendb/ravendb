@@ -111,14 +111,16 @@
                 <h3 class="margin-none">Properties</h3>
                 <hr class="small" />
                 <dl class="dl-horizontal small" data-bind="with: metadata">
-                    <dt>Change Vector:</dt>
-                    <dd>
-                        <span data-bind="foreach: $root.changeVector">
-                            <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
-                        </span>
-                    </dd>
-                    <dt>Modified:</dt>
-                    <dd data-bind="text: lastModifiedInterval, attr: { title: lastModifiedFullDate }"></dd>
+                    <div data-bind="visible: !$root.isCreatingNewDocument()">
+                        <dt>Change Vector:</dt>
+                        <dd>
+                            <span data-bind="foreach: $root.changeVector">
+                                <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                            </span>
+                        </dd>
+                        <dt>Modified:</dt>
+                        <dd data-bind="text: lastModifiedInterval, attr: { title: lastModifiedFullDate }"></dd>
+                    </div>
                     <dt>Size:</dt>
                     <dd><span data-bind="text: $root.documentSize() , attr: { title: $root.documentSize() }"></span> KB</dd>
                 </dl>
