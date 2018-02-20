@@ -1,41 +1,42 @@
 param(
     $Repo = "ravendb/ravendb",
-    $DockerSettingsFile = "src\Raven.Server\Properties\Settings\settings.docker.posix.json")
+    $ArtifactsDir = "..\artifacts",
+    $RavenDockerSettingsPath = "..\src\Raven.Server\Properties\Settings\settings.docker.posix.json",
+    $DockerfileDir = "./ravendb-ubuntu1604")
 
 $ErrorActionPreference = "Stop"
 
-function BuildUbuntuDockerImage ($projectDir, $version, $repo, $settingsFile) {
+function BuildUbuntuDockerImage ($version) {
     $packageFileName = "RavenDB-$version-linux-x64.tar.bz2"
-    $packagePath = [io.path]::combine($projectDir, "artifacts", $packageFileName)
+    $artifactsPackagePath = Join-Path -Path $ArtifactsDir -ChildPath $packageFileName
 
-    if ([string]::IsNullOrEmpty($packagePath))
+    if ([string]::IsNullOrEmpty($artifactsPackagePath))
     {
         throw "PackagePath cannot be empty."
     }
 
-    if ($(Test-Path $packagePath) -eq $False) {
+    if ($(Test-Path $artifactsPackagePath) -eq $False) {
         throw "Package file does not exist."
     }
     
-    Copy-Item -Destination ./ravendb-ubuntu1604/RavenDB.tar.bz2 -Force -Path $packagePath
-
-    $settingsPath = Join-Path -Path $projectDir -ChildPath "src\Raven.Server\Properties\Settings\settings.docker.posix.json"
-    Copy-Item -Path $settingsPath -Destination ./ravendb-ubuntu1604/settings.json -Force
+    $dockerPackagePath = Join-Path -Path $DockerfileDir -ChildPath "RavenDB.tar.bz2"
+    Copy-Item -Path $artifactsPackagePath -Destination $dockerPackagePath -Force
+    Copy-Item -Path $RavenDockerSettingsPath -Destination $(Join-Path -Path $DockerfileDir -ChildPath "settings.json") -Force
 
     write-host "Build docker image: $version"
     write-host "Tags: $($repo):$version-ubuntu.16.04-x64 $($repo):latest $($repo):ubuntu-latest"
 
-    docker build ./ravendb-ubuntu1604 `
+    docker build $DockerfileDir `
         -t "$($repo):$version-ubuntu.16.04-x64" `
         -t "$($repo):latest" `
         -t "$($repo):ubuntu-latest"
 
-    Remove-Item "./ravendb-ubuntu1604/RavenDB.tar.bz2"
+    Remove-Item -Path $dockerPackagePath
 }
 
 function GetVersionFromArtifactName() {
     $versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
-    $fname = $(Get-ChildItem "../artifacts" `
+    $fname = $(Get-ChildItem $ArtifactsDir `
         | Where-Object { $_.Name -Match $versionRegex } `
         | Sort-Object LastWriteTime -Descending `
         | Select-Object -First 1).Name
@@ -49,4 +50,4 @@ function GetVersionFromArtifactName() {
     return $version
 }
 
-BuildUbuntuDockerImage ".." $(GetVersionFromArtifactName) $Repo $DockerSettingsFile
+BuildUbuntuDockerImage $(GetVersionFromArtifactName)
