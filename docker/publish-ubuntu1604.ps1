@@ -39,6 +39,7 @@ function GetVersionFromArtifactName() {
 function PushImagesToDockerHub($imageTags) {
     write-host "Pushing images to Docker Hub."
     foreach ($tag in $imageTags) {
+        write-host "Push $tag"
         docker push "$tag"
         CheckLastExitCode
     }
