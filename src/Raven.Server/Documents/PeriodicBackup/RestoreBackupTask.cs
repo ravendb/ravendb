@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         databaseRecord.Topology = new DatabaseTopology();
                         // restoring to the current node only
                         databaseRecord.Topology.Members.Add(_nodeTag);
-
+                        databaseRecord.Disabled = true; // we are currently restoring, shouldn't try to access it
                         _serverStore.EnsureNotPassive();
 
                         var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore: true);
@@ -187,8 +187,19 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         // restore identities & cmpXchg values
                         RestoreFromLastFile(onProgress, database, lastFile, context, result);
+
                     }
                 }
+
+                // after the db for restore is done, we can safely set the db status to active
+
+
+                databaseRecord = _serverStore.LoadDatabaseRecord(databaseName, out _);
+                databaseRecord.Disabled = false;
+
+                var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null);
+                await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
+
                 return result;
             }
             catch (Exception e)
