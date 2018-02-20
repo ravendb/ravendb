@@ -2,6 +2,7 @@
 using System.IO;
 using Voron;
 using Voron.Exceptions;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Storage.Layout
 {
@@ -39,33 +40,43 @@ namespace Raven.Server.Storage.Layout
                     options.OwnsPagers = oldOwnsPager;
                 }
             }
-            catch (InvalidJournalException e)
+            catch (InvalidJournalException)
             {
                 var basePath = options.BasePath;
                 var preRtmJournalPath = basePath.Combine("Journal");
-                if (Directory.Exists(preRtmJournalPath.FullPath))
-                    throw new InvalidOperationException(
-                        "We could not find a journal file, but we have detected that you might have a pre-RTM directory layout. Please move all journals from 'Journal' directory to directory where '.voron' file is and reload the database.",
-                        e);
-
-                var journalsInRoot = Directory.GetFiles(basePath.FullPath, "*.journal", SearchOption.TopDirectoryOnly);
-                if (journalsInRoot.Length == 0)
-                    throw;
-
                 var journalsPath = options.JournalPath;
-
-                foreach (var journalFile in journalsInRoot)
+                if (Directory.Exists(preRtmJournalPath.FullPath))
                 {
-                    var journalFileInfo = new FileInfo(journalFile);
-
-                    var source = basePath.Combine(journalFileInfo.Name);
-                    var destination = journalsPath.Combine(journalFileInfo.Name);
-
-                    File.Move(source.FullPath, destination.FullPath);
+                    TryMoveJournals(preRtmJournalPath, journalsPath);
+                    Directory.Delete(preRtmJournalPath.FullPath);
+                }
+                else
+                {
+                    if (TryMoveJournals(basePath, journalsPath) == false)
+                        throw;
                 }
 
                 return new StorageEnvironment(options);
             }
+        }
+
+        private static bool TryMoveJournals(VoronPathSetting basePath, VoronPathSetting journalsPath)
+        {
+            var journalsInRoot = Directory.GetFiles(basePath.FullPath, "*.journal", SearchOption.TopDirectoryOnly);
+            if (journalsInRoot.Length == 0)
+                return false;
+
+            foreach (var journalFile in journalsInRoot)
+            {
+                var journalFileInfo = new FileInfo(journalFile);
+
+                var source = basePath.Combine(journalFileInfo.Name);
+                var destination = journalsPath.Combine(journalFileInfo.Name);
+
+                File.Move(source.FullPath, destination.FullPath);
+            }
+
+            return true;
         }
     }
 }
