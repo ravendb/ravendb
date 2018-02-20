@@ -6,6 +6,7 @@ import appUrl = require("common/appUrl");
 import generalUtils = require("common/generalUtils");
 import addClusterNodeModel = require("models/database/cluster/addClusterNodeModel");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import popoverUtils = require("common/popoverUtils");
 
 class addClusterNode extends viewModelBase {
 
@@ -31,6 +32,16 @@ class addClusterNode extends viewModelBase {
         this.model.serverUrl.subscribe(() => this.testConnectionResult(null));
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        
+         popoverUtils.longWithHover($(".js-watcher-info"),
+            {
+                content: 'A Watcher is a non-voting node in the cluster that is still fully managed by the cluster. <br />' +
+                'A Watcher can be assigned databases and work to be done.'
+            });
+    }
+    
     private initObservables() {
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
