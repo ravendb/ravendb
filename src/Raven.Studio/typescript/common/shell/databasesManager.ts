@@ -64,7 +64,6 @@ class databasesManager {
             .done(result => {
                 this.updateDatabases(result);
             });
-        //TODO: .fail(result => this.handleRavenConnectionFailure(result))
     }
 
     activateBasedOnCurrentUrl(): JQueryPromise<canActivateResultDto> | boolean {
