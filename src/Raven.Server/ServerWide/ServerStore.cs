@@ -101,6 +101,9 @@ namespace Raven.Server.ServerWide
 
         public ServerStore(RavenConfiguration configuration, RavenServer server)
         {
+            // we want our servers to be robust get early errors about such issues
+            MemoryInformation.EnableEarlyOutOfMemoryChecks = true; 
+
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
             _server = server;

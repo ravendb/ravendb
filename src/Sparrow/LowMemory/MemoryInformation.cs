@@ -80,9 +80,11 @@ namespace Sparrow.LowMemory
         private static bool IsRunningOnDocker =>
           string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER")) == false;
 
+        public static bool EnableEarlyOutOfMemoryChecks = false; // we don't want this to run on the clients
+
         public static void AssertNotAboutToRunOutOfMemory(float minimumFreeCommittedMemory)
         {
-            if (IsRunningOnDocker)
+            if (IsRunningOnDocker || EnableEarlyOutOfMemoryChecks == false)
                 return;
 
             // we are about to create a new thread, might not always be a good idea:
@@ -118,7 +120,7 @@ namespace Sparrow.LowMemory
 
         private static void ThrowInsufficentMemory(MemoryInfoResult memInfo)
         {
-            throw new InsufficientExecutionStackException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}" +
+            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}" +
                 $" Will not create a new thread in this situation because it may result in a stack overflow error when trying to allocate stack space but there isn't sufficient memory for that.");
         }
 
@@ -519,4 +521,13 @@ namespace Sparrow.LowMemory
         public Size AvailableMemory;
         public MemoryUsageLowHigh MemoryUsageRecords;
     }
+
+
+    public class EarlyOutOfMemoryException : Exception
+    {
+        public EarlyOutOfMemoryException() { }
+        public EarlyOutOfMemoryException(string message) : base(message) { }
+        public EarlyOutOfMemoryException(string message, Exception inner) : base(message, inner) { }
+    }
+
 }
