@@ -3,6 +3,7 @@ import connectionStringModel = require("models/database/settings/connectionStrin
 import database = require("models/resources/database");
 import testSqlConnectionStringCommand = require("commands/database/cluster/testSqlConnectionStringCommand");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
+import jsonUtil = require("common/jsonUtil");
 
 class connectionStringSqlEtlModel extends connectionStringModel {
     
@@ -10,12 +11,19 @@ class connectionStringSqlEtlModel extends connectionStringModel {
     
     validationGroup: KnockoutValidationGroup;
     testConnectionValidationGroup: KnockoutValidationGroup;  
+    
+    dirtyFlag: () => DirtyFlag;
 
     constructor(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
         
         this.update(dto);
         this.initValidation();
+        
+        this.dirtyFlag = new ko.DirtyFlag([           
+            this.connectionString,
+            this.connectionStringName
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     update(dto: Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString) {
