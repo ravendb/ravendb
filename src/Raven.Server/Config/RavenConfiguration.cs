@@ -42,6 +42,8 @@ namespace Raven.Server.Config
 
         public SecurityConfiguration Security { get; }
 
+        public BackupConfiguration Backup { get; }
+
         public IndexingConfiguration Indexing { get; set; }
 
         public MonitoringConfiguration Monitoring { get; }
@@ -100,6 +102,7 @@ namespace Raven.Server.Config
             Etl = new EtlConfiguration();
             Storage = new StorageConfiguration();
             Security = new SecurityConfiguration();
+            Backup = new BackupConfiguration();
             PerformanceHints = new PerformanceHintsConfiguration();
             Indexing = new IndexingConfiguration(this);
             Monitoring = new MonitoringConfiguration();
@@ -158,6 +161,7 @@ namespace Raven.Server.Config
             Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Security.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Backup.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Indexing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Monitoring.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Studio.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
