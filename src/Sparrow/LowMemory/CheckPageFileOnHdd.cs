@@ -386,18 +386,18 @@ namespace Sparrow.LowMemory
         {
             try
             {
-                var path = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile();
-                if (path.DeviceName == null) // on error return as if no swap problem
+                var swaps = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile();
+                if (swaps.Length == 0) // on error return as if no swap problem
                     return null;
 
                 string foundRotationalDiskDrive = null;
-                for (int i = 0; i < path.DeviceName.Length; i++)
+                for (int i = 0; i < swaps.Length; i++)
                 {
-                    if (path.IsDeviceSwapFile[i])
+                    if (swaps[i].IsDeviceSwapFile)
                         continue; // we do not check swap file, only partitions
 
                     // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
-                    var disk = _regExRemoveNumbers.Replace(path.DeviceName[i], "").Replace("/dev/", "");
+                    var disk = _regExRemoveNumbers.Replace(swaps[i].DeviceName, "").Replace("/dev/", "");
                     var filename = $"/sys/block/{disk}/queue/rotational";
                     var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
 
