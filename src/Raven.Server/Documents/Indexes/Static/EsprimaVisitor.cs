@@ -84,8 +84,14 @@ namespace Raven.Server.Documents.Indexes.Static
                     VisitCatchClause(statement.As<CatchClause>());
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    VisitUnknownNode(statement);
+                    break;
             }
+        }
+
+        public virtual void VisitUnknownNode(INode node)
+        {
+            throw new NotImplementedException($"ESprima visitor doesn't support nodes of type {node.Type}, you can override VisitUnknownNode to handle this case.");
         }
 
         private void VisitCatchClause(CatchClause catchClause)
@@ -292,7 +298,8 @@ namespace Raven.Server.Documents.Indexes.Static
                     VisitArrowFunctionExpression(expression.As<ArrowFunctionExpression>());
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    VisitUnknownNode(expression);
+                    break;
             }
         }
 
@@ -579,6 +586,9 @@ namespace Raven.Server.Documents.Indexes.Static
                 case Nodes.ClassExpression:
                     VisitClassExpression(node.As<ClassExpression>());
                     break;
+                default:
+                    VisitUnknownNode(node);
+                    break;
             }
         }
 
@@ -624,6 +634,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitForOfStatement(ForOfStatement forOfStatement)
         {
+            VisitExpression(forOfStatement.Right);
+            Visit(forOfStatement.Left);
+            VisitStatment(forOfStatement.Body);
         }
 
         public virtual void VisitClassDeclaration(ClassDeclaration classDeclaration)
