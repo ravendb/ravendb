@@ -1,5 +1,6 @@
 param(
     $Repo = "ravendb/ravendb", 
+    $ArtifactsDir = "..\artifacts",
     [switch]$DryRun = $False)
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +23,7 @@ CALLSTACK:$(Get-PSCallStack | Out-String)
 
 function GetVersionFromArtifactName() {
     $versionRegex = [regex]'RavenDB-([0-9]\.[0-9]\.[0-9](-[a-zA-Z]+-[0-9-]+)?)-[a-z]+'
-    $fname = $(Get-ChildItem "../artifacts" `
+    $fname = $(Get-ChildItem $ArtifactsDir `
         | Where-Object { $_.Name -Match $versionRegex } `
         | Sort-Object LastWriteTime -Descending `
         | Select-Object -First 1).Name
