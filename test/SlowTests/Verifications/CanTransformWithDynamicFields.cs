@@ -169,7 +169,7 @@ select {
             }
         }
 
-        [Fact(Skip = "RavenDB-8257")]
+        [Fact]
         public void WillMapPropertiesOnMapReduceIndexes()
         {
             using (var store = GetDocumentStore())
@@ -187,7 +187,7 @@ select {
 from index 'TranslatedEntities/MapReduce' as p
 select {
     Id: p.Id,
-    Title: p['Title', :lang]
+    Title: p['Title_' + $lang]
 }")
 .AddParameter("lang", "pt")
                         .ToList();

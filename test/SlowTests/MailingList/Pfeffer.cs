@@ -8,15 +8,15 @@ namespace SlowTests.MailingList
 {
     public class Pfeffer : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6305")]
+        [Fact]
         public void QueryingUsingObjects()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options()
             {
-                store.Conventions.CustomizeJsonSerializer += serializer =>
-                {
-                    serializer.TypeNameHandling = TypeNameHandling.All;
-                };
+                ModifyDocumentStore = documentStore =>
+                    documentStore.Conventions.CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.All
+            }))
+            {
                 using (var session = store.OpenSession())
 
                 {
