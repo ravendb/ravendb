@@ -23,6 +23,7 @@ namespace Sparrow.LowMemory
         private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
         private static readonly byte[] MemAvailable = Encoding.UTF8.GetBytes("MemAvailable:");
         private static readonly byte[] MemFree = Encoding.UTF8.GetBytes("MemFree:");
+        private static readonly byte[] SwapTotal = Encoding.UTF8.GetBytes("SwapTotal:");
         private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
 
         private const string CgroupMemoryLimit = "/sys/fs/cgroup/memory/memory.limit_in_bytes";
@@ -153,13 +154,14 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static (long MemAvailableInKb, long MemFreeInKb, long CommitedInKb) GetFromProcMemInfo()
+        public static (long MemAvailableInKb, long SwapTotalInKb, long CommitedInKb) GetFromProcMemInfo()
         {
             const string path = "/proc/meminfo";
 
             // this is different then sysinfo freeram+buffered (and the closest to the real free memory)
             // MemFree is really different then MemAvailable (while free is usually lower then the real free,
             // and available is only estimated free which sometimes higher then the real free memory)
+            // for some distros we have only MemFree
             try
             {
                 using (var bufferedReader = new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
@@ -167,8 +169,9 @@ namespace Sparrow.LowMemory
                     bufferedReader.ReadFileIntoBuffer();
                     var memAvailable = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemAvailable);
                     var memFree = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree);
+                    var swapTotal = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
                     var commited = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
-                    return (MemAvailableInKb: memAvailable, MemFreeInKb: memFree, CommitedInKb: commited);
+                    return (MemAvailableInKb: Math.Max(memAvailable, memFree), SwapTotalInKb: swapTotal, CommitedInKb: commited);
                 }
             }
             catch (Exception ex)
@@ -259,20 +262,17 @@ namespace Sparrow.LowMemory
                     // linux
                     int rc;
                     ulong totalRamInBytes;
-                    ulong totalSwapInBytes;
                     if (PlatformDetails.Is32Bits == false)
                     {
                         var info = new sysinfo_t();
                         rc = Syscall.sysinfo(ref info);
                         totalRamInBytes = info.TotalRam;
-                        totalSwapInBytes = info.TotalSwap;
                     }
                     else
                     {
                         var info = new sysinfo_t_32bit();
                         rc = Syscall.sysinfo(ref info);
                         totalRamInBytes = info.TotalRam;
-                        totalSwapInBytes = info.TotalSwap;
                     }
                     if (rc != 0)
                     {
@@ -304,7 +304,7 @@ namespace Sparrow.LowMemory
                         var fromProcMemInfo = GetFromProcMemInfo();
                         availableRamInBytes = fromProcMemInfo.MemAvailableInKb * 1024;
                         commitedMemoryInBytes = fromProcMemInfo.CommitedInKb * 1024;
-                        commitLimitInBytes = (long)(totalRamInBytes + totalSwapInBytes);
+                        commitLimitInBytes = totalPhysicalMemoryInBytes + fromProcMemInfo.SwapTotalInKb * 1024;
                     }
                 }
                 else
