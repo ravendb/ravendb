@@ -481,6 +481,21 @@ namespace FastTests
             } while (documentStore.Commands().Head("Debug/Done") == null && (debug == false || Debugger.IsAttached));
         }
 
+        protected ManualResetEventSlim WaitForIndexBatchCompleted(IDocumentStore store, Func<(string IndexName, bool DidWork), bool> predicate)
+        {
+            var database = GetDatabase(store.Database).Result;
+
+            var mre = new ManualResetEventSlim();
+
+            database.IndexStore.IndexBatchCompleted += x =>
+            {
+                if (predicate(x))
+                    mre.Set();
+            };
+
+            return mre;
+        }
+
         protected override void Dispose(ExceptionAggregator exceptionAggregator)
         {
             foreach (var store in CreatedStores)
