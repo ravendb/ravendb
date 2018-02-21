@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact(Skip = "RavenDB-6305")]
+        [Fact]
         public void InOnObjects()
         {
             using (var store = GetDocumentStore())
