@@ -12,7 +12,7 @@ namespace Raven.Server.Config.Categories
 {
     public class BackupConfiguration : ConfigurationCategory
     {
-        [Description("Local backups are allowed to be created under this root path. If a relative path is specified, it will be located under the application base directory.")]
+        [Description("Local backups can only be created under this root path.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Backup.LocalRootPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting LocalRootPath { get; set; }

@@ -268,7 +268,7 @@ namespace Raven.Server.Web.System
         {
             var result = new DynamicJsonValue
             {
-                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = ServerStore.Configuration.Backup.LocalRootPath?.Combine(Database.Name).FullPath,
+                [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = ServerStore.Configuration.Backup.LocalRootPath?.FullPath,
                 [nameof(ServerStore.Configuration.Backup.AllowedAwsRegions)] = ServerStore.Configuration.Backup.AllowedAwsRegions,
                 [nameof(ServerStore.Configuration.Backup.AllowedDestinations)] = ServerStore.Configuration.Backup.AllowedDestinations
             };
@@ -347,7 +347,6 @@ namespace Raven.Server.Web.System
 
             localSettings.TryGet(nameof(LocalSettings.FolderPath), out string folderPath);
 
-            // If Backup.LocalRootPath is not defined (there is no restriction), the user supplies a non-empty path and we use it.
             if (ServerStore.Configuration.Backup.LocalRootPath == null)
             {
                 if (string.IsNullOrWhiteSpace(folderPath))
@@ -357,31 +356,33 @@ namespace Raven.Server.Web.System
             }
             else
             {
-                // Backup.LocalRootPath is defined. We expect the studio to send the LocalRootPath as the folderPath. 
-                if (ServerStore.Configuration.Backup.LocalRootPath.Combine(Database.Name).FullPath.Equals(folderPath) == false)
+                // In this case we receive a path relative to the root path
+                string fullPath;
+                try
                 {
-                    // If we got an empty path (e.g. not sent by studio) we make sure to override it with the LocalRootPath.
-                    if (string.IsNullOrWhiteSpace(folderPath))
-                    {
-                        folderPath = ServerStore.Configuration.Backup.LocalRootPath.Combine(Database.Name).FullPath;
-
-                        readerObject.Modifications = new DynamicJsonValue
-                        {
-                            [nameof(LocalSettings)] = new DynamicJsonValue
-                            {
-                                [nameof(LocalSettings.Disabled)] = disabled,
-                                [nameof(LocalSettings.FolderPath)] = folderPath
-                            }
-                        };
-
-                        readerObject = context.ReadObject(readerObject, "modified backup configuration");
-                    }
-                    else
-                    {
-                        throw new ArgumentException(
-                            $"The administrator has restricted local backups to the following path: {ServerStore.Configuration.Backup.LocalRootPath?.Combine(Database.Name).FullPath}. Please specify it as the backup directory or leave this field empty.");
-                    }
+                    fullPath = ServerStore.Configuration.Backup.LocalRootPath.Combine(folderPath).FullPath;
                 }
+                catch (Exception e)
+                {
+                    throw new ArgumentException($"Unable to combine the local root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' with the user supplied relative path '{folderPath}'", e);
+                }
+
+                if (IsSubDirectoryOfRootPath(fullPath) == false)
+                {
+                    throw new ArgumentException($"The administrator has restricted local backups to be saved under the following root path: {ServerStore.Configuration.Backup.LocalRootPath?.FullPath}.");
+                }
+                
+                readerObject.Modifications = new DynamicJsonValue
+                {
+                    [nameof(LocalSettings)] = new DynamicJsonValue
+                    {
+                        [nameof(LocalSettings.Disabled)] = disabled,
+                        [nameof(LocalSettings.FolderPath)] = fullPath
+                    }
+                };
+
+                readerObject = context.ReadObject(readerObject, "modified-backup-configuration");
+                folderPath = fullPath;
             }
 
             var originalFolderPath = folderPath;
@@ -402,6 +403,23 @@ namespace Raven.Server.Web.System
 
                 break;
             }
+        }
+
+        public bool IsSubDirectoryOfRootPath(string userPath)
+        {
+            var rootDirInfo = new DirectoryInfo(ServerStore.Configuration.Backup.LocalRootPath.FullPath);
+            var userDirInfo = new DirectoryInfo(userPath);
+
+            while (userDirInfo.Parent != null)
+            {
+                if (userDirInfo.Parent.FullName == rootDirInfo.FullName)
+                {
+                    return true;
+                }
+
+                userDirInfo = userDirInfo.Parent;
+            }
+            return false;
         }
 
         private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)
