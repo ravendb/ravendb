@@ -23,6 +23,8 @@ namespace Sparrow.LowMemory
         private static readonly byte[] VmRss = Encoding.UTF8.GetBytes("VmRSS:");
         private static readonly byte[] MemAvailable = Encoding.UTF8.GetBytes("MemAvailable:");
         private static readonly byte[] MemFree = Encoding.UTF8.GetBytes("MemFree:");
+        private static readonly byte[] MemTotal = Encoding.UTF8.GetBytes("MemTotal:");
+
         private static readonly byte[] SwapTotal = Encoding.UTF8.GetBytes("SwapTotal:");
         private static readonly byte[] Committed_AS = Encoding.UTF8.GetBytes("Committed_AS:");
 
@@ -163,7 +165,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static (long MemAvailableInKb, long SwapTotalInKb, long CommitedInKb) GetFromProcMemInfo()
+        public static (long MemAvailableInKb, long SwapTotalInKb, long CommitedInKb, long TotalMemoryInKb) GetFromProcMemInfo()
         {
             const string path = "/proc/meminfo";
 
@@ -180,7 +182,13 @@ namespace Sparrow.LowMemory
                     var memFree = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree);
                     var swapTotal = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
                     var commited = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
-                    return (MemAvailableInKb: Math.Max(memAvailable, memFree), SwapTotalInKb: swapTotal, CommitedInKb: commited);
+                    var total = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemTotal);
+                    return (
+                        MemAvailableInKb: Math.Max(memAvailable, memFree), 
+                        SwapTotalInKb: swapTotal, 
+                        CommitedInKb: commited,
+                        TotalMemoryInKb: total
+                    );
                 }
             }
             catch (Exception ex)
@@ -188,7 +196,7 @@ namespace Sparrow.LowMemory
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to read value from {path}", ex);
 
-                return (-1, -1, -1);
+                return (-1, -1, -1, -1);
             }
         }
 
@@ -234,54 +242,40 @@ namespace Sparrow.LowMemory
             long commitedMemoryInBytes;
             long commitLimitInBytes;
 
-            int rc;
-            ulong totalRamInBytes;
-            if (PlatformDetails.Is32Bits == false)
-            {
-                var info = new sysinfo_t();
-                rc = Syscall.sysinfo(ref info);
-                totalRamInBytes = info.TotalRam;
-            }
-            else
-            {
-                var info = new sysinfo_t_32bit();
-                rc = Syscall.sysinfo(ref info);
-                totalRamInBytes = info.TotalRam;
-            }
-            if (rc != 0)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
-                return FailedResult;
-            }
+            var fromProcMemInfo = GetFromProcMemInfo();
+            long totalPhysicalMemoryInBytes = fromProcMemInfo.TotalMemoryInKb * 1024;
 
-            var totalPhysicalMemoryInBytes = (long)totalRamInBytes;
+            availableRamInBytes = fromProcMemInfo.MemAvailableInKb * 1024;
+            commitedMemoryInBytes = fromProcMemInfo.CommitedInKb * 1024;
+            // On Linux, we use the swap + ram as the commit limit, because the actual limit
+            // is dependent on many different factors
+            commitLimitInBytes = totalPhysicalMemoryInBytes + fromProcMemInfo.SwapTotalInKb * 1024;
+
 
             var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
             var cgroupMaxMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMaxMemoryUsage);
-            var maxMemoryUsage = Math.Min(cgroupMemoryLimit, cgroupMaxMemoryUsage);
+            // here we need to deal with _soft_ limit, so we'll take the largest of these values
+            var maxMemoryUsage = Math.Max(cgroupMemoryLimit ?? 0, cgroupMaxMemoryUsage ?? 0);
 
-            if (maxMemoryUsage <= totalPhysicalMemoryInBytes)
+            if (maxMemoryUsage != 0) // running on container
             {
                 // running in a container
                 var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
-
-                availableRamInBytes = maxMemoryUsage - cgroupMemoryUsage;
+                if (cgroupMemoryUsage != null)
+                {
+                    commitedMemoryInBytes = cgroupMemoryUsage.Value;
+                    availableRamInBytes = maxMemoryUsage - cgroupMemoryUsage.Value;
+                }
                 totalPhysicalMemoryInBytes = maxMemoryUsage;
-                commitedMemoryInBytes = cgroupMemoryUsage;
 
-                //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-10492
                 commitLimitInBytes = Math.Max(maxMemoryUsage, commitedMemoryInBytes);
             }
-            else
-            {
-                var fromProcMemInfo = GetFromProcMemInfo();
-                availableRamInBytes = fromProcMemInfo.MemAvailableInKb * 1024;
-                commitedMemoryInBytes = fromProcMemInfo.CommitedInKb * 1024;
-                commitLimitInBytes = totalPhysicalMemoryInBytes + fromProcMemInfo.SwapTotalInKb * 1024;
-            }
 
-            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemoryInBytes, commitedMemoryInBytes, commitLimitInBytes);
+            return BuildPosixMemoryInfoResult(
+                availableRamInBytes,
+                totalPhysicalMemoryInBytes,
+                commitedMemoryInBytes, 
+                commitLimitInBytes);
         }
 
         private static unsafe MemoryInfoResult BuildPosixMemoryInfoResult(long availableRamInBytes, long totalPhysicalMemoryInBytes, long commitedMemoryInBytes, long commitLimitInBytes)

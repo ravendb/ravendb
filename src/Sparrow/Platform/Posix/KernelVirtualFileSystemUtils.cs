@@ -13,7 +13,7 @@ namespace Sparrow.Platform.Posix
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger(nameof(KernelVirtualFileSystemUtils), "Raven/Server");
         private static readonly ConcurrentSet<string> IsOldFileAlert = new ConcurrentSet<string>();
 
-        public static long ReadNumberFromCgroupFile(string fileName)
+        public static long? ReadNumberFromCgroupFile(string fileName)
         {
             // return long number read from file.  long.MaxValue is returned on error or on N/A value (-1)
             try
@@ -21,7 +21,7 @@ namespace Sparrow.Platform.Posix
                 var txt = File.ReadAllText(fileName);
                 var result = Convert.ToInt64(txt);
                 if (result <= 0)
-                    result = long.MaxValue;
+                    return null;
                 return result;
             }
             catch (Exception e)
@@ -30,7 +30,7 @@ namespace Sparrow.Platform.Posix
                 {
                     Logger.Operations($"Unable to read and parse '{fileName}', will not respect container's limit", e);
                 }
-                return long.MaxValue;
+                return null;
             }
         }
 
