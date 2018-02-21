@@ -16,7 +16,9 @@ function LayoutDockerPrerequisites($projectDir, $artifactsDir) {
     )
 
     foreach ($asset in $assets) {
-        Copy-Item -Force -Recurse -Path $(Join-Path -Path $dockerAssetsDir -ChildPath $asset) -Destination $artifactsDockerDir
+        $assetSrcPath = Join-Path -Path $dockerAssetsDir -ChildPath $asset
+        write-host "Copy $assetSrcPath -> $artifactsDockerDir"
+        Copy-Item -Force -Recurse -Path $assetSrcPath -Destination $artifactsDockerDir
     }
 
     $settingsFiles = "src\Raven.Server\Properties\Settings\settings.docker.*.json"

@@ -102,6 +102,8 @@ New-Item -Path $RELEASE_DIR -Type Directory -Force
 CleanFiles $RELEASE_DIR
 CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $DRTOOL_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
+LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR
+
 $versionObj = SetVersionInfo
 $version = $versionObj.Version
 $versionSuffix = $versionObj.VersionSuffix
@@ -186,4 +188,3 @@ if ($buildType -eq 'stable') {
     BumpVersion $PROJECT_DIR $versionObj.VersionPrefix $versionObj.BuildType $DryRunVersionBump
 }
 
-LayoutDockerPrerequisites $PROJECT_DIR $RELEASE_DIR
