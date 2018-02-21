@@ -1009,6 +1009,9 @@ namespace Raven.Server.Documents.Indexes
                                 _didWork = true;
                                 _firstBatchTimeout = null;
                             }
+                            
+                            var batchCompletedAction = DocumentDatabase.IndexStore.IndexBatchCompleted;
+                            batchCompletedAction?.Invoke((Name, didWork));
                         }
 
                         try

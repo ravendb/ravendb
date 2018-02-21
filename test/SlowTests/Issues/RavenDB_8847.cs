@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -42,11 +43,14 @@ namespace SlowTests.Issues
 
                     session.Query<User>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToList();
 
+                    WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
+
+                    // ensure the timeout was reset after the run completed
                     Assert.False(index._firstBatchTimeout.HasValue);
                 }
             }
         }
-
+        
         [Fact]
         public void Should_set_first_batch_timeout_of_newly_created_static_index()
         {
@@ -89,6 +93,9 @@ namespace SlowTests.Issues
 
                     session.Query<User>(usersByname).Customize(x => x.WaitForNonStaleResults()).Where(x => x.Name != "ema").ToList();
 
+                    WaitForIndexBatchCompleted(store, x => x.DidWork).Wait(TimeSpan.FromSeconds(2));
+
+                    // ensure the timeout was reset after the run completed
                     Assert.False(index._firstBatchTimeout.HasValue);
                 }
             }
