@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -23,120 +22,118 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore())
             {
-                var databaseName = $"{store.Database}_2";
+                var databaseName = GetDatabaseName();
 
-                var restoreOperation = new RestoreBackupOperation(new RestoreBackupConfiguration
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = backupPath,
                     DatabaseName = databaseName
-                });
-
-                var operation = store.Maintenance.Server.Send(restoreOperation);
-                operation.WaitForCompletion();
-
-                var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
-
-                Assert.Equal(3, stats.CountOfIndexes);
-                Assert.Equal(1057, stats.CountOfDocuments);
-                Assert.Equal(4647, stats.CountOfRevisionDocuments);
-                Assert.Equal(2, stats.CountOfTombstones);
-                Assert.Equal(0, stats.CountOfDocumentsConflicts);
-                Assert.Equal(0, stats.CountOfConflicts);
-                Assert.Equal(17, stats.CountOfAttachments);
-                Assert.Equal(17, stats.CountOfUniqueAttachments);
-                Assert.Equal(3, stats.Indexes.Length);
-
-                foreach (var indexInformation in stats.Indexes)
+                }))
                 {
-                    var indexStats = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexStatisticsOperation(indexInformation.Name));
-                    var indexDefinition = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexOperation(indexInformation.Name));
+                    var stats = store.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
 
-                    using (var session = store.OpenSession(databaseName))
+                    Assert.Equal(3, stats.CountOfIndexes);
+                    Assert.Equal(1057, stats.CountOfDocuments);
+                    Assert.Equal(4647, stats.CountOfRevisionDocuments);
+                    Assert.Equal(2, stats.CountOfTombstones);
+                    Assert.Equal(0, stats.CountOfDocumentsConflicts);
+                    Assert.Equal(0, stats.CountOfConflicts);
+                    Assert.Equal(17, stats.CountOfAttachments);
+                    Assert.Equal(17, stats.CountOfUniqueAttachments);
+                    Assert.Equal(3, stats.Indexes.Length);
+
+                    foreach (var indexInformation in stats.Indexes)
                     {
-                        var results = session.Query<dynamic>(indexInformation.Name).ToList();
-                        Assert.Equal(indexStats.EntriesCount, results.Count);
-                    }
+                        var indexStats = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexStatisticsOperation(indexInformation.Name));
+                        var indexDefinition = store.Maintenance.ForDatabase(databaseName).Send(new GetIndexOperation(indexInformation.Name));
 
-                    Assert.False(indexStats.IsStale);
-                    Assert.False(indexStats.IsInvalidIndex);
-                    Assert.Equal(IndexRunningStatus.Running, indexStats.Status);
-                    Assert.Equal(IndexState.Normal, indexStats.State);
-                    Assert.Equal(IndexPriority.Normal, indexStats.Priority);
-                    Assert.Equal(0, indexStats.ErrorsCount);
-                    Assert.Equal(0, indexStats.MapErrors);
+                        using (var session = store.OpenSession(databaseName))
+                        {
+                            var results = session.Query<dynamic>(indexInformation.Name).ToList();
+                            Assert.Equal(indexStats.EntriesCount, results.Count);
+                        }
 
-                    switch (indexStats.Name)
-                    {
-                        case "Orders/ByCompany":
-                            Assert.Equal(89, indexStats.EntriesCount);
+                        Assert.False(indexStats.IsStale);
+                        Assert.False(indexStats.IsInvalidIndex);
+                        Assert.Equal(IndexRunningStatus.Running, indexStats.Status);
+                        Assert.Equal(IndexState.Normal, indexStats.State);
+                        Assert.Equal(IndexPriority.Normal, indexStats.Priority);
+                        Assert.Equal(0, indexStats.ErrorsCount);
+                        Assert.Equal(0, indexStats.MapErrors);
 
-                            Assert.Equal(830, indexStats.MapAttempts);
-                            Assert.Equal(830, indexStats.MapSuccesses);
+                        switch (indexStats.Name)
+                        {
+                            case "Orders/ByCompany":
+                                Assert.Equal(89, indexStats.EntriesCount);
 
-                            Assert.Equal(863, indexStats.ReduceAttempts);
-                            Assert.Equal(863, indexStats.ReduceSuccesses);
+                                Assert.Equal(830, indexStats.MapAttempts);
+                                Assert.Equal(830, indexStats.MapSuccesses);
 
-                            Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
-                            Assert.Equal(IndexType.MapReduce, indexStats.Type);
+                                Assert.Equal(863, indexStats.ReduceAttempts);
+                                Assert.Equal(863, indexStats.ReduceSuccesses);
 
-                            Assert.Equal("from result in results\r\ngroup result by result.Company \r\ninto g\r\nselect new\r\n{\r\n\tCompany = g.Key,\r\n\tCount = g.Sum(x => x.Count),\r\n\tTotal = g.Sum(x => x.Total)\r\n}", indexDefinition.Reduce);
-                            Assert.Equal(1, indexDefinition.Maps.Count);
-                            Assert.Equal("from order in docs.Orders\r\nselect new\r\n{\r\n    order.Company,\r\n    Count = 1,\r\n    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))\r\n}", indexDefinition.Maps.First());
+                                Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
+                                Assert.Equal(IndexType.MapReduce, indexStats.Type);
 
-                            Assert.Null(indexDefinition.OutputReduceToCollection);
+                                Assert.Equal("from result in results\r\ngroup result by result.Company \r\ninto g\r\nselect new\r\n{\r\n\tCompany = g.Key,\r\n\tCount = g.Sum(x => x.Count),\r\n\tTotal = g.Sum(x => x.Total)\r\n}", indexDefinition.Reduce);
+                                Assert.Equal(1, indexDefinition.Maps.Count);
+                                Assert.Equal("from order in docs.Orders\r\nselect new\r\n{\r\n    order.Company,\r\n    Count = 1,\r\n    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))\r\n}", indexDefinition.Maps.First());
 
-                            Assert.Equal(0, indexDefinition.Fields.Count);
-                            break;
+                                Assert.Null(indexDefinition.OutputReduceToCollection);
 
-                        case "Orders/Totals":
-                            Assert.Equal(828, indexStats.EntriesCount);
+                                Assert.Equal(0, indexDefinition.Fields.Count);
+                                break;
 
-                            Assert.Equal(830, indexStats.MapAttempts);
-                            Assert.Equal(830, indexStats.MapSuccesses);
+                            case "Orders/Totals":
+                                Assert.Equal(828, indexStats.EntriesCount);
 
-                            Assert.Null(indexStats.ReduceAttempts);
-                            Assert.Null(indexStats.ReduceSuccesses);
+                                Assert.Equal(830, indexStats.MapAttempts);
+                                Assert.Equal(830, indexStats.MapSuccesses);
 
-                            Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
-                            Assert.Equal(IndexType.Map, indexStats.Type);
+                                Assert.Null(indexStats.ReduceAttempts);
+                                Assert.Null(indexStats.ReduceSuccesses);
 
-                            Assert.Equal(1, indexDefinition.Maps.Count);
-                            Assert.Equal("from order in docs.Orders\r\nselect new\r\n{\r\n    order.Employee,\r\n    order.Company,\r\n    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))\r\n}", indexDefinition.Maps.First());
+                                Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
+                                Assert.Equal(IndexType.Map, indexStats.Type);
 
-                            Assert.Null(indexDefinition.OutputReduceToCollection);
+                                Assert.Equal(1, indexDefinition.Maps.Count);
+                                Assert.Equal("from order in docs.Orders\r\nselect new\r\n{\r\n    order.Employee,\r\n    order.Company,\r\n    Total = order.Lines.Sum(l => (l.Quantity * l.PricePerUnit) * (1 - l.Discount))\r\n}", indexDefinition.Maps.First());
 
-                            Assert.Equal(0, indexDefinition.Fields.Count);
-                            break;
+                                Assert.Null(indexDefinition.OutputReduceToCollection);
 
-                        case "Product/Search":
-                            Assert.Equal(77, indexStats.EntriesCount);
+                                Assert.Equal(0, indexDefinition.Fields.Count);
+                                break;
 
-                            Assert.Equal(77, indexStats.MapAttempts);
-                            Assert.Equal(77, indexStats.MapSuccesses);
+                            case "Product/Search":
+                                Assert.Equal(77, indexStats.EntriesCount);
 
-                            Assert.Null(indexStats.ReduceAttempts);
-                            Assert.Null(indexStats.ReduceSuccesses);
+                                Assert.Equal(77, indexStats.MapAttempts);
+                                Assert.Equal(77, indexStats.MapSuccesses);
 
-                            Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
-                            Assert.Equal(IndexType.Map, indexStats.Type);
+                                Assert.Null(indexStats.ReduceAttempts);
+                                Assert.Null(indexStats.ReduceSuccesses);
 
-                            Assert.Equal(1, indexDefinition.Maps.Count);
-                            Assert.Equal("from p in docs.Products\r\nselect new\r\n{\r\n    p.Name,\r\n    p.Category,\r\n    p.Supplier,\r\n    p.PricePerUnit\r\n}", indexDefinition.Maps.First());
+                                Assert.Equal(1, indexStats.MaxNumberOfOutputsPerDocument);
+                                Assert.Equal(IndexType.Map, indexStats.Type);
 
-                            Assert.Null(indexDefinition.OutputReduceToCollection);
+                                Assert.Equal(1, indexDefinition.Maps.Count);
+                                Assert.Equal("from p in docs.Products\r\nselect new\r\n{\r\n    p.Name,\r\n    p.Category,\r\n    p.Supplier,\r\n    p.PricePerUnit\r\n}", indexDefinition.Maps.First());
 
-                            Assert.Equal(1, indexDefinition.Fields.Count);
+                                Assert.Null(indexDefinition.OutputReduceToCollection);
 
-                            var field = indexDefinition.Fields["Name"];
-                            Assert.Null(field.Analyzer);
-                            Assert.Equal(FieldIndexing.Search, field.Indexing);
-                            Assert.Null(field.Storage);
-                            Assert.True(field.Suggestions);
-                            Assert.Equal(FieldTermVector.Yes, field.TermVector);
-                            Assert.Null(field.Spatial);
-                            break;
-                        default:
-                            throw new InvalidOperationException(indexStats.Name);
+                                Assert.Equal(1, indexDefinition.Fields.Count);
+
+                                var field = indexDefinition.Fields["Name"];
+                                Assert.Null(field.Analyzer);
+                                Assert.Equal(FieldIndexing.Search, field.Indexing);
+                                Assert.Null(field.Storage);
+                                Assert.True(field.Suggestions);
+                                Assert.Equal(FieldTermVector.Yes, field.TermVector);
+                                Assert.Null(field.Spatial);
+                                break;
+                            default:
+                                throw new InvalidOperationException(indexStats.Name);
+                        }
                     }
                 }
             }

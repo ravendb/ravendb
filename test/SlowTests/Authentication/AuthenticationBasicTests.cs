@@ -177,7 +177,7 @@ namespace SlowTests.Authentication
                 ModifyDatabaseName = s => dbName
             }))
             {
-                var doc = new DatabaseRecord("WhateverDB");
+                var doc = new DatabaseRecord($"WhateverDB-{Guid.NewGuid()}");
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
             }
         }
@@ -200,7 +200,7 @@ namespace SlowTests.Authentication
                 ModifyDatabaseName = s => dbName
             }))
             {
-                var doc = new DatabaseRecord("WhateverDB");
+                var doc = new DatabaseRecord($"WhateverDB-{Guid.NewGuid()}");
                 Assert.Throws<AuthorizationException>(() =>
                 {
                     store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
