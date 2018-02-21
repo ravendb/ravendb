@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             public BlittableObjectProperty(BlittableObjectInstance parent, string property)
-                : base(null, true, null, null)
+                : base(null, true, true, null)
             {
                 _parent = parent;
                 _property = property;
