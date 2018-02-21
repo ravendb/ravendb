@@ -37,15 +37,10 @@ namespace Tryouts
 
         public static async Task Main(string[] args)
         {
-            using(var store = new DocumentStore
-            {
-                Urls = new[] {"http://live-test.ravendb.net"},
-                Database = "Demo"
-            })
-            {
-
-                
-            }
+            Parallel.For(1, 10000, _ =>
+             {
+                 new FastTests.Blittable.PeepingTomTest().PeepingTomStreamShouldPeepCorrectlyWithRandomValues(seed: 1705655787);
+             });
         }
     }
 

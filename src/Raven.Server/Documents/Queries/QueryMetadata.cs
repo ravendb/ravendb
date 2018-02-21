@@ -116,12 +116,19 @@ namespace Raven.Server.Documents.Queries
             bool exact = false,
             AutoSpatialOptions spatial = null,
             OperatorType? operatorType = null,
-            bool isNegated = false
+            bool isNegated = false,
+            string methodName = null
             )
         {
             var indexFieldName = GetIndexFieldName(fieldName, parameters);
 
-            if (search || exact || spatial != null || operatorType != OperatorType.Equal || (operatorType == OperatorType.Equal && isNegated))
+            if (operatorType == null && 
+                // to support startsWith(id(), ...)
+                string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
+                operatorType = OperatorType.Equal;
+
+            if (search || exact || spatial != null || isNegated || 
+                operatorType != OperatorType.Equal )
             {
                 IsCollectionQuery = false;
             }
@@ -1395,9 +1402,9 @@ namespace Raven.Server.Documents.Queries
                                 parameters);
 
                         if (methodType == MethodType.Search || methodType == MethodType.Lucene)
-                            _metadata.AddWhereField(fieldName, parameters, search: true);
+                            _metadata.AddWhereField(fieldName, parameters, search: true, methodName: methodName);
                         else
-                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0);
+                            _metadata.AddWhereField(fieldName, parameters, exact: _insideExact > 0, methodName: methodName);
                         break;
                     case MethodType.Exists:
                         fieldName = _metadata.ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
