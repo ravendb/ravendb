@@ -7,7 +7,6 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
@@ -66,41 +65,39 @@ namespace SlowTests.Issues
                 }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
-                var restoredDatabaseName = $"restored_database_snapshot_{Guid.NewGuid().ToString()}";
-                var restoreConfiguration = new RestoreBackupConfiguration
+                var restoredDatabaseName = GetDatabaseName();
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
-                };
+                }))
+                {
+                    var afterRestoreStats = store.Maintenance.ForDatabase(restoredDatabaseName).Send(new GetStatisticsOperation());
 
-                var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                var afterRestoreStats = store.Maintenance.ForDatabase(restoredDatabaseName).Send(new GetStatisticsOperation());
-
-                var restoredDatabase = await GetDatabase(restoredDatabaseName);
+                    var restoredDatabase = await GetDatabase(restoredDatabaseName);
                 
-                int afterRestoreAlertCount;
-                using (restoredDatabase.NotificationCenter.GetStored(out var actions))
-                    afterRestoreAlertCount = actions.Count();
+                    int afterRestoreAlertCount;
+                    using (restoredDatabase.NotificationCenter.GetStored(out var actions))
+                        afterRestoreAlertCount = actions.Count();
 
-                Assert.True(afterRestoreAlertCount > 0);
+                    Assert.True(afterRestoreAlertCount > 0);
 
-                var indexesPath = restoredDatabase.Configuration.Indexing.StoragePath;
-                var indexesDirectory = new DirectoryInfo(indexesPath.FullPath);
-                Assert.True(indexesDirectory.Exists);
-                Assert.Equal(afterRestoreStats.CountOfIndexes, indexesDirectory.GetDirectories().Length);
+                    var indexesPath = restoredDatabase.Configuration.Indexing.StoragePath;
+                    var indexesDirectory = new DirectoryInfo(indexesPath.FullPath);
+                    Assert.True(indexesDirectory.Exists);
+                    Assert.Equal(afterRestoreStats.CountOfIndexes, indexesDirectory.GetDirectories().Length);
 
-                Assert.NotEqual(beforeBackupStats.DatabaseId, afterRestoreStats.DatabaseId);
-                Assert.Equal(beforeBackupStats.CountOfAttachments, afterRestoreStats.CountOfAttachments);
-                Assert.Equal(beforeBackupStats.CountOfConflicts, afterRestoreStats.CountOfConflicts);
-                Assert.Equal(beforeBackupStats.CountOfDocuments, afterRestoreStats.CountOfDocuments);
-                Assert.Equal(beforeBackupStats.CountOfDocumentsConflicts, afterRestoreStats.CountOfDocumentsConflicts);
-                Assert.Equal(beforeBackupStats.CountOfIndexes, afterRestoreStats.CountOfIndexes);
-                Assert.Equal(beforeBackupStats.CountOfRevisionDocuments, afterRestoreStats.CountOfRevisionDocuments);
-                Assert.Equal(beforeBackupStats.CountOfTombstones, afterRestoreStats.CountOfTombstones);
-                Assert.Equal(beforeBackupStats.CountOfUniqueAttachments, afterRestoreStats.CountOfUniqueAttachments);
+                    Assert.NotEqual(beforeBackupStats.DatabaseId, afterRestoreStats.DatabaseId);
+                    Assert.Equal(beforeBackupStats.CountOfAttachments, afterRestoreStats.CountOfAttachments);
+                    Assert.Equal(beforeBackupStats.CountOfConflicts, afterRestoreStats.CountOfConflicts);
+                    Assert.Equal(beforeBackupStats.CountOfDocuments, afterRestoreStats.CountOfDocuments);
+                    Assert.Equal(beforeBackupStats.CountOfDocumentsConflicts, afterRestoreStats.CountOfDocumentsConflicts);
+                    Assert.Equal(beforeBackupStats.CountOfIndexes, afterRestoreStats.CountOfIndexes);
+                    Assert.Equal(beforeBackupStats.CountOfRevisionDocuments, afterRestoreStats.CountOfRevisionDocuments);
+                    Assert.Equal(beforeBackupStats.CountOfTombstones, afterRestoreStats.CountOfTombstones);
+                    Assert.Equal(beforeBackupStats.CountOfUniqueAttachments, afterRestoreStats.CountOfUniqueAttachments);
+                }
             }
         }
     }

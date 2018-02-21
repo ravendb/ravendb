@@ -13,11 +13,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var doc = new DatabaseRecord("test");
+                var doc = new DatabaseRecord(GetDatabaseName());
 
-                store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
+                using (EnsureDatabaseDeletion(doc.DatabaseName, store))
+                {
+                    store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
 
-                Assert.Throws<ConcurrencyException>(() => store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)));
+                    Assert.Throws<ConcurrencyException>(() => store.Maintenance.Server.Send(new CreateDatabaseOperation(doc)));
+                }
             }
         }
     }

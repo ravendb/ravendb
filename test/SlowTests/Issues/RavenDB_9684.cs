@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -16,11 +17,13 @@ namespace SlowTests.Issues
         [Fact]
         public void Should_be_able_to_query_tenant_without_default_database_set()
         {
-            var database = "my-db";
+            var database = GetDatabaseName();
             using (var store = GetDocumentStore())
             {
                 store.Database = null;
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(database)));
+
+                using (EnsureDatabaseDeletion(database, store))
                 using (var session = store.OpenSession(database))
                 {
                     session.Query<Document>()
