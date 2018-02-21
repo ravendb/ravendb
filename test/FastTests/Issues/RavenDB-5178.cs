@@ -16,17 +16,14 @@ namespace FastTests.Issues
                 var doc = new DatabaseRecord(longName);
 
                 store.Maintenance.Server.Send(new CreateDatabaseOperation(doc));
-                try
+
+                using (EnsureDatabaseDeletion(doc.DatabaseName, store))
                 {
                     store.Database = longName;
 
                     var db = GetDocumentDatabaseInstanceFor(store).Result;
 
                     Assert.Equal(db.Name, longName);
-                }
-                finally
-                {
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(longName, true));
                 }
             }
         }

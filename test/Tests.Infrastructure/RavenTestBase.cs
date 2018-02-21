@@ -13,12 +13,14 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -546,6 +548,33 @@ namespace FastTests
                 }
             }
             return clientCertificate;
+        }
+
+        protected IDisposable RestoreDatabase(IDocumentStore store, RestoreBackupConfiguration config, TimeSpan? timeout = null)
+        {
+            var restoreOperation = new RestoreBackupOperation(config);
+
+            var operation = store.Maintenance.Server.Send(restoreOperation);
+            operation.WaitForCompletion(timeout ?? TimeSpan.FromSeconds(30));
+
+            return EnsureDatabaseDeletion(config.DatabaseName, store);
+        }
+
+        protected IDisposable EnsureDatabaseDeletion(string databaseToDelete, IDocumentStore store)
+        {
+            return new DisposableAction(() =>
+            {
+                try
+                {
+                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseToDelete, hardDelete: true));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Failed to delete '{databaseToDelete}' database. Exception: " + e);
+
+                    // do not throw to not hide an exception that could be thrown in a test
+                }
+            });
         }
 
         protected string SetupServerAuthentication(

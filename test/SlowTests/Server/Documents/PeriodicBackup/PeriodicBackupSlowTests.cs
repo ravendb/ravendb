@@ -465,21 +465,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
-                const string databaseName = "restored_database";
-                var restoreConfiguration = new RestoreBackupConfiguration
+                string databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
-                };
-                var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                using (var session = store.OpenAsyncSession(databaseName))
+                }))
                 {
-                    var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
-                    Assert.True(users.Any(x => x.Value.Name == "oren"));
-                    Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                    }
                 }
             }
         }
@@ -544,25 +543,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, TimeSpan.FromSeconds(15));
 
                 // restore the database with a different name
-                const string restoredDatabaseName = "restored_database_snapshot";
-                var restoreConfiguration = new RestoreBackupConfiguration
+                string restoredDatabaseName = $"restored_database_snapshot-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
                     BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
-                };
-                var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
-                var restoreResult = store.Maintenance.Server.Send(restoreBackupTask);
-                restoreResult.WaitForCompletion(TimeSpan.FromSeconds(30));
-
-                using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                }))
                 {
-                    var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
-                    Assert.True(users.Any(x => x.Value.Name == "oren"));
-                    Assert.True(users.Any(x => x.Value.Name == "ayende"));
-                }
+                    using (var session = store.OpenAsyncSession(restoredDatabaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
+                    }
 
-                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
-                Assert.Equal(2, stats.CountOfIndexes);
+                    var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfIndexes);
+                }
             }
         }
 
