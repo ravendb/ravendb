@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Sparrow.Logging;
 using Sparrow.Platform.Posix;
 
@@ -379,6 +380,8 @@ namespace Sparrow.LowMemory
             return query_disk_extents.Extents[0].DiskNumber;
         }
 
+        private static readonly Regex _regExRemoveNumbers = new System.Text.RegularExpressions.Regex(@"\d+$");
+        
         public static string PosixIsSwappingOnHddInsteadOfSsd()
         {
             try
@@ -394,8 +397,7 @@ namespace Sparrow.LowMemory
                         continue; // we do not check swap file, only partitions
 
                     // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
-                    var reg = new System.Text.RegularExpressions.Regex(@"\d+$");
-                    var disk = reg.Replace(path.deviceName[i], "").Replace("/dev/", "");
+                    var disk = _regExRemoveNumbers.Replace(path.deviceName[i], "").Replace("/dev/", "");
                     var filename = $"/sys/block/{disk}/queue/rotational";
                     var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
 
