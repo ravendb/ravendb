@@ -16,6 +16,34 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void MetadataIsAvailableOnBeforeStoreEvent()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeStore += (sender, args) =>
+                    {
+                        args.DocumentMetadata["Value"] = "a";
+                    };
+
+                    session.Store(new Document
+                    {
+                        Id = "my-id/123"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var s = session.Load<Document>("my-id/123");
+                    Assert.Equal("a", session.Advanced.GetMetadataFor(s)["Value"]);
+                }
+            }
+        }
+
+        [Fact]
         public void QueryIdStartsWithAndQueryOptimizerGeneratedIndexesDisabled_ShouldBeAbleToQuery()
         {
             Options options = new Options
