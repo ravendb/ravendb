@@ -381,21 +381,24 @@ namespace Sparrow.LowMemory
 
         public static string PosixIsSwappingOnHddInsteadOfSsd()
         {
+            try
             {
                 var path = KernelVirtualFileSystemUtils.ReadSwapInformationFromSwapsFile();
-                if (path == null) // on error return as if no swap problem
+                if (path.deviceName == null) // on error return as if no swap problem
                     return null;
 
                 string foundRotationalDiskDrive = null;
-                foreach (string partition in path)
+                for (int i = 0; i < path.deviceName.Length; i++)
                 {
+                    if (path.isDeviceSwapFile[i])
+                        continue; // we do not check swap file, only partitions
+
                     // remove numbers at end of string (i.e.: /dev/sda5 ==> sda)
-                    var reg = new System.Text.RegularExpressions.Regex(@"\d+$"); // we do not check swap file, only partitions
-                    var disk = reg.Replace(partition, "").Replace("/dev/", "");
+                    var reg = new System.Text.RegularExpressions.Regex(@"\d+$");
+                    var disk = reg.Replace(path.deviceName[i], "").Replace("/dev/", "");
                     var filename = $"/sys/block/{disk}/queue/rotational";
                     var isHdd = KernelVirtualFileSystemUtils.ReadNumberFromFile(filename);
-                    
-                    
+
                     if (isHdd == -1)
                         return null;
                     if (isHdd == 1)
@@ -426,6 +429,11 @@ namespace Sparrow.LowMemory
                 }
 
                 return hddSwapsInsteadOfSsd;
+            }
+            catch (Exception ex)
+            {
+                Log.Info("Error while trying to determine if hdd swaps instead of ssd on linux, ignoring this check and assuming no hddswap", ex);
+                return null;
             }
         }
     }
