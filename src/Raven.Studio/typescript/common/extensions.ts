@@ -22,6 +22,8 @@ class extensions {
         if (!url) {
             return null;
         }
+        
+        url = _.trim(url);
 
         const urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
         if (!urlRegex.test(url)) {
