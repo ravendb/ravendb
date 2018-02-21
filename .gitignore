@@ -96,7 +96,6 @@ src/Raven.Studio/typings/globals
 /src/Raven.Studio/wwwroot/Content/**/*.css
 /src/Raven.Studio/wwwroot/Content_old/awesome-bootstrap-checkbox.css
 /src/Raven.Studio/wwwroot/lib
-/src/Raven.Studio/package-lock.json
 
 test/FastTests/Databases/
 /test/Tryouts/Logs
