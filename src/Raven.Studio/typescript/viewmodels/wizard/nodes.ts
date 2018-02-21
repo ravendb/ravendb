@@ -8,6 +8,8 @@ import ipEntry = require("models/wizard/ipEntry");
 class nodes extends setupStep {
 
     currentStep: number;
+    
+    remoteNodeIpOptions = ko.observableArray<string>(['0.0.0.0']);
 
     confirmation = ko.observable<boolean>(false);
     confirmationValidationGroup = ko.validatedObservable({

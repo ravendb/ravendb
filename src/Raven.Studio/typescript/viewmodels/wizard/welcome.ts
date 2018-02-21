@@ -16,7 +16,7 @@ class welcome extends setupStep {
                 const ipV4 = _.filter(localIpsResult[0], (ip: string) => _.split(ip,  '.').length === 4);
                 const ipV6 = _.difference(localIpsResult[0],  ipV4);
                
-                this.model.localIps(_.uniq(_.concat(ipV4, ipV6)));
+                this.model.localIps(_.uniq(_.concat(["0.0.0.0"], ipV4, ipV6)));
                 
                 // Remove localhost IPs if running on Docker
                 if (setupParamsResult[0].IsDocker) {
