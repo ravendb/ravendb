@@ -37,6 +37,10 @@ namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, GenericPerformanceTestRequest> GenericPerformanceTestRequest = GenerateJsonDeserializationRoutine<GenericPerformanceTestRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, BatchPerformanceTestRequest> BatchPerformanceTestRequest = GenerateJsonDeserializationRoutine<BatchPerformanceTestRequest>();
+
         public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader = GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatusReport> DatabaseStatusReport = GenerateJsonDeserializationRoutine<DatabaseStatusReport>();

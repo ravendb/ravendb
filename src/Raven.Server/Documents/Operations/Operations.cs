@@ -360,6 +360,9 @@ namespace Raven.Server.Documents.Operations
             [Description("Update by index")]
             UpdateByIndex,
 
+            [Description("Storage I/O Test")]
+            IOTest,
+
             [Description("Delete by index")]
             DeleteByIndex,
 
