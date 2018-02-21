@@ -3,15 +3,22 @@ import database = require("models/resources/database");
 import connectionStringModel = require("models/database/settings/connectionStringModel");
 import saveConnectionStringCommand = require("commands/database/settings/saveConnectionStringCommand");
 import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
+import jsonUtil = require("common/jsonUtil");
 
 class discoveryUrl {
     discoveryUrlName = ko.observable<string>();
     validationGroup: KnockoutValidationGroup;
     
+    dirtyFlag: () => DirtyFlag;
+    
     constructor(urlName: string) {      
 
         this.discoveryUrlName(urlName);
         this.initValidation();
+        
+        this.dirtyFlag = new ko.DirtyFlag([           
+            this.discoveryUrlName,
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     initValidation() {
@@ -34,11 +41,33 @@ class connectionStringRavenEtlModel extends connectionStringModel {
 
     validationGroup: KnockoutValidationGroup;
     
+    dirtyFlag: () => DirtyFlag;
+    
     constructor(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString, isNew: boolean, tasks: { taskName: string; taskId: number }[]) {
         super(isNew, tasks);
         
         this.update(dto);       
-        this.initValidation();      
+        this.initValidation(); 
+        
+        const urlsCount = ko.pureComputed(() => this.topologyDiscoveryUrls().length);
+        const urlsAreDirty = ko.pureComputed(() => {
+            let anyDirty = false;
+            
+            this.topologyDiscoveryUrls().forEach(url => {
+                if (url.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                }
+            });
+           
+            return anyDirty;
+        });
+        
+        this.dirtyFlag = new ko.DirtyFlag([           
+            this.database,
+            this.connectionStringName,
+            urlsCount,
+            urlsAreDirty
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }    
 
     update(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString) {
@@ -101,7 +130,9 @@ class connectionStringRavenEtlModel extends connectionStringModel {
 
     addDiscoveryUrlWithBlink() { 
         if ( !_.find(this.topologyDiscoveryUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {
-            this.topologyDiscoveryUrls.unshift(new discoveryUrl(this.inputUrl().discoveryUrlName()));
+            const newUrl = new discoveryUrl(this.inputUrl().discoveryUrlName());
+            newUrl.dirtyFlag().forceDirty();
+            this.topologyDiscoveryUrls.unshift(newUrl);
             this.inputUrl().discoveryUrlName("");
 
             $(".collection-list li").first().addClass("blink-style");
