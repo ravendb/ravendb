@@ -51,6 +51,8 @@ namespace Raven.Server.Documents.Indexes
 
         public SemaphoreSlim StoppedConcurrentIndexBatches { get; }
 
+        internal Action<(string IndexName, bool DidWork)> IndexBatchCompleted;
+
         public IndexStore(DocumentDatabase documentDatabase, ServerStore serverStore)
         {
             _documentDatabase = documentDatabase;
