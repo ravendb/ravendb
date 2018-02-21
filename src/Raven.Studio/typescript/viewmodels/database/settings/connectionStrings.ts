@@ -33,7 +33,20 @@ class connectionStrings extends viewModelBase {
 
         this.initObservables();
         this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDelete", "isConnectionStringInUse", "onTestConnectionRaven");
-        this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtlConnectionString, this.editedSqlEtlConnectionString], false); 
+        const currenlyEditedObjectIsDirty = ko.pureComputed(() => {
+            const ravenEtl = this.editedRavenEtlConnectionString();
+            if (ravenEtl) {
+                return ravenEtl.dirtyFlag().isDirty();
+            }
+            
+            const sqlEtl = this.editedSqlEtlConnectionString();
+            if (sqlEtl) {
+                return sqlEtl.dirtyFlag().isDirty();
+            }
+            
+            return false;
+        });
+        this.dirtyFlag = new ko.DirtyFlag([currenlyEditedObjectIsDirty], false); 
     }
     
     private initObservables() {
