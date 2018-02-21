@@ -37,10 +37,11 @@ namespace Raven.Bundles.Replication.Responders
 		public IEnumerable<AbstractDocumentReplicationConflictResolver> ReplicationConflictResolvers { get; set; }
 
 
+        private readonly string EmptyEtagString = Etag.Empty.ToString();
+        private const int PulseThreshold = 512;
+
 		public override void Respond(IHttpContext context)
 		{
-			const int PulseThreshold = 512;
-
 			var src = context.Request.QueryString["from"];
 			if (string.IsNullOrEmpty(src))
 			{
@@ -60,50 +61,47 @@ namespace Raven.Bundles.Replication.Responders
 
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				IDisposable documentLock = null;
+                string lastEtag = EmptyEtagString;
 
-				try
-				{
-					Database.TransactionalStorage.Batch(actions =>
-					{
-						string lastEtag = Etag.Empty.ToString();
-						for (var i = 0; i < array.Length; i++)
-						{
-							if (documentLock == null)
-								documentLock = Database.DocumentLock.Lock();
+                var position = 0;
+                while (position < array.Length)
+                {
+                    // save documents in batches
+                    using (Database.DocumentLock.Lock())
+                    {
+                        Database.TransactionalStorage.Batch(actions =>
+                        {
+                            var count = 0;
+                            while (count < PulseThreshold && position < array.Length)
+                            {
+                                var document = (RavenJObject)array[position];
+                                var metadata = document.Value<RavenJObject>("@metadata");
+                                if (metadata[Constants.RavenReplicationSource] == null)
+                                {
+                                    // not sure why, old document from when the user didn't have replication
+                                    // that we suddenly decided to replicate, choose the source for that
+                                    metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
+                                }
+                                lastEtag = metadata.Value<string>("@etag");
+                                var id = metadata.Value<string>("@id");
+                                document.Remove("@metadata");
 
-							var document = (RavenJObject)array[i];
-							var metadata = document.Value<RavenJObject>("@metadata");
-							if (metadata[Constants.RavenReplicationSource] == null)
-							{
-								// not sure why, old document from when the user didn't have replication
-								// that we suddenly decided to replicate, choose the source for that
-								metadata[Constants.RavenReplicationSource] = RavenJToken.FromObject(src);
-							}
-							lastEtag = metadata.Value<string>("@etag");
-							var id = metadata.Value<string>("@id");
-							document.Remove("@metadata");
+                                ReplicateDocument(actions, id, metadata, document, src);
+                                count++;
+                                position++;
+                            }
+                        });
+                    }
+                }
 
-							ReplicateDocument(actions, id, metadata, document, src);
-
-							if (i <= 0 || i % PulseThreshold != 0)
-								continue;
-
-							SaveReplicationSource(context, src, lastEtag);
-							actions.General.PulseTransaction();
-
-							documentLock.Dispose();
-							documentLock = null;
-						}
-
-						SaveReplicationSource(context, src, lastEtag);
-					});
-				}
-				finally
-				{
-					if (documentLock != null)
-						documentLock.Dispose();
-				}
+                using (Database.DocumentLock.Lock())
+                {
+                    // save the last etag
+                    Database.TransactionalStorage.Batch(actions =>
+                    {
+                        SaveReplicationSource(context, src, lastEtag);
+                    });
+                }
 			}
 		}
 

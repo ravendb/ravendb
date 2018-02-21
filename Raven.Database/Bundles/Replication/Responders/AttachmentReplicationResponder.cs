@@ -79,16 +79,20 @@ namespace Raven.Bundles.Replication.Responders
 					Guid serverInstanceId;
 					if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
 						serverInstanceId = Database.TransactionalStorage.Id;
-					Database.Put(replicationDocKey, null,
-								 RavenJObject.FromObject(new SourceReplicationInformation
-								 {
-									 Source = src,
-									 LastDocumentEtag = lastDocId,
-									 LastAttachmentEtag = lastEtag,
-									 ServerInstanceId = serverInstanceId
-								 }),
-								 new RavenJObject(), null);
-				});
+
+                    using (Database.DocumentLock.Lock())
+                    {
+                        Database.Put(replicationDocKey, null,
+                                 RavenJObject.FromObject(new SourceReplicationInformation
+                                 {
+                                     Source = src,
+                                     LastDocumentEtag = lastDocId,
+                                     LastAttachmentEtag = lastEtag,
+                                     ServerInstanceId = serverInstanceId
+                                 }),
+                                 new RavenJObject(), null);
+                    }
+                });
 			}
 		}
 
