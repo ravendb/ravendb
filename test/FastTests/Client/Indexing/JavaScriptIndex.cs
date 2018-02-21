@@ -1,16 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config;
 using Xunit;
 
 namespace FastTests.Client.Indexing
 {
-    public class JavaScriptIndex:RavenTestBase
+    public class JavaScriptIndex : RavenTestBase
     {
+        [Fact]
+        public void CreatingJavaScriptIndexWithFeaturesAvailabilitySetToStableWillThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = null; // by default we should have Stable features
+                }
+            }))
+            {
+                var e = Assert.Throws<IndexCreationException>(() => store.ExecuteIndex(new UsersByName()));
+                Assert.Contains("Database does not support 'JavaScript' indexes. Please enable experimental features by changing 'Features.Availability' configuration value to 'Experimental'.", e.Message);
+            }
+        }
 
         [Fact]
         public void CanUseJavaScriptIndex()
@@ -20,12 +33,12 @@ namespace FastTests.Client.Indexing
                 store.ExecuteIndex(new UsersByName());
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{Name = "Brendan Eich" , IsActive = true});
+                    session.Store(new User { Name = "Brendan Eich", IsActive = true });
                     session.SaveChanges();
                     WaitForIndexing(store);
                     session.Query<User>("UsersByName").Single(x => x.Name == "Brendan Eich");
                 }
-                
+
             }
         }
 
@@ -38,7 +51,7 @@ namespace FastTests.Client.Indexing
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Brendan Eich", IsActive = true });
-                    session.Store(new Product {Name = "Shampoo", IsAvailable = true});
+                    session.Store(new Product { Name = "Shampoo", IsAvailable = true });
                     session.SaveChanges();
                     WaitForIndexing(store);
                     session.Query<User>("UsersAndProductsByName").Single(x => x.Name == "Brendan Eich");
@@ -55,7 +68,7 @@ namespace FastTests.Client.Indexing
                 using (var session = store.OpenSession())
                 {
                     var productId = "Products/1";
-                    session.Store(new User { Name = "Brendan Eich", IsActive = true,Product = productId });
+                    session.Store(new User { Name = "Brendan Eich", IsActive = true, Product = productId });
                     session.Store(new Product { Name = "Shampoo", IsAvailable = true }, productId);
                     session.SaveChanges();
                     WaitForIndexing(store);
@@ -111,9 +124,9 @@ namespace FastTests.Client.Indexing
                     {
                         @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                     },
-                    Type = IndexType.JavascriptMap,
+                    Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,                    
+                    Priority = IndexPriority.Normal,
                     Configuration = new IndexConfiguration()
                 };
             }
@@ -131,7 +144,7 @@ namespace FastTests.Client.Indexing
                         @"map('Users', function (u){ return { Name: u.Name, Count: 1};})",
                         @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                     },
-                    Type = IndexType.JavascriptMap,
+                    Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
                     Configuration = new IndexConfiguration()
@@ -150,7 +163,7 @@ namespace FastTests.Client.Indexing
                     {
                         @"map('Users', function (u){ return { Name: u.Name, Count: 1, Product: load(u.Product,'Products').Name};})",
                     },
-                    Type = IndexType.JavascriptMap,
+                    Type = IndexType.JavaScriptMap,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
                     Configuration = new IndexConfiguration()
@@ -171,7 +184,7 @@ namespace FastTests.Client.Indexing
                         @"map('Products', function (p){ return { Name: p.Name, Count: 1};})"
                     },
                     Reduce = @"groupBy(x => x.Name).aggregate((key,values) => {return {Name: key,Count: values.reduce((total, val) => val.Count + total,0)};})",
-                    Type = IndexType.JavascriptMapReduce,
+                    Type = IndexType.JavaScriptMapReduce,
                     LockMode = IndexLockMode.Unlock,
                     Priority = IndexPriority.Normal,
                     Configuration = new IndexConfiguration()

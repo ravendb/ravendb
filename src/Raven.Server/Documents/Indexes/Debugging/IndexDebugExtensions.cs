@@ -428,10 +428,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
             switch (self.Type)
             {
                 case IndexType.Map:
-                case IndexType.JavascriptMap:
+                case IndexType.JavaScriptMap:
                     return ((MapIndex)self)._compiled.OutputFields;
                 case IndexType.MapReduce:
-                case IndexType.JavascriptMapReduce:
+                case IndexType.JavaScriptMapReduce:
                     return ((MapReduceIndex)self)._compiled.OutputFields;
                 case IndexType.AutoMap:
                     return ((AutoMapIndex)self).Definition.IndexFields.Keys.ToArray();

@@ -12,6 +12,8 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Configuration;
@@ -290,11 +292,11 @@ namespace Raven.Server.Documents.Indexes
             switch (definition.Type)
             {
                 case IndexType.Map:
-                case IndexType.JavascriptMap:
+                case IndexType.JavaScriptMap:
                     index = MapIndex.CreateNew(definition, _documentDatabase);
                     break;
                 case IndexType.MapReduce:
-                case IndexType.JavascriptMapReduce:
+                case IndexType.JavaScriptMapReduce:
                     index = MapReduceIndex.CreateNew(definition, _documentDatabase);
                     break;
                 default:
@@ -354,6 +356,10 @@ namespace Raven.Server.Documents.Indexes
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
+
+            if (_documentDatabase.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Stable && definition.Type.IsJavaScript())
+                throw new IndexCreationException($"Could not create index '{definition.Name}'. Database does not support 'JavaScript' indexes. Please enable experimental features by changing '{RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)}' configuration value to '{nameof(FeaturesAvailability.Experimental)}'.");
+
             ValidateIndexName(definition.Name, isStatic: true);
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
@@ -805,11 +811,11 @@ namespace Raven.Server.Documents.Indexes
                     switch (staticIndexDefinition.Type)
                     {
                         case IndexType.Map:
-                        case IndexType.JavascriptMap:
+                        case IndexType.JavaScriptMap:
                             index = MapIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                             break;
                         case IndexType.MapReduce:
-                        case IndexType.JavascriptMapReduce:
+                        case IndexType.JavaScriptMapReduce:
                             index = MapReduceIndex.CreateNew(staticIndexDefinition, _documentDatabase);
                             break;
                         default:

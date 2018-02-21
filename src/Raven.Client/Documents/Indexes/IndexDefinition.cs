@@ -345,9 +345,9 @@ namespace Raven.Client.Documents.Indexes
                 return IndexType.MapReduce;
             }
             if (string.IsNullOrWhiteSpace(Reduce))
-                return IndexType.JavascriptMap;
+                return IndexType.JavaScriptMap;
 
-            return IndexType.JavascriptMapReduce;
+            return IndexType.JavaScriptMapReduce;
         }
 
 #if FEATURE_TEST_INDEX

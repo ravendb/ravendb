@@ -58,8 +58,8 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexType.MapReduce:
                 case IndexType.Faulty:
                     return IndexCompiler.Compile(definition);
-                case IndexType.JavascriptMap:
-                case IndexType.JavascriptMapReduce:
+                case IndexType.JavaScriptMap:
+                case IndexType.JavaScriptMapReduce:
                     return new JavaScriptIndex(definition);                
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
