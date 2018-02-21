@@ -12,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_4041 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void streaming_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -48,7 +48,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public async Task streaming_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void streaming_query_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public async Task streaming_query_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -160,7 +160,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -185,7 +185,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
@@ -193,7 +193,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -219,7 +219,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
@@ -227,7 +227,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void load_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -245,14 +245,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var customer = session.Load<Customer>("customers/1");
+                    var customer = session.Load<Customer>("customers/1-A");
                     Assert.NotNull(customer);
                     Assert.NotNull(customer.Id);
                     Assert.Equal(customer.Name, "John");
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
@@ -260,7 +260,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public async Task load_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -278,14 +278,14 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var customer = await session.LoadAsync<Customer>("customers/1");
+                    var customer = await session.LoadAsync<Customer>("customers/1-A");
                     Assert.NotNull(customer);
                     Assert.NotNull(customer.Id);
                     Assert.Equal(customer.Name, "John");
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
@@ -293,7 +293,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void load_with_big_key_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -312,7 +312,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var customer = commands.Get("customers/1");
+                    var customer = commands.Get(id);
 
                     Assert.NotNull(customer);
 
@@ -336,7 +336,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public async Task load_with_big_key_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -355,7 +355,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var customer = await commands.GetAsync("customers/1");
+                    var customer = await commands.GetAsync(id);
 
                     Assert.NotNull(customer);
 
@@ -379,7 +379,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void multi_load_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -398,7 +398,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var customers = session.Load<Customer>(new List<string> { "customers/1", "customers/2" });
+                    var customers = session.Load<Customer>(new List<string> { "customers/1-A", "customers/2-A" });
 
                     foreach (var customer in customers.Values)
                     {
@@ -408,7 +408,7 @@ namespace SlowTests.Issues
                         Assert.Equal(customer.Address, "Tel Aviv");
 
                         var metadata = session.Advanced.GetMetadataFor(customer);
-                        Assert.NotNull(metadata["@etag"]);
+                        Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                         Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                         Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
@@ -417,7 +417,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void load_lazily_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -435,7 +435,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var customerLazy = session.Advanced.Lazily.Load<Customer>("customers/1");
+                    var customerLazy = session.Advanced.Lazily.Load<Customer>("customers/1-A");
                     var customer = customerLazy.Value;
                     Assert.NotNull(customer);
                     Assert.NotNull(customer.Id);
@@ -443,7 +443,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
@@ -451,7 +451,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [Fact]
         public void load_lazily_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -469,7 +469,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var customerLazy = session.Advanced.Lazily.LoadAsync<Customer>("customers/1");
+                    var customerLazy = session.Advanced.Lazily.LoadAsync<Customer>("customers/1-A");
                     var customer = customerLazy.Value.Result;
                     Assert.NotNull(customer);
                     Assert.NotNull(customer.Id);
@@ -477,7 +477,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customer.Address, "Tel Aviv");
 
                     var metadata = session.Advanced.GetMetadataFor(customer);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.RavenClrType]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.Collection]);
                     Assert.NotNull(metadata[Constants.Documents.Metadata.LastModified]);
