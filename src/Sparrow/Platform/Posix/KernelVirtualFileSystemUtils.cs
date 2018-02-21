@@ -64,7 +64,7 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-        public static (string[] deviceName, bool[] isDeviceSwapFile) ReadSwapInformationFromSwapsFile()
+        public static (string[] DeviceName, bool[] IsDeviceSwapFile) ReadSwapInformationFromSwapsFile()
         {
             // /proc/swaps output format :
             //              Filename        Type            Size            Used    Priority
