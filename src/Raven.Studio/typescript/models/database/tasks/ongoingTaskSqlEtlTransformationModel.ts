@@ -56,7 +56,8 @@ class ongoingTaskSqlEtlTransformationModel {
 
     private initValidation() {
         this.script.extend({
-            required: true
+            required: true,
+            aceValidation: true
         });
         
         this.collection.extend({

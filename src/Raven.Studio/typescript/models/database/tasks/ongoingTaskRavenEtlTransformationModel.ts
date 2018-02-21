@@ -81,9 +81,14 @@ class ongoingTaskEtlTransformationModel {
                 }
             ]
         });
+        
+        this.script.extend({
+            aceValidation: true
+        });
 
         this.validationGroup = ko.validatedObservable({
-            transformScriptCollections: this.transformScriptCollections
+            transformScriptCollections: this.transformScriptCollections,
+            script: this.script
         });
     }
 
