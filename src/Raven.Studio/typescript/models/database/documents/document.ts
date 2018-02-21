@@ -89,7 +89,7 @@ class document implements documentBase {
             return id.substring(0, 1).toUpperCase() + id.substring(1, separatorIndex);
         }
 
-        return id;
+        return null;
     }
 }
 
