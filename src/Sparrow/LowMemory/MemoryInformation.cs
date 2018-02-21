@@ -78,17 +78,27 @@ namespace Sparrow.LowMemory
             public ulong ullAvailExtendedVirtual;
         }
 
-        private static bool IsRunningOnDocker =>
-          string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER")) == false;
+        public static bool DisableEarlyOutOfMemoryCheck =
+            string.Equals(Environment.GetEnvironmentVariable("RAVEN_DISABLE_EARLY_OOM"), "true", StringComparison.OrdinalIgnoreCase);
+
+        public static bool EnableEarlyOutOfMemoryCheck =
+           string.Equals(Environment.GetEnvironmentVariable("RAVEN_ENABLE_EARLY_OOM"), "true", StringComparison.OrdinalIgnoreCase);
 
         public static bool EnableEarlyOutOfMemoryChecks = false; // we don't want this to run on the clients
 
         public static void AssertNotAboutToRunOutOfMemory(float minimumFreeCommittedMemory)
         {
-            if (IsRunningOnDocker || EnableEarlyOutOfMemoryChecks == false)
+            if (EnableEarlyOutOfMemoryChecks == false)
                 return;
 
-            // we are about to create a new thread, might not always be a good idea:
+            if (DisableEarlyOutOfMemoryCheck)
+                return;
+
+            if (PlatformDetails.RunningOnPosix &&       // we only _need_ this check on Windows
+                EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
+                return;
+
+            // if we are about to create a new thread, might not always be a good idea:
             // https://ayende.com/blog/181537-B/production-test-run-overburdened-and-under-provisioned
             // https://ayende.com/blog/181569-A/threadpool-vs-pool-thread
 
@@ -121,8 +131,7 @@ namespace Sparrow.LowMemory
 
         private static void ThrowInsufficentMemory(MemoryInfoResult memInfo)
         {
-            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}" +
-                $" Will not create a new thread in this situation because it may result in a stack overflow error when trying to allocate stack space but there isn't sufficient memory for that.");
+            throw new EarlyOutOfMemoryException($"The amount of available memory to commit on the system is low. Commit charge: {memInfo.CurrentCommitCharge} / {memInfo.TotalCommittableMemory}. Memory: {memInfo.TotalPhysicalMemory - memInfo.AvailableMemory} / {memInfo.TotalPhysicalMemory}");
         }
 
         [return: MarshalAs(UnmanagedType.Bool)]
