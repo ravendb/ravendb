@@ -62,6 +62,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool ThrowIfAnyIndexCannotBeOpened { get; set; }
 
+        [Description("Indicates what set of features should be available")]
+        [DefaultValue(FeaturesAvailability.Stable)]
+        [ConfigurationEntry("Features.Availability", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public FeaturesAvailability FeaturesAvailability { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
             base.Initialize(settings, serverWideSettings, type, resourceName);
@@ -210,5 +215,11 @@ namespace Raven.Server.Config.Categories
             if (UrlUtil.IsZeros(parsedUri.Host))
                 throw new ArgumentException($"Invalid host value in {optName} configuration option: {parsedUri.Host}");
         }
+    }
+
+    public enum FeaturesAvailability
+    {
+        Stable,
+        Experimental
     }
 }
