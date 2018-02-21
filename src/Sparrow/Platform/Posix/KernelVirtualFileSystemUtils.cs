@@ -64,7 +64,7 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-        public static string[] ReadSwapInformationFromSwapsFile()
+        public static (string[] DeviceName, bool[] IsDeviceSwapFile) ReadSwapInformationFromSwapsFile()
         {
             // /proc/swaps output format :
             //              Filename        Type            Size            Used    Priority
@@ -84,7 +84,7 @@ namespace Sparrow.Platform.Posix
                 {
                     if (IsOldFileAlert.TryAdd(filename) && Logger.IsOperationsEnabled)
                         Logger.Operations($"no swap defined on this system according to {filename}");
-                    return null;
+                    return (null, null);
                 }
 
                 if (items[0].Equals("Filename") == false ||
@@ -95,35 +95,37 @@ namespace Sparrow.Platform.Posix
                 {
                     if (IsOldFileAlert.TryAdd(filename) && Logger.IsOperationsEnabled)
                         Logger.Operations($"Unrecognized header at {filename}, cannot read swap information");
-                    return null;
+                    return (null, null);
                 }
+
 
                 if (items.Length % 5 != 0)
                 {
                     if (IsOldFileAlert.TryAdd(filename) && Logger.IsOperationsEnabled)
                         Logger.Operations($"Invalid number of fields at {filename}, cannot read swap information");
-                    return null;
+                    return (null, null);
                 }
 
                 var numberOfSwaps = items.Length / 5 - 1; // "-1" ignore header;
                 if (numberOfSwaps < 1)
-                    return null; // no swaps defined
+                    return (null, null); // no swaps defined
 
-                var path = new string[numberOfSwaps];
+                var swapDevices = (new string[numberOfSwaps], new bool[numberOfSwaps]);                
 
                 int j = 0;
                 for (var i = 5; i < items.Length; i += 5) // start from "5" - skip header
                 {
-                    path[j++] = items[i];
+                    swapDevices.Item1[j] = items[i];
+                    swapDevices.Item2[j++] = items[i + 1].Contains("file");
                 }
 
-                return path;
+                return swapDevices;
             }
             catch (Exception e)
             {
                 if (IsOldFileAlert.TryAdd(filename) && Logger.IsOperationsEnabled)
                     Logger.Operations($"Unable to read and parse '{filename}', cannot read swap information", e);
-                return null;
+                return (null, null);
             }
         }
 
