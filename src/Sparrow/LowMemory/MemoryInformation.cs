@@ -104,13 +104,13 @@ namespace Sparrow.LowMemory
 
             var memInfo = GetMemoryInfo();
             Size overage;
-            if(memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
+            if (memInfo.CurrentCommitCharge > memInfo.TotalCommittableMemory)
             {
                 // this can happen on containers, since we get this information from the host, and
                 // sometimes this kind of stat is shared, see: 
                 // https://fabiokung.com/2014/03/13/memory-inside-linux-containers/
 
-                overage = 
+                overage =
                     (memInfo.TotalPhysicalMemory * minimumFreeCommittedMemory) +  //extra to keep free
                     (memInfo.TotalPhysicalMemory - memInfo.AvailableMemory);      //actually in use now
                 if (overage >= memInfo.TotalPhysicalMemory)
@@ -145,10 +145,10 @@ namespace Sparrow.LowMemory
         public static long GetRssMemoryUsage(int processId)
         {
             var path = $"/proc/{processId}/status";
-            
+
             try
             {
-                using (var bufferedReader =new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
+                using (var bufferedReader = new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
                     var vmrss = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(VmRss);
@@ -158,7 +158,7 @@ namespace Sparrow.LowMemory
             catch (Exception ex)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read value from {path}",ex);
+                    Logger.Info($"Failed to read value from {path}", ex);
                 return -1;
             }
         }
@@ -186,7 +186,7 @@ namespace Sparrow.LowMemory
             catch (Exception ex)
             {
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to read value from {path}",ex);
+                    Logger.Info($"Failed to read value from {path}", ex);
 
                 return (-1, -1, -1);
             }
@@ -212,192 +212,12 @@ namespace Sparrow.LowMemory
             try
             {
                 if (PlatformDetails.RunningOnPosix == false)
-                {
-                    // windows
-                    var memoryStatus = new MemoryStatusEx
-                    {
-                        dwLength = (uint)sizeof(MemoryStatusEx)
-                    };
+                    return GetMemoryInfoWindows();
 
-                    if (GlobalMemoryStatusEx(&memoryStatus) == false)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
-                        return FailedResult;
-                    }
+                if (PlatformDetails.RunningOnMacOsx)
+                    return GetMemoryInfoMacOs();
 
-                    // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function 
-                    // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
-                    // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA. 
-                    // Malformed SMBIOS data may indicate a problem with the user's computer.
-                    var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
-
-                    SetMemoryRecords((long)memoryStatus.ullAvailPhys);
-                    
-                    return new MemoryInfoResult
-                    {
-                        TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
-                        CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
-                        AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
-                        TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                        InstalledMemory = fetchedInstalledMemory ? 
-                            new Size(installedMemoryInKb, SizeUnit.Kilobytes) : 
-                            new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
-                        MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
-                        {
-                            High = new MemoryInfoResult.MemoryUsageIntervals
-                            {
-                                LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
-                                LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
-                                SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
-                            },
-                            Low = new MemoryInfoResult.MemoryUsageIntervals
-                            {
-                                LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
-                                LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
-                                SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
-                            }
-                        }
-                    };
-                }
-
-                long availableRamInBytes;
-                long totalPhysicalMemoryInBytes;
-                long commitedMemoryInBytes;
-                long commitLimitInBytes;
-
-                if (PlatformDetails.RunningOnMacOsx == false)
-                {
-                    // linux
-                    int rc;
-                    ulong totalRamInBytes;
-                    if (PlatformDetails.Is32Bits == false)
-                    {
-                        var info = new sysinfo_t();
-                        rc = Syscall.sysinfo(ref info);
-                        totalRamInBytes = info.TotalRam;
-                    }
-                    else
-                    {
-                        var info = new sysinfo_t_32bit();
-                        rc = Syscall.sysinfo(ref info);
-                        totalRamInBytes = info.TotalRam;
-                    }
-                    if (rc != 0)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
-                        return FailedResult;
-                    }
-
-                    totalPhysicalMemoryInBytes = (long)totalRamInBytes;
-
-                    var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
-                    var cgroupMaxMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMaxMemoryUsage);
-                    var maxMemoryUsage = Math.Min(cgroupMemoryLimit, cgroupMaxMemoryUsage);
-
-                    if (maxMemoryUsage <= totalPhysicalMemoryInBytes)
-                    {
-                        // running in a container
-                        var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
-
-                        availableRamInBytes = maxMemoryUsage - cgroupMemoryUsage;
-                        totalPhysicalMemoryInBytes = maxMemoryUsage;
-                        commitedMemoryInBytes = cgroupMemoryUsage;
-
-                        //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-10492
-                        commitLimitInBytes = Math.Max(maxMemoryUsage, commitedMemoryInBytes);
-                    }
-                    else
-                    {
-                        var fromProcMemInfo = GetFromProcMemInfo();
-                        availableRamInBytes = fromProcMemInfo.MemAvailableInKb * 1024;
-                        commitedMemoryInBytes = fromProcMemInfo.CommitedInKb * 1024;
-                        commitLimitInBytes = totalPhysicalMemoryInBytes + fromProcMemInfo.SwapTotalInKb * 1024;
-                    }
-                }
-                else
-                {
-                    // macOS
-                    var mib = new[] {(int)TopLevelIdentifiers.CTL_HW, (int)CtkHwIdentifiers.HW_MEMSIZE};
-                    ulong physicalMemory = 0;
-                    var len = sizeof(ulong);
-
-                    if (macSyscall.sysctl(mib, 2, &physicalMemory, &len, null, UIntPtr.Zero) != 0)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failure when trying to read physical memory info from MacOS, error code was: " + Marshal.GetLastWin32Error());
-                        return FailedResult;
-                    }
-
-                    totalPhysicalMemoryInBytes = (long)physicalMemory;
-
-                    uint pageSize;
-                    var vmStats = new vm_statistics64();
-
-                    var machPort = macSyscall.mach_host_self();
-                    var count = sizeof(vm_statistics64) / sizeof(uint);
-
-                    if (macSyscall.host_page_size(machPort, &pageSize) != 0 ||
-                        macSyscall.host_statistics64(machPort, (int)Flavor.HOST_VM_INFO64, &vmStats, &count) != 0)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failure when trying to get vm_stats from MacOS, error code was: " + Marshal.GetLastWin32Error());
-                        return FailedResult;
-                    }
-
-                    // swap usage
-                    var swapu = new xsw_usage();
-                    len = sizeof(xsw_usage);
-                    mib = new[] { (int)TopLevelIdentifiers.CTL_VM, (int)CtlVmIdentifiers.VM_SWAPUSAGE };
-                    if (macSyscall.sysctl(mib, 2, &swapu, &len, null, UIntPtr.Zero) != 0)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failure when trying to read swap info from MacOS, error code was: " + Marshal.GetLastWin32Error());
-                        return FailedResult;
-                    }
-
-                    /* Free memory: This is RAM that's not being used.
-                     * Wired memory: Information in this memory can't be moved to the hard disk, so it must stay in RAM. The amount of Wired memory depends on the applications you are using.
-                     * Active memory: This information is currently in memory, and has been recently used.
-                     * Inactive memory: This information in memory is not actively being used, but was recently used. */
-                    availableRamInBytes = (vmStats.FreePagesCount + vmStats.InactivePagesCount) * pageSize;
-
-                    // there is no commited memory value in OSX,
-                    // this is an approximation: wired + active + swap used
-                    commitedMemoryInBytes = vmStats.WirePagesCount + vmStats.ActivePagesCount * pageSize + (long)swapu.xsu_used;
-
-                    // commit limit: physical memory + swap
-                    commitLimitInBytes = (long)(physicalMemory + swapu.xsu_total);
-                }
-
-                SetMemoryRecords(availableRamInBytes);
-                
-                var totalPhysicalMemory = new Size(totalPhysicalMemoryInBytes, SizeUnit.Bytes);
-                return new MemoryInfoResult
-                {
-                    TotalCommittableMemory = new Size(commitLimitInBytes, SizeUnit.Bytes),
-                    CurrentCommitCharge = new Size(commitedMemoryInBytes, SizeUnit.Bytes),
-
-                    AvailableMemory = new Size(availableRamInBytes, SizeUnit.Bytes),
-                    TotalPhysicalMemory = totalPhysicalMemory,
-                    InstalledMemory = totalPhysicalMemory,
-                    MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
-                    {
-                        High = new MemoryInfoResult.MemoryUsageIntervals
-                        {
-                            LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
-                            LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
-                            SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
-                        },
-                        Low = new MemoryInfoResult.MemoryUsageIntervals
-                        {
-                            LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
-                            LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
-                            SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
-                        }
-                    }
-                };
+                return GetMemoryInfoLinux();
             }
             catch (Exception e)
             {
@@ -406,6 +226,199 @@ namespace Sparrow.LowMemory
                 _failedToGetAvailablePhysicalMemory = true;
                 return FailedResult;
             }
+        }
+
+        private static unsafe MemoryInfoResult GetMemoryInfoLinux()
+        {
+            long availableRamInBytes;
+            long commitedMemoryInBytes;
+            long commitLimitInBytes;
+
+            int rc;
+            ulong totalRamInBytes;
+            if (PlatformDetails.Is32Bits == false)
+            {
+                var info = new sysinfo_t();
+                rc = Syscall.sysinfo(ref info);
+                totalRamInBytes = info.TotalRam;
+            }
+            else
+            {
+                var info = new sysinfo_t_32bit();
+                rc = Syscall.sysinfo(ref info);
+                totalRamInBytes = info.TotalRam;
+            }
+            if (rc != 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to read memory info from posix, error code was: " + Marshal.GetLastWin32Error());
+                return FailedResult;
+            }
+
+            var totalPhysicalMemoryInBytes = (long)totalRamInBytes;
+
+            var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
+            var cgroupMaxMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMaxMemoryUsage);
+            var maxMemoryUsage = Math.Min(cgroupMemoryLimit, cgroupMaxMemoryUsage);
+
+            if (maxMemoryUsage <= totalPhysicalMemoryInBytes)
+            {
+                // running in a container
+                var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
+
+                availableRamInBytes = maxMemoryUsage - cgroupMemoryUsage;
+                totalPhysicalMemoryInBytes = maxMemoryUsage;
+                commitedMemoryInBytes = cgroupMemoryUsage;
+
+                //TODO: http://issues.hibernatingrhinos.com/issue/RavenDB-10492
+                commitLimitInBytes = Math.Max(maxMemoryUsage, commitedMemoryInBytes);
+            }
+            else
+            {
+                var fromProcMemInfo = GetFromProcMemInfo();
+                availableRamInBytes = fromProcMemInfo.MemAvailableInKb * 1024;
+                commitedMemoryInBytes = fromProcMemInfo.CommitedInKb * 1024;
+                commitLimitInBytes = totalPhysicalMemoryInBytes + fromProcMemInfo.SwapTotalInKb * 1024;
+            }
+
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemoryInBytes, commitedMemoryInBytes, commitLimitInBytes);
+        }
+
+        private static unsafe MemoryInfoResult BuildPosixMemoryInfoResult(long availableRamInBytes, long totalPhysicalMemoryInBytes, long commitedMemoryInBytes, long commitLimitInBytes)
+        {
+            SetMemoryRecords(availableRamInBytes);
+
+            var totalPhysicalMemory = new Size(totalPhysicalMemoryInBytes, SizeUnit.Bytes);
+            return new MemoryInfoResult
+            {
+                TotalCommittableMemory = new Size(commitLimitInBytes, SizeUnit.Bytes),
+                CurrentCommitCharge = new Size(commitedMemoryInBytes, SizeUnit.Bytes),
+
+                AvailableMemory = new Size(availableRamInBytes, SizeUnit.Bytes),
+                TotalPhysicalMemory = totalPhysicalMemory,
+                InstalledMemory = totalPhysicalMemory,
+                MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
+                {
+                    High = new MemoryInfoResult.MemoryUsageIntervals
+                    {
+                        LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
+                        LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
+                        SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
+                    },
+                    Low = new MemoryInfoResult.MemoryUsageIntervals
+                    {
+                        LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
+                        LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
+                        SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
+                    }
+                }
+            };
+        }
+
+        private static unsafe MemoryInfoResult GetMemoryInfoMacOs()
+        {
+            var mib = new[] { (int)TopLevelIdentifiers.CTL_HW, (int)CtkHwIdentifiers.HW_MEMSIZE };
+            ulong physicalMemory = 0;
+            var len = sizeof(ulong);
+
+            if (macSyscall.sysctl(mib, 2, &physicalMemory, &len, null, UIntPtr.Zero) != 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to read physical memory info from MacOS, error code was: " + Marshal.GetLastWin32Error());
+                return FailedResult;
+            }
+
+            var totalPhysicalMemoryInBytes = (long)physicalMemory;
+
+            uint pageSize;
+            var vmStats = new vm_statistics64();
+
+            var machPort = macSyscall.mach_host_self();
+            var count = sizeof(vm_statistics64) / sizeof(uint);
+
+            if (macSyscall.host_page_size(machPort, &pageSize) != 0 ||
+                macSyscall.host_statistics64(machPort, (int)Flavor.HOST_VM_INFO64, &vmStats, &count) != 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to get vm_stats from MacOS, error code was: " + Marshal.GetLastWin32Error());
+                return FailedResult;
+            }
+
+            // swap usage
+            var swapu = new xsw_usage();
+            len = sizeof(xsw_usage);
+            mib = new[] { (int)TopLevelIdentifiers.CTL_VM, (int)CtlVmIdentifiers.VM_SWAPUSAGE };
+            if (macSyscall.sysctl(mib, 2, &swapu, &len, null, UIntPtr.Zero) != 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to read swap info from MacOS, error code was: " + Marshal.GetLastWin32Error());
+                return FailedResult;
+            }
+
+            /* Free memory: This is RAM that's not being used.
+             * Wired memory: Information in this memory can't be moved to the hard disk, so it must stay in RAM. The amount of Wired memory depends on the applications you are using.
+             * Active memory: This information is currently in memory, and has been recently used.
+             * Inactive memory: This information in memory is not actively being used, but was recently used. */
+            var availableRamInBytes = (vmStats.FreePagesCount + vmStats.InactivePagesCount) * pageSize;
+
+            // there is no commited memory value in OSX,
+            // this is an approximation: wired + active + swap used
+            var commitedMemoryInBytes = vmStats.WirePagesCount + vmStats.ActivePagesCount * pageSize + (long)swapu.xsu_used;
+
+            // commit limit: physical memory + swap
+            var commitLimitInBytes = (long)(physicalMemory + swapu.xsu_total);
+
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemoryInBytes, commitedMemoryInBytes, commitLimitInBytes);
+        }
+
+        private static unsafe MemoryInfoResult GetMemoryInfoWindows()
+        {
+            // windows
+            var memoryStatus = new MemoryStatusEx
+            {
+                dwLength = (uint)sizeof(MemoryStatusEx)
+            };
+
+            if (GlobalMemoryStatusEx(&memoryStatus) == false)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
+                return FailedResult;
+            }
+
+            // The amount of physical memory retrieved by the GetPhysicallyInstalledSystemMemory function 
+            // must be equal to or greater than the amount reported by the GlobalMemoryStatusEx function
+            // if it is less, the SMBIOS data is malformed and the function fails with ERROR_INVALID_DATA. 
+            // Malformed SMBIOS data may indicate a problem with the user's computer.
+            var fetchedInstalledMemory = GetPhysicallyInstalledSystemMemory(out var installedMemoryInKb);
+
+            SetMemoryRecords((long)memoryStatus.ullAvailPhys);
+
+            return new MemoryInfoResult
+            {
+                TotalCommittableMemory = new Size((long)memoryStatus.ullTotalPageFile, SizeUnit.Bytes),
+                CurrentCommitCharge = new Size((long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile), SizeUnit.Bytes),
+                AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
+                TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                InstalledMemory = fetchedInstalledMemory ?
+                    new Size(installedMemoryInKb, SizeUnit.Kilobytes) :
+                    new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
+                {
+                    High = new MemoryInfoResult.MemoryUsageIntervals
+                    {
+                        LastOneMinute = new Size(HighLastOneMinute, SizeUnit.Bytes),
+                        LastFiveMinutes = new Size(HighLastFiveMinutes, SizeUnit.Bytes),
+                        SinceStartup = new Size(HighSinceStartup, SizeUnit.Bytes)
+                    },
+                    Low = new MemoryInfoResult.MemoryUsageIntervals
+                    {
+                        LastOneMinute = new Size(LowLastOneMinute, SizeUnit.Bytes),
+                        LastFiveMinutes = new Size(LowLastFiveMinutes, SizeUnit.Bytes),
+                        SinceStartup = new Size(LowSinceStartup, SizeUnit.Bytes)
+                    }
+                }
+            };
         }
 
         public static (long WorkingSet, long TotalUnmanagedAllocations, long ManagedMemory, long MappedTemp) MemoryStats()
@@ -458,7 +471,7 @@ namespace Sparrow.LowMemory
             if (LowSinceStartup > availableRamInBytes)
                 LowSinceStartup = availableRamInBytes;
 
-            while (MemByTime.TryPeek(out var existing) && 
+            while (MemByTime.TryPeek(out var existing) &&
                 (now - existing.Item2) > TimeSpan.FromMinutes(5))
             {
                 if (MemByTime.TryDequeue(out _) == false)
