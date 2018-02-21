@@ -85,18 +85,12 @@
                                     <i class="required"></i>
                                 </span>
                             </label>                            
-                            <div class="flex-grow input-group" data-bind="validationOptions: { insertMessages: false }, visible: !$parent.isLocal()">
-                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address / Hostname" data-bind="textInput: ip">                               
-                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: ip">
-                                    <div class="help-block" data-bind="validationMessage: ip"></div>
-                                </div>
-                            </div>
-                            <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }, visible: $parent.isLocal()">
-                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP / Hostname"
+                            <div class="flex-grow input-group dropdown ip-dropdown" data-bind="validationOptions: { insertMessages: false }">
+                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter Server IP Address / Hostname" 
                                        data-bind="textInput: ip, attr: { id: 'inInput_' + $index() }">
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 <ul class="dropdown-menu" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $root.model.localIps">
+                                    data-bind="autoComplete: '#inInput_' + $index(), foreach: $parent.isLocal() ? $root.model.localIps : $root.remoteNodeIpOptions">
                                     <li role="presentation" data-bind="click: $parent.ip.bind($parent, $data)">
                                         <a role="menuitem" tabindex="-1" href="#">
                                             <span data-bind="text: $data"></span>
