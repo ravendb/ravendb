@@ -41,10 +41,12 @@ namespace Raven.Server.Documents
                 context.HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
         }
 
+        protected delegate void RefAction(string databaseName, ref BlittableJsonReaderObject configuration, JsonOperationContext context);
+
         protected async Task DatabaseConfigurations(Func<TransactionOperationContext, string,
            BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc,
            string debug,
-           Action<string, BlittableJsonReaderObject> beforeSetupConfiguration = null,
+           RefAction beforeSetupConfiguration = null,
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
@@ -59,7 +61,7 @@ namespace Raven.Server.Documents
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
-                beforeSetupConfiguration?.Invoke(Database.Name, configurationJson);
+                beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
 
                 var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson);
                 DatabaseRecord dbRecord;
