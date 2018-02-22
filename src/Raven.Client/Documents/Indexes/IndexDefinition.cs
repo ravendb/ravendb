@@ -330,11 +330,29 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
+        private HashSet<(string Start, string End)> _commentTokens = new HashSet<(string Start, string End)>{("//",Environment.NewLine),("/*","*/")};
         public IndexType DetectStaticIndexType()
         {
             var firstMap = Maps.FirstOrDefault()?.TrimStart();
             if (firstMap == null)
                 throw new ArgumentNullException("Index definitions contains no Maps");
+            //Taking care for all comments combination before the first none comment line
+            int prevLength;
+            do
+            {
+                prevLength = firstMap.Length;
+                foreach (var commentToken in _commentTokens)
+                {
+                    if (firstMap.StartsWith(commentToken.Start))
+                    {
+                        var index = firstMap.IndexOf(commentToken.End);
+                        if (index > 0)
+                        {
+                            firstMap = firstMap.Substring(index + commentToken.End.Length).TrimStart();
+                        }
+                    }
+                }
+            } while (firstMap.Length != prevLength);
             if (firstMap.StartsWith("from") || firstMap.StartsWith("docs"))
             {
                 // C# indexes must start with "from" for query synatx or
