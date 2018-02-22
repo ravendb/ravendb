@@ -47,9 +47,13 @@ namespace Raven.Bundles.Replication.Responders
 			var array = context.ReadBsonArray();
 			using (Database.DisableAllTriggersForCurrentThread())
 			{
-				Database.TransactionalStorage.Batch(actions =>
+                var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
+                Etag lastEtag = Etag.Empty;
+                Etag lastDocId = null;
+                Guid serverInstanceId = Guid.Empty;
+
+                Database.TransactionalStorage.Batch(actions =>
 				{
-					Etag lastEtag = Etag.Empty;
 					foreach (RavenJObject attachment in array)
 					{
 						var metadata = attachment.Value<RavenJObject>("@metadata");
@@ -66,30 +70,31 @@ namespace Raven.Bundles.Replication.Responders
 						ReplicateAttachment(actions, id, metadata, attachment.Value<byte[]>("data"), lastEtag, src);
 					}
 
-
-					var replicationDocKey = Constants.RavenReplicationSourcesBasePath + "/" + src;
 					var replicationDocument = Database.Get(replicationDocKey, null);
-					Etag lastDocId = null;
 					if (replicationDocument != null)
 					{
 						lastDocId =
 							replicationDocument.DataAsJson.JsonDeserialization<SourceReplicationInformation>().
 								LastDocumentEtag;
 					}
-					Guid serverInstanceId;
+					
 					if (Guid.TryParse(context.Request.QueryString["dbid"], out serverInstanceId) == false)
 						serverInstanceId = Database.TransactionalStorage.Id;
-					Database.Put(replicationDocKey, null,
-								 RavenJObject.FromObject(new SourceReplicationInformation
-								 {
-									 Source = src,
-									 LastDocumentEtag = lastDocId,
-									 LastAttachmentEtag = lastEtag,
-									 ServerInstanceId = serverInstanceId
-								 }),
-								 new RavenJObject(), null);
-				});
-			}
+                });
+
+                using (Database.DocumentLock.Lock())
+                {
+                    Database.Put(replicationDocKey, null,
+                             RavenJObject.FromObject(new SourceReplicationInformation
+                             {
+                                 Source = src,
+                                 LastDocumentEtag = lastDocId,
+                                 LastAttachmentEtag = lastEtag,
+                                 ServerInstanceId = serverInstanceId
+                             }),
+                             new RavenJObject(), null);
+                }
+            }
 		}
 
 		private void ReplicateAttachment(IStorageActionsAccessor actions, string id, RavenJObject metadata, byte[] data, Etag lastEtag, string src)
