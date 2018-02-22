@@ -21,6 +21,7 @@ class nodes extends setupStep {
     defineServerUrl: KnockoutComputed<boolean>;
     showDnsInfo: KnockoutComputed<boolean>;
     showAgreement: KnockoutComputed<boolean>;
+    requirePublicIpWhenBindAllUsed: KnockoutComputed<boolean>;
     showFullDomain: KnockoutComputed<boolean>;
     canCustomizeExternalIpsAndPorts: KnockoutComputed<boolean>;
     canCustomizeExternalTcpPorts: KnockoutComputed<boolean>;
@@ -49,6 +50,7 @@ class nodes extends setupStep {
         this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.showFullDomain = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.showAgreement = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
+        this.requirePublicIpWhenBindAllUsed = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.canCustomizeExternalIpsAndPorts = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.canCustomizeExternalTcpPorts = ko.pureComputed(() => this.model.mode() === "Secured");
        

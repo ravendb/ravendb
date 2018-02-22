@@ -18,6 +18,7 @@ class nodeInfo {
     externalTcpPort = ko.observable<string>();
     
     ipsContainHostName: KnockoutComputed<boolean>;
+    ipContainBindAll: KnockoutComputed<boolean>; // i.e. 0.0.0.0
   
     advancedSettingsCheckBox = ko.observable<boolean>(false);    
     showAdvancedSettings: KnockoutComputed<boolean>;
@@ -56,6 +57,24 @@ class nodeInfo {
 
         this.ipsContainHostName.subscribe(val => {
             if (val && this.mode() !== 'Secured') {
+                this.advancedSettingsCheckBox(true);
+            }
+        });
+        
+        this.ipContainBindAll = ko.pureComputed(() => {
+            let hasBindAll = false;
+            
+            this.ips().forEach(ipItem => {
+                if (ipItem.ip() === "0.0.0.0") {
+                    hasBindAll = true;
+                }
+            });
+            
+            return hasBindAll;
+        });
+        
+        this.ipContainBindAll.subscribe(val => {
+            if (val && this.mode() === "LetsEncrypt") {
                 this.advancedSettingsCheckBox(true);
             }
         });
