@@ -181,13 +181,13 @@ class cluster extends viewModelBase {
         router.navigate(appUrl.forAddClusterNode());
     }
 
-    forceTimeout() {
+    forceTimeout(node: clusterNode) {
         this.confirmationMessage("Are you sure?", `Do you want force timeout on waiting for leader?`, ["Cancel", "Yes, force"])
             .done(result => {
                 if (result.can) {
                     eventsCollector.default.reportEvent("cluster", "timeout");
                     this.spinners.forceTimeout(true);
-                    new forceLeaderTimeoutCommand()
+                    new forceLeaderTimeoutCommand(node.serverUrl())
                         .execute()
                         .always(() => this.spinners.forceTimeout(false));
                 }
