@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private static readonly string CollectionProperty = "collection";
         private static readonly string MethodProperty = "method";
         private static readonly string ReduceProperty = "reduce";
+        public static readonly string DynamicFieldName = "_";
 
         public JavaScriptIndex(IndexDefinition definition)
         {
@@ -34,12 +35,7 @@ namespace Raven.Server.Documents.Indexes.Static
             foreach (var map in definition.Maps)
             {
                 _engine.Execute(map);
-                //ExtractFields(map);
             }
-            // TODO: This code currently assume proper strucutre, but need to make sure
-            // TODO: we get proper errors if the maps contains a value that is null, or a number, etc
-            // TODO: That kind of error should throw, but we should be able to get clear error message and ensure that the
-            // TODO: user has a proper way to recover from that
 
             var definitionsObj = _engine.GetValue(GlobalDefinitions);
             if(definitionsObj.IsNull() || definitionsObj.IsUndefined() || definitionsObj.IsObject() == false)
@@ -105,7 +101,12 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var operation in val)
                 {
                     HasDynamicFields |= operation.HasDynamicReturns;
-                    fields.UnionWith(operation.Fields); 
+                    fields.UnionWith(operation.Fields);
+                    foreach ((var k, var v) in operation.FieldOptionses)
+                    {
+                        _definitions.Fields.Add(k,v);
+                    }
+                    
                 }
             }
             OutputFields = fields.ToArray();
@@ -116,7 +117,6 @@ namespace Raven.Server.Documents.Indexes.Static
             throw new IndexCreationException($"Javascript index {_definitions.Name} {message}");
         }
 
-        //TODO: We need to calculate the refrenced collections for this to work.
         private JsValue LoadDocument(JsValue self, JsValue[] args)
         {
             if (args.Length != 2)
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             return JsValue.Undefined;
         }
-        //TODO: Implement a visitor to the full AST structure
+
         public static IEnumerable<ReturnStatement> GetReturnStatements(Statement stmt)
         {
             // here we only traverse the single statement, we don't try to traverse into
@@ -340,6 +340,7 @@ function groupBy(lambda) {
             public bool HasDynamicReturns;
 
             public HashSet<string> Fields = new HashSet<string>();
+            public Dictionary<string,IndexFieldOptions> FieldOptionses = new Dictionary<string, IndexFieldOptions>();
             public string IndexName { get; set; }
 
             public void Analyze()
@@ -375,7 +376,15 @@ function groupBy(lambda) {
                     {
                         foreach (var prop in oe.Properties)
                         {
-                            Fields.Add(prop.Key.GetKey());
+                            var fieldName = prop.Key.GetKey();
+                            if (fieldName != DynamicFieldName)
+                            {
+                                Fields.Add(fieldName);
+                            }
+                            else
+                            {
+                                HasDynamicReturns = true;
+                            }
                         }
                     }
                     else if(CompareFields(oe) == false)
