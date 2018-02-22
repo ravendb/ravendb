@@ -69,7 +69,9 @@ namespace Raven.Server.Smuggler.Documents
 
             buildVersion = ReadBuildVersion();
             _buildVersionType = BuildVersion.Type(buildVersion);
+#pragma warning disable 618
             _readLegacyEtag = options.ReadLegacyEtag;
+#pragma warning restore 618
 
             return new DisposableAction(() =>
             {
