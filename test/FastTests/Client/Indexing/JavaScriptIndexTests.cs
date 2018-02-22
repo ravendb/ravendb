@@ -66,7 +66,7 @@ namespace FastTests.Client.Indexing
                     session.SaveChanges();
                     WaitForIndexing(store);
                     WaitForUserToContinueTheTest(store);
-                    var res = session.Query<UsersByNameAndAnalyzedName.Result>("UsersByNameAndAnalyzedName").Search(x => x.AnalyzedName, "Brendan Eich").OfType<User>()
+                    session.Query<User>("UsersByNameAndAnalyzedName").ProjectInto<UsersByNameAndAnalyzedName.Result>().Search(x => x.AnalyzedName, "Brendan")
                         .Single();
                 }
 
@@ -228,42 +228,10 @@ map('Users', function (u){
 
             public class Result
             {
-                public string Name { get; set; }
                 public string AnalyzedName { get; set; }
             }
         }
-
-        /*private class UsersByNameAndAnalyzedName : AbstractIndexCreationTask
-        {
-            public override IndexDefinition CreateIndexDefinition()
-            {
-                return new IndexDefinition
-                {
-                    Name = "UsersByName",
-                    Maps = new HashSet<string>
-                    {
-                        "from user in docs.Users select new { user.Name, _ = CreateField(\"AnalyzedName\",user.Name,false,true)}",
-                    },
-                    Type = IndexType.JavaScriptMap,
-                    LockMode = IndexLockMode.Unlock,
-                    Priority = IndexPriority.Normal,
-                    Fields = new Dictionary<string, IndexFieldOptions>
-                    {
-                        [Constants.Documents.Indexing.Fields.AllFields] = new IndexFieldOptions()
-                        {
-                            Indexing = FieldIndexing.Search, Analyzer = "StandardAnalyzer"
-                        } 
-                    },
-                    Configuration = new IndexConfiguration()
-                };
-            }
-
-            public class Result
-            {
-                public string Name { get; set; }
-                public string AnalyzedName { get; set; }
-            }
-        }      */        
+        
         private class UsersAndProductsByName : AbstractIndexCreationTask
         {
             public override IndexDefinition CreateIndexDefinition()
