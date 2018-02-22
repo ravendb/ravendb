@@ -16,6 +16,10 @@ class ipEntry {
                {
                    validator: (ip: string) => (ipEntry.runningOnDocker && !genUtils.isLocalhostIpAddress(ip)) || !ipEntry.runningOnDocker,  
                    message: "A localhost IP Address is not allowed when running on Docker"
+               },
+               {
+                   validator: (ip: string) => !_.startsWith(ip, "http://") && !_.startsWith(ip, "https://"),
+                   message: "Expected valid IP Address/Hostname, not URL"
                }]
        });      
        
