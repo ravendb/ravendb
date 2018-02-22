@@ -132,7 +132,7 @@ class columnsSelector<T> {
     customColumnForm = new customColumnForm();
     columnLayout = ko.observableArray<columnItem>();
     selectionState: KnockoutComputed<checkbox>;
-
+    hasAtLeastOneColumn: KnockoutComputed<boolean>;
 
     constructor() {
         this.initObservables();
@@ -148,6 +148,12 @@ class columnsSelector<T> {
 
             return checkedCount > 0 ? "some_checked" : "unchecked";
         });
+        
+        this.hasAtLeastOneColumn = ko.pureComputed(() => {
+            const allVisibleColumns = this.columnLayout().filter(x => x.visibleInSelector());
+            const selectedCount = allVisibleColumns.filter(x => x.visible()).length;
+            return selectedCount > 0;
+        })
     }
 
     init(grid: virtualGridController<T>, fetcher: (skip: number, take: number, previewColumns: string[], fullColumns: string[]) => JQueryPromise<pagedResult<T>>,
@@ -202,8 +208,10 @@ class columnsSelector<T> {
     }
 
     applyColumns() {
-        this.customLayout(true);
-        this.grid.reset(true);
+        if (this.hasAtLeastOneColumn()) {
+            this.customLayout(true);
+            this.grid.reset(true);    
+        }
     }
 
     addCustomColumn() {

@@ -356,10 +356,15 @@ class extensions {
                 $(element).on('click', e => {
                     const $target = $(e.target);
 
-                    const clickedOnClose = !!$target.closest(".close-panel").length;
+                    const closestClosePanel = $target.closest(".close-panel");
+                    const clickedOnClose = !!closestClosePanel.length;
                     if (clickedOnClose) {
-                        const $dropdownParent = $target.closest(".dropdown-menu").parent();
-                        $dropdownParent.removeClass('open');
+                        if (!closestClosePanel.is(":disabled")) {
+                            const $dropdownParent = $target.closest(".dropdown-menu").parent();
+                            $dropdownParent.removeClass('open');
+                        } else {
+                            e.stopPropagation();
+                        }
                     } else {
                         const $button = $target.closest(".dropdown-toggle");
                         const $dropdown = $button.next(".dropdown-menu");
