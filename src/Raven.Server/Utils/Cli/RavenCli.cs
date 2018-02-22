@@ -1022,7 +1022,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', 63 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', 73 - cmd[0].Length) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             WriteText("", TextColor, cli);
 
