@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Commercial;
@@ -322,7 +323,7 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
-                if (clientCert != null && clientCert.Thumbprint.Equals(thumbprint))
+                if (clientCert?.Thumbprint != null && clientCert.Thumbprint.Equals(thumbprint))
                 {
                     var clientCertDef = ReadCertificateFromCluster(ctx, Constants.Certificates.Prefix + thumbprint);
                     throw new InvalidOperationException($"Cannot delete {clientCertDef?.Name} because it's the current client certificate being used");
@@ -505,6 +506,21 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("admin/certificates/server", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task WhoIsTheServer()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("ServerCertificateThumbprint");
+                writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
+                writer.WriteEndObject();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/edit", "POST", AuthorizationStatus.Operator)]
         public async Task Edit()
         {
@@ -626,6 +642,40 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/certificates/cluster-domains", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task ClusterDomains()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                ClusterTopology clusterTopology;
+                using (context.OpenReadTransaction())
+                    clusterTopology = ServerStore.GetClusterTopology(context);
+
+                var domains = clusterTopology.AllNodes.Select(node => new Uri(node.Value).DnsSafeHost).ToList();
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("ClusterDomains");
+
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var domain in domains)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+                        first = false;
+                        writer.WriteString(domain);
+                    }
+                    writer.WriteEndArray();
+
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/certificates/letsencrypt/force-renew", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task ForceRenew()
         {
@@ -683,7 +733,7 @@ namespace Raven.Server.Web.Authentication
                     X509Certificate2 newCertificate;
                     try
                     {
-                        newCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
+                        newCertificate = new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet);
                     }
                     catch (Exception e)
                     {

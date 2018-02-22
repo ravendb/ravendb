@@ -25,6 +25,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         LicenseManager_LicenseLimit,
 
         Certificates_DeveloperLetsEncryptRenewal,
+        Certificates_ReplaceSuccess,
+        Certificates_ReplaceError,
 
         IndexStore_IndexCouldNotBeOpened,
         WarnIndexOutputsPerDocument,
