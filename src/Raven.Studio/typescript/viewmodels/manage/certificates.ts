@@ -6,6 +6,7 @@ import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
+import replaceClusterCertificateCommand = require("commands/auth/replaceClusterCertificateCommand");
 import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import notificationCenter = require("common/notifications/notificationCenter");
@@ -31,6 +32,7 @@ class certificates extends viewModelBase {
     showDatabasesSelector: KnockoutComputed<boolean>;
     hasAllDatabasesAccess: KnockoutComputed<boolean>;
     canExportClusterCertificates: KnockoutComputed<boolean>;
+    canReplaceClusterCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     
     usingHttps = location.protocol === "https:";
@@ -100,7 +102,12 @@ class certificates extends viewModelBase {
         this.canExportClusterCertificates = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
-        })
+        });
+        
+        this.canReplaceClusterCertificate = ko.pureComputed(() => {
+            const certs = this.certificates();
+            return _.some(certs, x => x.SecurityClearance === "ClusterNode");
+        });
     }
     
     private initValidation() {
@@ -141,6 +148,11 @@ class certificates extends viewModelBase {
     enterUploadCertificateMode() {
         eventsCollector.default.reportEvent("certificates", "upload");
         this.model(certificateModel.upload());
+    }
+    
+    replaceClusterCertificate() {
+        eventsCollector.default.reportEvent("certificates", "replace");
+        this.model(certificateModel.replace());
     }
 
     fileSelected(fileInput: HTMLInputElement) {
@@ -189,7 +201,7 @@ class certificates extends viewModelBase {
         } else {
             maybeWarnTask.resolve();
         }
-        
+
         maybeWarnTask
             .done(() => {
                 this.spinners.processing(true);
@@ -243,6 +255,14 @@ class certificates extends viewModelBase {
                                 this.onCloseEdit();
                             });
                         break;
+                    case "replace":
+                        new replaceClusterCertificateCommand(model)
+                            .execute()
+                            .always(() => {
+                                this.spinners.processing(false);
+                                this.loadCertificates();
+                                this.onCloseEdit();
+                            });
                 }
             });
         
