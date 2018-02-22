@@ -16,16 +16,21 @@ namespace Raven.Client.Documents.Smuggler
 {
     public class DatabaseSmuggler
     {
-        private readonly DocumentStore _store;
+        private readonly IDocumentStore _store;
         private readonly string _databaseName;
         private readonly RequestExecutor _requestExecutor;
 
-        public DatabaseSmuggler(DocumentStore store, string databaseName = null)
+        public DatabaseSmuggler(IDocumentStore store, string databaseName = null)
         {
             _store = store;
             _databaseName = databaseName ?? store.Database;
             if (_databaseName != null)
                 _requestExecutor = store.GetRequestExecutor(_databaseName);
+        }
+
+        public DatabaseSmuggler(DocumentStore store, string databaseName = null)
+            : this((IDocumentStore)store, databaseName)
+        {
         }
 
         public DatabaseSmuggler ForDatabase(string databaseName)
@@ -36,7 +41,7 @@ namespace Raven.Client.Documents.Smuggler
             return new DatabaseSmuggler(_store, databaseName);
         }
 
-        public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, string toFile, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, string toFile, CancellationToken token = default)
         {
             using (var file = File.OpenWrite(toFile))
             {
@@ -49,7 +54,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default(CancellationToken))
+        private async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default)
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
@@ -69,7 +74,7 @@ namespace Raven.Client.Documents.Smuggler
             }
         }
 
-        public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> ExportAsync(DatabaseSmugglerExportOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default)
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
@@ -84,7 +89,7 @@ namespace Raven.Client.Documents.Smuggler
             return result;
         }
 
-        public async Task ImportIncrementalAsync(DatabaseSmugglerImportOptions options, string fromDirectory, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task ImportIncrementalAsync(DatabaseSmugglerImportOptions options, string fromDirectory, CancellationToken cancellationToken = default)
         {
             var files = Directory.GetFiles(fromDirectory)
                 .Where(file =>
@@ -124,7 +129,7 @@ namespace Raven.Client.Documents.Smuggler
             return oldOperateOnTypes;
         }
 
-        public async Task<Operation> ImportAsync(DatabaseSmugglerImportOptions options, string fromFile, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Operation> ImportAsync(DatabaseSmugglerImportOptions options, string fromFile, CancellationToken cancellationToken = default)
         {
             var countOfFileParts = 0;
             Operation result;
@@ -139,7 +144,7 @@ namespace Raven.Client.Documents.Smuggler
             return result;
         }
 
-        public async Task<Operation> ImportAsync(DatabaseSmugglerImportOptions options, Stream stream, CancellationToken token = default(CancellationToken))
+        public async Task<Operation> ImportAsync(DatabaseSmugglerImportOptions options, Stream stream, CancellationToken token = default)
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
