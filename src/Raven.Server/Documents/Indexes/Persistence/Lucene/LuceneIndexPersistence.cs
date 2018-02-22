@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             CheckDisposed();
             CheckInitialized();
 
-            return new IndexFacetedReadOperation(_index, _index.Definition.IndexFields, _directory, _indexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
+            return new IndexFacetedReadOperation(_index, _index.Definition, _directory, _indexSearcherHolder, _index._queryBuilderFactories, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
         public LuceneSuggestionIndexReader OpenSuggestionIndexReader(Transaction readTransaction, string field)

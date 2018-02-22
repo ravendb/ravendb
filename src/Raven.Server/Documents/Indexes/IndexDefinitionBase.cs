@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes
 
         public Dictionary<string, IndexFieldBase> MapFields { get; protected set; }
 
-        public Dictionary<string, IndexField> IndexFields { get; protected set; }
+        public Dictionary<string, IndexField> IndexFields { get;  set; }
     }
 
     public abstract class IndexDefinitionBase<T> : IndexDefinitionBase where T : IndexFieldBase 

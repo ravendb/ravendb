@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.IndexFields);
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition);
             }
             catch (Exception e)
             {

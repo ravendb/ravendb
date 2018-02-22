@@ -94,7 +94,10 @@ namespace FastTests.Server.Documents.Indexing
 
             public RavenPerFieldAnalyzerWrapper GetAnalyzer(Dictionary<string, IndexField> fields, bool forQuerying)
             {
-                return CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), fields, forQuerying);
+                return CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), new TestIndexDefinitions
+                {
+                    IndexFields = fields
+                }, forQuerying);
             }
 
             public override void Dispose()

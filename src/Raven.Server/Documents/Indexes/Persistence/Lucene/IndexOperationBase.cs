@@ -34,9 +34,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _logger = logger;
         }
 
-        protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, Dictionary<string, IndexField> fields, bool forQuerying = false)
+        protected static RavenPerFieldAnalyzerWrapper CreateAnalyzer(Func<Analyzer> createDefaultAnalyzer, IndexDefinitionBase indexDefinition, bool forQuerying = false)
         {
-            if (fields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
+            if (indexDefinition.IndexFields.ContainsKey(Constants.Documents.Indexing.Fields.AllFields))
                 throw new InvalidOperationException($"Detected '{Constants.Documents.Indexing.Fields.AllFields}'. This field should not be present here, because inheritance is done elsewhere.");
 
             var defaultAnalyzer = createDefaultAnalyzer();
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             RavenStandardAnalyzer standardAnalyzer = null;
             KeywordAnalyzer keywordAnalyzer = null;
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
-            foreach (var field in fields)
+            foreach (var field in indexDefinition.IndexFields)
             {
                 var fieldName = field.Value.Name;
 
