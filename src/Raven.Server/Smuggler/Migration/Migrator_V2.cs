@@ -75,7 +75,9 @@ namespace Raven.Server.Smuggler.Migration
                 var destination = new DatabaseDestination(Database);
                 var options = new DatabaseSmugglerOptionsServerSide
                 {
+#pragma warning disable 618
                     ReadLegacyEtag = true
+#pragma warning restore 618
                 };
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options, Result, OnProgress, CancelToken.Token);
 
