@@ -369,7 +369,7 @@ namespace Raven.Server.Web.System
 
                 if (IsSubDirectoryOfRootPath(fullPath) == false)
                 {
-                    throw new ArgumentException($"The administrator has restricted local backups to be saved under the following root path: {ServerStore.Configuration.Backup.LocalRootPath?.FullPath}.");
+                    throw new ArgumentException($"The administrator has restricted local backups to be saved under the following root path '{ServerStore.Configuration.Backup.LocalRootPath?.FullPath}' but the actual chosen path is '{fullPath}' which is not a subdirectory of the root path.");
                 }
                 
                 readerObject.Modifications = new DynamicJsonValue

@@ -858,8 +858,16 @@ namespace Raven.Server.Commercial
 
             // Because we can get from user either an ip or a hostname, we resolve the hostname and get the actual ips it is mapped to 
             foreach (var hostnameOrIp in localNode.Addresses)
+            {
+                if (hostnameOrIp.Equals("0.0.0.0"))
+                {
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port)); 
+                    continue;
+                }
+
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+            }
 
             var requestedEndpoints = localIps.ToArray();
             var currentServerEndpoints = serverStore.Server.ListenEndpoints.Addresses.Select(ip => new IPEndPoint(ip, serverStore.Server.ListenEndpoints.Port)).ToArray();
@@ -885,8 +893,16 @@ namespace Raven.Server.Commercial
             var localIps = new List<IPEndPoint>();
 
             foreach (var hostnameOrIp in localNode.Addresses)
+            {
+                if (hostnameOrIp.Equals("0.0.0.0"))
+                {
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), localNode.Port));
+                    continue;
+                }
+
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), localNode.Port));
+            }
 
             var serverCert = setupInfo.GetX509Certificate();
 
@@ -938,9 +954,17 @@ namespace Raven.Server.Commercial
             var localIps = new List<IPEndPoint>();
 
             foreach (var hostnameOrIp in hostnamesOrIps)
+            {
+                if (hostnameOrIp.Equals("0.0.0.0"))
+                {
+                    localIps.Add(new IPEndPoint(IPAddress.Parse(hostnameOrIp), port));
+                    continue;
+                }
+
                 foreach (var ip in await Dns.GetHostAddressesAsync(hostnameOrIp))
                     localIps.Add(new IPEndPoint(IPAddress.Parse(ip.ToString()), port));
-            
+            }
+
             try
             {
                 if (serverStore.Server.ListenEndpoints.Port == port)
@@ -1002,9 +1026,16 @@ namespace Raven.Server.Commercial
 
                 if (node.Value.Port == 0)
                     setupInfo.NodeSetupInfos[node.Key].Port = 443;
-
+                
                 if (node.Value.TcpPort == 0)
                     setupInfo.NodeSetupInfos[node.Key].TcpPort = 38888;
+
+                if (setupMode == SetupMode.LetsEncrypt &&
+                    setupInfo.NodeSetupInfos[node.Key].Addresses.Any(ip => ip.Equals("0.0.0.0")) &&
+                    string.IsNullOrWhiteSpace(setupInfo.NodeSetupInfos[node.Key].ExternalIpAddress))
+                {
+                    throw new ArgumentException("When choosing 0.0.0.0 as the ip address, you must provide an external ip to update in the DNS records.");
+                }
             }
 
             await AssertLocalNodeCanListenToEndpoints(setupInfo, serverStore);
@@ -1588,7 +1619,9 @@ namespace Raven.Server.Commercial
                     Environment.NewLine +
                     $"You can now restart the server and access the studio at {publicServerUrl}." +
                     Environment.NewLine +
-                    "Chrome will let you select this certificate." +
+                    "Chrome will let you select this certificate automatically. " +
+                    Environment.NewLine +
+                    "If it doesn't, you will get an authentication error. Please restart all instances of Chrome to make sure nothing is cached." +
                     Environment.NewLine;
             }
             else
@@ -1830,7 +1863,7 @@ namespace Raven.Server.Commercial
 
                     var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                     if (response.IsSuccessStatusCode == false)
-                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
                                                             + $"Request failed with status {response.StatusCode}.{Environment.NewLine}{responseString}");
 
                     dynamic dnsResult = JsonConvert.DeserializeObject(responseString);
@@ -1838,7 +1871,7 @@ namespace Raven.Server.Commercial
                     // DNS response format: https://developers.google.com/speed/public-dns/docs/dns-over-https
 
                     if (dnsResult.Status != 0)
-                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
                                                             + $"Got a DNS failure response:{Environment.NewLine}{responseString}" +
                                                             Environment.NewLine + "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
 
@@ -1846,8 +1879,8 @@ namespace Raven.Server.Commercial
                     var googleIps = answers.Select(answer => answer["data"].ToString()).ToHashSet();
 
                     if (googleIps.SetEquals(expectedIps) == false)
-                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using google's api ({GoogleDnsApi}).{Environment.NewLine}"
-                                                            + $"Expected to get these ips: {string.Join(", ", expectedIps)} while google's actual result was: {string.Join(", ", googleIps)}"
+                        throw new InvalidOperationException($"Tried to resolve '{hostname}' using Google's api ({GoogleDnsApi}).{Environment.NewLine}"
+                                                            + $"Expected to get these ips: {string.Join(", ", expectedIps)} while Google's actual result was: {string.Join(", ", googleIps)}"
                                                             + Environment.NewLine + "Please wait a while until DNS propagation is finished and try again. If you are trying to update existing DNS records, it might take hours to update because of DNS caching. If the issue persists, contact RavenDB's support.");
                 }
 
@@ -1860,18 +1893,18 @@ namespace Raven.Server.Commercial
                 catch (Exception e)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot resolve '{hostname}' locally but succeeded resolving the address using google's api ({GoogleDnsApi})."
+                        $"Cannot resolve '{hostname}' locally but succeeded resolving the address using Google's api ({GoogleDnsApi})."
                         + Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again."
-                        + Environment.NewLine + "Another temporary solution is to configure your local network connection to use google's DNS server (8.8.8.8).", e);
+                        + Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).", e);
                 }
 
                 if (expectedIps.SetEquals(actualIps) == false)
                     throw new InvalidOperationException(
                         $"Tried to resolve '{hostname}' locally but got an outdated result."
                         + Environment.NewLine + $"Expected to get these ips: {string.Join(", ", expectedIps)} while the actual result was: {string.Join(", ", actualIps)}"
-                        + Environment.NewLine + $"If we try resolving through google's api ({GoogleDnsApi}), it works well."
+                        + Environment.NewLine + $"If we try resolving through Google's api ({GoogleDnsApi}), it works well."
                         + Environment.NewLine + "Try to clear your local/network DNS cache or wait a few minutes and try again."
-                        + Environment.NewLine + "Another temporary solution is to configure your local network connection to use google's DNS server (8.8.8.8).");
+                        + Environment.NewLine + "Another temporary solution is to configure your local network connection to use Google's DNS server (8.8.8.8).");
             }
         }
 
