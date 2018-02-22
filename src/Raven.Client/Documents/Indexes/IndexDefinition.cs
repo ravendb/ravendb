@@ -330,7 +330,7 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
-        private HashSet<(string Start, string End)> _commentTokens = new HashSet<(string Start, string End)>{("//",Environment.NewLine),("/*","*/")};
+        private static readonly HashSet<(string Start, string End)> _commentTokens = new HashSet<(string Start, string End)>{("//",Environment.NewLine),("/*","*/")};
         public IndexType DetectStaticIndexType()
         {
             var firstMap = Maps.FirstOrDefault()?.TrimStart();
