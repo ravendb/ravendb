@@ -8,17 +8,24 @@ namespace Raven.Server.Documents.ETL
 {
     public class EtlProcessStatistics
     {
-        private readonly string _processType;
-        private readonly string _name;
+        private readonly string _processTag;
+        private readonly string _processName;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly string _databaseName;
+        private readonly EtlErrorsDetails _transformationErrorsInCurrentBatch;
+        private readonly EtlErrorsDetails _loadErrorsInCurrentBatch;
+        private readonly SlowSqlDetails _slowSqlsInCurrentBatch;
 
-        public EtlProcessStatistics(string processType, string name, NotificationCenter.NotificationCenter notificationCenter, string databaseName)
+        private readonly EnsureAlerts _alertsGuard;
+
+        public EtlProcessStatistics(string processTag, string processName, NotificationCenter.NotificationCenter notificationCenter)
         {
-            _processType = processType;
-            _name = name;
+            _processTag = processTag;
+            _processName = processName;
             _notificationCenter = notificationCenter;
-            _databaseName = databaseName;
+            _transformationErrorsInCurrentBatch = new EtlErrorsDetails();
+            _loadErrorsInCurrentBatch = new EtlErrorsDetails();
+            _slowSqlsInCurrentBatch = new SlowSqlDetails();
+            _alertsGuard = new EnsureAlerts(this);
         }
 
         public string LastChangeVector { get; set; }
@@ -44,20 +51,27 @@ namespace Raven.Server.Documents.ETL
             TransformationSuccesses++;
         }
 
-        public void RecordTransformationError(Exception e)
+        public IDisposable NewBatch()
+        {
+            _transformationErrorsInCurrentBatch.Errors.Clear();
+            _loadErrorsInCurrentBatch.Errors.Clear();
+            _slowSqlsInCurrentBatch.Statements.Clear();
+
+            return _alertsGuard;
+        }
+
+        public void RecordTransformationError(Exception e, string documentId)
         {
             TransformationErrors++;
 
             LastErrorTime = SystemTime.UtcNow;
 
-            LastAlert = AlertRaised.Create(
-                _databaseName,
-                _processType,
-                $"[{_name}] Transformation script failed",
-                AlertType.Etl_TransformationError,
-                NotificationSeverity.Warning,
-                key: _name,
-                details: new ExceptionDetails(e));
+            _transformationErrorsInCurrentBatch.Add(new EtlErrorInfo
+            {
+                Date = SystemTime.UtcNow,
+                DocumentId = documentId,
+                Error = e.ToString()
+            });
 
             if (TransformationErrors < 100)
                 return;
@@ -65,24 +79,15 @@ namespace Raven.Server.Documents.ETL
             if (TransformationErrors <= TransformationSuccesses)
                 return;
 
-            var message = $"[{_name}] Transformation errors ratio too high. " +
-                          "Could not tolerate transformation script error ratio and stopped current ETL cycle";
+            var message = $"Transformation error ratio is too high (errors: {TransformationErrors}, successes: {TransformationSuccesses}). " +
+                          "Could not tolerate transformation error ratio and stopped current ETL batch. ";
 
-            LastAlert = AlertRaised.Create(
-                _databaseName, 
-                _processType,
-                message,
-                AlertType.Etl_TransformationError,
-                NotificationSeverity.Error,
-                key: _name,
-                details: new ExceptionDetails(e));
-
-            _notificationCenter.Add(LastAlert);
+            CreateAlertIfAnyTransformationErrors(message);
 
             throw new InvalidOperationException($"{message}. Current stats: {this}");
         }
 
-        public void RecordLoadError(Exception e, int count = 1)
+        public void RecordLoadError(string error, string documentId, int count = 1)
         {
             WasLatestLoadSuccessful = false;
 
@@ -90,43 +95,66 @@ namespace Raven.Server.Documents.ETL
 
             LastErrorTime = SystemTime.UtcNow;
 
-            LastAlert = AlertRaised.Create(
-                _databaseName, 
-                _processType,
-                $"[{_name}] Load error: {e.Message}",
-                AlertType.Etl_LoadError,
-                NotificationSeverity.Error,
-                key: _name, details: new ExceptionDetails(e));
+            _loadErrorsInCurrentBatch.Add(new EtlErrorInfo
+            {
+                Date = SystemTime.UtcNow,
+                DocumentId = documentId,
+                Error = error
+            });
 
             if (LoadErrors < 100)
-            {
-                _notificationCenter.Add(LastAlert);
                 return;
-            }
 
             if (LoadErrors <= LoadSuccesses)
                 return;
 
-            var message = $"[{_name}] Load error hit ratio too high. Could not tolerate load error ratio and stopped current ETL cycle";
+            var message = $"Load error ratio is too high (errors: {LoadErrors}, successes: {LoadSuccesses}). " +
+                          "Could not tolerate load error ratio and stopped current ETL batch. ";
 
-            LastAlert = AlertRaised.Create(
-                _databaseName, 
-                _processType,
-                message,
-                AlertType.Etl_WriteErrorRatio,
-                NotificationSeverity.Error,
-                key: _name,
-                details: new ExceptionDetails(e));
+            CreateAlertIfAnyLoadErrors(message);
 
-            _notificationCenter.Add(LastAlert);
+            throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
+        }
 
-            throw new InvalidOperationException($"{message}. Current stats: {this}", e);
+        public void RecordSlowSql(SlowSqlStatementInfo slowSql)
+        {
+            _slowSqlsInCurrentBatch.Add(slowSql);
         }
 
         public void LoadSuccess(int items)
         {
             WasLatestLoadSuccessful = true;
             LoadSuccesses += items;
+        }
+
+        private void CreateAlertIfAnyTransformationErrors(string preMessage = null)
+        {
+            if (_transformationErrorsInCurrentBatch.Errors.Count == 0)
+                return;
+
+            LastAlert = _notificationCenter.EtlAlerts.AddTransformationErrors(_processTag, _processName, _transformationErrorsInCurrentBatch.Errors, preMessage);
+
+            _transformationErrorsInCurrentBatch.Errors.Clear();
+        }
+
+        private void CreateAlertIfAnyLoadErrors(string preMessage = null)
+        {
+            if (_loadErrorsInCurrentBatch.Errors.Count == 0)
+                return;
+
+            LastAlert = _notificationCenter.EtlAlerts.AddLoadErrors(_processTag, _processName, _loadErrorsInCurrentBatch.Errors, preMessage);
+
+            _loadErrorsInCurrentBatch.Errors.Clear();
+        }
+
+        private void CreateAlertIfAnySlowSqls()
+        {
+            if (_slowSqlsInCurrentBatch.Statements.Count == 0)
+                return;
+
+            _notificationCenter.EtlAlerts.AddSlowSqlWarnings(_processTag, _processName, _slowSqlsInCurrentBatch.Statements);
+
+            _slowSqlsInCurrentBatch.Statements.Clear();
         }
 
         public DynamicJsonValue ToJson()
@@ -164,6 +192,26 @@ namespace Raven.Server.Documents.ETL
             LoadErrors = 0;
             LastChangeVector = null;
             LastAlert = null;
+            _transformationErrorsInCurrentBatch.Errors.Clear();
+            _loadErrorsInCurrentBatch.Errors.Clear();
+            _slowSqlsInCurrentBatch.Statements.Clear();
+        }
+
+        private class EnsureAlerts : IDisposable
+        {
+            private readonly EtlProcessStatistics _parent;
+
+            public EnsureAlerts(EtlProcessStatistics parent)
+            {
+                _parent = parent;
+            }
+
+            public void Dispose()
+            {
+                _parent.CreateAlertIfAnyTransformationErrors();
+                _parent.CreateAlertIfAnySlowSqls();
+                _parent.CreateAlertIfAnyLoadErrors();
+            }
         }
     }
 }

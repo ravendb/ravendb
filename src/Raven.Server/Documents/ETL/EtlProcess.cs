@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.ETL
             Logger = LoggingSource.Instance.GetLogger(database.Name, GetType().FullName);
             Database = database;
             _serverStore = serverStore;
-            Statistics = new EtlProcessStatistics(tag, Transformation.Name, Database.NotificationCenter, Database.Name);
+            Statistics = new EtlProcessStatistics(Tag, Name, Database.NotificationCenter);
 
             if (transformation.ApplyToAllDocuments == false)
                 _collections = new HashSet<string>(Transformation.Collections, StringComparer.OrdinalIgnoreCase);                        
@@ -222,7 +222,7 @@ namespace Raven.Server.Documents.ETL
                                 Database.Name,
                                 Tag,
                                 message,
-                                AlertType.Etl_TransformationError,
+                                AlertType.Etl_InvalidScript,
                                 NotificationSeverity.Error,
                                 key: Name,
                                 details: new ExceptionDetails(e));
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.ETL
                         }
                         catch (Exception e)
                         {
-                            Statistics.RecordTransformationError(e);
+                            Statistics.RecordTransformationError(e, item.DocumentId);
 
                             if (Logger.IsInfoEnabled)
                                 Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.ETL
 
                     HandleFallback();
 
-                    Statistics.RecordLoadError(e, stats.NumberOfExtractedItems);
+                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems);
                 }
             }
         }
@@ -426,6 +426,7 @@ namespace Raven.Server.Documents.ETL
 
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
+                    using (Statistics.NewBatch())
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
@@ -442,7 +443,7 @@ namespace Raven.Server.Documents.ETL
                                     var extracted = Extract(context, loadLastProcessedEtag + 1, stats);
 
                                     var transformed = Transform(extracted, context, stats, state);
-
+                                    
                                     Load(transformed, context, stats);
 
                                     var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtag);
@@ -505,7 +506,6 @@ namespace Raven.Server.Documents.ETL
 
                         continue;
                     }
-
 
                     try
                     {

@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public string Key { get; private set; }
 
-        public override string Id => string.IsNullOrEmpty(Key) ? $"{Type}/{AlertType}" : $"{Type}/{AlertType}/{Key}";
+        public override string Id => GetKey(AlertType, Key);
         
         public INotificationDetails Details { get; protected set; }
 
@@ -40,6 +40,11 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Key = key,
                 Details = details
             };
+        }
+
+        public static string GetKey(AlertType alertType, string key)
+        {
+            return string.IsNullOrEmpty(key) ? $"{NotificationType.AlertRaised}/{alertType}" : $"{NotificationType.AlertRaised}/{alertType}/{key}";
         }
     }
 }
