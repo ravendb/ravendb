@@ -80,8 +80,8 @@ class commandBase {
         return this.ajax<T>(relativeUrl, args, "DELETE", db, options, timeToAlert);
     }
 
-    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<any> {
-        return this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert);
+    protected post<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<any> {
+        return this.ajax<T>(relativeUrl, args, "POST", db, options, timeToAlert, baseUrl);
     }
 
     protected patch<T>(relativeUrl: string, args: any, db?: database, options?: JQueryAjaxSettings): JQueryPromise<T> {
