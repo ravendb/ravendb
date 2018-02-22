@@ -26,6 +26,7 @@ namespace SlowTests.Issues
                                    _ = CreateField("AName", u.Name),
                                    u.Name
                                };
+                Index(Constants.Documents.Indexing.Fields.AllFields, FieldIndexing.Search);
                 Analyze(Constants.Documents.Indexing.Fields.AllFields,
                     "StandardAnalyzer");
             }
