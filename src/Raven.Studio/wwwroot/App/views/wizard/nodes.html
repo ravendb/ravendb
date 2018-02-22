@@ -130,7 +130,7 @@
                             <strong data-bind="text: effectiveIpAddresses() || '<Enter IP/Hostname>'"></strong>
                         </p>
                         <div class="checkbox">
-                            <input id="customize1" type="checkbox" data-bind="checked: advancedSettingsCheckBox, disable: ipsContainHostName">
+                            <input id="customize1" type="checkbox" data-bind="checked: advancedSettingsCheckBox, disable: ipsContainHostName() || ($root.requirePublicIpWhenBindAllUsed() && ipContainBindAll())">
                             <label for="customize1">Customize external IP and Ports</label>
                         </div>
                         <div data-bind="collapse: showAdvancedSettings" class="margin-top">
