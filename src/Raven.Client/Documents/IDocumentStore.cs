@@ -15,6 +15,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -166,6 +167,8 @@ namespace Raven.Client.Documents
         MaintenanceOperationExecutor Maintenance { get; }
 
         OperationExecutor Operations { get; }
+
+        DatabaseSmuggler Smuggler { get; }
 
         IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
     }

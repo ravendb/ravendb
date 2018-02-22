@@ -10,13 +10,13 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
 {
-
     /// <summary>
     /// Contains implementation of some IDocumentStore operations shared by DocumentStore implementations
     /// </summary>
@@ -181,6 +181,8 @@ namespace Raven.Client.Documents
         }
 
         public abstract RequestExecutor GetRequestExecutor(string databaseName = null);
+
+        public abstract DatabaseSmuggler Smuggler { get; }
 
         public abstract IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
 

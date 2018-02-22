@@ -363,7 +363,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public override event EventHandler BeforeDispose;
 
-        public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
+        public override DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
         public override MaintenanceOperationExecutor Maintenance
         {
