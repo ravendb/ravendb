@@ -12,7 +12,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         SqlEtl_ProviderError,
         SqlEtl_SlowSql,
         
-        Etl_WriteErrorRatio,
+        Etl_InvalidScript,
         
         PeriodicBackup,
         Replication,
