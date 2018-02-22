@@ -833,13 +833,14 @@ namespace Raven.Client.Documents.Session
             if (queryData != null && queryData.Fields.Length > 0)
             {
                 var fields = queryData.Fields;
-
-                var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
-                if (identityProperty != null)
-                    fields = queryData.Fields
-                        .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
-                        .ToArray();
-
+                if (IsGroupBy == false)
+                {
+                    var identityProperty = Conventions.GetIdentityProperty(typeof(TResult));
+                    if (identityProperty != null)
+                        fields = queryData.Fields
+                            .Select(x => x == identityProperty.Name ? Constants.Documents.Indexing.Fields.DocumentIdFieldName : x)
+                            .ToArray();
+                }
                 newFieldsToFetch = FieldsToFetchToken.Create(fields, queryData.Projections.ToArray(), queryData.IsCustomFunction);
             }
             else
