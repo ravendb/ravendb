@@ -43,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/certificates/replace-cluster-cert";
+                url = $"{node.Url}/admin/certificates/replace-cluster-cert?ReplaceImmediately={_replaceImmediately}";
 
                 var request = new HttpRequestMessage
                 {
@@ -59,9 +59,6 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
                             writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Pfx))); // keep the private key -> this is a server cert
-                            writer.WriteComma();
-                            writer.WritePropertyName("replaceImmediately");
-                            writer.WriteBool(_replaceImmediately);
 
                             writer.WriteEndObject();
                         }

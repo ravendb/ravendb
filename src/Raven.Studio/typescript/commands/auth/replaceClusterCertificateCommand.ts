@@ -17,7 +17,7 @@ class replaceClusterCertificateCommand extends commandBase {
         const payload = this.model.toReplaceCertificateDto();
         
         return this.post<void>(url, JSON.stringify(payload), null, { dataType: undefined })
-            .done(() => this.reportSuccess("Cluster certificate was replaced successfully"))
+            .done(() => this.reportSuccess("The cluster certificate will be replaced when all the nodes confirm receipt. An alert will be raised upon success."))
             .fail((response: JQueryXHR) => this.reportError("Unable to replace cluster certificate", response.responseText, response.statusText));
     }
 }
