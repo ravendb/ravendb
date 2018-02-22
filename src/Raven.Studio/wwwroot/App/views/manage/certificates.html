@@ -48,6 +48,10 @@
                         <i class="icon-export"></i>
                         <span>Export cluster certificates</span>
                     </button>
+                    <button class="btn btn-default" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
+                        <i class="icon-upload"></i>
+                        <span>Replace cluster certificate</span>
+                    </button>
                 </div>
             </div>
             <div class="scroll flex-grow" data-bind="foreach: certificates">
@@ -101,6 +105,7 @@
                                 <h3 data-bind="visible: mode() === 'generate'">Generate client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'upload'">Upload client certificate</h3>
                                 <h3 data-bind="visible: mode() === 'editExisting'">Edit permissions</h3>
+                                <h3 data-bind="visible: mode() === 'replace'">Replace cluster certificate</h3>
                             </div>
                             <div class="flex-start">
                                 <button data-bind="click: $root.onCloseEdit" class="close"><i class="icon-cancel"></i></button>
@@ -116,7 +121,7 @@
                                 </div>
                             </div>
     
-                            <div class="form-group">
+                            <div class="form-group" data-bind="visible: mode() !== 'replace'">
                                 <label class="control-label">
                                     Security clearance
                                 </label>
@@ -130,10 +135,10 @@
                                 </div>
                             </div>
     
-                            <div class="form-group" data-bind="visible: mode() === 'upload'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'replace', validationElement: certificateAsBase64">
                                 <label class="control-label certificate-file-label">
                                     Certificate file
-                                    <small><i class="icon-info text-info"></i></small>
+                                    <small data-bind="visible: mode() === 'upload'"><i class="icon-info text-info"></i></small>
                                 </label>
                                 <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
                                     <input type="file" tabindex="-1" name="importFile" id="importFile" accept="" data-bind="event: { change: _.partial($root.fileSelected, $element) }">
@@ -148,7 +153,7 @@
                                 </div>
                             </div>
 
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'replace'">
                                 <label class="control-label">
                                     Certificate passphrase
                                 </label>
@@ -180,57 +185,73 @@
                                 <button type="button" data-bind="click: $root.copyThumbprint" class="btn btn-default"><i class="icon-copy"></i></button>
                             </div>
                             <!-- /ko -->
-                            <hr />
-                            <h4>Database permissions</h4>
-                           
-                            <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
-                                <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
-                                    <div class="dropdown btn-block">
-                                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
-                                               id="databaseNameInput"
-                                               data-bind="textInput: $root.newPermissionDatabaseName"
-                                               placeholder="Select a database">
-                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
-                                            <li data-bind="click: _.partial($root.useDatabase, $data)">
-                                                <a href="#" data-bind="text: $data"></a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                    <span class="help-block" data-bind="validationMessage: $root.newPermissionDatabaseName"></span>
+                            <div class="" data-bind="visible: mode() === 'replace'">
+                                <div class="checkbox">
+                                    <input id="replaceImmediately" type="checkbox" data-bind="checked: replaceImmediately">
+                                    <label for="replaceImmediately">Replace immediately</label>
                                 </div>
-                                <div>
-                                    <button data-bind="click: $root.addNewPermission" title="Add permissions for selected database" class="btn btn-default"><i class="icon-plus"></i></button>
+                                <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: replaceImmediately()">
+                                    <div>
+                                        <i class="icon-info"></i>
+                                    </div>
+                                    <div class="small">
+                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding. In that case, you will have to manually replace the certificate in those nodes. Use with care. 
+                                    </div>
                                 </div>
                             </div>
-                            <ul class="well collection-list" data-bind="visible: $root.showDatabasesSelector() && permissions().length, foreach: permissions">
-                                <li>
-                                    <div class="name" data-bind="text: databaseName">
-                                    </div>
-                                    <div data-bind="validationOptions: { insertMessages: false }">
-                                        <div class="radio radio-default radio-inline">
-                                            <input type="radio" value="Admin" 
-                                                   data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }">
-                                            <label data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
+                            <div data-bind="visible: mode() !== 'replace'">
+                                <hr />
+                                <h4>Database permissions</h4>
+                               
+                                <div class="flex-horizontal margin-bottom margin-bottom-sm" data-bind="visible: $root.showDatabasesSelector">
+                                    <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: $root.newPermissionDatabaseName">
+                                        <div class="dropdown btn-block">
+                                            <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                                   id="databaseNameInput"
+                                                   data-bind="textInput: $root.newPermissionDatabaseName"
+                                                   placeholder="Select a database">
+                                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                            <ul class="dropdown-menu max-height" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
+                                                <li data-bind="click: _.partial($root.useDatabase, $data)">
+                                                    <a href="#" data-bind="text: $data"></a>
+                                                </li>
+                                            </ul>
                                         </div>
-                                        <div class="radio radio-default radio-inline">
-                                            <input type="radio" value="ReadWrite" 
-                                                   data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
-                                            <label data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
-                                        </div>
+                                        <span class="help-block" data-bind="validationMessage: $root.newPermissionDatabaseName"></span>
                                     </div>
-                                    <a href="#" data-bind="click: _.partial($root.deletePermission, $data)">
-                                        <i class="icon-trash"></i>
-                                    </a>
-                                </li>
-                            </ul>
-    
-                            <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
-                                <div>
-                                    <i class="icon-info"></i>
+                                    <div>
+                                        <button data-bind="click: $root.addNewPermission" title="Add permissions for selected database" class="btn btn-default"><i class="icon-plus"></i></button>
+                                    </div>
                                 </div>
-                                <div class="small">
-                                    With the user role set to <strong data-bind="text: securityClearanceLabel"></strong>, the user of this certificate is going to have access to all databases.
+                                <ul class="well collection-list" data-bind="visible: $root.showDatabasesSelector() && permissions().length, foreach: permissions">
+                                    <li>
+                                        <div class="name" data-bind="text: databaseName">
+                                        </div>
+                                        <div data-bind="validationOptions: { insertMessages: false }">
+                                            <div class="radio radio-default radio-inline">
+                                                <input type="radio" value="Admin" 
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_admin_' + $index(), name: 'accessLevel_' + $index() }">
+                                                <label data-bind="attr: { for: 'accessLevel_admin_' + $index() }"> Admin </label>
+                                            </div>
+                                            <div class="radio radio-default radio-inline">
+                                                <input type="radio" value="ReadWrite" 
+                                                       data-bind="checked: accessLevel, attr: { id: 'accessLevel_rw_' + $index(), name: 'accessLevel_' + $index() }">
+                                                <label data-bind="attr: { for: 'accessLevel_rw_' + $index() }"> Read/Write </label>
+                                            </div>
+                                        </div>
+                                        <a href="#" data-bind="click: _.partial($root.deletePermission, $data)">
+                                            <i class="icon-trash"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+        
+                                <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
+                                    <div>
+                                        <i class="icon-info"></i>
+                                    </div>
+                                    <div class="small">
+                                        With the user role set to <strong data-bind="text: securityClearanceLabel"></strong>, the user of this certificate is going to have access to all databases.
+                                    </div>
                                 </div>
                             </div>
     
@@ -255,6 +276,11 @@
                                             data-bind="visible: mode() === 'upload', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-upload"></i>
                                         <span>Upload</span>
+                                    </button>
+                                    <button class="btn btn-success" type="submit" 
+                                            data-bind="visible: mode() === 'replace', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
+                                        <i class="icon-upload"></i>
+                                        <span>Replace certificate</span>
                                     </button>
                                 </div>
                             </div>
