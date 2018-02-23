@@ -15,6 +15,7 @@ param(
     [switch]$Help)
 
 $ErrorActionPreference = "Stop"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 . '.\scripts\checkLastExitCode.ps1'
 . '.\scripts\checkPrerequisites.ps1'
