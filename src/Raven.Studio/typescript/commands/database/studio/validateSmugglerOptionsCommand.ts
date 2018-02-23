@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class validateExportDatabaseOptionsCommand extends commandBase {
+class validateSmugglerOptionsCommand extends commandBase {
 
     constructor(private smugglerOptions: Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide, private db: database) {
         super();
@@ -13,4 +13,4 @@ class validateExportDatabaseOptionsCommand extends commandBase {
     }
 }
 
-export = validateExportDatabaseOptionsCommand;
+export = validateSmugglerOptionsCommand;

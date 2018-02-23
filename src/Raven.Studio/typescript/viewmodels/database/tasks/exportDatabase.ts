@@ -9,7 +9,7 @@ import notificationCenter = require("common/notifications/notificationCenter");
 import database = require("models/resources/database");
 import exportDatabaseModel = require("models/database/tasks/exportDatabaseModel");
 import collectionsStats = require("models/database/documents/collectionsStats");
-import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
+import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import eventsCollector = require("common/eventsCollector");
@@ -165,7 +165,7 @@ class exportDatabase extends viewModelBase {
 
         const exportArg = this.model.toDto();
 
-        new validateExportDatabaseOptionsCommand(exportArg, this.activeDatabase())
+        new validateSmugglerOptionsCommand(exportArg, this.activeDatabase())
             .execute()
             .done(() => this.startDownload(exportArg))
             .fail((response: JQueryXHR) => {

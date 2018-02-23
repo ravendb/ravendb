@@ -13,6 +13,7 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import EVENTS = require("common/constants/events");
 import popoverUtils = require("common/popoverUtils");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import validateSmugglerOptionsCommand = require("commands/database/studio/validateSmugglerOptionsCommand");
 
 class importDatabaseFromFile extends viewModelBase {
 
@@ -176,14 +177,26 @@ class importDatabaseFromFile extends viewModelBase {
 
         const fileInput = document.querySelector(importDatabaseFromFile.filePickerTag) as HTMLInputElement;
         const db = this.activeDatabase();
-
-        this.getNextOperationId(db)
-            .done((operationId: number) => {
-                notificationCenter.instance.openDetailsForOperationById(db, operationId);
-
-                new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
-                    .execute()
-                    .always(() => this.isUploading(false));
+        
+        const dtoToValidate = {
+            TransformScript: this.model.transformScript()
+        } as Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide;
+        
+        new validateSmugglerOptionsCommand(dtoToValidate, db)
+            .execute()
+            .done(() => {
+                this.getNextOperationId(db)
+                .done((operationId: number) => {
+                    notificationCenter.instance.openDetailsForOperationById(db, operationId);
+    
+                    new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
+                        .execute()
+                        .always(() => this.isUploading(false));
+                });                
+            })
+            .fail((response: JQueryXHR) => {
+                messagePublisher.reportError("Invalid import options", response.responseText, response.statusText);
+                this.isUploading(false);
             });
     }
 
