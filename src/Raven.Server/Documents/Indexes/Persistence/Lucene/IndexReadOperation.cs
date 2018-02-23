@@ -314,6 +314,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField)
         {
+            if (query.PageSize == 0) // no need to sort when counting only
+                return null;
+
             var orderByFields = query.Metadata.OrderBy;
 
             if (orderByFields == null)
