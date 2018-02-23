@@ -43,7 +43,9 @@ class exportDatabase extends viewModelBase {
 
         this.showTransformScript.subscribe(v => {
             if (v) {
-                this.model.transformScript("function transform(doc) {\r\n  var id = doc['@metadata']['@id'];\r\n  return doc;\r\n}");
+                this.model.transformScript(
+                    "var id = this['@metadata']['@id'];\r\n" +
+                    "// current object is available under 'this' variable");
             } else {
                 this.model.transformScript("");
             }
@@ -140,17 +142,15 @@ class exportDatabase extends viewModelBase {
 
     attached() {
         super.attached();
-
-        popoverUtils.longWithHover($(".scriptPopover"),
+         popoverUtils.longWithHover($(".scriptPopover"),
             {
                 content:
                 "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
-                "<pre><span class=\"token keyword\">function </span>transform(doc) " +
-                "{<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
-                "<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
-                "<span class=\"token keyword\">return null</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
-                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
-                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
+                "<pre><span class=\"token keyword\">var</span> id = doc[<span class=\"token string\">'@metadata'</span>][<span class=\"token string\">'@id'</span>];<br />" +
+                "<span class=\"token keyword\">if</span> (id === <span class=\"token string\">'orders/999'</span>)<br />&nbsp;&nbsp;&nbsp;&nbsp;" +
+                "<span class=\"token keyword\">throw </span><span class=\"token string\">'skip'</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
+                "<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
+                "</pre>" 
             });
     }
 
