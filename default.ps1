@@ -714,6 +714,8 @@ task BumpVersion {
     $repo = "ravendb"
     $branch = "v3.5"
     $filePath = "CommonAssemblyInfo.cs"
+
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     write-host "Build file URI for: $repoOwner/$repo $filePath"
     $fileUri = GetGitHubFileUri $repoOwner $repo $filePath
