@@ -75,7 +75,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
-            var pageSize = GetPageSize(_searcher, query.PageSize);
+            var pageSize = query.PageSize;
+            var isDistinctCount = pageSize == 0 && query.Metadata.IsDistinct;
+            if (isDistinctCount)
+                pageSize = int.MaxValue;
+
+            pageSize = GetPageSize(_searcher, pageSize);
+
             var docsToGet = pageSize;
             var position = query.Start;
 
@@ -116,7 +122,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         }
 
                         returnedResults++;
-                        yield return result;
+
+                        if (isDistinctCount == false)
+                            yield return result;
 
                         if (returnedResults == pageSize)
                             yield break;
@@ -132,6 +140,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     docsToGet += GetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                 }
+
+                if (isDistinctCount)
+                    totalResults.Value = returnedResults;
             }
         }
 
@@ -327,7 +338,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
-                    if(field.Ascending)
+                    if (field.Ascending)
                         sort.Add(SortField.FIELD_SCORE);
                     else
                         sort.Add(new SortField((string)null, 0, true));
@@ -447,7 +458,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     releaseServerContext = context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out serverContext);
                     closeServerTransaction = serverContext.OpenReadTransaction();
                 }
-                
+
                 using (closeServerTransaction)
                     moreLikeThisQuery = QueryBuilder.BuildMoreLikeThisQuery(serverContext, context, query.Metadata, query.Metadata.Query.Where, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
