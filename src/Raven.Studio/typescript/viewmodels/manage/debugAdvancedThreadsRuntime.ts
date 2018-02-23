@@ -28,7 +28,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         super();
         
         this.threadsCount = ko.pureComputed(() => {
-            const data = this.allData();
+            const data = this.filteredData();
             
             if (data) {
                 return data.length;
@@ -37,7 +37,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         });
         
         this.dedicatedThreadsCount = ko.pureComputed(() => {
-            const data = this.allData();
+            const data = this.filteredData();
             
             if (data) {
                 return data.filter(x => x.Name !== "Unknown" && x.Name !== "Unmanaged Thread").length;
