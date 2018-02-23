@@ -2725,9 +2725,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case SpecialQueryType.Count:
                 case SpecialQueryType.LongCount:
                     {
-                        if (finalQuery.IsDistinct)
-                            throw new NotSupportedException("RavenDB does not support mixing Distinct & Count together." + Environment.NewLine +
-                                                            "See: https://groups.google.com/forum/#!searchin/ravendb/CountDistinct/ravendb/yKQikUYKY5A/nCNI5oQB700J");
                         var qr = finalQuery.GetQueryResult();
                         if (_queryType != SpecialQueryType.Count)
                             return (long)qr.TotalResults;
