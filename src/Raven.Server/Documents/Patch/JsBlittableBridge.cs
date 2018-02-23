@@ -42,25 +42,18 @@ namespace Raven.Server.Documents.Patch
             _scriptEngine = scriptEngine;
         }
 
-
-        public void WriteInstance(ObjectInstance jsObject, IResultModifier modifier = null)
+        private void WriteInstance(ObjectInstance jsObject, IResultModifier modifier = null)
         {
             _writer.StartWriteObject();
 
             modifier?.Modify(jsObject);
-            WriteRawObjectProperties(jsObject);
 
-            _writer.WriteObjectEnd();
-        }
-
-        private void WriteRawObjectProperties(ObjectInstance jsObject)
-        {
-            var blittableObjectInstance = jsObject as BlittableObjectInstance;
-
-            if (blittableObjectInstance != null)
-                WriteBlittableInstance(blittableObjectInstance);
+            if (jsObject is BlittableObjectInstance blittableJsObject)
+                WriteBlittableInstance(blittableJsObject);
             else
                 WriteJsInstance(jsObject);
+
+            _writer.WriteObjectEnd();
         }
 
         private void WriteJsonValue(object parent, string propName, object value)
@@ -129,7 +122,7 @@ namespace Raven.Server.Documents.Patch
                 _writer.StartWriteArray();
                 foreach (var property in jsArray.GetOwnProperties())
                 {
-                    WriteValue(jsArray, property.Key as string, property.Value);
+                    WriteValue(jsArray, property.Key, property.Value);
                 }
                 _writer.WriteArrayEnd();
             }
@@ -168,7 +161,7 @@ namespace Raven.Server.Documents.Patch
             {
                 var target = objectWrapper.Target;
 
-                if (target is IDictionary dictionary)
+                if (target is IDictionary)
                 {
                     WriteValueInternal(target, obj);
                 }
@@ -380,6 +373,9 @@ namespace Raven.Server.Documents.Patch
                     if (existInObject == false && obj.Deletes?.Contains(prop.Name) == true)
                         continue;
 
+                    if (ShouldFilterProperty(prop.Name))
+                        continue;
+
                     _writer.WritePropertyName(prop.Name);
 
                     if (existInObject && modifiedValue.Changed)
@@ -395,9 +391,13 @@ namespace Raven.Server.Documents.Patch
 
             foreach (var modificationKvp in obj.OwnValues)
             {
-                _writer.WritePropertyName(modificationKvp.Key);
+                var propertyName = modificationKvp.Key;
+                if (ShouldFilterProperty(propertyName))
+                    continue;
+
+                _writer.WritePropertyName(propertyName);
                 var blittableObjectProperty = modificationKvp.Value;
-                WriteJsonValue(obj, modificationKvp.Key, blittableObjectProperty.Value);
+                WriteJsonValue(obj, propertyName, blittableObjectProperty.Value);
             }
         }
 
