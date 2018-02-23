@@ -38,7 +38,27 @@ class docsIdsBasedOnQueryFetcher {
 
 class indexInfoQueryExtractor {
 
-    private static IndexInfoQueryPartRegex = /from\s+((index ('.+'|".+"))|([@_A-Za-z0-9]+))?/mi;
+    /**
+     * Should match query w/o where statement
+     *     
+     * from index 'Products/Search' where "Dfd"
+from index Second where
+from Order where
+from 'Roder' where
+
+from index 'Products/Search'
+from index Second
+from Order
+from 'Roder'
+
+from index "Products/Search"
+from index Second
+from "Order"
+from 'Roder'
+
+     * @type {RegExp}
+     */
+    private static IndexInfoQueryPartRegex = /from\s+(index)?\s*(('[^']+'|"[^"]+")|[\S]+)/mi;
 
     static extract(query: string) {
         if (!query)
