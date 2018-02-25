@@ -112,7 +112,7 @@ select {Number1:scalarToRawString(u,(x=> x.Number)), Number2:u.Number, Char1:u.S
             try
             {
                 //new RavenDB_7691().ScalarToRawThrowsOnIllegalLambdas().Wait();
-                new RavenDB_7691().ScalarToRawThrowsOnIllegalLambdas().Wait();
+                new RavenDB_7691().CanParseNumericPercisionEdgeCasesRawValuesInJSProjection().Wait();
                 
             }
             catch (Exception e)
