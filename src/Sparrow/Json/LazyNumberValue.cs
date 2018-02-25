@@ -18,46 +18,24 @@ namespace Sparrow.Json
             Inner = inner;
         }
 
-        public static implicit operator long(LazyNumberValue self)
+        public static unsafe implicit operator long(LazyNumberValue self)
         {
-            if (self._longVal != null)
-                return self._longVal.Value;
-
-            if (long.TryParse(self.Inner, out var longVal) == false)
-            {
-                var doubleVal = (double)self;
-                longVal = (long)doubleVal;
-            }
-
-            self._longVal = longVal;
-            return self._longVal.Value; // that's inefficient, but percise
+            long val = self.Inner._context.ParseLong(self.Inner.Buffer, self.Inner.Size);
+            self._longVal = val;
+            return val;
         }
 
-        public static implicit operator ulong(LazyNumberValue self)
+        public static unsafe implicit operator ulong(LazyNumberValue self)
         {
-            if (self._ulongVal != null)
-                return self._ulongVal.Value;
-
-            if (ulong.TryParse(self.Inner, out var ulongVal) == false)
-            {
-                var doubleVal = (double)self;
-                ulongVal = (ulong)doubleVal;
-            }
-
-            self._ulongVal = ulongVal;
-            return self._ulongVal.Value; // that's inefficient, but percise
+            ulong val = self.Inner._context.ParseULong(self.Inner.Buffer, self.Inner.Size);
+            self._ulongVal = val;
+            return val;
         }
 
 
-        public static implicit operator double(LazyNumberValue self)
+        public static unsafe implicit operator double(LazyNumberValue self)
         {
-            if (self._val != null)
-                return self._val.Value;
-
-            var val = double.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
-                    
-            
-            
+            double val = self.Inner._context.ParseDouble(self.Inner.Buffer, self.Inner.Size);
             self._val = val;
             return val;
         }
@@ -67,25 +45,20 @@ namespace Sparrow.Json
             return self.Inner;
         }
 
-        public static implicit operator float(LazyNumberValue self)
+        public static unsafe implicit operator float(LazyNumberValue self)
         {
-            if (self._floatVal != null)
-                return (float)self._floatVal;
-
-            var val = float.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            float val = self.Inner._context.ParseFloat(self.Inner.Buffer, self.Inner.Size);
             self._floatVal = val;
             return val;
         }
 
-        public static implicit operator decimal(LazyNumberValue self)
+        public static unsafe implicit operator decimal(LazyNumberValue self)
         {
-            if (self._decimalVal != null)
-                return self._decimalVal.Value;
-
-            var val = decimal.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            decimal val = self.Inner._context.ParseDecimal(self.Inner.Buffer, self.Inner.Size);
             self._decimalVal = val;
             return val;
         }
+       
 
         public static decimal operator *(LazyNumberValue x, LazyNumberValue y)
         {
@@ -172,6 +145,24 @@ namespace Sparrow.Json
                 return _decimalVal.Value.Equals(other._decimalVal.Value);
 
             return Inner.Equals(other.Inner);
+        }
+
+        internal unsafe bool TryParseDouble(out double doubleVal)
+        {
+            bool parsedDoubleValue = Inner._context.TryParseDouble(Inner.Buffer, Inner.Size, out doubleVal);
+            return parsedDoubleValue;
+        }
+
+        internal unsafe bool TryParseDecimal(out decimal decimalValue)
+        {
+            bool parsedDecimalValue = Inner._context.TryParseDecimal(Inner.Buffer, Inner.Size, out decimalValue);
+            return parsedDecimalValue;
+        }
+
+        internal unsafe bool TryParseUlong(out ulong decimalValue)
+        {
+            bool parsedDecimalValue = Inner._context.TryParseUlong(Inner.Buffer, Inner.Size, out decimalValue);
+            return parsedDecimalValue;
         }
 
         public override int GetHashCode()
