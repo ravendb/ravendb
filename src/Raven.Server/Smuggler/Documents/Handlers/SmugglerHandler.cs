@@ -62,8 +62,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 {
                     var scriptRunner = new ScriptRunner(Database, Database.Configuration, false);
                     scriptRunner.TryCompileScript(string.Format(@"
-                    function Transform(docInner){{
-                        return ({0}).apply(this, [docInner]);
+                    function execute(){{
+                        {0}
                     }};", options.TransformScript));
                 }
                 catch (Exception e)

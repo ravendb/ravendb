@@ -1,4 +1,5 @@
 ﻿using System;
+
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -23,16 +24,19 @@ namespace Raven.Server.Smuggler.Documents
         public Document Transform(Document document, JsonOperationContext context)
         {
             object translatedResult;
-            using (var result = _run.Run(context, null, "execute", new object[] { document }))
+
+            try
             {
-                try
-                {
+                using (document.Data)
+                using (var result = _run.Run(context, null, "execute", new object[] { document }))
                     translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                }
-                finally
-                {
-                    document.Data.Dispose();
-                }
+            }
+            catch (Raven.Client.Exceptions.Documents.Patching.JavaScriptException e)
+            {
+                if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                throw;
             }
 
             if (translatedResult is BlittableJsonReaderObject == false)

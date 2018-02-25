@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Patch
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
-            private DocumentsOperationContext  _docsCtx;
+            private DocumentsOperationContext _docsCtx;
             private JsonOperationContext _jsonCtx;
             public PatchDebugActions DebugActions;
             public bool DebugMode;
@@ -265,9 +265,9 @@ namespace Raven.Server.Documents.Patch
 
             public JsValue ExplodeArgs(JsValue self, JsValue[] args)
             {
-                if(args.Length != 2)
+                if (args.Length != 2)
                     throw new InvalidOperationException("Raven_ExplodeArgs(this, args) - must be called with 2 arguments");
-                if(args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
+                if (args[1].IsObject() && args[1].AsObject() is BlittableObjectInstance boi)
                 {
                     _refResolver.ExplodeArgsOn(args[0], boi);
                     return self;
@@ -485,7 +485,7 @@ namespace Raven.Server.Documents.Patch
                         if (kvp.Value.Value.IsString() == false)
                             throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
                         var result = LoadDocumentInternal(kvp.Value.Value.AsString());
-                        ScriptEngine.Array.PrototypeObject.Push(results, new[]{ result });
+                        ScriptEngine.Array.PrototypeObject.Push(results, new[] { result });
                     }
                     return results;
                 }
@@ -505,7 +505,7 @@ namespace Raven.Server.Documents.Patch
             {
                 throw new MissingMethodException("The method PutDocument was renamed to 'put'");
             }
-            
+
             private JsValue ThrowOnDeleteDocument(JsValue self, JsValue[] args)
             {
                 throw new MissingMethodException("The method DeleteDocument was renamed to 'del'");
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             private JsValue[] _args = Array.Empty<JsValue>();
-            private JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
+            private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
             public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args)
             {
@@ -646,6 +646,7 @@ namespace Raven.Server.Documents.Patch
                 }
                 Includes?.Clear();
                 PutOrDeleteCalled = false;
+                ScriptEngine.ResetCallStack();
                 ScriptEngine.ResetStatementsCount();
                 ScriptEngine.ResetTimeoutTicks();
             }
@@ -735,7 +736,7 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(s);
                 if (o is LazyStringValue ls)
                     return new JsValue(ls.ToString());
-                if(o is LazyCompressedStringValue lcs)
+                if (o is LazyCompressedStringValue lcs)
                     return new JsValue(lcs.ToString());
                 if (o is LazyNumberValue lnv)
                     return new JsValue(lnv.ToString());
