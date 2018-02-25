@@ -3,11 +3,14 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
+using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
+using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Lucene.Net.Store;
@@ -134,6 +137,8 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("Raven_ExplodeArgs", new ClrFunctionInstance(ScriptEngine, ExplodeArgs));
 
                 ScriptEngine.SetValue("convertJsTimeToTimeSpanString", new ClrFunctionInstance(ScriptEngine, ConvertJsTimeToTimeSpanString));
+
+                ScriptEngine.SetValue("scalarToRawString", new ClrFunctionInstance(ScriptEngine, ScalarToRawString));
 
                 ScriptEngine.Execute(ScriptRunnerCache.PolyfillJs);
 
@@ -527,7 +532,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (args.Length != 2 || args[0].IsString() == false || args[1].IsString() == false)
                     throw new InvalidOperationException("startsWith(text, contained) must be called with two string paremters");
-
+                
                 return new JsValue(args[0].AsString().StartsWith(args[1].AsString(), StringComparison.OrdinalIgnoreCase));
             }
 
@@ -547,6 +552,122 @@ namespace Raven.Server.Documents.Patch
                 var regex = _regexCache.Get(args[1].AsString());
 
                 return new JsValue(regex.IsMatch(args[0].AsString()));
+            }
+
+            private static JsValue ScalarToRawString(JsValue self2, JsValue[] args)
+            {
+                if (args.Length != 2)                
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called on with two parameters only");
+
+
+                JsValue firstParam = args[0];
+                if (firstParam.IsObject() == false || args[0].AsObject() is BlittableObjectInstance == false)
+                {
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) may be called with a document first parameter only");
+                }
+
+                JsValue secondParam = args[1];
+                if (args[1].IsObject() == false || secondParam.AsObject() is FunctionInstance == false)
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) must be called with a second lambda argument");
+
+
+
+                BlittableObjectInstance selfInstance = firstParam.AsObject() as BlittableObjectInstance;
+                FunctionInstance lambda = secondParam.AsObject() as FunctionInstance;
+                //TODO: expose this in Jint directly instead of reflection
+
+
+                var funcDeclField = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
+                var func = (IFunction)funcDeclField.GetValue(lambda);
+
+
+                var ret = func.Body.Body.As<ReturnStatement[]>();
+
+                if (ret.Length != 1)
+                {
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must contain a single return expression");
+                }
+                StaticMemberExpression staticMemberExpression = ret[0].Argument.As<StaticMemberExpression>();
+                var prop = staticMemberExpression.Property;
+
+                if (staticMemberExpression.Object is Identifier == false)
+                {
+                    throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must contain a single return expression of a single field");
+                }
+                var propName = prop.As<Identifier>().Name;
+
+                if (selfInstance.OwnValues.TryGetValue(propName, out var existingValue))
+                {
+                    if (existingValue.Changed)
+                    {
+                        return existingValue.Value;
+                    }
+                }
+
+                var propertyIndex = selfInstance.Blittable.GetPropertyIndex(propName);
+
+                if (propertyIndex == -1)
+                {
+                    return  new JsValue(new ObjectInstance(selfInstance.Engine)
+                    {
+                        Extensible = true
+                    });
+                }
+
+                BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                selfInstance.Blittable.GetPropertyByIndex(propertyIndex,ref propDetails);
+                var value = propDetails.Value;
+
+                switch (propDetails.Token & BlittableJsonReaderBase.TypesMask)
+                {
+                    case BlittableJsonToken.Null:
+                        return JsValue.Null;
+                    case BlittableJsonToken.Boolean:
+                        return new JsValue((bool)propDetails.Value);
+                    case BlittableJsonToken.Integer:
+                        // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
+                        var lnv= GetIntegerAsLazyNumber(selfInstance, (long)value);
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine,lnv));
+                    case BlittableJsonToken.LazyNumber:                                                
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));
+                    case BlittableJsonToken.String:
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
+                    case BlittableJsonToken.CompressedString:
+                        return new JsValue(new ObjectWrapper(selfInstance.Engine, value));                        
+                    default:
+                        throw new InvalidOperationException("scalarToRawString(document, lambdaToField) lambda to field must return either raw numeric or raw string types");
+                }            
+            }
+
+            private static unsafe LazyNumberValue GetIntegerAsLazyNumber(BlittableObjectInstance owner, long value)
+            {
+                var negative = value < 0;
+                long absLongVal = Math.Abs((long)value);
+                var digitsNumber = (int)Math.Ceiling(Math.Log10(absLongVal));
+                int allocatedMemorySize = digitsNumber + (negative ? 1 : 0);
+                var mem = owner.AllocateMemory(allocatedMemorySize);
+                var lsv = new LazyStringValue(null,
+                    mem.Address,
+                    allocatedMemorySize,
+                    owner.Blittable._context);
+
+                long temp = absLongVal;
+                long curDigit;
+                byte* endPtr = lsv.Buffer + lsv.Size;
+
+                if (negative)
+                {
+                    *lsv.Buffer = (byte)'-';
+                }
+
+                for (var i = 1; i <= digitsNumber; i++)
+                {
+                    curDigit = temp % 10;
+                    *(endPtr - i) = (byte)((byte)curDigit + (byte)'0');
+                    temp /= 10;
+                }
+
+                return new LazyNumberValue(lsv);
             }
 
             private JsValue CmpXchangeInternal(string key)
@@ -608,13 +729,24 @@ namespace Raven.Server.Documents.Patch
                     throw CreateFullError(e);
                 }
                 finally
-                {
+                {                    
                     _refResolver.ExplodeArgsOn(null, null);
                     _docsCtx = null;
                     _jsonCtx = null;
                 }
             }
 
+            internal void ReleaseAllocations()
+            {
+                for (var i=0; i< _objectInstances.Count; i++)
+                {
+                    _objectInstances[i].Dispose();
+                }
+            }
+
+            private List<BlittableObjectInstance> _objectInstances = new List<BlittableObjectInstance>();
+
+            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
             private static JsonOperationContext ThrowArgumentNull()
             {
                 throw new ArgumentNullException("jsonCtx");
@@ -673,23 +805,39 @@ namespace Raven.Server.Documents.Patch
                     _disposables.Add(cloned);
                     return cloned;
                 }
+
+                BlittableObjectInstance blittableObjectInstance;
                 if (o is Tuple<Document, Lucene.Net.Documents.Document, IState> t)
                 {
                     var d = t.Item1;
-                    return new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified, d.ChangeVector)
+                    blittableObjectInstance = new BlittableObjectInstance(engine, null, Clone(d.Data), d.Id, d.LastModified, d.ChangeVector)
                     {
                         LuceneDocument = t.Item2,
                         LuceneState = t.Item3
                     };
+                    _objectInstances.Add(blittableObjectInstance);
+                    return blittableObjectInstance;
                 }
                 if (o is Document doc)
                 {
-                    return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);
+                    blittableObjectInstance = new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);
+                    _objectInstances.Add(blittableObjectInstance);
+                    return blittableObjectInstance;
                 }
                 if (o is DocumentConflict dc)
-                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);
+                {
+                    blittableObjectInstance = new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);
+                    _objectInstances.Add(blittableObjectInstance);
+                    return blittableObjectInstance;
+                }
+
                 if (o is BlittableJsonReaderObject json)
-                    return new BlittableObjectInstance(engine, null, json, null, null);
+                {
+                    blittableObjectInstance = new BlittableObjectInstance(engine, null, json, null, null);
+                    _objectInstances.Add(blittableObjectInstance);
+                    return blittableObjectInstance;
+                }
+
                 if (o == null)
                     return Undefined.Instance;
                 if (o is long lng)
