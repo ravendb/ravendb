@@ -51,6 +51,7 @@ namespace Raven.Server.Documents.Patch
 
         public void Dispose()
         {
+            _parent?.ReleaseAllocations();
             _parent?.DisposeClonedDocuments();
         }
     }
