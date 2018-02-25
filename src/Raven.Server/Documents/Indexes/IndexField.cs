@@ -111,9 +111,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private IndexFieldOptions _indexFieldOptions;
+
         public IndexFieldOptions ToIndexFieldOptions()
         {
-            return new IndexFieldOptions
+            if (_indexFieldOptions != null)
+                return _indexFieldOptions;
+
+            return _indexFieldOptions = new IndexFieldOptions
             {
                 Analyzer = Analyzer,
                 Indexing = Indexing,

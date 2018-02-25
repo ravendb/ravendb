@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Indexes.Static
         private static readonly string CollectionProperty = "collection";
         private static readonly string MethodProperty = "method";
         private static readonly string ReduceProperty = "reduce";
-        public static readonly string DynamicFieldName = "_";
 
         public JavaScriptIndex(IndexDefinition definition)
         {
@@ -102,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     HasDynamicFields |= operation.HasDynamicReturns;
                     fields.UnionWith(operation.Fields);
-                    foreach ((var k, var v) in operation.FieldOptionses)
+                    foreach ((var k, var v) in operation.FieldOptions)
                     {
                         _definitions.Fields.Add(k,v);
                     }
@@ -340,7 +339,7 @@ function groupBy(lambda) {
             public bool HasDynamicReturns;
 
             public HashSet<string> Fields = new HashSet<string>();
-            public Dictionary<string,IndexFieldOptions> FieldOptionses = new Dictionary<string, IndexFieldOptions>();
+            public Dictionary<string,IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
             public string IndexName { get; set; }
 
             public void Analyze()
@@ -377,14 +376,10 @@ function groupBy(lambda) {
                         foreach (var prop in oe.Properties)
                         {
                             var fieldName = prop.Key.GetKey();
-                            if (fieldName != DynamicFieldName)
-                            {
-                                Fields.Add(fieldName);
-                            }
-                            else
-                            {
+                            if (fieldName == "_")
                                 HasDynamicReturns = true;
-                            }
+
+                            Fields.Add(fieldName);
                         }
                     }
                     else if(CompareFields(oe) == false)
