@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var result = new SmapsReader().CalculateMemUsageFromSmaps();
                 var djv = new DynamicJsonValue
                 {
-                    ["TotalRw-s"] = new DynamicJsonValue
+                    ["Totals"] = new DynamicJsonValue
                     {
                         ["Rss"] = result.Rss,
                         ["SharedClean"] = result.SharedClean,
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
                         ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean)
                     },
-                    ["PerFile"] = result.Json
+                    ["Details"] = result.Json
                 };
 
                 using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))

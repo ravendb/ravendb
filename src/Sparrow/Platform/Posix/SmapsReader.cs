@@ -51,7 +51,7 @@ namespace Sparrow.Platform.Posix
             return read;
         }
 
-        public (long Rss, long SharedClean, long PrivateClean, DynamicJsonValue Json) CalculateMemUsageFromSmaps()
+        public (long Rss, long SharedClean, long PrivateClean, DynamicJsonArray Json) CalculateMemUsageFromSmaps()
         {
             var state = SearchState.None;
             var dja = new DynamicJsonArray();
@@ -68,11 +68,7 @@ namespace Sparrow.Platform.Posix
                 {
                     if (read == 0)
                     {
-                        var jsonResult = new DynamicJsonValue
-                        {
-                            [$"/proc/{currentProcess.Id}/smaps"] = dja
-                        };
-                        return (tmpRss, tmpSharedClean, tmpPrivateClean, jsonResult);
+                        return (tmpRss, tmpSharedClean, tmpPrivateClean, dja);
                     }
 
                     var switchBuffer = false;
@@ -354,11 +350,7 @@ namespace Sparrow.Platform.Posix
                     }
                 }
 
-                var json = new DynamicJsonValue
-                {
-                    [$"/proc/{currentProcess.Id}/smaps"] = dja
-                };
-                return (tmpRss, tmpSharedClean, tmpPrivateClean, json);
+                return (tmpRss, tmpSharedClean, tmpPrivateClean, dja);
             }
         }
     }
