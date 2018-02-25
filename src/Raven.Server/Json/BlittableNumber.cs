@@ -35,7 +35,7 @@ namespace Raven.Server.Json
             if (value is decimal)
             {
                 var d = (decimal)value;
-                if (DecimalHelper.Instance.IsDouble(ref d))
+                if (DecimalHelper.Instance.IsDouble(ref d) || d > long.MaxValue || d < long.MinValue)
                 {
                     doubleResult = (double)d;
                     longResult = long.MinValue;
