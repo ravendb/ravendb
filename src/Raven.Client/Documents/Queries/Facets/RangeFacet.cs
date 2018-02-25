@@ -235,6 +235,7 @@ namespace Raven.Client.Documents.Queries.Facets
                     case ExpressionType.Convert:
                         return ParseUnaryExpression((UnaryExpression)operand);
                     case ExpressionType.New:
+                    case ExpressionType.Call:
                         return TryInvokeLambda(operand);
                 }
             }
