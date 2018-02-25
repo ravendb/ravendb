@@ -2,6 +2,7 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
@@ -34,6 +35,7 @@ namespace Sparrow.Json
         private ArenaMemoryAllocator _arenaAllocatorForLongLivedValues;
         private AllocatedMemoryData _tempBuffer;
         private List<GCHandle> _pinnedObjects;
+        private string _doubleStringBuffer;
 
         private readonly Dictionary<string, LazyStringValue> _fieldNames = new Dictionary<string, LazyStringValue>(OrdinalStringStructComparer.Instance);
 
@@ -279,7 +281,7 @@ namespace Sparrow.Json
             {
                 return AllocateInstance(_smallBufferSegments);
             }
-        }
+        }       
 
         private Stack<ManagedPinnedBuffer> _managedBuffers;
 
@@ -1058,6 +1060,115 @@ namespace Sparrow.Json
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("Could not understand " + state.CurrentTokenType);
+            }            
+        }
+
+        public void ThrowArgumentOutOfRangeException(string message)
+        {
+            throw new ArgumentOutOfRangeException(message);
+        }        
+
+        public unsafe double ParseDouble(byte* ptr, int length)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return double.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseDouble(byte* ptr, int length, out double val)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+                        
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return double.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture,out val);            
+        }
+
+        public unsafe decimal ParseDecimal(byte* ptr, int length)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return decimal.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseDecimal(byte* ptr, int length, out decimal val)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return decimal.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        public unsafe float ParseFloat(byte* ptr, int length)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return float.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseFloat(byte* ptr, int length, out float val)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return float.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        public unsafe long ParseLong(byte* ptr, int length)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return long.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseLong(byte* ptr, int length, out long val)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return long.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        public unsafe ulong ParseULong(byte* ptr, int length)
+        {            
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return ulong.Parse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture);
+        }
+
+        public unsafe bool TryParseUlong(byte* ptr, int length, out ulong val)
+        {
+            InitializeStringBufferForNumberParsing(ptr, length);
+
+            // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+            return ulong.TryParse(_doubleStringBuffer, NumberStyles.Any, CultureInfo.InvariantCulture, out val);
+        }
+
+        private unsafe void InitializeStringBufferForNumberParsing(byte* ptr, int length)
+        {            
+            // we should support any length of LazyNumber, therefore, we do not validate it's length
+
+            if (_doubleStringBuffer == null || length > _doubleStringBuffer.Length)
+                _doubleStringBuffer = new string(' ', length);
+            
+            // here we assume a clear char <- -> byte conversion, we only support
+            // utf8, and those cleanly transfer
+            fixed (char* pChars = _doubleStringBuffer)
+            {
+                int i = 0;
+
+                for (; i < length; i++)
+                {
+                    pChars[i] = (char)ptr[i];
+                }
+                for (; i < _doubleStringBuffer.Length; i++)
+                {
+                    pChars[i] = ' ';
+                }
             }
         }
 
