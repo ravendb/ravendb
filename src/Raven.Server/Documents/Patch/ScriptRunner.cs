@@ -643,7 +643,7 @@ namespace Raven.Server.Documents.Patch
             {
                 var negative = value < 0;
                 long absLongVal = Math.Abs((long)value);
-                var digitsNumber = (int)Math.Ceiling(Math.Log10(absLongVal));
+                var digitsNumber = Math.Max((int)Math.Ceiling(Math.Log10(absLongVal)),1);
                 int allocatedMemorySize = digitsNumber + (negative ? 1 : 0);
                 var mem = owner.AllocateMemory(allocatedMemorySize);
                 var lsv = new LazyStringValue(null,
@@ -745,8 +745,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             private List<BlittableObjectInstance> _objectInstances = new List<BlittableObjectInstance>();
-
-            private Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
+            
             private static JsonOperationContext ThrowArgumentNull()
             {
                 throw new ArgumentNullException("jsonCtx");
