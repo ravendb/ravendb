@@ -89,7 +89,7 @@ namespace Sparrow.Json
 
         public int WriteValue(double value)
         {
-            var s = EnsureDecimalPlace(value, value.ToString("G17", CultureInfo.InvariantCulture));
+            var s = EnsureDecimalPlace(value, value.ToString("R", CultureInfo.InvariantCulture));
             BlittableJsonToken token;
             return WriteValue(s, out token);
         }

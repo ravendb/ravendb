@@ -149,11 +149,11 @@ namespace Raven.Client.Documents.Queries
             }
             else if (value is double d)
             {
-                Write(d.ToString("G17"));
+                Write(d.ToString("R"));
             }
             else if (value is float f)
             {
-                Write(f.ToString("G9"));
+                Write(f.ToString("R"));
             }
             else if (value == null)
             {
