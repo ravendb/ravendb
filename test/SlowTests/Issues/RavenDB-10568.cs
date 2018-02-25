@@ -5,6 +5,7 @@ using System.Text;
 using FastTests;
 using Raven.Server.Config;
 using Xunit;
+using static Raven.Client.Documents.Session.DocumentsChanges;
 
 namespace SlowTests.Issues
 {
@@ -13,6 +14,42 @@ namespace SlowTests.Issues
         private class Document
         {
             public string Id { get; set; }
+        }
+
+        [Fact]
+        public void MetadataChangesAreAvailableForWhatChanged()
+        {
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.OnBeforeStore += (sender, args) =>
+                    {
+                        args.DocumentMetadata["Value"] = "a";
+                    };
+
+                    session.Store(new Document
+                    {
+                        Id = "my-id/123"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<Document>("my-id/123");
+                    var metadata = session.Advanced.GetMetadataFor(doc);
+                    metadata["Value"] = "b";
+
+                    var changes = session.Advanced.WhatChanged()["my-id/123"];
+
+
+                    Assert.Equal(ChangeType.FieldChanged, changes.Last().Change);
+                    Assert.Equal("Value", changes.Last().FieldName);
+                }
+            }
         }
 
         [Fact]
