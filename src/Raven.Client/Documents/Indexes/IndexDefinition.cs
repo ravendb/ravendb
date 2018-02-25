@@ -330,7 +330,7 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
-        private static readonly HashSet<(string Start, string End)> _commentTokens = new HashSet<(string Start, string End)>{("//",Environment.NewLine),("/*","*/")};
+        private static readonly HashSet<(string Start, List<string> End)> _commentTokens = new HashSet<(string Start, List<string> End)>{("//",new List<string>{"\r\n","\n","\r"}),("/*",new List<string>{ "*/" })};
         public IndexType DetectStaticIndexType()
         {
             var firstMap = Maps.FirstOrDefault()?.TrimStart();
@@ -345,11 +345,15 @@ namespace Raven.Client.Documents.Indexes
                 {
                     if (firstMap.StartsWith(commentToken.Start))
                     {
-                        var index = firstMap.IndexOf(commentToken.End);
-                        if (index > 0)
+                        foreach (var end in commentToken.End)
                         {
-                            firstMap = firstMap.Substring(index + commentToken.End.Length).TrimStart();
-                        }
+                            var index = firstMap.IndexOf(end);
+                            if (index > 0)
+                            {
+                                firstMap = firstMap.Substring(index + end.Length).TrimStart();
+                                break;
+                            }
+                        }                        
                     }
                 }
             } while (firstMap.Length != prevLength);
