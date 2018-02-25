@@ -11,6 +11,44 @@ namespace SlowTests.Server.Documents.Indexing.Static
 {
     public class RavenDB_7691 : RavenTestBase
     {
+        private const string QueryWithScalarToRawStringForAllValues = @"declare function MyProjection(x){
+return {
+    IntMinVal : scalarToRawString(x, u=> u.IntMinVal),
+    IntMaxVal : scalarToRawString(x, u=> u.IntMaxVal),
+    LongMinVal : scalarToRawString(x, u=> u.LongMinVal),
+    LongMaxVal : scalarToRawString(x, u=> u.LongMaxVal),
+    DecimalMaxVal : scalarToRawString(x, u=> u.DecimalMaxVal),
+    DecimalMinVal : scalarToRawString(x, u=> u.DecimalMinVal),
+    DoubleMinVal : scalarToRawString(x, u=> u.DoubleMinVal),
+    DoubleMaxVal : scalarToRawString(x, u=> u.DoubleMaxVal),
+    DoubleNegativeInfinity : scalarToRawString(x, u=> u.DoubleNegativeInfinity),
+    DoublePositiveInfinity : scalarToRawString(x, u=> u.DoublePositiveInfinity),
+    DoubleNan : scalarToRawString(x, u=> u.DoubleNan),
+    DoubleEpsilon : scalarToRawString(x, u=> u.DoubleEpsilon),
+    FloatMinVal : scalarToRawString(x, u=> u.FloatMinVal ),
+    FloatMaxVal : scalarToRawString(x, u=> u.FloatMaxVal),
+    FloatMaxPercision : scalarToRawString(x, u=> u.FloatMaxPercision),
+    FloatNegativeInfinity : scalarToRawString(x, u=> u.FloatNegativeInfinity),
+    FloatPositiveInfinity : scalarToRawString(x, u=> u.FloatPositiveInfinity),
+    FloatNan : scalarToRawString(x, u=> u.FloatNan),
+    UintMaxVal : scalarToRawString(x, u=> u.UintMaxVal),    
+    UlongMaxVal : scalarToRawString(x, u=> u.UlongMaxVal),
+    StringMaxLength : scalarToRawString(x, u=> u.StringMaxLength),
+    DateMaxPercision : scalarToRawString(x, u=> u.DateMaxPercision),
+    DateTimeOffsetMinVal : scalarToRawString(x, u=> u.DateTimeOffsetMinVal),
+    DateTimeOffsetMaxVal : scalarToRawString(x, u=> u.DateTimeOffsetMaxVal),
+    TimeSpanMinVal : scalarToRawString(x, u=> u.TimeSpanMinVal),
+    TimeSpanMaxVal : scalarToRawString(x, u=> u.TimeSpanMaxVal),
+    TimeSpanDays : scalarToRawString(x, u=> u.TimeSpanDays),
+    TimeSpanHours : scalarToRawString(x, u=> u.TimeSpanHours),
+    TimeSpanMinutes : scalarToRawString(x, u=> u.TimeSpanMinutes),
+    TimeSpanSeconds : scalarToRawString(x, u=> u.TimeSpanSeconds),
+    TimeSpanMiliseconds : scalarToRawString(x, u=> u.TimeSpanMiliseconds),
+    TimeSpanNanoseconds : scalarToRawString(x, u=> u.TimeSpanNanoseconds)
+}
+}
+from EdgeCaseValues as e select MyProjection(e)";
+
         public class TypeWithDecimal
         {
             public decimal DecimalVal;
@@ -137,43 +175,34 @@ namespace SlowTests.Server.Documents.Indexing.Static
                 using (var session = store.OpenAsyncSession())
                 {
                     var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
-                        @"declare function MyProjection(x){
-return {
-    IntMinVal : scalarToRawString(x, u=> u.IntMinVal),
-    IntMaxVal : scalarToRawString(x, u=> u.IntMaxVal),
-    LongMinVal : scalarToRawString(x, u=> u.LongMinVal),
-    LongMaxVal : scalarToRawString(x, u=> u.LongMaxVal),
-    DecimalMaxVal : scalarToRawString(x, u=> u.DecimalMaxVal),
-    DecimalMinVal : scalarToRawString(x, u=> u.DecimalMinVal),
-    DoubleMinVal : scalarToRawString(x, u=> u.DoubleMinVal),
-    DoubleMaxVal : scalarToRawString(x, u=> u.DoubleMaxVal),
-    DoubleNegativeInfinity : scalarToRawString(x, u=> u.DoubleNegativeInfinity),
-    DoublePositiveInfinity : scalarToRawString(x, u=> u.DoublePositiveInfinity),
-    DoubleNan : scalarToRawString(x, u=> u.DoubleNan),
-    DoubleEpsilon : scalarToRawString(x, u=> u.DoubleEpsilon),
-    FloatMinVal : scalarToRawString(x, u=> u.FloatMinVal ),
-    FloatMaxVal : scalarToRawString(x, u=> u.FloatMaxVal),
-    FloatMaxPercision : scalarToRawString(x, u=> u.FloatMaxPercision),
-    FloatNegativeInfinity : scalarToRawString(x, u=> u.FloatNegativeInfinity),
-    FloatPositiveInfinity : scalarToRawString(x, u=> u.FloatPositiveInfinity),
-    FloatNan : scalarToRawString(x, u=> u.FloatNan),
-    UintMaxVal : scalarToRawString(x, u=> u.UintMaxVal),    
-    UlongMaxVal : scalarToRawString(x, u=> u.UlongMaxVal),
-    StringMaxLength : scalarToRawString(x, u=> u.StringMaxLength),
-    DateMaxPercision : scalarToRawString(x, u=> u.DateMaxPercision),
-    DateTimeOffsetMinVal : scalarToRawString(x, u=> u.DateTimeOffsetMinVal),
-    DateTimeOffsetMaxVal : scalarToRawString(x, u=> u.DateTimeOffsetMaxVal),
-    TimeSpanMinVal : scalarToRawString(x, u=> u.TimeSpanMinVal),
-    TimeSpanMaxVal : scalarToRawString(x, u=> u.TimeSpanMaxVal),
-    TimeSpanDays : scalarToRawString(x, u=> u.TimeSpanDays),
-    TimeSpanHours : scalarToRawString(x, u=> u.TimeSpanHours),
-    TimeSpanMinutes : scalarToRawString(x, u=> u.TimeSpanMinutes),
-    TimeSpanSeconds : scalarToRawString(x, u=> u.TimeSpanSeconds),
-    TimeSpanMiliseconds : scalarToRawString(x, u=> u.TimeSpanMiliseconds),
-    TimeSpanNanoseconds : scalarToRawString(x, u=> u.TimeSpanNanoseconds)
-}
-}
-from EdgeCaseValues as e select MyProjection(e)"
+                        QueryWithScalarToRawStringForAllValues
+                    ).FirstAsync();
+
+                    AssertFieldsValuesEqual(edgeCaseValues, edgeCaseDeserialized);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection()
+        {
+            EdgeCaseValues edgeCaseValues = GenerateEdgeCasePercisionValues();
+
+            using (var store = GetDocumentStore(new Options()
+            {
+                ModifyDocumentStore = x => x.Conventions.MaxNumberOfRequestsPerSession = 200
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(edgeCaseValues);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var edgeCaseDeserialized = await session.Advanced.AsyncRawQuery<EdgeCaseValues>(
+                        QueryWithScalarToRawStringForAllValues
                     ).FirstAsync();
 
                     AssertFieldsValuesEqual(edgeCaseValues, edgeCaseDeserialized);
@@ -343,13 +372,7 @@ from EdgeCaseValues as e select MyProjection(e)"
 
                 }
             }
-        }
-
-        [Fact]
-        public async Task JintRoundsNumbersToDoublesByDefault()
-        {
-
-        }
+        }       
 
         private static void AssertFieldsValuesEqual(EdgeCaseValues edgeCaseValues, EdgeCaseValues edgeCaseDeserialized)
         {
@@ -530,6 +553,20 @@ from EdgeCaseValues as e select MyProjection(e)"
                 }
             }
         }
+
+        private static EdgeCaseValues GenerateEdgeCasePercisionValues()
+        {
+            return new EdgeCaseValues
+            {                
+                DecimalMaxVal = long.MaxValue,
+                DecimalMinVal = long.MinValue,
+                DoubleMinVal = long.MaxValue,
+                DoubleMaxVal = long.MinValue,                
+                FloatMinVal = int.MinValue,
+                FloatMaxVal = int.MaxValue                
+            };
+        }
+
 
         private static EdgeCaseValues GenerateEdgeCaseValues()
         {
