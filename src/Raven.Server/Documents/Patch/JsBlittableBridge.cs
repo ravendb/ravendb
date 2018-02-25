@@ -74,9 +74,35 @@ namespace Raven.Server.Documents.Patch
                     WriteArray(js.AsArray());
                 else if (js.IsObject())
                 {
-                    var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
+                    var asObject = js.AsObject();
+                    if ( asObject is ObjectWrapper wrapper)
+                    {
+                        if (wrapper.Target is LazyNumberValue)
+                        {
+                            _writer.WriteValue(BlittableJsonToken.LazyNumber, wrapper.Target);                            
+                        }
+                        else if (wrapper.Target is LazyStringValue)
+                        {
+                            _writer.WriteValue(BlittableJsonToken.String, wrapper.Target);
+                        }
+                        else if (wrapper.Target is LazyCompressedStringValue)
+                        {
+                            _writer.WriteValue(BlittableJsonToken.CompressedString, wrapper.Target);
+                        }
+                        else
+                        {
+							var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
 
-                    WriteNestedObject(js.AsObject(), filterProperties);
+		                    WriteNestedObject(js.AsObject(), filterProperties);
+                        }
+                    }
+                    else
+                    {
+                        var filterProperties = isRoot && string.Equals(propertyName, Constants.Documents.Metadata.Key, StringComparison.Ordinal);
+
+        	            WriteNestedObject(js.AsObject(), filterProperties);
+                    }
+                    
                 }
                 else
                 {
@@ -258,9 +284,19 @@ namespace Raven.Server.Documents.Patch
 
             void GuessNumberType()
             {
-                if (Math.Abs(Math.Round(d, 0) - d) < double.Epsilon)
+                double roundedNumber = Math.Round(d, 0);
+
+                double digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
+                if (digitsAfterDecimalPoint < double.Epsilon )
                 {
-                    writer.WriteValue((long)d);
+                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
+                    {
+                        writer.WriteValue((long)d);                        
+                    }
+                    else
+                    {
+                        writer.WriteValue(d);
+                    }                        
                 }
                 else
                 {
