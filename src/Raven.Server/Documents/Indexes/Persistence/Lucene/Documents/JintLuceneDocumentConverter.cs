@@ -21,12 +21,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
         }
 
-        private static readonly IndexFieldOptions DefaultFieldOptionds = new IndexFieldOptions();
-
         private readonly string CreatedFieldValuePropertyName = "$value";
         private readonly string CreatedFieldOptionsPropertyName = "$options";
         private readonly string CreatedFieldNamePropertyName = "$name";
-
 
         protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
@@ -39,41 +36,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 instance.Add(GetOrCreateKeyField(key));
                 newFields++;
             }
-
-            IndexField allFields = null;
-            _fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
-            var AllFieldsOptions = allFields?.ToIndexFieldOptions();
+           
             foreach ((var property, var propertyDescriptor) in documentToProcess.GetOwnProperties())
             {
-                var actualValue = propertyDescriptor.Value;
-                var actualFieldOption = DefaultFieldOptionds;
-                string actualFieldName = property;
-                if (_fields.TryGetValue(property, out var field) == false)
+                _fields.TryGetValue(property, out var field);
+
+                if (propertyDescriptor.Value.IsObject())
                 {
-                    var shouldCreateField = true;
-                    if (actualValue.IsObject())
+                    var result = TryDetectDynamicFieldCreation(property, propertyDescriptor.Value.AsObject());
+                    if (result != null)
                     {
-                        if (TryDetectDynamicFieldCreation(ref actualValue, property, ref actualFieldOption, out actualFieldName))
+                        foreach (var value in GetValue(result.Value.Value))
                         {
-                            shouldCreateField = _fields.ContainsKey(actualFieldName) == false;
+                            newFields += GetRegularFields(instance, result.Value.IndexField, value, indexContext);
                         }
+                        continue;
                     }
-
-                    if (shouldCreateField && actualFieldName != JavaScriptIndex.DynamicFieldName)
-                    {
-                        field = IndexField.Create(actualFieldName, actualFieldOption, AllFieldsOptions);
-
-                        _fields.Add(actualFieldName, field);
-                    }                    
                 }
 
-                
-                
-
-                foreach (var value in GetValue(actualValue))
+                foreach (var value in GetValue(propertyDescriptor.Value))
                 {
                     newFields += GetRegularFields(instance, field, value, indexContext);
-                }                
+                }
             }
 
             return newFields;
@@ -83,52 +67,58 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static readonly string[] StoreFieldValues = { "store", "Store" };
 
-        private bool TryDetectDynamicFieldCreation(ref JsValue actualValue, string property, ref IndexFieldOptions actualFieldOption, out string fieldName)
+        private (IndexField IndexField, JsValue Value)? TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject)
         {
-            fieldName = null;
-            var valueAsObject = actualValue.AsObject();
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-            if (valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName)
-            && valueAsObject.HasOwnProperty(CreatedFieldNamePropertyName))
+            if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName) || 
+                !valueAsObject.HasOwnProperty(CreatedFieldNamePropertyName))
+                return null;
+
+            var value = valueAsObject.GetOwnProperty(CreatedFieldValuePropertyName).Value;
+            var fieldNameObj = valueAsObject.GetOwnProperty(CreatedFieldNamePropertyName).Value;
+            if(fieldNameObj.IsString() == false)
+                throw new ArgumentException($"Dynamic field {property} is expected to have a string {CreatedFieldNamePropertyName} property but got {fieldNameObj}");
+
+            var actualFieldOption = new IndexField
             {
-                actualValue = valueAsObject.GetOwnProperty(CreatedFieldValuePropertyName).Value;
-                var fieldNameObj = valueAsObject.GetOwnProperty(CreatedFieldNamePropertyName).Value;
-                if(fieldNameObj.IsString() == false)
-                    throw new ArgumentException($"Dynamic field {property} is expected to have a string {CreatedFieldNamePropertyName} property but got {fieldNameObj}");
-                fieldName = fieldNameObj.AsString();
-                if (valueAsObject.HasOwnProperty(CreatedFieldOptionsPropertyName))
+                Name = fieldNameObj.AsString(),
+                Indexing = _allFields.Indexing,
+                Storage = _allFields.Storage,
+                Analyzer = _allFields.Analyzer,
+                Spatial = _allFields.Spatial,
+                HasSuggestions = _allFields.HasSuggestions,
+                TermVector = _allFields.TermVector
+            };
+
+            if (valueAsObject.HasOwnProperty(CreatedFieldOptionsPropertyName))
+            {
+                var options = valueAsObject.GetOwnProperty(CreatedFieldOptionsPropertyName).Value;
+                if (options.IsObject() == false)
                 {
-                    var options = valueAsObject.GetOwnProperty(CreatedFieldOptionsPropertyName).Value;
-                    if (options.IsObject() == false)
-                    {
-                        throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
-                                                    $"{CreatedFieldOptionsPropertyName}, {CreatedFieldNamePropertyName} and {CreatedFieldOptionsPropertyName} the later should be a valid IndexFieldOptions object.");
-                    }
+                    throw new ArgumentException($"Dynamic field {property} is expected to contain an object with three properties " +
+                                                $"{CreatedFieldOptionsPropertyName}, {CreatedFieldNamePropertyName} and {CreatedFieldOptionsPropertyName} the later should be a valid IndexFieldOptions object.");
+                }
                     
-                    var optionObj = options.AsObject();
-
-                    foreach (var searchField in IndexFieldValues)
+                var optionObj = options.AsObject();
+                foreach (var searchField in IndexFieldValues)
+                {
+                    if (optionObj.Get(searchField).IsBoolean())
                     {
-                        if (optionObj.Get(searchField).IsBoolean())
-                        {
-                            var indexing = optionObj.Get(searchField).AsBoolean();
-                            actualFieldOption.Indexing = indexing ? FieldIndexing.Search : FieldIndexing.No;
-                        }
+                        var indexing = optionObj.Get(searchField).AsBoolean();
+                        actualFieldOption.Indexing = indexing ? FieldIndexing.Search : FieldIndexing.No;
                     }
-                    foreach (var storeFieldd in StoreFieldValues)
+                }
+                foreach (var storeFieldd in StoreFieldValues)
+                {
+                    if (optionObj.Get(storeFieldd).IsBoolean())
                     {
-                        if (optionObj.Get(storeFieldd).IsBoolean())
-                        {
-                            var store = optionObj.Get(storeFieldd).AsBoolean();
-                            actualFieldOption.Storage = store ? FieldStorage.Yes : FieldStorage.No;
-                        }
+                        var store = optionObj.Get(storeFieldd).AsBoolean();
+                        actualFieldOption.Storage = store ? FieldStorage.Yes : FieldStorage.No;
                     }
-
-                    return true;
-                }                
+                }
             }
 
-            return false;
+            return (actualFieldOption, value);
         }
 
         [ThreadStatic]
