@@ -193,8 +193,7 @@ namespace Raven.Client.Json
                 case double d:
                     _manualBlittableJsonDocumentBuilder.WriteValue(d);
                     break;
-                case decimal decVal:
-                    BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(decVal);
+                case decimal decVal:                    
                     _manualBlittableJsonDocumentBuilder.WriteValue(decVal);
                     break;
                 case float f:
@@ -313,8 +312,7 @@ namespace Raven.Client.Json
         }
 
         public override void WriteValue(decimal value)
-        {
-            BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(value);
+        {            
             _manualBlittableJsonDocumentBuilder.WriteValue(value);
         }
 
@@ -392,8 +390,7 @@ namespace Raven.Client.Json
         public override void WriteValue(decimal? value)
         {
             if (value != null)
-            {
-                BlittableJsonReader.AssertDecimalValueInDoublePercisionBoundries(value.Value);
+            {                
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             }                
             else

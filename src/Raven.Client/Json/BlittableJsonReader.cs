@@ -123,8 +123,7 @@ namespace Raven.Client.Json
             if (val is IEnumerable)
                 return BlittableJsonToken.StartArray;
             if (val is decimal asDec)
-            {
-                AssertDecimalValueInDoublePercisionBoundries(asDec);
+            {                
                 return BlittableJsonToken.LazyNumber;
             }
             return BlittableJsonToken.StartObject;
@@ -156,7 +155,8 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.Integer, (long)value);
                     return true;
                 case BlittableJsonToken.LazyNumber:
-                    SetToken(JsonToken.Float, (double)(LazyNumberValue)value);
+                    SetToken(JsonToken.Float, value);
+
                     return true;
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:
@@ -224,41 +224,8 @@ namespace Raven.Client.Json
             }
             if (Value == null)
                 return null;
-            if (Value is decimal)
-            {
-                AssertDecimalValueInDoublePercisionBoundries((decimal)Value);
-                return (decimal)Value;
-            }                
-            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
-        }
-        
-        internal static void AssertDecimalValueInDoublePercisionBoundries(decimal val)
-        {
-            double asDouble;
-            decimal asRoundtringDecimal;
-
-            try
-            {
-                asDouble = (double)val;
-                asRoundtringDecimal = (decimal)asDouble;
-            }
-            catch
-            {
-                ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);
-                return;
-            }
             
-            if (val != asRoundtringDecimal)
-            {
-                ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(val);                    
-            }
-
-        }
-
-        private static void ThrowDecimalValueOutOfDoublePercisionBoundariesNotSupported(decimal value)
-        {
-            throw new NotSupportedException(
-                                $"RavenDB supports up to double percision floating point types, therefore it does not support the decimal value {value}. Please use double type, or store value as string");
+            return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
         }
 
         public override double? ReadAsDouble()
@@ -270,8 +237,7 @@ namespace Raven.Client.Json
             }
             if (Value == null)
                 return null;
-            if (Value is double)
-                return (double)Value;
+           
             return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
         }                
 
