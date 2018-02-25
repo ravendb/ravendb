@@ -43,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/certificates/replace-cluster-cert?ReplaceImmediately={_replaceImmediately}";
+                url = $"{node.Url}/admin/certificates/replace-cluster-cert?replaceImmediately={_replaceImmediately}";
 
                 var request = new HttpRequestMessage
                 {
