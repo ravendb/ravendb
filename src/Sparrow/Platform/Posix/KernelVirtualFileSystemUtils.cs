@@ -15,13 +15,13 @@ namespace Sparrow.Platform.Posix
 
         public static long? ReadNumberFromCgroupFile(string fileName)
         {
-            // return long number read from file.  long.MaxValue is returned on error or on N/A value (-1)
             try
             {
                 var txt = File.ReadAllText(fileName);
                 var result = Convert.ToInt64(txt);
                 if (result <= 0)
                     return null;
+
                 return result;
             }
             catch (Exception e)
