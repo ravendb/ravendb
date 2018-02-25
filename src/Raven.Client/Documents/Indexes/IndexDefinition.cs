@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Extensions;
 
@@ -330,33 +331,25 @@ namespace Raven.Client.Documents.Indexes
                 Fields.Remove(key);
         }
 
-        private static readonly HashSet<(string Start, List<string> End)> _commentTokens = new HashSet<(string Start, List<string> End)>{("//",new List<string>{"\r\n","\n","\r"}),("/*",new List<string>{ "*/" })};
+        private static readonly Regex CommentsStripper = new Regex(@"\s+|\/\*[\s\S]*?\*\/|\/\/.*$", 
+            RegexOptions.IgnorePatternWhitespace | 
+            RegexOptions.Multiline);
+
         public IndexType DetectStaticIndexType()
         {
-            var firstMap = Maps.FirstOrDefault()?.TrimStart();
+            var firstMap = Maps.FirstOrDefault();
             if (firstMap == null)
                 throw new ArgumentNullException("Index definitions contains no Maps");
-            //Taking care for all comments combination before the first none comment line
-            int prevLength;
-            do
-            {
-                prevLength = firstMap.Length;
-                foreach (var commentToken in _commentTokens)
-                {
-                    if (firstMap.StartsWith(commentToken.Start))
-                    {
-                        foreach (var end in commentToken.End)
-                        {
-                            var index = firstMap.IndexOf(end);
-                            if (index > 0)
-                            {
-                                firstMap = firstMap.Substring(index + end.Length).TrimStart();
-                                break;
-                            }
-                        }                        
-                    }
-                }
-            } while (firstMap.Length != prevLength);
+
+            while (true)
+            { // strip whitespace, comments, etc
+                var m = CommentsStripper.Match(firstMap);
+                if (m.Success == false || m.Index != 0)
+                    break;
+
+                firstMap = firstMap.Substring(m.Length);
+            }
+
             if (firstMap.StartsWith("from") || firstMap.StartsWith("docs"))
             {
                 // C# indexes must start with "from" for query synatx or
