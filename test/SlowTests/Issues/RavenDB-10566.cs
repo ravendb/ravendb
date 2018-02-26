@@ -20,6 +20,33 @@ namespace SlowTests.Issues
             public Dictionary<string, Page> Trie = new Dictionary<string, Page>();
             public Dictionary<string, string> Items = new Dictionary<string, string>();
         }
+
+        [Fact]
+        public async Task CanUseObjectsInMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var v = new Item();
+                    await session.StoreAsync(v, "items/first");
+                    session.Advanced.GetMetadataFor(v).Add("Items", new Dictionary<string, string>
+                    {
+                        ["lang"] = "en"
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var v = await session.LoadAsync<Item>("items/first");
+                    var metadata = session.Advanced.GetMetadataFor(v);
+                    Assert.Equal("en", (((IDictionary<string, object>)metadata["Items"])["lang"]));
+                }
+            }
+        }
+
         [Fact]
         public async Task CanPatchWithFilter()
         {
@@ -93,8 +120,14 @@ Object.keys(this.Trie).filter(function(key) {
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var item = await session.LoadAsync<Item>("items/first");
-                    Assert.Equal("B", item.Items["A"]);
+                    var v = new Item();
+                    await session.StoreAsync(v, "items/first");
+                    session.Advanced.GetMetadataFor(v).Add("Items", new Dictionary<string, string>
+                    {
+                        ["lang"] = "en"
+                    });
+
+                    await session.SaveChangesAsync();
                 }
             }
         }
@@ -105,7 +138,8 @@ Object.keys(this.Trie).filter(function(key) {
             using (var store = GetDocumentStore())
             {
                 string name = null;
-                store.OnAfterSaveChanges += (object sender, AfterSaveChangesEventArgs e) => {
+                store.OnAfterSaveChanges += (object sender, AfterSaveChangesEventArgs e) =>
+                {
                     name = (string)e.DocumentMetadata["Name"];
                 };
                 store.Initialize();

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
 using Sparrow;
@@ -205,6 +206,12 @@ namespace Raven.Client.Json
                 case LazyNumberValue lazyNumber:
                     _manualBlittableJsonDocumentBuilder.WriteValue(lazyNumber);
                     break;
+                case IDictionary<string, string> dics:
+                    WriteDictionary(dics);
+                    break;
+                case IDictionary<string, object> dico:
+                    WriteDictionary(dico);
+                    break;
                 case IEnumerable enumerable:
                     _manualBlittableJsonDocumentBuilder.StartWriteArray();
                     foreach (var entry in enumerable)
@@ -213,11 +220,23 @@ namespace Raven.Client.Json
                     }               
                     _manualBlittableJsonDocumentBuilder.WriteArrayEnd();
                     break;
+              
                 default:
                     throw new NotSupportedException($"The value type {value.GetType().FullName} of key {propName} is not supported in the metadata");
             }
         }
-        
+
+        private void WriteDictionary<T>(IDictionary<string, T> dic)
+        {
+            _manualBlittableJsonDocumentBuilder.StartWriteObject();
+            foreach (var item in dic)
+            {
+                _manualBlittableJsonDocumentBuilder.WritePropertyName(item.Key);
+                WritePropertyValue(item.Key, item.Value);
+            }
+            _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
+        }
+
         public override void WriteEndObject()
         {
             _manualBlittableJsonDocumentBuilder.WriteObjectEnd();
