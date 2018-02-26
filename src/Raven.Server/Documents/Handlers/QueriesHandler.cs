@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
             } 
-            catch (Exception)
+            catch
             {
                 returnContextToPool.Dispose();
                 throw;
@@ -309,22 +309,30 @@ namespace Raven.Server.Documents.Handlers
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
-            var reader = context.Read(RequestBodyStream(), "queries/patch");
-            if (reader == null)
-                throw new BadRequestException("Missing JSON content.");
-            if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
-                throw new BadRequestException("Missing 'Query' property.");
+            try
+            {
+                var reader = context.Read(RequestBodyStream(), "queries/patch");
+                if (reader == null)
+                    throw new BadRequestException("Missing JSON content.");
+                if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
+                    throw new BadRequestException("Missing 'Query' property.");
 
-            var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
+                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
 
-            var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
+                var patch = new PatchRequest(query.Metadata.GetUpdateBody(query.QueryParameters), PatchRequestType.Patch);
 
-            ExecuteQueryOperation(query,
-                (runner, options, onProgress, token) => runner.ExecutePatchQuery(
-                    query, options, patch, query.QueryParameters, context, onProgress, token),
-                context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
+                ExecuteQueryOperation(query,
+                    (runner, options, onProgress, token) => runner.ExecutePatchQuery(
+                        query, options, patch, query.QueryParameters, context, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
 
-            return Task.CompletedTask;
+                return Task.CompletedTask;
+            }
+            catch
+            {
+                returnContextToPool.Dispose();
+                throw;
+            }
         }
 
         private void ExecuteQueryOperation(IndexQueryServerSide query,
