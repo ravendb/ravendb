@@ -45,6 +45,10 @@ namespace Raven.Client.Json
             return new BlittableJsonReaderObject.PropertiesInsertionBuffer();
         }
 
+
+        private bool _readAsLazyNumber = false;
+       
+
         public override bool Read()
         {
             if (_items.Count == 0)
@@ -152,10 +156,46 @@ namespace Raven.Client.Json
                     SetToken(JsonToken.StartArray);
                     return true;
                 case BlittableJsonToken.Integer:
-                    SetToken(JsonToken.Integer, (long)value);
+                    if (_readAsLazyNumber)
+                    {
+                        SetToken(JsonToken.Integer, value);
+                    }
+                    else
+                    {
+                        if (value is long)
+                        {
+                            SetToken(JsonToken.Integer, (long)value);
+                        }
+                        else
+                        {
+                            SetToken(JsonToken.Integer, (long)(LazyNumberValue)value);
+                        }
+                        
+                    }
+                    
                     return true;
                 case BlittableJsonToken.LazyNumber:
-                    SetToken(JsonToken.Float, value);
+                    if (_readAsLazyNumber)
+                    {
+                        SetToken(JsonToken.Float, value);
+                    }
+                    else
+                    {
+                        LazyNumberValue lnv = (LazyNumberValue)value;
+                        if (lnv.TryParseUlong(out var ulongValue))
+                        {
+                            SetToken(JsonToken.Integer, ulongValue);
+                        }
+                        else if (lnv.TryParseDecimal(out var decimalValue))
+                        {
+                            SetToken(JsonToken.Float, decimalValue);
+                        }
+                        else
+                        {
+                            SetToken(JsonToken.Float, (double)lnv);
+                        }
+                        
+                    }                    
 
                     return true;
                 case BlittableJsonToken.String:
@@ -175,24 +215,38 @@ namespace Raven.Client.Json
 
         public override int? ReadAsInt32()
         {
-            if (!Read())
+            _readAsLazyNumber = true;
+            try
             {
-                SetToken(JsonToken.None);
-                return null;
+                if (!Read())
+                {
+                    SetToken(JsonToken.None);
+                    return null;
+                }
+            }
+            finally
+            {
+                _readAsLazyNumber = false;
             }
 
             if (Value is LazyNumberValue lazyNumber)
-                return (int)lazyNumber;
+            {
+                int numberAsInt = (int)lazyNumber;
+                SetToken(JsonToken.Integer, numberAsInt);
 
-            if (Value is int)
+                return numberAsInt;
+            }
+            else if (Value is int)
                 return (int)Value;
+            else
+            {
+                //This method will return null at the end of an array.
+                if (TokenType == JsonToken.EndArray)
+                    return new int?();
 
-            //This method will return null at the end of an array.
-            if (TokenType == JsonToken.EndArray)
-                return new int?();
-
-            if (TokenType == JsonToken.Null)
-                return new int?();
+                if (TokenType == JsonToken.Null)
+                    return new int?();
+            }
 
             return (int)Convert.ChangeType(Value, typeof(int), CultureInfo.InvariantCulture);
         }
@@ -208,8 +262,8 @@ namespace Raven.Client.Json
         }               
 
         public override byte[] ReadAsBytes()
-        {
-            var str = ReadAsString();
+        {            
+            var str = ReadAsString();            
             if (str == null)
                 return null;
             return Convert.FromBase64String(str);
@@ -217,26 +271,60 @@ namespace Raven.Client.Json
 
         public override decimal? ReadAsDecimal()
         {
-            if (!Read())
+            _readAsLazyNumber = true;
+            try
+            { 
+                if (!Read())
+                {
+                    SetToken(JsonToken.None);
+                    return null;
+                }
+            }
+            finally
             {
-                SetToken(JsonToken.None);
-                return null;
+                _readAsLazyNumber = false;
             }
             if (Value == null)
                 return null;
-            
+
+            if (Value is LazyNumberValue lnv)
+            {
+                if (lnv.TryParseDecimal(out var decimalVal))
+                {
+                    SetToken(JsonToken.Float, decimalVal);
+                    return decimalVal;
+                }
+            }
+
             return (decimal)Convert.ChangeType(Value, typeof(decimal), CultureInfo.InvariantCulture);            
         }
 
         public override double? ReadAsDouble()
         {
-            if (!Read())
+            _readAsLazyNumber = true;
+            try
             {
-                SetToken(JsonToken.None);
-                return null;
+                if (!Read())
+                {
+                    SetToken(JsonToken.None);
+                    return null;
+                }
+            }
+            finally
+            {
+                _readAsLazyNumber = false;
             }
             if (Value == null)
                 return null;
+
+            if (Value is LazyNumberValue lnv)
+            {
+                if (lnv.TryParseDouble(out var doubleVal))
+                {
+                    SetToken(JsonToken.Float, doubleVal);
+                    return doubleVal;
+                }
+            }
            
             return (double)Convert.ChangeType(Value, typeof(double), CultureInfo.InvariantCulture);
         }                
