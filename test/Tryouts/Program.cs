@@ -29,6 +29,7 @@ using Sparrow.Json;
 using Raven.Client.Documents.Operations;
 using SlowTests.Issues;
 using SlowTests.Server.Documents.Indexing.Static;
+using FastTests.Client.Indexing;
 
 namespace Tryouts
 {
@@ -112,7 +113,7 @@ select {Number1:scalarToRawString(u,(x=> x.Number)), Number2:u.Number, Char1:u.S
             try
             {
                 //new RavenDB_7691().ScalarToRawThrowsOnIllegalLambdas().Wait();
-                new RavenDB_7691().CanParseNumericPercisionEdgeCasesRawValuesInJSProjection().Wait();
+                new RavenDB_7691().CanModifyRawAndOriginalValuesTogether().Wait();
                 
             }
             catch (Exception e)
