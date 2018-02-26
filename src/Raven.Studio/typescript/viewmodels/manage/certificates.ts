@@ -34,6 +34,7 @@ class certificates extends viewModelBase {
     canExportClusterCertificates: KnockoutComputed<boolean>;
     canReplaceClusterCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
+    serverCertificateThumbprint = ko.observable<string>();
     
     usingHttps = location.protocol === "https:";
     
@@ -271,12 +272,12 @@ class certificates extends viewModelBase {
     private loadCertificates() {
         return new getCertificatesCommand(true)
             .execute()
-            .done(certificates => {
+            .done(certificatesInfo => {
                 const mergedCertificates = [] as Array<unifiedCertificateDefinition>;
                 
                 const secondaryCertificates = [] as Array<Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition>;
                 
-                certificates.forEach(cert => {
+                certificatesInfo.Certificates.forEach(cert => {
                     if (cert.CollectionPrimaryKey) {
                         secondaryCertificates.push(cert);
                     } else {
@@ -284,6 +285,8 @@ class certificates extends viewModelBase {
                         mergedCertificates.push(cert as unifiedCertificateDefinition);
                     }
                 });
+                
+                this.serverCertificateThumbprint(certificatesInfo.LoadedServerCert);
                 
                 secondaryCertificates.forEach(cert => {
                     const thumbprint = cert.CollectionPrimaryKey.split("/")[1];
