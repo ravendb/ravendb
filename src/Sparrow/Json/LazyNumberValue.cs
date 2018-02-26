@@ -159,9 +159,9 @@ namespace Sparrow.Json
             return parsedDecimalValue;
         }
 
-        internal unsafe bool TryParseUlong(out ulong decimalValue)
+        internal unsafe bool TryParseUlong(out ulong ulongValue)
         {
-            bool parsedDecimalValue = Inner._context.TryParseUlong(Inner.Buffer, Inner.Size, out decimalValue);
+            bool parsedDecimalValue = Inner._context.TryParseUlong(Inner.Buffer, Inner.Size, out ulongValue);
             return parsedDecimalValue;
         }
 
