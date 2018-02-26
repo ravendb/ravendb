@@ -118,8 +118,14 @@
                         <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
                             Replace the cluster certificate without shutting down the servers. 
                             The update will happen when all nodes of the cluster confirm the replacement or when
-                            there are 3 days left for expiration. Please verify that the new certificate contains 
-                            all of the cluster domain names in the CN or ASN properties of the certificate.
+                            there are 3 days left for expiration.
+                        </div>
+                        <div class="bg-warning padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
+                            Please verify that the new certificate contains 
+                            all of the following cluster domain names in the CN or ASN properties of the certificate:
+                            <ul data-bind="foreach: $root.domainsForServerCertificate">
+                                <li data-bind="text: $data"></li>
+                            </ul>
                         </div>
                         <div class="flex-form">
                             <div class="form-group" data-bind="validationElement: name">
