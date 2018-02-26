@@ -645,8 +645,8 @@ namespace Raven.Server.ServerWide
 
                             NotificationCenter.Add(AlertRaised.Create(
                                 null,
-                                $"Node {NodeTag}:",
-                                "The server certificate was replaced successfully.",
+                                "Successful certificate replacement",
+                                $"The server certificate was replaced on node {NodeTag}.",
                                 AlertType.Certificates_ReplaceSuccess,
                                 NotificationSeverity.Success,
                                 "Cluster.Certificate.Replace.Success"));
