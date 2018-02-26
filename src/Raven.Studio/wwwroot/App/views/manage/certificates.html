@@ -49,7 +49,7 @@
                         <span>Export cluster certificates</span>
                     </button>
                     <button class="btn btn-default" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
-                        <i class="icon-upload"></i>
+                        <i class="icon-replace"></i>
                         <span>Replace cluster certificate</span>
                     </button>
                 </div>
@@ -64,6 +64,10 @@
                                 </div>
                                 <div>
                                     <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
+                                </div>
+                                <div title="This certificate is currently used by server for incoming HTTPS connections" class="label label-info"
+                                    data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint()) ">
+                                    server certificate
                                 </div>
                             </a>
                             <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
@@ -110,6 +114,12 @@
                             <div class="flex-start">
                                 <button data-bind="click: $root.onCloseEdit" class="close"><i class="icon-cancel"></i></button>
                             </div>
+                        </div>
+                        <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
+                            Replace the cluster certificate without shutting down the servers. 
+                            The update will happen when all nodes of the cluster confirm the replacement or when
+                            there are 3 days left for expiration. Please verify that the new certificate contains 
+                            all of the cluster domain names in the CN or ASN properties of the certificate.
                         </div>
                         <div class="flex-form">
                             <div class="form-group" data-bind="validationElement: name">
@@ -279,7 +289,7 @@
                                     </button>
                                     <button class="btn btn-success" type="submit" 
                                             data-bind="visible: mode() === 'replace', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
-                                        <i class="icon-upload"></i>
+                                        <i class="icon-replace"></i>
                                         <span>Replace certificate</span>
                                     </button>
                                 </div>
