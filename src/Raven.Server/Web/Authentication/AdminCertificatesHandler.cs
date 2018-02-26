@@ -473,6 +473,8 @@ namespace Raven.Server.Web.Authentication
                         {
                             c.Write(w, cert.Value);
                         });
+                        writer.WritePropertyName("LoadedServerCert");
+                        writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
                         writer.WriteEndObject();
                     }
                 }
@@ -501,21 +503,6 @@ namespace Raven.Server.Web.Authentication
                 {
                     writer.WriteObject(certificate);
                 }
-            }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("admin/certificates/server", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task WhoIsTheServer()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName("ServerCertificateThumbprint");
-                writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
-                writer.WriteEndObject();
             }
 
             return Task.CompletedTask;
