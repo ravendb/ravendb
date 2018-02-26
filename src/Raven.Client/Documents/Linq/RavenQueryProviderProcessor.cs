@@ -2200,7 +2200,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 new JavascriptConversionExtensions.NullCoalescingSupport(),
                 new JavascriptConversionExtensions.NestedConditionalSupport(),
                 new JavascriptConversionExtensions.StringSupport(),
-                new JavascriptConversionExtensions.ConstSupport(),
+                new JavascriptConversionExtensions.ConstSupport() { Conventions = _documentQuery.Conventions },
                 new JavascriptConversionExtensions.MetadataSupport(),
                 new JavascriptConversionExtensions.CompareExchangeSupport(),
                 new JavascriptConversionExtensions.ValueTypeParseSupport(),

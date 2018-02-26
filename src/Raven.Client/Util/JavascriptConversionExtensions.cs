@@ -983,6 +983,8 @@ namespace Raven.Client.Util
 
         public class ConstSupport : JavascriptConversionExtension
         {
+            public DocumentConventions Conventions { get; set; }
+
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
                 if (!(context.Node is ConstantExpression nodeAsConst))
@@ -996,6 +998,16 @@ namespace Raven.Client.Util
                         context.PreventDefault();
                         writer.Write("null");
                         return;
+                    }
+
+                    // Type.IsEnum is unavailable in .netstandard1.3
+                    if (nodeAsConst.Type.GetTypeInfo().IsEnum 
+                        && Conventions.SaveEnumsAsIntegers == false)
+                    {
+                        context.PreventDefault();
+                        writer.Write("\"");
+                        writer.Write(nodeAsConst.Value);
+                        writer.Write("\"");
                     }
 
                     if (nodeAsConst.Type == typeof(bool))
