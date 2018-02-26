@@ -313,11 +313,9 @@ namespace Raven.Server.Documents.Replication
                                     {                                        
                                         //Send a heartbeat first so we will get an updated CV of the destination
                                         var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
-                                        //snapshot last CV and send heartbeat
-                                        var prevChangeVector = _lastSentChangeVectorDuringHeartbeat;
-                                        SendHeartbeat(currentChangeVector);
+                                        SendHeartbeat(null);
                                         //If our previous CV is already merged to the destination wait a bit more 
-                                        if (prevChangeVector != null && ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, prevChangeVector) ==
+                                        if (ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, currentChangeVector) ==
                                             ConflictStatus.AlreadyMerged)
                                         {
                                             continue;
