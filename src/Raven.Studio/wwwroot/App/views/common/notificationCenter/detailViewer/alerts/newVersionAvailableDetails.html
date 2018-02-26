@@ -31,6 +31,15 @@
                 </div>
             </div>
 
+            <div class="text-center">
+                <a target="_blank" class="btn btn-primary" href="https://ravendb.net/downloads">
+                    <i class="icon-export"></i> <span>Download</span>
+                </a>
+                
+                <a target="_blank" class="btn btn-info" data-bind="attr: { href: 'https://ravendb.net/whats-new?buildNumber=' + alert.details().VersionInfo.BuildNumber }">
+                    <i class="icon-info"></i> <span>What's New</span>
+                </a>
+            </div>
         </div>
         <div class="modal-footer" data-bind="compose: 'common/notificationCenter/detailViewer/alerts/footerPartial.html'">
         </div>
