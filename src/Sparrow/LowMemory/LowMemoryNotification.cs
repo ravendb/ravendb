@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
@@ -245,8 +246,7 @@ namespace Sparrow.LowMemory
                 stats = (new Size(), new Size(), new Size());
                 totalUnmanagedAllocations = -1;
             }
-            if (isLowMemory
-            )
+            if (isLowMemory)
             {
                 if (LowMemoryState == false)
                 {
@@ -315,13 +315,19 @@ namespace Sparrow.LowMemory
 
             var currentProcessMemoryMappedShared = GetCurrentProcessMemoryMappedShared();
             var availableMem = (memInfo.AvailableMemory + currentProcessMemoryMappedShared);
+            
             var commitChargePlusMinSizeToKeepFree = memInfo.CurrentCommitCharge + (memInfo.TotalPhysicalMemory * _commitChargeThreshold);
 
             // We consider low memory only if we don't have enough free pyhsical memory *AND* the commited memory size if larger than our pyhsical memory.
             // This is to ensure that from one hand we don't hit the disk to do page faults and from the other hand
             // we don't want to stay in low memory due to retained memory.
-            var isLowMemory = availableMem < _lowMemoryThreshold && 
-                              memInfo.TotalPhysicalMemory < commitChargePlusMinSizeToKeepFree;
+            var isLowMemory = availableMem < _lowMemoryThreshold;
+
+            if (PlatformDetails.RunningOnPosix == false)
+            {
+                // this is relevant only on Windows
+                isLowMemory |= memInfo.TotalPhysicalMemory < commitChargePlusMinSizeToKeepFree;
+            }
 
             memStats = (availableMem, memInfo.TotalPhysicalMemory, memInfo.CurrentCommitCharge);
             return isLowMemory;

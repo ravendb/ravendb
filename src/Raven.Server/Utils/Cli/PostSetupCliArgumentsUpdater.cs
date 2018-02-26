@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 using Raven.Server.Config;
+using Sparrow.Platform;
 
 namespace Raven.Server.Utils.Cli
 {
     public static class PostSetupCliArgumentsUpdater
     {
-        private static bool IsRunningOnDocker => 
-            string.IsNullOrEmpty(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER")) == false;
-
         public static string[] Process(string[] configurationArgs, RavenConfiguration configBeforeRestart, RavenConfiguration currentConfiguration)
         {
             var result = configurationArgs;
@@ -68,7 +67,7 @@ namespace Raven.Server.Utils.Cli
             var removeArgEnvVar = Environment.GetEnvironmentVariable("REMOVE_UNSECURED_CLI_ARG_AFTER_RESTART");
             var shouldRemoveUnsecuredCliArg = removeArgEnvVar == "true";
 
-            if (IsRunningOnDocker && shouldRemoveUnsecuredCliArg)
+            if (PlatformDetails.RunningOnDocker && shouldRemoveUnsecuredCliArg)
             {
                 return FilterOutArgByConfigurationKey(args, RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed));
             }
