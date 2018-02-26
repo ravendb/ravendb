@@ -259,8 +259,7 @@
                                             <li><span>Task Status:</span><span class="text-details" data-bind="text: badgeText"></span></li>
                                             <li><span>Destinations:</span><span data-bind="text: backupDestinations().join(', '), attr: { class: textClass() }"></span></li>
                                             <li data-bind="visible: lastFullBackupHumanized">
-                                                <span data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></span>
-                                                <span class="text-details" data-bind="text: lastFullBackupHumanized"></span>
+                                                <span data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></span><span class="text-details" data-bind="text: lastFullBackupHumanized"></span>
                                             </li>
                                             <li data-bind="visible: lastIncrementalBackupHumanized"><span>Last Incremental Backup:</span><span  class="text-details" data-bind="text: lastIncrementalBackupHumanized"></span></li>
                                             <li data-bind="visible: nextBackup() && !onGoingBackup()"><span>Next Estimated Backup:</span><span data-bind="text: nextBackupHumanized, attr: { class: textClass() }"></span></li>

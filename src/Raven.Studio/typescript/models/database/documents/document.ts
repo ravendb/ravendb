@@ -76,19 +76,31 @@ class document implements documentBase {
         return new document(<any>emptyDto);
     }
 
-    static getCollectionFromId(id: string): string {
+    static getCollectionFromId(id: string, collections: string[]): string {
         if (!id) {
             return null;
         }
 
-        // get first index of '/' or '|'. Otherwise return -1;
+        // Get first index of '/' or '|'. Otherwise return -1;
         const indexes = [id.indexOf("/"), id.indexOf("|")].filter(x => x !== -1);
-        const separatorIndex = _.min(indexes.length ? indexes : [-1]);
+        const firstSeparatorIndex = _.min(indexes.length ? indexes : [-1]);
 
-        if (separatorIndex >= 1) {
-            return id.substring(0, 1).toUpperCase() + id.substring(1, separatorIndex);
+        if (firstSeparatorIndex >= 1) {
+            let collectionName = id.substring(0, firstSeparatorIndex);
+            
+            if (collectionName.toLocaleLowerCase() === collectionName) {
+                // All letters are lower case, Capitalize first 
+                collectionName = _.capitalize(collectionName);
+            }
+            else {
+                // Find an already existing matching collection name 
+                collectionName = collections.find(collection => collection.toLocaleLowerCase() === collectionName.toLocaleLowerCase());
+            }
+        
+             return collectionName;
         }
 
+        // if no '/' or '|' at all then we want the document to be in the @empty collection
         return null;
     }
 }
