@@ -990,6 +990,12 @@ namespace Raven.Client.Util
                         //match DateTime.Now , DateTime.UtcNow, DateTime.Today
                         switch (node.Member.Name)
                         {
+                            case "MinValue":
+                                writer.Write("new Date(-62135596800000)");
+                                break;
+                            case "MaxValue":
+                                writer.Write("new Date(253402297199999)");
+                                break;
                             case "Now":
                                 writer.Write("Date.now()");
                                 break;
