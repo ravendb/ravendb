@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import certificateModel = require("models/auth/certificateModel");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
@@ -10,11 +9,13 @@ import replaceClusterCertificateCommand = require("commands/auth/replaceClusterC
 import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import notificationCenter = require("common/notifications/notificationCenter");
+import getClusterDomainsCommand = require("commands/auth/getClusterDomainsCommand");
 import endpoints = require("endpoints");
 import copyToClipboard = require("common/copyToClipboard");
 import popoverUtils = require("common/popoverUtils");
 import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
+import changesContext = require("common/changesContext");
 
 interface unifiedCertificateDefinitionWithCache extends unifiedCertificateDefinition {
     expirationClass: string;
@@ -30,11 +31,12 @@ class certificates extends viewModelBase {
     
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
-    hasAllDatabasesAccess: KnockoutComputed<boolean>;
     canExportClusterCertificates: KnockoutComputed<boolean>;
     canReplaceClusterCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     serverCertificateThumbprint = ko.observable<string>();
+    
+    domainsForServerCertificate = ko.observableArray<string>([]);
     
     usingHttps = location.protocol === "https:";
     
@@ -70,6 +72,8 @@ class certificates extends viewModelBase {
     
     compositionComplete() {
         super.compositionComplete();
+        
+        this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
 
         $(".js-export-certificates").tooltip({
             container: "body",
@@ -81,6 +85,12 @@ class certificates extends viewModelBase {
                 this.initPopover();
             }
         });
+    }
+    
+    private onAlert(alert: Raven.Server.NotificationCenter.Notifications.AlertRaised) {
+        if (alert.AlertType === "Certificates_ReplaceError" || alert.AlertType === "Certificates_ReplaceSuccess") {
+            this.loadCertificates();
+        }
     }
     
     private initPopover() {
@@ -154,6 +164,10 @@ class certificates extends viewModelBase {
     replaceClusterCertificate() {
         eventsCollector.default.reportEvent("certificates", "replace");
         this.model(certificateModel.replace());
+        
+        new getClusterDomainsCommand()
+            .execute()
+            .done(domains => this.domainsForServerCertificate(domains));
     }
 
     fileSelected(fileInput: HTMLInputElement) {
