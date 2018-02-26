@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Platform.Posix;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
 
@@ -102,6 +103,36 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return djv;
         }
 
+        [RavenAction("/admin/debug/memory/smaps", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task MemorySmaps()
+        {
+            if (PlatformDetails.RunningOnLinux == false)
+                throw new IOException("End point runing smaps is available only for posix");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var result = new SmapsReader().CalculateMemUsageFromSmaps();
+                var djv = new DynamicJsonValue
+                {
+                    ["Totals"] = new DynamicJsonValue
+                    {
+                        ["Rss"] = result.Rss,
+                        ["SharedClean"] = result.SharedClean,
+                        ["PrivateClean"] = result.PrivateClean,
+                        ["RssHumanly"] = Sizes.Humane(result.Rss),
+                        ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
+                        ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean)
+                    },
+                    ["Details"] = result.Json
+                };
+
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, djv);
+                }
+                return Task.CompletedTask;
+            }
+        }
 
 
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]

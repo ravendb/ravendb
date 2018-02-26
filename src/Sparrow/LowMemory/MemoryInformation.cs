@@ -253,7 +253,7 @@ namespace Sparrow.LowMemory
 
             if (maxMemoryUsage != 0 && maxMemoryUsage <= totalPhysicalMemoryInBytes)
             {
-                // running in a container
+                // running in a limitted cgroup
                 var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
                 if (cgroupMemoryUsage != null)
                 {
