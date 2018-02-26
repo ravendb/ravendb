@@ -20,7 +20,7 @@ namespace Sparrow.Platform
 
         public static readonly bool CanPrefetch = IsWindows8OrNewer() || RunningOnPosix;
 
-        public static readonly bool RunningOnDocker = Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER") == "true".ToLowerInvariant();
+        public static bool RunningOnDocker => string.Equals(Environment.GetEnvironmentVariable("RAVEN_IN_DOCKER"), "true", StringComparison.OrdinalIgnoreCase);
 
         public static ulong GetCurrentThreadId()
         {
