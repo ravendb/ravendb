@@ -2,14 +2,6 @@
 
 This repository contains source code for [RavenDB](http://ravendb.net/) document database.
 
-Build Status
-------------
-| Version | Windows | Linux |
-|:-------:|:-------|:------:|
-| 3.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_30Tests)/statusIcon) | N/A |
-| 3.5 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_35Tests)/statusIcon) | N/A |
-| 4.0 | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_40TestsWindows)/statusIcon) | ![](http://teamcity.hibernatingrhinos.com/app/rest/builds/buildType:(id:RavenDBTests_40TestsLinux)/statusIcon) |
-
 New to RavenDB?
 ---------------
 Check out our [Getting started page](http://ravendb.net/docs/article-page/3.5/csharp/start/getting-started).
