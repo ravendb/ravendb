@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
             catch (Exception e)
             {
-                _index.ThrowIfCorruptionException(e);
+                _index.ErrorIndexIfCriticalException(e);
 
                 LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: null, numberOfNestedValues: numberOfEntriesToReduce);
             }
@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
-                        _index.ThrowIfCorruptionException(e);
+                        _index.ErrorIndexIfCriticalException(e);
 
                         LogReductionError(e, reduceKeyHash, stats, updateStats: parentPage == -1, page: leafPage);
                     }
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     }
                     catch (Exception e)
                     {
-                        _index.ThrowIfCorruptionException(e);
+                        _index.ErrorIndexIfCriticalException(e);
 
                         LogReductionError(e, reduceKeyHash, stats, updateStats: true, page: page);
                     }

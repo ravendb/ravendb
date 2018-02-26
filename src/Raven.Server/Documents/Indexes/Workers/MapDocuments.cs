@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     catch (Exception e)
                                     {
                                         docsEnumerator.OnError();
-                                        _index.ThrowIfCorruptionException(e);
+                                        _index.ErrorIndexIfCriticalException(e);
 
                                         collectionStats.RecordMapError();
                                         if (_logger.IsInfoEnabled)

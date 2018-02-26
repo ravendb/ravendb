@@ -945,9 +945,6 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (Exception e)
                                 {
-                                    if (_logger.IsOperationsEnabled)
-                                        _logger.Operations($"Critical exception occurred for '{Name}'.", e);
-
                                     HandleUnexpectedErrors(scope, e);
                                 }
 
@@ -1137,6 +1134,9 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleAnalyzerErrors(IndexingStatsScope stats, IndexAnalyzerException iae)
         {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Analyzer error occurred for '{Name}'.", iae);
+
             stats.AddAnalyzerError(iae);
 
             var analyzerErrors = Interlocked.Increment(ref _analyzerErrors);
@@ -1150,6 +1150,9 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleUnexpectedErrors(IndexingStatsScope stats, Exception e)
         {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Unexpected exception occurred for '{Name}'.", e);
+
             stats.AddUnexpectedError(e);
 
             var unexpectedErrors = Interlocked.Increment(ref _unexpectedErrors);
@@ -1163,15 +1166,21 @@ namespace Raven.Server.Documents.Indexes
 
         internal void HandleCriticalErrors(IndexingStatsScope stats, CriticalIndexingException e)
         {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Critical exception occurred for '{Name}'.", e);
+
             if (State == IndexState.Error)
                 return;
 
-            _errorStateReason = "State was changed due to a critical error.";
+            _errorStateReason = $"State was changed due to a critical error. Error message: {e.Message}";
             SetState(IndexState.Error);
         }
 
         internal void HandleWriteErrors(IndexingStatsScope stats, IndexWriteException iwe)
         {
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Write exception occurred for '{Name}'.", iwe);
+
             stats.AddWriteError(iwe);
 
             if (iwe.InnerException is SystemException) // Don't count transient errors
@@ -1272,14 +1281,13 @@ namespace Raven.Server.Documents.Indexes
             SetState(IndexState.Error);
         }
 
-        public void ThrowIfCorruptionException(Exception e)
+        public void ErrorIndexIfCriticalException(Exception e)
         {
-            if (e is VoronUnrecoverableErrorException == false &&
-                e is PageCompressedException == false &&
-                e is UnexpectedReduceTreePageException == false)
-                return;
+            if (e is VoronUnrecoverableErrorException || e is PageCompressedException || e is UnexpectedReduceTreePageException)
+                throw new IndexCorruptionException(e);
 
-            throw new IndexCorruptionException(e);
+            if (e is InvalidProgramException ipe)
+                throw new JitHitInternalLimitsOnIndexingFunction(ipe);
         }
 
         protected abstract IIndexingWork[] CreateIndexWorkExecutors();
