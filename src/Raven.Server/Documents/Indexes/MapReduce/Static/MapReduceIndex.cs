@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -66,8 +67,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         }
 
         public static MapReduceIndex CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
-        {
-            var instance = CreateIndexInstance(definition);
+        {            
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
             ValidateReduceResultsCollectionName(definition, instance._compiled, documentDatabase);
 
             instance.Initialize(documentDatabase,
@@ -212,7 +213,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         public static Index Open(StorageEnvironment environment, DocumentDatabase documentDatabase)
         {
             var definition = MapIndexDefinition.Load(environment);
-            var instance = CreateIndexInstance(definition);
+            var instance = CreateIndexInstance(definition, documentDatabase.Configuration);
 
             instance.Initialize(environment, documentDatabase,
                 new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration),
@@ -231,9 +232,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             staticMapIndex.Update(staticMapIndexDefinition, new SingleIndexConfiguration(definition.Configuration, documentDatabase.Configuration));
         }
 
-        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition)
+        private static MapReduceIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
-            var staticIndex = IndexCompilationCache.GetIndexInstance(definition);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapReduceIndexDefinition(definition, staticIndex.Maps.Keys.ToHashSet(), staticIndex.OutputFields,
                 staticIndex.GroupByFields, staticIndex.HasDynamicFields);

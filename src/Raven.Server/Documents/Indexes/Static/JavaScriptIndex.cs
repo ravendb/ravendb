@@ -7,10 +7,13 @@ using Esprima;
 using Esprima.Ast;
 using Jint;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Function;
+using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -21,14 +24,28 @@ namespace Raven.Server.Documents.Indexes.Static
         private static readonly string MapsProperty = "maps";
         private static readonly string CollectionProperty = "collection";
         private static readonly string MethodProperty = "method";
+        private static readonly string MoreArgsProperty = "moreArgs";
         private static readonly string ReduceProperty = "reduce";
 
-        public JavaScriptIndex(IndexDefinition definition)
+        public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
         {
             _definitions = definition;
             // we create the Jint instance directly instead of using SingleRun
             // because the index is single threaded and long lived
-            _engine = new Engine();
+            _engine = new Engine(options =>
+            {
+                options.LimitRecursion(64)
+                    .SetReferencesResolver(new JintPreventResolvingTasksReferenceResolver())
+                    .MaxStatements(configuration.Indexing.MaxStepsForScript)
+                    .Strict()
+                    .AddObjectConverter(new JintGuidConverter())
+                    .AddObjectConverter(new JintStringConverter())
+                    .AddObjectConverter(new JintEnumConverter())
+                    .AddObjectConverter(new JintDateTimeConverter())
+                    .AddObjectConverter(new JintTimeSpanConverter())
+                    .LocalTimeZone(TimeZoneInfo.Utc);
+
+            });
             _engine.SetValue("load", new ClrFunctionInstance(_engine, LoadDocument));
             _engine.Execute(Code);
             foreach (var map in definition.Maps)
@@ -68,13 +85,26 @@ namespace Raven.Server.Documents.Indexes.Static
                     ThrowIndexCreationException($"map function #{i} is missing its {MethodProperty} property");
                 var funcInstance = map.Get(MethodProperty).As<FunctionInstance>();
                 if(funcInstance == null)
-                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");
+                    ThrowIndexCreationException($"map function #{i} {MethodProperty} property isn't a 'FunctionInstance'");                
                 var operation = new MapOperation
                 {
                     MapFunc = funcInstance,
-                    IndexName = _definitions.Name
+                    IndexName = _definitions.Name,
+                    Configuration = configuration
                 };
-                operation.Analyze();
+                if (map.HasOwnProperty(MoreArgsProperty))
+                {
+                    var moreArgsObj = map.Get(MoreArgsProperty);
+                    if (moreArgsObj.IsArray())
+                    {
+                        var array = moreArgsObj.AsArray();
+                        if (array.GetLength() > 0)
+                        {
+                            operation.MoreArguments = array;
+                        }
+                    }
+                }
+                operation.Analyze(_engine);
                 if (ReferencedCollections.TryGetValue(mapCollection, out var collectionNames) == false)
                 {
                     collectionNames = new HashSet<CollectionName>();
@@ -317,7 +347,8 @@ function map(name, lambda) {
 
     var map = {
         collection: name,
-        method: lambda                
+        method: lambda,
+        moreArgs: Array.prototype.slice.call(arguments, 2)
     };    
     globalDefinition.maps.push(map);
 }
@@ -342,19 +373,21 @@ function groupBy(lambda) {
             public Dictionary<string,IndexFieldOptions> FieldOptions = new Dictionary<string, IndexFieldOptions>();
             public string IndexName { get; set; }
 
-            public void Analyze()
+            public void Analyze(Engine engine)
             {
-                //TODO: expose this in Jint directly instead of reflection
-                //TODO: we should calculate the refrenced collection in this method
-                var funcDeclField = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
-
                 HasDynamicReturns = false;
                                
                 if (!(MapFunc is ScriptFunctionInstance sfi))
                     return;
 
-                var theFuncAst = (IFunction)funcDeclField.GetValue(sfi);
+                var theFuncAst = GetFunctionAst(sfi);
 
+                var res = CheckIfsimpleMapExpression(engine, theFuncAst);
+                if (res != null)
+                {
+                    MapFunc = res.Value.Function;
+                    theFuncAst = res.Value.FunctionAst;
+                }
                 var loadSearcher = new EsprimaReferencedCollectionVisitor();
                 loadSearcher.VisitFunctionExpression(theFuncAst);
                 ReferencedCollection.UnionWith(loadSearcher.ReferencedCollection);
@@ -390,7 +423,77 @@ function groupBy(lambda) {
                 }
             }
 
+            private static IFunction GetFunctionAst(ScriptFunctionInstance scriptFunctionInstance)
+            {
+                //TODO: expose this in Jint directly instead of reflection
+                var funcDeclField = typeof(ScriptFunctionInstance).GetField("_functionDeclaration", BindingFlags.Instance | BindingFlags.NonPublic);
+                var theFuncAst = (IFunction)funcDeclField.GetValue(scriptFunctionInstance);
+                return theFuncAst;
+            }
+
+            private (FunctionInstance Function, IFunction FunctionAst)? CheckIfsimpleMapExpression(Engine engine, IFunction function)
+            {
+                var field = TryGetField(function);
+                if (field == null)
+                    return null;
+                var properties = new List<Property>
+                {
+                    new Property(PropertyKind.Data, new Identifier(field), false,
+                        new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false)
+                };
+
+                if(MoreArguments != null)
+                {
+                    for (int i = 0; i < MoreArguments.GetLength(); i++)
+                    {
+                        var arg = MoreArguments.Get(i.ToString()).As<FunctionInstance>();
+
+                        if(!(arg is ScriptFunctionInstance sfi))
+                            continue;
+                        var moreFuncAst = GetFunctionAst(sfi);
+                        field = TryGetField(moreFuncAst);
+                        if(field != null)
+                        {
+                            properties.Add(new Property(PropertyKind.Data, new Identifier(field), false,
+                            new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false));
+
+                        }
+                    }
+                }
+
+                var functionExp = new FunctionExpression(function.Id,new []{ new Identifier("self") },
+                    new BlockStatement(new []
+                    {
+                        new ReturnStatement(new ObjectExpression(properties))
+                    }),false ,function.HoistingScope, function.Strict );
+                var functionObject = new ScriptFunctionInstance(
+                        engine,
+                        functionExp,
+                        LexicalEnvironment.NewDeclarativeEnvironment(engine, engine.ExecutionContext.LexicalEnvironment),
+                        function.Strict
+                    )
+                    { Extensible = true };
+                return (functionObject, functionExp);
+            }
+
+            private static string TryGetField(IFunction function)
+            {
+                if (!(function.Params.SingleOrDefault() is Identifier identifier))
+                    return null;
+                if (!(function.Body.Body.SingleOrDefault() is ReturnStatement returnStatement))
+                    return null;
+                if (!(returnStatement.Argument is MemberExpression me))
+                    return null;
+                if (!(me.Property is Identifier property))
+                    return null;
+                if ((!(me.Object is Identifier reference) || reference.Name != identifier.Name))
+                    return null;
+                return property.Name;
+            }
+
             public HashSet<CollectionName> ReferencedCollection { get; set; } = new HashSet<CollectionName>();
+            public ArrayInstance MoreArguments { get; set; }
+            public RavenConfiguration Configuration { get; set; }
 
             private bool CompareFields(ObjectExpression oe)
             {
