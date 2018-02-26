@@ -473,6 +473,7 @@ namespace Raven.Server.Web.Authentication
                         {
                             c.Write(w, cert.Value);
                         });
+                        writer.WriteComma();
                         writer.WritePropertyName("LoadedServerCert");
                         writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
                         writer.WriteEndObject();
