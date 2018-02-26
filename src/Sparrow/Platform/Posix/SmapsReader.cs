@@ -100,8 +100,7 @@ namespace Sparrow.Platform.Posix
                         if (switchBuffer == false && i + term.Length + offset > _endOfBuffer[_currentBuffer])
                         {
                             var nextBuffer = (_currentBuffer + 1) % 2;
-                            var _ = ReadFromFile(fileStream, nextBuffer);
-                            // we don't care if this is the end of the file
+                            read = ReadFromFile(fileStream, nextBuffer);
                             switchBuffer = true;
                         }
 
@@ -223,14 +222,7 @@ namespace Sparrow.Platform.Posix
                             ++bytesSearched;
                         }
 
-                        if (term != _rwsBytes)
-                        {
-                            if (foundValue == false)
-                                throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{currentProcess.Id}/smaps, but no value");
-                            if (foundK == false)
-                                throw new InvalidDataException(
-                                    $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{currentProcess.Id}/smaps, and value but not in kB - invalid format");
-                        }
+                        ThrowNotContainsValidValue(term, foundValue, foundK, currentProcess.Id);
 
                         i += term.Length + bytesSearched;
                         if (i >= _smapsBuffer[_currentBuffer].Length)
@@ -258,9 +250,7 @@ namespace Sparrow.Platform.Posix
 
                         if (term == _rwsBytes)
                         {
-                            if (state != SearchState.None)
-                                throw new InvalidDataException(
-                                    $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{currentProcess.Id}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}'");
+                            ThrowNotRwsTermAfterLockedTerm(state, term, currentProcess.Id);                            
                             state = SearchState.Rws;
                         }
                         else if (term == _sizeBytes)
@@ -314,10 +304,8 @@ namespace Sparrow.Platform.Posix
                                 continue;
                             state = SearchState.None;
 
-
-                            if (resultString == null)
-                                throw new InvalidDataException("Got term 'Locked' (end of single mapping data) with no filename after rw-s");
-
+                            ThrowIfNullString(resultString);
+                            
                             if (resultString.EndsWith(".voron") == false && 
                                 resultString.EndsWith(".buffers") == false) 
                                 continue;
@@ -351,6 +339,31 @@ namespace Sparrow.Platform.Posix
                 }
 
                 return (tmpRss, tmpSharedClean, tmpPrivateClean, dja);
+            }
+        }
+
+        private static void ThrowIfNullString(string resultString)
+        {
+            if (resultString == null)
+                throw new InvalidDataException($"Got term 'Locked' (end of single mapping data) with no filename (in {nameof(resultString)}) after rw-s");
+        }
+
+        private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
+        {
+            if (state != SearchState.None)
+                throw new InvalidDataException(
+                    $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but previous search did not end with '{Encoding.UTF8.GetString(_lockedBytes)}' (instead got {state})");
+        }
+
+        private void ThrowNotContainsValidValue(byte[] term, bool foundValue, bool foundK, int processId)
+        {
+            if (term != _rwsBytes)
+            {
+                if (foundValue == false)
+                    throw new InvalidDataException($"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, but no value");
+                if (foundK == false)
+                    throw new InvalidDataException(
+                        $"Found '{Encoding.UTF8.GetString(term)}' string in /proc/{processId}/smaps, and value but not in kB - invalid format");
             }
         }
     }
