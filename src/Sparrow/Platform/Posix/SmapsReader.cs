@@ -304,7 +304,8 @@ namespace Sparrow.Platform.Posix
                                 continue;
                             state = SearchState.None;
 
-                            ThrowIfNullString(resultString);
+                            if (resultString == null)
+                                ThrowOnNullString();
                             
                             if (resultString.EndsWith(".voron") == false && 
                                 resultString.EndsWith(".buffers") == false) 
@@ -342,10 +343,9 @@ namespace Sparrow.Platform.Posix
             }
         }
 
-        private static void ThrowIfNullString(string resultString)
+        private static void ThrowOnNullString()
         {
-            if (resultString == null)
-                throw new InvalidDataException($"Got term 'Locked' (end of single mapping data) with no filename (in {nameof(resultString)}) after rw-s");
+            throw new InvalidDataException($"Got term 'Locked' (end of single mapping data) with no filename (in 'resultString') after rw-s");
         }
 
         private void ThrowNotRwsTermAfterLockedTerm(SearchState state, byte[] term, int processId)
