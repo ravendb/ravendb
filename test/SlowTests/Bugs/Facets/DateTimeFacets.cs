@@ -16,10 +16,10 @@ namespace SlowTests.Bugs.Facets
         {
             var now = DateTime.Today;
             var dates = new List<DateTime>{
-                now.AddDays(-10),
-                now.AddDays(-7),
-                now.AddDays(0),
-                now.AddDays(7)
+                DateTime.SpecifyKind(now.AddDays(-10), DateTimeKind.Unspecified),
+                DateTime.SpecifyKind(now.AddDays(-7), DateTimeKind.Unspecified),
+                DateTime.SpecifyKind(now.AddDays(0), DateTimeKind.Unspecified),
+                DateTime.SpecifyKind(now.AddDays(7), DateTimeKind.Unspecified)                
             };
 
             var facetsNewWay = new List<RangeFacet>
@@ -43,11 +43,11 @@ namespace SlowTests.Bugs.Facets
                 {
                     Ranges = new List<string>
                     {
-                        string.Format("DateOfListing < '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0]),
-                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[0], dates[1]),
-                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[1], dates[2]),
-                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}' AND DateOfListing < '{1:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[2], dates[3]),
-                        string.Format("DateOfListing > '{0:yyyy-MM-ddTHH:mm:ss.fffffff}'", dates[3])
+                        $"DateOfListing < '{dates[0]:o}'",
+                        $"DateOfListing > '{dates[0]:o}' and DateOfListing < '{dates[1]:o}'",
+                        $"DateOfListing > '{dates[1]:o}' and DateOfListing < '{dates[2]:o}'",
+                        $"DateOfListing > '{dates[2]:o}' and DateOfListing < '{dates[3]:o}'",
+                        $"DateOfListing > '{dates[3]:o}'"
                     }
                 }
             };
@@ -60,9 +60,17 @@ namespace SlowTests.Bugs.Facets
                 Assert.Equal(o.Options, n.Options);
                 Assert.Equal(o.Ranges.Count, n.Ranges.Count);
 
+                //replace the parameters in facetNewWay.Ranges with the actual dates 
+                var newWayRanges = new List<string>(n.Ranges);
+                newWayRanges[0] = newWayRanges[0].Replace("$p0", $"'{dates[0]:o}'");
+                newWayRanges[1] = newWayRanges[1].Replace("$p1", $"'{dates[0]:o}'").Replace("$p2", $"'{dates[1]:o}'");
+                newWayRanges[2] = newWayRanges[2].Replace("$p3", $"'{dates[1]:o}'").Replace("$p4", $"'{dates[2]:o}'");              ;
+                newWayRanges[3] = newWayRanges[3].Replace("$p5", $"'{dates[2]:o}'").Replace("$p6", $"'{dates[3]:o}'");
+                newWayRanges[4] = newWayRanges[4].Replace("$p7", $"'{dates[3]:o}'");
+
                 for (int j = 0; j < o.Ranges.Count; j++)
                 {
-                    Assert.Equal(o.Ranges[i], n.Ranges[i]);
+                    Assert.Equal(o.Ranges[j], newWayRanges[j]);
                 }
 
                 Assert.Equal(o.Aggregations.Count, n.Aggregations.Count);
