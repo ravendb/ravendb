@@ -1029,13 +1029,13 @@ namespace Raven.Server.ServerWide
         }
         
         public IEnumerable<(string Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesStartsWith(TransactionOperationContext context, 
-            string dbName, string prefix, int currentPage = 0, int pageSize = 1024)
+            string dbName, string prefix, int start = 0, int pageSize = 1024)
         {
             var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
             var dbKey = prefix.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {
-                foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, currentPage * pageSize))
+                foreach (var item in items.SeekByPrimaryKeyPrefix(keySlice, Slices.Empty, start))
                 {
                     pageSize--;
                     var key = ReadCompareExchangeKey(item.Value.Reader, dbName);
