@@ -252,7 +252,7 @@ namespace Raven.Server
             // confirm they got it (or if there are less than 3 days to spare).
 
             var currentCertificate = Certificate;
-            if (currentCertificate == null)
+            if (currentCertificate.Certificate == null)
             {
                 return; // shouldn't happen, but just in case
             }
@@ -353,7 +353,7 @@ namespace Raven.Server
 
                 try
                 {
-                    newCertificate = await RefreshLetsEncryptCertificate(currentCertificate);
+                    newCertificate = await RenewLetsEncryptCertificate(currentCertificate);
                 }
                 catch (Exception e)
                 {
@@ -394,7 +394,7 @@ namespace Raven.Server
             });
         }
 
-        private async Task<CertificateHolder> RefreshLetsEncryptCertificate(CertificateHolder existing)
+        private async Task<CertificateHolder> RenewLetsEncryptCertificate(CertificateHolder existing)
         {
             var license = ServerStore.LoadLicense();
 
