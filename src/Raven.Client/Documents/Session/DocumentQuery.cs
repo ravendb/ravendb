@@ -753,7 +753,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         bool IDocumentQueryBase<T>.Any()
         {
-            return ExecuteQueryOperation(1).Any();
+            Take(0);
+            var queryResult = GetQueryResult();
+            return queryResult.TotalResults > 0;
         }
 
         private List<T> ExecuteQueryOperation(int? take)
@@ -782,7 +784,6 @@ namespace Raven.Client.Documents.Session
                 Take(0);
                 QueryOperation = InitializeQueryOperation();
             }
-
 
             var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
 

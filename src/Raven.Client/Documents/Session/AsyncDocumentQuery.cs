@@ -761,8 +761,9 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         async Task<bool> IAsyncDocumentQueryBase<T>.AnyAsync(CancellationToken token)
         {
-            var operation = await ExecuteQueryOperation(1, token).ConfigureAwait(false);
-            return operation.Any();
+            Take(0);
+            var result = await GetQueryResultAsync(token).ConfigureAwait(false);
+            return result.TotalResults > 0;
         }
 
         private async Task<List<T>> ExecuteQueryOperation(int? take, CancellationToken token)
