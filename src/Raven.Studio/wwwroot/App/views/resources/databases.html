@@ -128,7 +128,9 @@
                                               css: { 'link-disabled': isBeingDeleted }, visible: canNavigateToDatabase()" href="#">
                                     <i data-bind="attr: { class: $root.createIsLocalDatabaseObservable(name)() ? 'icon-database-home': 'icon-database' }"></i><span data-bind="text: name"></span>
                                 </a>
+                                
                             </h3>
+                            <small class="margin-right margin-right-sm" title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption"></i></small>
                         </div>
                         <div class="dbgroup-node-type flex-horizontal">
                             <!-- ko foreach: nodes -->
