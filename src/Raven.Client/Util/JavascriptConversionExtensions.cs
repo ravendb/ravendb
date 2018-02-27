@@ -651,8 +651,14 @@ namespace Raven.Client.Util
 
         public class WrappedConstantSupport<T> : JavascriptConversionExtension
         {
-            public IAbstractDocumentQuery<T> DocumentQuery { private get; set; }
-            public List<string> ProjectionParameters { get; set; }
+            private readonly IAbstractDocumentQuery<T> _documentQuery;
+            private readonly List<string> _projectionParameters;
+
+            public WrappedConstantSupport(IAbstractDocumentQuery<T> documentQuery, List<string> projectionParameters)
+            {
+                _documentQuery = documentQuery;
+                _projectionParameters = projectionParameters;
+            }
 
             private static bool IsWrapedConstatntExpression(Expression expression)
             {
@@ -671,8 +677,8 @@ namespace Raven.Client.Util
                     return;
 
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(memberExpression, out var value);
-                var parameter = DocumentQuery.ProjectionParameter(value);
-                ProjectionParameters?.Add(parameter);
+                var parameter = _documentQuery.ProjectionParameter(value);
+                _projectionParameters?.Add(parameter);
 
                 var writer = context.GetWriter();
                 context.PreventDefault();

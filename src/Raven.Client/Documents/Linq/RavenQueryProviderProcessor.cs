@@ -2204,11 +2204,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 JavascriptConversionExtensions.NullableSupport.Instance,
                 JavascriptConversionExtensions.NewSupport.Instance,
                 JavascriptConversionExtensions.ListInitSupport.Instance,
-                new JavascriptConversionExtensions.WrappedConstantSupport<T>
-                {
-                    DocumentQuery = _documentQuery,
-                    ProjectionParameters = _projectionParameters
-                },
+                new JavascriptConversionExtensions.WrappedConstantSupport<T>(_documentQuery, _projectionParameters),
                 loadSupport ?? new JavascriptConversionExtensions.LoadSupport(),
                 MemberInitAsJson.ForAllTypes
             };
