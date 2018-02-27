@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -39,9 +41,9 @@ namespace Raven.Client.Documents.Session.Tokens
             return new FacetToken(facetSetupDocumentId);
         }
 
-        public static FacetToken Create(FacetBase facet, Func<object, string> addQueryParameter)
+        public static FacetToken Create(FacetBase facet, Parameters queryParameters)
         {
-            var optionsParameterName = facet.Options != null && facet.Options != FacetOptions.Default ? addQueryParameter(facet.Options) : null;
+            var optionsParameterName = facet.Options != null && facet.Options != FacetOptions.Default ? AddQueryParameter(facet.Options, queryParameters) : null;
 
             string aggregateByField = null;
             List<string> ranges = null;
@@ -53,7 +55,11 @@ namespace Raven.Client.Documents.Session.Tokens
                 aggregateByField = aggregationFacet.FieldName;
 
             if (rangeFacet != null)
-                ranges = rangeFacet.Ranges;
+            {
+                ranges = rangeFacet.FacetParameters?.Count > 0 
+                        ? AddFacetParametersToQueryAndRenameInRangesIfNeeded(rangeFacet, queryParameters) 
+                        : rangeFacet.Ranges;
+            }
 
             var token = new FacetToken(aggregateByField, facet.DisplayFieldName, ranges, optionsParameterName);
 
@@ -144,6 +150,49 @@ namespace Raven.Client.Documents.Session.Tokens
             writer
                 .Append(" as ")
                 .Append(_alias);
+        }
+
+        private static List<string> AddFacetParametersToQueryAndRenameInRangesIfNeeded(RangeFacet rangeFacet, Parameters queryParameters)
+        {
+            var ranges = new List<string>(rangeFacet.Ranges);
+            var nameMappings = new Dictionary<string, string>();
+
+            foreach (var p in rangeFacet.FacetParameters.Keys)
+            {
+                if (queryParameters.ContainsKey(p))
+                {
+                    nameMappings[p] = AddQueryParameter(rangeFacet.FacetParameters[p], queryParameters);
+                }
+                else
+                {
+                    AddQueryParameter(rangeFacet.FacetParameters[p], queryParameters);
+                }
+            }
+
+            var j = ranges.Count - 1;
+            foreach (var p in nameMappings.Keys.Reverse())
+            {
+                while (ranges[j].Contains("$" + p) == false && --j >= 0)
+                {
+                }
+
+                if (j < 0)
+                {
+                    break;
+                }
+
+                ranges[j] = ranges[j].Replace("$" + p, "$" + nameMappings[p]);
+
+            }
+
+            return ranges;
+        }
+
+        private static string AddQueryParameter(object value, Parameters queryParameters)
+        {
+            var parameterName = $"p{queryParameters.Count.ToInvariantString()}";
+            queryParameters.Add(parameterName, value);
+            return parameterName;
         }
 
         private class FacetAggregationToken : QueryToken
