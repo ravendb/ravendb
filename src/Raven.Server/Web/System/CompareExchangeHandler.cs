@@ -56,9 +56,9 @@ namespace Raven.Server.Web.System
                         numberOfResults++;
                         operationContext.Write(textWriter, new DynamicJsonValue
                         {
-                            ["Key"] = item.Key,
-                            ["Value"] = item.Value,
-                            ["Index"] = item.Index
+                            [nameof(CompareExchangeListItem.Key)] = item.Key,
+                            [nameof(CompareExchangeListItem.Value)] = item.Value,
+                            [nameof(CompareExchangeListItem.Index)] = item.Index
                         });
                     });
 
@@ -67,6 +67,13 @@ namespace Raven.Server.Web.System
 
             AddPagingPerformanceHint(PagingOperationType.CompareExchange, nameof(ClusterStateMachine.GetCompareExchangeValuesStartsWith), 
                 HttpContext.Request.QueryString.Value, numberOfResults, pageSize, sw.ElapsedMilliseconds);
+        }
+        
+        public class CompareExchangeListItem
+        {
+            public string Key { get; set; }
+            public object Value { get; set; }
+            public long Index { get; set; }
         }
         
         private void GetCompareExchangeValuesByKey(TransactionOperationContext context, StringValues keys)
