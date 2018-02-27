@@ -55,15 +55,19 @@ namespace Raven.Client.Documents.Queries.Facets
             if (_range == null)
                 _range = new RangeFacet();
 
-            _range.Ranges.Add(RangeFacet<T>.Parse(path));
+            var facetParameters = new Parameters();
+
+            _range.Ranges.Add(RangeFacet<T>.Parse(path, facetParameters));
 
             if (paths != null)
             {
                 foreach (var p in paths)
                 {
-                    _range.Ranges.Add(RangeFacet<T>.Parse(p));
+                    _range.Ranges.Add(RangeFacet<T>.Parse(p, facetParameters));
                 }
             }
+
+            _range.FacetParameters = facetParameters;
 
             return this;
         }

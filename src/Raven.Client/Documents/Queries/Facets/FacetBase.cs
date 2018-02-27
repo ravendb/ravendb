@@ -17,6 +17,8 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public Dictionary<FacetAggregation, string> Aggregations { get; set; }
 
+        public Parameters FacetParameters { get; set; }
+
         /// <summary>
         /// Displayed field name in facet results
         /// </summary>

@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Extensions;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Documents.Queries.Facets
@@ -55,23 +56,29 @@ namespace Raven.Client.Documents.Queries.Facets
 
         public static implicit operator RangeFacet(RangeFacet<T> other)
         {
-            var ranges = other.Ranges.Select(Parse).ToList();
+            var ranges = new List<string>();
+            var facetParameters = new Parameters();
+            foreach (var rangeExpression in other.Ranges)
+            {
+                ranges.Add(Parse(rangeExpression, facetParameters));
+            }
 
             return new RangeFacet
             {
                 Ranges = ranges,
                 Options = other.Options,
                 Aggregations = other.Aggregations,
-                DisplayFieldName = other.DisplayFieldName
+                DisplayFieldName = other.DisplayFieldName,
+                FacetParameters = facetParameters
             };
         }
 
-        public static string Parse(Expression<Func<T, bool>> expr)
+        public static string Parse(Expression<Func<T, bool>> expr, Parameters parameters = null)
         {
-            return Parse(null, (LambdaExpression)expr);
+            return Parse(null, (LambdaExpression)expr, parameters);
         }
         
-        public static string Parse(string prefix, LambdaExpression expr)
+        public static string Parse(string prefix, LambdaExpression expr, Parameters parameters)
         {
             if (expr.Body is MethodCallExpression mce)
             {
@@ -80,7 +87,7 @@ namespace Raven.Client.Documents.Queries.Facets
                     if (mce.Arguments[0] is MemberExpression src &&
                         mce.Arguments[1] is LambdaExpression le)
                     {
-                        return Parse(GetFieldName(prefix, src) , le);
+                        return Parse(GetFieldName(prefix, src) , le, parameters);
                     }
                 }
                 throw new InvalidOperationException("Don't know how to translate expression to facets: " + expr);
@@ -92,7 +99,7 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 var fieldName = GetFieldName(prefix, me);
                 var subExpressionValue = ParseSubExpression(operation);
-                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue);
+                var expression = GetStringRepresentation(fieldName, operation.NodeType, subExpressionValue, parameters);
                 return expression;
             }
 
@@ -122,7 +129,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm1)
             {
-                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right));
+                return GetStringRepresentation(leftFieldName, left.NodeType, right.NodeType, ParseSubExpression(left), ParseSubExpression(right), parameters);
             }
 
             // option #2: expression has form x < 10 && x > 5 --> reverse expression to end up with form #1
@@ -131,7 +138,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             if (hasForm2)
             {
-                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left));
+                return GetStringRepresentation(leftFieldName, right.NodeType, left.NodeType, ParseSubExpression(right), ParseSubExpression(left), parameters);
             }
 
             throw new InvalidOperationException("Members in sub-expression(s) are not the correct types (expected '<', '<=', '>' or '>=')");
@@ -256,7 +263,7 @@ namespace Raven.Client.Documents.Queries.Facets
             }
         }
 
-        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue)
+        private static string GetStringRepresentation(string fieldName, ExpressionType leftOp, ExpressionType rightOp, object lValue, object rValue, Parameters parameters)
         {
             if (lValue is IComparable lValueAsComparable && rValue is IComparable rValueAsComparable)
             {
@@ -269,17 +276,25 @@ namespace Raven.Client.Documents.Queries.Facets
             if (lValue != null && rValue != null)
             {
                 if (leftOp == ExpressionType.GreaterThanOrEqual && rightOp == ExpressionType.LessThanOrEqual)
-                    return $"{fieldName} between {GetStringValue(lValue)} and {GetStringValue(rValue)}";
+                    return $"{fieldName} between {GetStringValue(lValue, parameters)} and {GetStringValue(rValue, parameters)}";
 
-                return $"{GetStringRepresentation(fieldName, leftOp, lValue)} and {GetStringRepresentation(fieldName, rightOp, rValue)}";
+                return $"{GetStringRepresentation(fieldName, leftOp, lValue, parameters)} and {GetStringRepresentation(fieldName, rightOp, rValue, parameters)}";
             }
 
             throw new InvalidOperationException("Unable to parse the given operation into a facet range!!! ");
         }
 
-        private static string GetStringValue(object value)
+        private static string GetStringValue(object value, Parameters parameters)
         {
-            switch (value.GetType().FullName)
+            var type = value.GetType().FullName;
+
+            if (parameters != null && 
+                type.In(new[] { "System.DateTime", "System.DateTimeOffset", "System.String" }))
+            {
+                return AddParameter(value, parameters);
+            }
+
+            switch (type)
             {
                 //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
                 case "System.DateTime":
@@ -299,13 +314,20 @@ namespace Raven.Client.Documents.Queries.Facets
                 case "System.String":
                     return $"'{value}'";
                 default:
-                    throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
+                    throw new InvalidOperationException("Unable to parse the given type " + type + ", into a facet range!!! ");
             }
         }
 
-        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value)
+        private static string AddParameter(object value, Parameters parameters)
         {
-            var valueAsStr = GetStringValue(value);
+            var parameterName = $"p{parameters.Count.ToInvariantString()}";
+            parameters.Add(parameterName, value);
+            return "$"+parameterName;
+        }
+
+        private static string GetStringRepresentation(string fieldName, ExpressionType op, object value, Parameters parameters)
+        {
+            var valueAsStr = GetStringValue(value, parameters);
             if (op == ExpressionType.LessThan)
                 return $"{fieldName} < {valueAsStr}";
             if (op == ExpressionType.GreaterThan)
