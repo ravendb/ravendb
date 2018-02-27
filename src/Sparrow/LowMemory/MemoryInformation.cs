@@ -164,7 +164,7 @@ namespace Sparrow.LowMemory
             }
         }
 
-        public static (long MemAvailable, long SwapTotal, long Commited, long TotalMemory) GetFromProcMemInfo()
+        public static (Size MemAvailable, Size TotalMemory, Size Commited, Size CommitLimit) GetFromProcMemInfo()
         {
             const string path = "/proc/meminfo";
 
@@ -177,16 +177,19 @@ namespace Sparrow.LowMemory
                 using (var bufferedReader = new KernelVirtualFileSystemUtils.BufferedPosixKeyValueOutputValueReader(path))
                 {
                     bufferedReader.ReadFileIntoBuffer();
-                    var memAvailable = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemAvailable);
-                    var memFree = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree);
-                    var swapTotal = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
-                    var commited = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
-                    var total = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemTotal);
+                    var memAvailableInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemAvailable);
+                    var memFreeInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemFree);
+                    var totalMemInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(MemTotal);
+                    var swapTotalInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(SwapTotal);
+                    var commitedInKb = bufferedReader.ExtractNumericValueFromKeyValuePairsFormattedFile(Committed_AS);
                     return (
-                        MemAvailable: Math.Max(memAvailable, memFree) * 1024,
-                        SwapTotal: swapTotal * 1024,
-                        Commited: commited * 1024,
-                        TotalMemory: total * 1024
+                        MemAvailable: new Size(Math.Max(memAvailableInKb, memFreeInKb), SizeUnit.Kilobytes),
+                        TotalMemory: new Size(totalMemInKb, SizeUnit.Kilobytes),
+                        Commited: new Size(commitedInKb, SizeUnit.Kilobytes),
+
+                        // on Linux, we use the swap + ram as the commit limit, because the actual limit
+                        // is dependent on many different factors
+                        CommitLimit: new Size(totalMemInKb + swapTotalInKb, SizeUnit.Kilobytes)
                     );
                 }
             }
@@ -195,7 +198,7 @@ namespace Sparrow.LowMemory
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Failed to read value from {path}", ex);
 
-                return (-1, -1, -1, -1);
+                return (new Size(), new Size(), new Size(), new Size());
             }
         }
 
@@ -238,51 +241,45 @@ namespace Sparrow.LowMemory
         private static MemoryInfoResult GetMemoryInfoLinux()
         {
             var fromProcMemInfo = GetFromProcMemInfo();
-            var totalPhysicalMemoryInBytes = fromProcMemInfo.TotalMemory;
-            var availableRamInBytes = fromProcMemInfo.MemAvailable;
-            var commitedMemoryInBytes = fromProcMemInfo.Commited;
-
-            // On Linux, we use the swap + ram as the commit limit, because the actual limit
-            // is dependent on many different factors
-            var commitLimitInBytes = totalPhysicalMemoryInBytes + fromProcMemInfo.SwapTotal;
+            var totalPhysicalMemoryInBytes = fromProcMemInfo.TotalMemory.GetValue(SizeUnit.Bytes);
 
             var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryLimit);
             var cgroupMaxMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMaxMemoryUsage);
             // here we need to deal with _soft_ limit, so we'll take the largest of these values
             var maxMemoryUsage = Math.Max(cgroupMemoryLimit ?? 0, cgroupMaxMemoryUsage ?? 0);
-
             if (maxMemoryUsage != 0 && maxMemoryUsage <= totalPhysicalMemoryInBytes)
             {
-                // running in a limitted cgroup
+                // running in a limited cgroup
+                var commitedMemoryInBytes = 0L;
                 var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile(CgroupMemoryUsage);
                 if (cgroupMemoryUsage != null)
                 {
                     commitedMemoryInBytes = cgroupMemoryUsage.Value;
-                    availableRamInBytes = maxMemoryUsage - cgroupMemoryUsage.Value;
+                    fromProcMemInfo.Commited.Set(commitedMemoryInBytes, SizeUnit.Bytes);
+                    fromProcMemInfo.MemAvailable.Set(maxMemoryUsage - cgroupMemoryUsage.Value, SizeUnit.Bytes);
                 }
 
-                totalPhysicalMemoryInBytes = maxMemoryUsage;
-                commitLimitInBytes = Math.Max(maxMemoryUsage, commitedMemoryInBytes);
+                fromProcMemInfo.TotalMemory.Set(maxMemoryUsage, SizeUnit.Bytes);
+                fromProcMemInfo.CommitLimit.Set(Math.Max(maxMemoryUsage, commitedMemoryInBytes), SizeUnit.Bytes);
             }
 
             return BuildPosixMemoryInfoResult(
-                availableRamInBytes,
-                totalPhysicalMemoryInBytes,
-                commitedMemoryInBytes, 
-                commitLimitInBytes);
+                fromProcMemInfo.MemAvailable,
+                fromProcMemInfo.TotalMemory,
+                fromProcMemInfo.Commited,
+                fromProcMemInfo.CommitLimit);
         }
 
-        private static MemoryInfoResult BuildPosixMemoryInfoResult(long availableRamInBytes, long totalPhysicalMemoryInBytes, long commitedMemoryInBytes, long commitLimitInBytes)
+        private static MemoryInfoResult BuildPosixMemoryInfoResult(Size availableRam, Size totalPhysicalMemory, Size commitedMemory, Size commitLimit)
         {
-            SetMemoryRecords(availableRamInBytes);
+            SetMemoryRecords(availableRam.GetValue(SizeUnit.Bytes));
 
-            var totalPhysicalMemory = new Size(totalPhysicalMemoryInBytes, SizeUnit.Bytes);
             return new MemoryInfoResult
             {
-                TotalCommittableMemory = new Size(commitLimitInBytes, SizeUnit.Bytes),
-                CurrentCommitCharge = new Size(commitedMemoryInBytes, SizeUnit.Bytes),
+                TotalCommittableMemory = commitLimit,
+                CurrentCommitCharge = commitedMemory,
 
-                AvailableMemory = new Size(availableRamInBytes, SizeUnit.Bytes),
+                AvailableMemory = availableRam,
                 TotalPhysicalMemory = totalPhysicalMemory,
                 InstalledMemory = totalPhysicalMemory,
                 MemoryUsageRecords = new MemoryInfoResult.MemoryUsageLowHigh
@@ -316,8 +313,6 @@ namespace Sparrow.LowMemory
                 return FailedResult;
             }
 
-            var totalPhysicalMemoryInBytes = (long)physicalMemory;
-
             uint pageSize;
             var vmStats = new vm_statistics64();
 
@@ -343,20 +338,23 @@ namespace Sparrow.LowMemory
                 return FailedResult;
             }
 
+            var totalPhysicalMemory = new Size((long)physicalMemory, SizeUnit.Bytes);
+
             /* Free memory: This is RAM that's not being used.
              * Wired memory: Information in this memory can't be moved to the hard disk, so it must stay in RAM. The amount of Wired memory depends on the applications you are using.
              * Active memory: This information is currently in memory, and has been recently used.
              * Inactive memory: This information in memory is not actively being used, but was recently used. */
-            var availableRamInBytes = (vmStats.FreePagesCount + vmStats.InactivePagesCount) * pageSize;
+            var availableRamInBytes = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount) * pageSize, SizeUnit.Bytes);
 
             // there is no commited memory value in OSX,
             // this is an approximation: wired + active + swap used
-            var commitedMemoryInBytes = vmStats.WirePagesCount + vmStats.ActivePagesCount * pageSize + (long)swapu.xsu_used;
+            var commitedMemoryInBytes = (vmStats.WirePagesCount + vmStats.ActivePagesCount) * pageSize + (long)swapu.xsu_used;
+            var commitedMemory = new Size(commitedMemoryInBytes, SizeUnit.Bytes);
 
             // commit limit: physical memory + swap
-            var commitLimitInBytes = (long)(physicalMemory + swapu.xsu_total);
+            var commitLimit = new Size((long)(physicalMemory + swapu.xsu_total), SizeUnit.Bytes);
 
-            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemoryInBytes, commitedMemoryInBytes, commitLimitInBytes);
+            return BuildPosixMemoryInfoResult(availableRamInBytes, totalPhysicalMemory, commitedMemory, commitLimit);
         }
 
         private static unsafe MemoryInfoResult GetMemoryInfoWindows()
