@@ -124,6 +124,11 @@ namespace Sparrow
             _valueInBytes += ConvertToBytes(value, unit);
         }
 
+        public void Set(long newValue, SizeUnit requestedUnit)
+        {
+            _valueInBytes = ConvertToBytes(newValue, requestedUnit);
+        }
+
         public static bool operator <(Size x, Size y)
         {
             return x._valueInBytes < y._valueInBytes;
