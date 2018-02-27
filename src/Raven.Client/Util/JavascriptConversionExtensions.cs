@@ -125,6 +125,7 @@ namespace Raven.Client.Util
                     case "Sum":
                         newName = "map";
                         break;
+
                     case "Where":
                         newName = "filter";
                         break;
@@ -141,6 +142,24 @@ namespace Raven.Client.Util
                     case "Concat":
                         newName = "concat";
                         break;
+
+                    case "Average":
+                    {
+                        context.PreventDefault();
+                        // Rewrite expression to Sum() / Count()
+                        var typeArguments = methodCallExpression.Arguments[0].Type.GenericTypeArguments;
+                        var sum = Expression.Call(
+                            typeof(Enumerable), 
+                            "Sum", 
+                            methodCallExpression.Arguments.Count > 1 ?
+                                typeArguments :
+                                new Type[] { }, 
+                            methodCallExpression.Arguments.ToArray());
+                        var count = Expression.Call(typeof(Enumerable), "Count", typeArguments, methodCallExpression.Arguments[0]);
+                        
+                        context.Visitor.Visit(Expression.Divide(sum, count));
+                        return;
+                    }
                     case "ToDictionary":
                     {
                         context.PreventDefault();
@@ -418,21 +437,25 @@ namespace Raven.Client.Util
                         javascriptWriter.Write(" state.push(");
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                         javascriptWriter.Write("[index]); return state; }, [])");
-
-
                     }
                     else
                     {
                         context.Visitor.Visit(methodCallExpression.Arguments[0]);
                     }
 
-                    javascriptWriter.Write($".{newName}");
-                    javascriptWriter.Write("(");
-                    if (methodCallExpression.Arguments.Count > 1)
+                    // When having no other arguments, don't call the function, when it's a .map operation
+                    // .Sum()/.Average()/.Select() for example can be called without arguments, which means, 
+                    // map all, though .map() without arguments returns an empty list
+                    if (newName != "map" || methodCallExpression.Arguments.Count > 1)
                     {
-                        context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                        javascriptWriter.Write($".{newName}");
+                        javascriptWriter.Write("(");
+                        if (methodCallExpression.Arguments.Count > 1)
+                        {
+                            context.Visitor.Visit(methodCallExpression.Arguments[1]);
+                        }
+                        javascriptWriter.Write(")");
                     }
-                    javascriptWriter.Write(")");
                 }
 
                 if (methodName == "Sum")
