@@ -46,8 +46,6 @@ namespace FastTests.Blittable
 
         public void PeepingTomStreamTest(int originalSize, int chunkSizeToRead, int offset, JsonOperationContext context)
         {
-            var buffer = new byte[originalSize + offset];
-
             var bytes = new byte[originalSize];
             for (var i = 0; i < bytes.Length; i++)
             {
@@ -67,6 +65,7 @@ namespace FastTests.Blittable
                     int read;
                     do
                     {
+                        var buffer = new byte[originalSize + offset];
                         read = peeping.Read(buffer, offset, chunkSizeToRead);
                         totalRead += read;
                         Assert.True(read <= chunkSizeToRead);
