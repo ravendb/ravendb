@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -188,6 +190,59 @@ namespace SlowTests.Client
             }, res.Index));
             Assert.True(res2.Successful);
             Assert.Equal("Karmel2", res2.Value.Name);
+        }
+        
+        [Fact]
+        public async Task CanListValues()
+        {
+            DoNotReuseServer();
+            var store = GetDocumentStore();
+            for (var  i = 0; i < 10; i++)
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test" + i, new User
+                {
+                    Name = "value" + i
+                }, 0));
+            }
+            
+            var result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("", 0, 3));
+            Assert.Equal(new HashSet<string> { "test0", "test1", "test2" }, result.Keys.ToHashSet());
+            
+            result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("", 1, 3));
+            Assert.Equal(new HashSet<string> { "test1", "test2", "test3" }, result.Keys.ToHashSet());
+            
+            result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("", 8, 5));
+            Assert.Equal(new HashSet<string> { "test8", "test9" }, result.Keys.ToHashSet());
+            
+            
+            // add some values at the beginning and at the end
+            for (var  i = 0; i < 2; i++)
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("a" + i, new User
+                {
+                    Name = "value" + i
+                }, 0));
+            }
+            
+            for (var  i = 0; i < 2; i++)
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("z" + i, new User
+                {
+                    Name = "value" + i
+                }, 0));
+            }
+            
+            // now query with prefix
+            
+            result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test", 0, 3));
+            Assert.Equal(new HashSet<string> { "test0", "test1", "test2" }, result.Keys.ToHashSet());
+            
+            result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test", 1, 3));
+            Assert.Equal(new HashSet<string> { "test1", "test2", "test3" }, result.Keys.ToHashSet());
+            
+            result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test", 8, 5));
+            Assert.Equal(new HashSet<string> { "test8", "test9" }, result.Keys.ToHashSet());
+            
         }
 
         [Fact]
